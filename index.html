@@ -504,6 +504,13 @@
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
+    /* Panels hold wide, fixed-column data tables (grid-risks, grid-controls, etc.) —
+       scroll them horizontally on narrow viewports instead of clipping columns off-screen. */
+    .panel {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
     .card:hover, .panel:hover {
       border-color: #2b4573;
     }
@@ -842,6 +849,7 @@
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.08em;
+      min-width: max-content;
     }
 
     .table-row {
@@ -851,6 +859,7 @@
       align-items: center;
       gap: 16px;
       transition: background 0.15s ease;
+      min-width: max-content;
     }
 
     .table-row:hover {
@@ -1146,6 +1155,8 @@
       font-size: 12px;
       outline: none;
       cursor: pointer;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .filter-select:focus { border-color: var(--teal); }
@@ -1367,15 +1378,22 @@
       .menu-toggle { display: block; }
       .grid-4 { grid-template-columns: repeat(2, 1fr); }
       .grid-2, .grid-2-asym, .grid-3 { grid-template-columns: 1fr; }
-      .topbar { padding: 0 20px; }
+      .topbar { height: auto; flex-wrap: wrap; row-gap: 12px; padding: 14px 20px; }
+      .topbar-left, .topbar-right { flex-wrap: wrap; row-gap: 8px; }
+      .topbar-right { justify-content: flex-start; width: 100%; }
       .content { padding: 24px 20px; }
     }
 
     @media (max-width: 640px) {
       .grid-4 { grid-template-columns: 1fr; }
       .hero { flex-direction: column; align-items: flex-start; }
+      .hero-actions { width: 100%; }
+      .hero-actions button { flex: 1 1 auto; }
       .form-row { grid-template-columns: 1fr; }
       .table-row, .table-header { font-size: 11.5px; }
+      .scanner-hero, .master-url-bar { padding: 20px; }
+      .master-url-input-wrap { min-width: 0; flex-basis: 100%; }
+      .modal-dialog, .modal-dialog.wide { padding: 20px; }
     }
   </style>
 </head>
