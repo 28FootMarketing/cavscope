@@ -1821,17 +1821,16 @@
               <div>
                 <span class="eyebrow" style="color: var(--emerald);">Overall Accessibility Health Index</span>
                 <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
-            <!-- AIO Audit Results & Billable Deliverable -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
-              <div>
-                <span class="eyebrow" style="color: var(--teal);" id="lblAioReportBrand">MUSTER Client Deliverable</span>
-                <h3 style="font-size: 22px; color: #fff; margin-top: 2px;" id="aioReportHeading">AI Optimization Audit & Roadmap</h3>
-                <p style="font-size: 12.5px; color: var(--text-muted);" id="aioReportMeta">Client: Northstar Fintech · Tier: Audit + Implementation Assets</p>
+                  <div style="font-size: 42px; font-weight: 800; color: #fff; font-family: var(--font-sans);" id="wcagOverallScore">84</div>
+                  <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
+                  <span class="benchmark-badge benchmark-good" id="wcagOverallBadge">80+ Good · 90+ is Better</span>
+                </div>
+                <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="wcagScoreSummary">
+                  One P0 keyboard trap and a handful of missing icon labels are the only blockers standing between this site and a 95+ conformance rating.
+                </p>
               </div>
-              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn-amber" onclick="showView('plainReport')" data-tooltip="View this finding in everyday accessible language">📖 Plain English Report</button>
-                <button class="btn-ghost" onclick="copyFullAioMarkdown()" data-tooltip="Copy clean Markdown deliverable to clipboard">📋 Copy Full Markdown</button>
-                <button class="btn-primary" onclick="downloadAioReport()" data-tooltip="Download markdown report file">↓ Download AIO Report (.md)</button>
+              <div style="text-align: right;">
+                <button class="btn-ghost" onclick="openScoreExplainer('wcagOverall')">ℹ How Score was Achieved & Path to 90+ ›</button>
               </div>
             </div>
 
