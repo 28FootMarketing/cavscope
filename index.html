@@ -299,12 +299,14 @@
 
     /* Topbar */
     .topbar {
-      height: 72px;
+      min-height: 72px;
       border-bottom: 1px solid var(--surface-border);
-      padding: 0 36px;
+      padding: 10px 36px;
       background: rgba(8, 16, 34, 0.75);
       backdrop-filter: blur(12px);
       display: flex;
+      flex-wrap: wrap;
+      row-gap: 10px;
       justify-content: space-between;
       align-items: center;
       position: sticky;
@@ -314,8 +316,11 @@
 
     .topbar-left {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 16px;
+      row-gap: 8px;
+      min-width: 0;
     }
 
     .menu-toggle {
@@ -336,14 +341,20 @@
 
     .topbar-right {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 10px;
+      row-gap: 8px;
+      min-width: 0;
     }
+
+    button.btn-primary, button.btn-ghost, button.btn-amber { white-space: nowrap; }
 
     .status-pill {
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
       border: 1px solid var(--surface-border);
       background: rgba(14, 25, 48, 0.6);
       border-radius: var(--radius-full);
@@ -467,6 +478,11 @@
       border-bottom: 1px solid rgba(31, 51, 88, 0.6);
     }
 
+    .hero-content {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
     .hero-content h2 {
       font-family: var(--font-serif);
       font-size: clamp(26px, 3vw, 40px);
@@ -490,8 +506,10 @@
     .hero-actions {
       display: flex;
       gap: 10px;
-      flex-shrink: 0;
+      flex: 0 1 auto;
+      max-width: 48%;
       flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     /* Cards & Panels */
@@ -849,7 +867,7 @@
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      min-width: max-content;
+      min-width: 720px;
     }
 
     .table-row {
@@ -859,7 +877,7 @@
       align-items: center;
       gap: 16px;
       transition: background 0.15s ease;
-      min-width: max-content;
+      min-width: 720px;
     }
 
     .table-row:hover {
@@ -1332,6 +1350,57 @@
 
     .toast.show { transform: translateY(0); }
 
+    /* Tooltips: one floating element managed by JS (see initTooltips), so tooltips never
+       get clipped by scrolling panels and work for dynamically rendered controls. */
+    .app-tooltip {
+      position: fixed;
+      z-index: 300;
+      max-width: 280px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: #0d1a33;
+      border: 1px solid #2e4a78;
+      color: #e6eefb;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(3px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+
+    .app-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .app-tooltip { transition: none; }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Keyboard users need to see where focus is before a tooltip is useful */
+    button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+    }
+
     /* Plain English Report Box */
     .simple-explainer-banner {
       background: linear-gradient(135deg, #102a45 0%, #152238 100%);
@@ -1387,7 +1456,7 @@
     @media (max-width: 640px) {
       .grid-4 { grid-template-columns: 1fr; }
       .hero { flex-direction: column; align-items: flex-start; }
-      .hero-actions { width: 100%; }
+      .hero-actions { width: 100%; max-width: none; justify-content: flex-start; }
       .hero-actions button { flex: 1 1 auto; }
       .form-row { grid-template-columns: 1fr; }
       .table-row, .table-header { font-size: 11.5px; }
@@ -1415,62 +1484,62 @@
           <span class="ico">◌</span>
           <span>Posture Overview</span>
         </button>
-        <button data-view="subclients" style="color: #38bdf8;">
+        <button data-view="subclients" style="color: #38bdf8;" data-tooltip="Manage the client websites you audit and report on.">
           <span class="ico" style="color: var(--cyan);">👥</span>
           <span>Client Accounts & URLs</span>
           <span class="nav-count" id="badgeSubClients" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">3</span>
         </button>
-        <button data-view="accessibility" style="color: #6ee7b7;">
+        <button data-view="accessibility" style="color: #6ee7b7;" data-tooltip="Checks how usable a site is for people with disabilities, against the WCAG 2.2 AA standard.">
           <span class="ico" style="color: var(--emerald);">♿</span>
           <span>Accessibility (WCAG 2.2)</span>
           <span class="nav-count" id="badgeWcag" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">AA</span>
         </button>
-        <button data-view="aio" style="color: #72f7e3;">
+        <button data-view="aio" style="color: #72f7e3;" data-tooltip="Checks whether AI assistants like ChatGPT can read and cite a site.">
           <span class="ico" style="color: var(--teal);">⚡</span>
           <span>AIO / GEO Audit</span>
           <span class="nav-count" style="background: rgba(54, 226, 201, 0.2); color: var(--teal);">NEW</span>
         </button>
-        <button data-view="risks">
+        <button data-view="risks" data-tooltip="Every known issue, its severity, and who owns fixing it.">
           <span class="ico">△</span>
           <span>Risk Register</span>
           <span class="nav-count" id="badgeRisks">0</span>
         </button>
-        <button data-view="controls">
+        <button data-view="controls" data-tooltip="Maps findings to compliance rules like SOC 2 and GDPR.">
           <span class="ico">▣</span>
           <span>Control Mapping</span>
           <span class="nav-count" id="badgeControls">0</span>
         </button>
-        <button data-view="evidence">
+        <button data-view="evidence" data-tooltip="Proof documents that back up compliance claims during an audit.">
           <span class="ico">⌑</span>
           <span>Evidence Library</span>
           <span class="nav-count" id="badgeEvidence">0</span>
         </button>
-        <button data-view="remediation">
+        <button data-view="remediation" data-tooltip="Track fixes in progress, who owns them, and their due dates.">
           <span class="ico">◎</span>
           <span>Remediation Plan</span>
           <span class="nav-count" id="badgeRemediation">0</span>
         </button>
 
         <div class="nav-label" style="margin-top: 10px;">Executive & Client Reports</div>
-        <button data-view="board">
+        <button data-view="board" data-tooltip="Executive summary for leadership: critical risks, coverage, exceptions.">
           <span class="ico">⌁</span>
           <span>Board Reporting</span>
         </button>
-        <button data-view="plainReport" style="color: #fde68a;" data-tooltip="View easy-to-read executive briefing">
+        <button data-view="plainReport" style="color: #fde68a;" data-tooltip="The same findings in everyday language, ready to print for a client.">
           <span class="ico">📖</span>
           <span>Plain English PDF</span>
         </button>
-        <button data-view="governance">
+        <button data-view="governance" data-tooltip="Set how much risk is acceptable and approve exceptions to policy.">
           <span class="ico">♜</span>
           <span>Enterprise Governance</span>
         </button>
-        <button data-view="assurance">
+        <button data-view="assurance" data-tooltip="Records of tests proving each control actually works.">
           <span class="ico">▤</span>
           <span>Assurance Testing</span>
         </button>
 
         <div class="nav-label" style="margin-top: 10px;">Platform Administration</div>
-        <button data-view="superadmin" style="color: #fde68a;">
+        <button data-view="superadmin" style="color: #fde68a;" data-tooltip="Platform-wide controls: tenants, feature flags, and white-labeling.">
           <span class="ico">👑</span>
           <span>Super Admin Console</span>
           <span class="nav-count" id="badgeTenantCount" style="background: rgba(251, 191, 36, 0.2); color: #fde68a;">3</span>
@@ -1480,10 +1549,10 @@
       <div class="sidebar-footer">
         <div class="preset-selector">
           <label>Portfolio Preset</label>
-          <select id="presetSelect" onchange="loadPreset(this.value)">
+          <select id="presetSelect" onchange="loadPreset(this.value)" data-tooltip="Loads sample data for demos. Replaces the current workspace immediately.">
             <option value="enterprise">MUSTER Client Portfolio (Default)</option>
-            <option value="breach">Critical Risk Scenario</option>
-            <option value="clean">Clean Baseline State</option>
+            <option value="breach">Critical Risk Scenario (adds a sample breach)</option>
+            <option value="clean">Clean Baseline (clears the risk register)</option>
           </select>
         </div>
 
@@ -1502,13 +1571,13 @@
       <!-- Topbar -->
       <header class="topbar">
         <div class="topbar-left">
-          <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation" onclick="toggleSidebar()">☰</button>
+          <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation" data-tooltip="Open or close the navigation menu." onclick="toggleSidebar()">☰</button>
           <div class="workspace-title">
             <span class="eyebrow" id="topbarTenantEyebrow">28 Foot Systems Portfolio</span>
             <h1 id="topbarHeaderTitle">Enterprise Risk, AIO & Website Assurance</h1>
           </div>
           <div style="margin-left: 12px; display: flex; align-items: center; gap: 6px;">
-            <select id="topbarTenantSelect" class="filter-select" onchange="switchTenant(this.value)" style="background: #0d1a38; border-color: #2b4573; color: #fff; font-weight: 700; font-size: 11.5px; padding: 6px 12px; border-radius: var(--radius-md);" title="Switch Active Client Tenant Workspace">
+            <select id="topbarTenantSelect" class="filter-select" onchange="switchTenant(this.value)" style="background: #0d1a38; border-color: #2b4573; color: #fff; font-weight: 700; font-size: 11.5px; padding: 6px 12px; border-radius: var(--radius-md);" data-tooltip="Switch which client organization you are working in. Each has its own data.">
               <!-- Rendered via JS -->
             </select>
           </div>
@@ -1516,22 +1585,22 @@
 
         <div class="topbar-right">
           <!-- White-label feature status badge -->
-          <button class="btn-ghost" id="btnWhiteLabelBadge" onclick="showView('superadmin')" style="padding: 6px 11px; font-size: 11px; border-color: rgba(56, 189, 248, 0.3);" title="Feature Flag: White-Labeling is OFF">
+          <button class="btn-ghost" id="btnWhiteLabelBadge" onclick="showView('superadmin')" style="padding: 6px 11px; font-size: 11px; border-color: rgba(56, 189, 248, 0.3);" data-tooltip="Whether agencies can replace MUSTER branding with their own. Change it in Super Admin.">
             🏷️ White-Label: <span id="lblWhiteLabelStatus" style="color: var(--amber); font-weight: 700;">OFF</span>
           </button>
-          <button class="btn-amber" onclick="showView('superadmin')" title="Platform Super Admin Console">
+          <button class="btn-amber" onclick="showView('superadmin')" data-tooltip="Manage all client organizations and platform settings in one place.">
             👑 Super Admin
           </button>
-          <button class="btn-primary" onclick="openModal('create_tenant')" style="padding: 7px 12px; font-size: 11.5px;" title="Provision New Tenant">
+          <button class="btn-primary" onclick="openModal('create_tenant')" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Set up a new client organization with its own isolated workspace.">
             ＋ Tenant
           </button>
-          <div class="status-pill">
+          <div class="status-pill" data-tooltip="This workspace runs on sample data. Nothing is being scanned live yet.">
             <i class="dot-live"></i>
-            <span id="syncStatus">Continuous Monitoring Active</span>
+            <span id="syncStatus">Demo workspace · sample data</span>
           </div>
-          <button class="btn-ghost" onclick="showView('plainReport')" title="View Plain English Explainer" data-tooltip="View Plain English executive report">📖 Plain English PDF</button>
-          <button class="btn-ghost" onclick="exportDataJSON()" title="Export workspace JSON snapshot">↓ Export JSON</button>
-          <button class="btn-primary" onclick="openModal('risk')">＋ Record Risk</button>
+          <button class="btn-ghost" onclick="showView('plainReport')" data-tooltip="Open a jargon-free version of this report you can print for a client.">📖 Plain English PDF</button>
+          <button class="btn-ghost" onclick="exportDataJSON()" data-tooltip="Downloads this client's full workspace as a JSON file for backup or sharing.">↓ Export JSON</button>
+          <button class="btn-primary" onclick="openModal('risk')" data-tooltip="Log a new issue with its severity, owner, and treatment plan.">＋ Record Risk</button>
         </div>
       </header>
 
@@ -1552,25 +1621,25 @@
           <div class="master-url-row">
             <div class="master-url-input-wrap">
               <span class="url-protocol-badge">https:// 🔒</span>
-              <input type="text" id="globalMasterUrl" class="master-url-input" placeholder="enter-client-domain.com" value="portal.northstar.com">
+              <input type="text" id="globalMasterUrl" class="master-url-input" placeholder="enter-client-domain.com" value="portal.northstar.com" data-tooltip="Enter a domain without https://. This becomes the audit target for every view.">
             </div>
-            <button class="btn-primary" id="btnRunMasterAudit" style="padding: 12px 24px; font-size: 13px;" onclick="runUniversalAudit()">
+            <button class="btn-primary" id="btnRunMasterAudit" style="padding: 12px 24px; font-size: 13px;" onclick="runUniversalAudit()" data-tooltip="Runs accessibility, AI-readiness, and risk checks on this URL and refreshes every view.">
               <span>⚡ Run Universal Audit</span>
             </button>
-            <button class="btn-ghost" onclick="saveCurrentUrlAsClient()" title="Save this URL to your managed clients list">
+            <button class="btn-ghost" onclick="saveCurrentUrlAsClient()" data-tooltip="Adds this URL to your client roster so you can re-audit it later.">
               <span>＋ Save as Client URL</span>
             </button>
-            <button class="btn-ghost" onclick="copyMasterLlmAuditPrompt()" title="Copy prompt to run this entire audit via an external LLM">
+            <button class="btn-ghost" onclick="copyMasterLlmAuditPrompt()" data-tooltip="Copies a ready-to-paste prompt for running this audit in ChatGPT or Claude.">
               <span>🤖 Copy Full Master Prompt</span>
             </button>
           </div>
 
           <div class="preset-chip-list" style="margin-top: 2px; align-items: center;">
             <span style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Select from Your Clients:</span>
-            <select id="clientUrlQuickPick" class="filter-select" onchange="pickClientUrl(this.value)" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; background: #0c1c38; border-color: #2b4573; color: #38bdf8;">
+            <select id="clientUrlQuickPick" class="filter-select" onchange="pickClientUrl(this.value)" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; background: #0c1c38; border-color: #2b4573; color: #38bdf8;" data-tooltip="Pick a saved client to load its URL and details as the audit target.">
               <!-- Dynamically populated -->
             </select>
-            <button type="button" class="preset-chip" onclick="showView('subclients')">Manage All Clients ↗</button>
+            <button type="button" class="preset-chip" onclick="showView('subclients')" data-tooltip="Add, review, or audit every client website in your portfolio.">Manage All Clients ↗</button>
           </div>
         </div>
 
@@ -1583,8 +1652,8 @@
               <p>Your workspace allows you to run audits, WCAG 2.2 AA accessibility, AIO/GEO, and risk evaluations directly for your own clients. Add any client website URL at any time, run one-click audits, and export deliverables.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-ghost" onclick="exportClientsJSON()">↓ Export Client List (.json)</button>
-              <button class="btn-primary" onclick="openModal('add_subclient')">＋ Add Client Property / URL</button>
+              <button class="btn-ghost" onclick="exportClientsJSON()" data-tooltip="Downloads your client roster as a JSON file.">↓ Export Client List (.json)</button>
+              <button class="btn-primary" onclick="openModal('add_subclient')" data-tooltip="Add a client website so you can audit and report on it.">＋ Add Client Property / URL</button>
             </div>
           </div>
 
@@ -1595,17 +1664,17 @@
               <div class="metric-value" style="color: var(--cyan);" id="subclientCount">3</div>
               <small style="color: var(--text-muted);">Active client web properties</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Average audit score across all your clients. 80 or higher is the benchmark.">
               <label>Fleet Conformance Average</label>
               <div class="metric-value" style="color: var(--teal);" id="subclientAvgHealth">86%</div>
               <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs.">
               <label>Deliverables Generated</label>
               <div class="metric-value" style="color: var(--emerald);">12</div>
               <small style="color: var(--text-muted);">WCAG, AIO & Plain English Briefs</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="When ON, agency clients see their own branding on reports instead of MUSTER's.">
               <label>White-Label Status</label>
               <div class="metric-value" style="color: var(--amber); font-size: 22px; margin-top: 22px;" id="kpiWlStatus">Flag: OFF</div>
               <small style="color: var(--text-muted);">Toggleable in Super Admin</small>
@@ -1619,7 +1688,7 @@
                 <h3>Your Client Portfolio Roster</h3>
                 <p>Select any client to run immediate audits, generate plain-English PDFs, or copy LLM remediation prompts</p>
               </div>
-              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('add_subclient')">＋ Add Client URL</button>
+              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('add_subclient')" data-tooltip="Add a client website so you can audit and report on it.">＋ Add Client URL</button>
             </div>
             <div class="table-header grid-subclients">
               <span>Client Name & ID</span>
@@ -1644,16 +1713,16 @@
               <p>MUSTER ties every finding to one single source of truth—connecting website accessibility (WCAG 2.2 AA), security vulnerabilities, compliance controls, audit evidence, and remediation velocity in real time. Every score includes transparent feedback on how it was achieved and how to reach 90+.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-amber" onclick="showView('plainReport')" data-tooltip="Read and print the Plain English Executive Briefing">📖 Plain English Report</button>
-              <button class="btn-ghost" onclick="showView('accessibility')" data-tooltip="Inspect WCAG 2.2 AA accessibility health">♿ WCAG 2.2 AA Audit</button>
-              <button class="btn-ghost" onclick="showView('aio')" data-tooltip="Inspect AI search and crawler optimization">⚡ AIO Deliverable</button>
-              <button class="btn-primary" onclick="openModal('risk')" data-tooltip="Log a new risk finding">＋ Record Finding</button>
+              <button class="btn-amber" onclick="showView('plainReport')" data-tooltip="Open a jargon-free version of this report you can print for a client.">📖 Plain English Report</button>
+              <button class="btn-ghost" onclick="showView('accessibility')" data-tooltip="See how usable this site is for people with disabilities.">♿ WCAG 2.2 AA Audit</button>
+              <button class="btn-ghost" onclick="showView('aio')" data-tooltip="See whether AI assistants can read and recommend this site.">⚡ AIO Deliverable</button>
+              <button class="btn-primary" onclick="openModal('risk')" data-tooltip="Log a new issue with its severity, owner, and treatment plan.">＋ Record Finding</button>
             </div>
           </div>
 
           <!-- Top Level Posture Metric Cards -->
           <div class="grid-4">
-            <div class="card metric-card" data-tooltip="Overall website risk score based on active critical and high findings">
+            <div class="card metric-card" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue.">
               <div class="metric-card-top">
                 <label>Risk Posture Score</label>
                 <div class="metric-icon-wrap">〽</div>
@@ -1661,7 +1730,7 @@
               <div class="metric-value">
                 <span id="kpiPostureScore">82</span>
                 <span class="denom">/ 100</span>
-                <span class="benchmark-badge benchmark-good" id="kpiPostureTier" data-tooltip="Standard: 80 is Good, 90+ is Better, 95+ is World-Class">80+ Good</span>
+                <span class="benchmark-badge benchmark-good" id="kpiPostureTier" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">80+ Good</span>
               </div>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiPostureBar" style="width: 82%;"></div></div>
               <div class="metric-sub">
@@ -1669,12 +1738,12 @@
                 <span>Target: 95%+</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('posture')" data-tooltip="View exact mathematical deduction and steps to reach 90+">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('posture')" data-tooltip="Copy prompt to fix active posture blockers in external LLM">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="openScoreExplainer('posture')" data-tooltip="See exactly what lowered this score and which fixes raise it most.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('posture')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
             </div>
 
-            <div class="card metric-card" data-tooltip="Percentage of compliance framework controls evaluated as effective">
+            <div class="card metric-card" data-tooltip="Share of compliance rules you have confirmed are working, not just documented.">
               <div class="metric-card-top">
                 <label>Control Coverage</label>
                 <div class="metric-icon-wrap">▣</div>
@@ -1689,12 +1758,12 @@
                 <span>SOC 2, GDPR, WCAG</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('controls')" data-tooltip="View steps to reach 100% control operating effectiveness">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('controls')" data-tooltip="Copy control remediation prompt">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="openScoreExplainer('controls')" data-tooltip="See which controls are still unverified and what closes them.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('controls')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
             </div>
 
-            <div class="card metric-card" data-tooltip="Proportion of required compliance and audit proof approved">
+            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
               <div class="metric-card-top">
                 <label>Evidence Readiness</label>
                 <div class="metric-icon-wrap">⌑</div>
@@ -1709,12 +1778,12 @@
                 <span>1 in review</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('evidence')" data-tooltip="View evidence verification requirements to reach 90+">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('evidence')" data-tooltip="Copy evidence checklist prompt">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="openScoreExplainer('evidence')" data-tooltip="See which proof documents are still missing or awaiting review.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('evidence')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
             </div>
 
-            <div class="card metric-card" data-tooltip="Progress rate across open remediation engineering tasks">
+            <div class="card metric-card" data-tooltip="Average completion across every open fix. Overdue items are flagged below.">
               <div class="metric-card-top">
                 <label>Remediation Progress</label>
                 <div class="metric-icon-wrap">◎</div>
@@ -1729,8 +1798,8 @@
                 <span>4 treatments active</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('remediation')" data-tooltip="View sprint velocity recommendations to reach 90+">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('remediation')" data-tooltip="Copy engineering remediation prompt">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="openScoreExplainer('remediation')" data-tooltip="See which open fixes to prioritize to move this score fastest.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('remediation')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
             </div>
           </div>
@@ -1743,7 +1812,7 @@
                   <h3>Priority Risk Exposure</h3>
                   <p>Highest severity website findings requiring accountable executive decisions</p>
                 </div>
-                <button class="btn-ghost" style="padding: 5px 12px; font-size: 11.5px;" onclick="showView('risks')">All Risks ›</button>
+                <button class="btn-ghost" style="padding: 5px 12px; font-size: 11.5px;" onclick="showView('risks')" data-tooltip="Open the full register with filters and the 5×5 heatmap.">All Risks ›</button>
               </div>
               <div id="overviewPriorityRisks" class="panel-flush">
               </div>
@@ -1760,7 +1829,7 @@
                 <div style="margin-bottom: 18px; padding: 14px; border-radius: var(--radius-md); background: rgba(54, 226, 201, 0.08); border: 1px solid rgba(54, 226, 201, 0.25);">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span class="eyebrow" style="color: var(--teal);">Risk Appetite Tolerance</span>
-                    <span class="pill pill-approved" id="overviewAppetiteStatus">Within Tolerance</span>
+                    <span class="pill pill-approved" id="overviewAppetiteStatus" data-tooltip="Open risks are within the limits leadership approved in Governance.">Within Tolerance</span>
                   </div>
                   <p style="font-size: 12.5px; color: #d0deef; line-height: 1.5;" id="overviewAppetiteSummary">Zero critical vulnerabilities allowed on public authenticated endpoints.</p>
                 </div>
@@ -1769,7 +1838,7 @@
                 <div id="overviewExceptionsList">
                 </div>
 
-                <button class="btn-ghost" style="width: 100%; margin-top: 14px; justify-content: center;" onclick="showView('remediation')">
+                <button class="btn-ghost" style="width: 100%; margin-top: 14px; justify-content: center;" onclick="showView('remediation')" data-tooltip="See every open fix, its owner, due date, and progress.">
                   Review Remediation Schedule ↗
                 </button>
               </div>
@@ -1813,8 +1882,8 @@
               <p>Accessibility is a system requirement, not a cosmetic enhancement. Audit, remediate, and validate digital experiences against WCAG 2.2 Level AA, Section 508, and EN 301 549 standards across semantic HTML, keyboard-only operation, focus management, screen readers, and 400% reflow.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-ghost" onclick="openScoreExplainer('wcagOverall')">ℹ Scoring Transparency</button>
-              <button class="btn-primary" onclick="copyCardLlmPrompt('wcag_master')">🤖 Copy Master WCAG Prompt</button>
+              <button class="btn-ghost" onclick="openScoreExplainer('wcagOverall')" data-tooltip="See how the accessibility score is calculated and what raises it.">ℹ Scoring Transparency</button>
+              <button class="btn-primary" onclick="copyCardLlmPrompt('wcag_master')" data-tooltip="Copies one prompt covering every accessibility defect for an AI assistant to fix.">🤖 Copy Master WCAG Prompt</button>
             </div>
           </div>
 
@@ -1829,7 +1898,7 @@
                   <strong>Conformance Principle:</strong> Automated scanners evaluate ~30% of WCAG criteria; true conformance requires validating keyboard traps, dynamic focus return, screen reader announcements, and cognitive friction. We report technical conformance findings without asserting unvalidated legal guarantees.
                 </p>
               </div>
-              <span class="pill pill-approved" style="font-size: 11px;">Target: WCAG 2.2 AA</span>
+              <span class="pill pill-approved" style="font-size: 11px;" data-tooltip="The mid-level accessibility standard most laws and contracts require.">Target: WCAG 2.2 AA</span>
             </div>
           </div>
 
@@ -1841,14 +1910,14 @@
                 <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
                   <div style="font-size: 42px; font-weight: 800; color: #fff; font-family: var(--font-sans);" id="wcagOverallScore">84</div>
                   <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
-                  <span class="benchmark-badge benchmark-good" id="wcagOverallBadge">80+ Good · 90+ is Better</span>
+                  <span class="benchmark-badge benchmark-good" id="wcagOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">80+ Good · 90+ is Better</span>
                 </div>
                 <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="wcagScoreSummary">
                   One P0 keyboard trap and a handful of missing icon labels are the only blockers standing between this site and a 95+ conformance rating.
                 </p>
               </div>
               <div style="text-align: right;">
-                <button class="btn-ghost" onclick="openScoreExplainer('wcagOverall')">ℹ How Score was Achieved & Path to 90+ ›</button>
+                <button class="btn-ghost" onclick="openScoreExplainer('wcagOverall')" data-tooltip="See what lowered this score and which two fixes raise it most.">ℹ How Score was Achieved & Path to 90+ ›</button>
               </div>
             </div>
 
@@ -1869,7 +1938,7 @@
                 <p>Actionable, non-vague findings classified by user impact: P0 Blocker, P1 Critical, P2 High, P3 Moderate, P4 Low</p>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button class="btn-ghost" style="padding: 5px 12px; font-size: 11.5px;" onclick="copyCardLlmPrompt('wcag_defects_table')">🤖 Copy Table for LLM</button>
+                <button class="btn-ghost" style="padding: 5px 12px; font-size: 11.5px;" onclick="copyCardLlmPrompt('wcag_defects_table')" data-tooltip="Copies this defect list as a prompt an AI assistant can work through.">🤖 Copy Table for LLM</button>
               </div>
             </div>
             <div class="table-header grid-wcag-defects">
@@ -1893,7 +1962,7 @@
                   <span class="eyebrow" style="color: var(--teal);">Accessible Code Pattern 01</span>
                   <h3 style="font-size: 15px; color: #fff;">Accessible Dialog with Focus Trap & Escape (Native HTML)</h3>
                 </div>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_modal_code')">🤖 Copy Fix</button>
+                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_modal_code')" data-tooltip="Copies a prompt to apply this accessible dialog pattern to your code.">🤖 Copy Fix</button>
               </div>
               <div class="code-box" id="wcagModalSnippet">
 &lt;!-- Native &lt;dialog&gt; provides built-in backdrop, focus trap, and Escape handling --&gt;
@@ -1923,7 +1992,7 @@
                   <span class="eyebrow" style="color: var(--cyan);">Accessible Code Pattern 02</span>
                   <h3 style="font-size: 15px; color: #fff;">Accessible Form Field with Explicit Validation Errors</h3>
                 </div>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_form_code')">🤖 Copy Fix</button>
+                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_form_code')" data-tooltip="Copies a prompt to apply this accessible form pattern to your code.">🤖 Copy Fix</button>
               </div>
               <div class="code-box" id="wcagFormSnippet">
 &lt;!-- Label explicitly associated; instructions & errors linked via aria-describedby --&gt;
@@ -1962,9 +2031,9 @@
             <div class="url-input-container">
               <div class="url-input-wrapper">
                 <span class="url-protocol-badge">https:// 🔒</span>
-                <input type="text" id="targetUrlInput" class="url-input" placeholder="client-domain.com" value="portal.northstar.com">
+                <input type="text" id="targetUrlInput" class="url-input" placeholder="client-domain.com" value="portal.northstar.com" data-tooltip="Enter a domain without https://. This is the site AI-readiness checks will run against.">
               </div>
-              <button class="btn-primary" id="btnRunAioScan" style="padding: 14px 26px; font-size: 13.5px;" onclick="executeAioAudit()">
+              <button class="btn-primary" id="btnRunAioScan" style="padding: 14px 26px; font-size: 13.5px;" onclick="executeAioAudit()" data-tooltip="Checks whether AI crawlers can read this site and builds a client-ready roadmap.">
                 <span>⚡ Run AIO Audit</span>
               </button>
             </div>
@@ -1972,9 +2041,9 @@
             <!-- Quick Preset Domains -->
             <div class="preset-chip-list">
               <span style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Client Intake Presets:</span>
-              <button type="button" class="preset-chip" onclick="setScanDomain('portal.northstar.com', 'Northstar Fintech', 'Fintech SaaS', 'Audit + Implementation Assets')">Northstar Fintech (SPA Portal)</button>
-              <button type="button" class="preset-chip" onclick="setScanDomain('acme-logistics.io', 'Acme Logistics', 'Supply Chain Tech', 'Audit-Only')">Acme Logistics (WordPress)</button>
-              <button type="button" class="preset-chip" onclick="setScanDomain('healthpulse.ai', 'HealthPulse Telehealth', 'Digital Health', 'Retainer')">HealthPulse AI (Next.js SSR)</button>
+              <button type="button" class="preset-chip" onclick="setScanDomain('portal.northstar.com', 'Northstar Fintech', 'Fintech SaaS', 'Audit + Implementation Assets')" data-tooltip="Sample client. Loads its URL and engagement details into the audit.">Northstar Fintech (SPA Portal)</button>
+              <button type="button" class="preset-chip" onclick="setScanDomain('acme-logistics.io', 'Acme Logistics', 'Supply Chain Tech', 'Audit-Only')" data-tooltip="Sample client. Loads its URL and engagement details into the audit.">Acme Logistics (WordPress)</button>
+              <button type="button" class="preset-chip" onclick="setScanDomain('healthpulse.ai', 'HealthPulse Telehealth', 'Digital Health', 'Retainer')" data-tooltip="Sample client. Loads its URL and engagement details into the audit.">HealthPulse AI (Next.js SSR)</button>
             </div>
 
             <!-- Live Audit Telemetry Stream -->
@@ -1993,9 +2062,9 @@
                 <p style="font-size: 12.5px; color: var(--text-muted);" id="aioReportMeta">Client: Northstar Fintech · Tier: Audit + Implementation Assets</p>
               </div>
               <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn-amber" onclick="showView('plainReport')">📖 Plain English PDF</button>
-                <button class="btn-ghost" onclick="copyFullAioMarkdown()">📋 Copy Full Markdown</button>
-                <button class="btn-primary" onclick="downloadAioReport()">↓ Download AIO Report (.md)</button>
+                <button class="btn-amber" onclick="showView('plainReport')" data-tooltip="Open a jargon-free version of this report you can print for a client.">📖 Plain English PDF</button>
+                <button class="btn-ghost" onclick="copyFullAioMarkdown()" data-tooltip="Copies the full report as Markdown for pasting into docs or email.">📋 Copy Full Markdown</button>
+                <button class="btn-primary" onclick="downloadAioReport()" data-tooltip="Saves the report as a .md file named after the client.">↓ Download AIO Report (.md)</button>
               </div>
             </div>
 
@@ -2007,14 +2076,14 @@
                   <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
                     <div style="font-size: 42px; font-weight: 800; color: #fff; font-family: var(--font-sans);" id="aioOverallScore">64</div>
                     <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
-                    <span class="benchmark-badge benchmark-good" id="aioOverallBadge">64/100 · 80 is Good, 90+ is Better</span>
+                    <span class="benchmark-badge benchmark-good" id="aioOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">64/100 · 80 is Good, 90+ is Better</span>
                   </div>
                   <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="aioScoreSummary">
                     Crawlability is blocked by client-side SPA rendering. Resolving P0 server rendering elevates this site to 88/100 immediately.
                   </p>
                 </div>
                 <div style="text-align: right;">
-                  <button class="btn-ghost" onclick="openScoreExplainer('aioOverall')">ℹ How Score was Achieved & Path to 90+ ›</button>
+                  <button class="btn-ghost" onclick="openScoreExplainer('aioOverall')" data-tooltip="See what lowered this score and which fixes raise it most.">ℹ How Score was Achieved & Path to 90+ ›</button>
                 </div>
               </div>
 
@@ -2032,7 +2101,7 @@
               <div class="panel panel-body">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span class="eyebrow" style="color: var(--rose);">#1 Technical Blocker</span>
-                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('blocker')">🤖 Copy LLM Fix</button>
+                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('blocker')" data-tooltip="Copies a prompt for an AI assistant to fix this specific blocker.">🤖 Copy LLM Fix</button>
                 </div>
                 <h3 style="font-size: 17px; margin: 6px 0 10px; color: #fff;" id="aioBlockerTitle">Client-Side JavaScript Rendering (#root shell)</h3>
                 <p style="font-size: 13px; color: #cbd7eb; line-height: 1.6;" id="aioBlockerText">
@@ -2043,7 +2112,7 @@
               <div class="panel panel-body">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span class="eyebrow" style="color: var(--teal);">The Prize & Business Opportunity</span>
-                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('prize')">🤖 Copy LLM Strategy</button>
+                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('prize')" data-tooltip="Copies a prompt for an AI assistant to plan how to win this opportunity.">🤖 Copy LLM Strategy</button>
                 </div>
                 <h3 style="font-size: 17px; margin: 6px 0 10px; color: #fff;" id="aioPrizeTitle">Default AI Citation for Category Queries</h3>
                 <p style="font-size: 13px; color: #cbd7eb; line-height: 1.6;" id="aioPrizeText">
@@ -2080,7 +2149,7 @@
                     <span class="eyebrow" style="color: var(--teal);">Implementation Asset 01</span>
                     <h3 style="font-size: 15px; color: #fff;">Structured Data — JSON-LD (Paste Ready)</h3>
                   </div>
-                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('jsonld')">🤖 Copy LLM Prompt</button>
+                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('jsonld')" data-tooltip="Copies a prompt to generate structured data AI crawlers can read.">🤖 Copy LLM Prompt</button>
                 </div>
                 <div class="code-box" id="jsonLdSnippet">
                 </div>
@@ -2092,7 +2161,7 @@
                     <span class="eyebrow" style="color: var(--cyan);">Implementation Asset 02</span>
                     <h3 style="font-size: 15px; color: #fff;">/llms.txt — Full File Contents</h3>
                   </div>
-                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('llmstxt')">🤖 Copy LLM Prompt</button>
+                  <button class="btn-copy-llm" onclick="copyCardLlmPrompt('llmstxt')" data-tooltip="Copies a prompt to write the /llms.txt file AI crawlers look for.">🤖 Copy LLM Prompt</button>
                 </div>
                 <div class="code-box" id="llmsTxtSnippet">
                 </div>
@@ -2111,8 +2180,8 @@
               <p>Explained in clear language that anyone can understand without technical jargon. Ready for executive review, non-technical clients, or direct PDF printing.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-primary" onclick="window.print()" data-tooltip="Print or save as PDF using your browser">▣ Print / Save as PDF</button>
-              <button class="btn-ghost" onclick="showView('board')" data-tooltip="Switch to board-level technical metric overview">View Board Metrics</button>
+              <button class="btn-primary" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export.">▣ Print / Save as PDF</button>
+              <button class="btn-ghost" onclick="showView('board')" data-tooltip="Switch to the executive summary with the technical numbers.">View Board Metrics</button>
             </div>
           </div>
 
@@ -2202,7 +2271,7 @@
               <p>Non-duplicative register of website findings, threat vectors, severity classifications, and accountable remediation assignments.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-primary" onclick="openModal('risk')">＋ Record New Risk</button>
+              <button class="btn-primary" onclick="openModal('risk')" data-tooltip="Log a new issue with its severity, owner, and treatment plan.">＋ Record New Risk</button>
             </div>
           </div>
 
@@ -2259,17 +2328,17 @@
           <div class="filter-bar">
             <div class="search-box">
               <span class="search-ico">🔍</span>
-              <input type="text" id="riskSearch" placeholder="Search finding title, asset, owner, or CVE..." oninput="renderRisks()">
+              <input type="text" id="riskSearch" placeholder="Search finding title, asset, owner, or CVE..." oninput="renderRisks()" data-tooltip="Filters the list as you type. Matches title, website, owner, or source.">
             </div>
             <div class="filter-group">
-              <select class="filter-select" id="riskSeverityFilter" onchange="renderRisks()">
+              <select class="filter-select" id="riskSeverityFilter" onchange="renderRisks()" data-tooltip="Show only issues at one severity level. Critical means fix now.">
                 <option value="ALL">All Severities</option>
                 <option value="Critical">Critical Only</option>
                 <option value="High">High Only</option>
                 <option value="Medium">Medium Only</option>
                 <option value="Low">Low Only</option>
               </select>
-              <select class="filter-select" id="riskStatusFilter" onchange="renderRisks()">
+              <select class="filter-select" id="riskStatusFilter" onchange="renderRisks()" data-tooltip="Show only issues at one stage: open, being fixed, fixed, or accepted as-is.">
                 <option value="ALL">All Statuses</option>
                 <option value="Open">Open</option>
                 <option value="In progress">In Progress</option>
@@ -2303,7 +2372,7 @@
               <p>Map regulatory frameworks (SOC 2, ISO 27001, GDPR, WCAG 2.1, PCI DSS, NIST CSF) directly to underlying operational website assets and active findings.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-primary" onclick="openModal('control')">＋ Map Control</button>
+              <button class="btn-primary" onclick="openModal('control')" data-tooltip="Link a compliance rule (SOC 2, GDPR, etc.) to this site and assign an owner.">＋ Map Control</button>
             </div>
           </div>
 
@@ -2329,7 +2398,7 @@
               <p>Maintain immutable, timestamped audit proof for framework controls, automated telemetry scans, and remediation sign-offs.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-primary" onclick="openModal('evidence')">＋ Upload / Link Evidence</button>
+              <button class="btn-primary" onclick="openModal('evidence')" data-tooltip="Log a document that proves a control works. New items start as 'In review'.">＋ Upload / Link Evidence</button>
             </div>
           </div>
 
@@ -2355,7 +2424,7 @@
               <p>Track actionable treatments, engineering assignments, due dates, and completion milestones without creating parallel, disconnected ticket queues.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-primary" onclick="openModal('remediation')">＋ Create Action</button>
+              <button class="btn-primary" onclick="openModal('remediation')" data-tooltip="Assign a fix to an owner with a due date and a clear definition of done.">＋ Create Action</button>
             </div>
           </div>
 
@@ -2381,9 +2450,9 @@
               <p>Exportable, high-level posture narrative linking open risk exposure, control coverage confidence, and treatment execution.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-amber" onclick="showView('plainReport')" data-tooltip="View the jargon-free plain English executive brief">📖 Plain English Brief</button>
-              <button class="btn-ghost" onclick="window.print()" data-tooltip="Print or export brief as PDF">▣ Print / PDF Brief</button>
-              <button class="btn-primary" onclick="openModal('appetite')" data-tooltip="Adjust corporate risk tolerance thresholds">♜ Update Appetite</button>
+              <button class="btn-amber" onclick="showView('plainReport')" data-tooltip="Open a jargon-free version of this report you can print for a client.">📖 Plain English Brief</button>
+              <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export.">▣ Print / PDF Brief</button>
+              <button class="btn-primary" onclick="openModal('appetite')" data-tooltip="Change how many critical and high risks leadership will tolerate.">♜ Update Appetite</button>
             </div>
           </div>
 
@@ -2405,22 +2474,22 @@
 
           <!-- Executive Summary Metrics -->
           <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Critical issues not yet fixed. Leadership's approved limit is zero.">
               <label>Open Critical Risks</label>
               <div class="metric-value" id="boardCritCount" style="color: var(--rose);">1</div>
               <small style="color: var(--text-muted);">Tolerance limit: 0</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Share of compliance rules confirmed to be working, not just documented.">
               <label>Control Assurance</label>
               <div class="metric-value" id="boardControlPct" style="color: var(--teal);">80%</div>
               <small style="color: var(--text-muted);">Assessed controls effective</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
               <label>Evidence Readiness</label>
               <div class="metric-value" id="boardEvidencePct" style="color: var(--cyan);">75%</div>
               <small style="color: var(--text-muted);">Artifacts reviewed & approved</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Approved, time-limited departures from policy. Each has an owner and expiry date.">
               <label>Active Exceptions</label>
               <div class="metric-value" id="boardExceptionCount" style="color: var(--amber);">1</div>
               <small style="color: var(--text-muted);">Time-bound & governed</small>
@@ -2437,8 +2506,8 @@
               <p>Define enterprise tolerance boundaries, govern formal exceptions, set strategic assurance objectives, and maintain an immutable decision log.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-ghost" onclick="openModal('exception')">＋ Exception Request</button>
-              <button class="btn-primary" onclick="openModal('appetite')">♜ Edit Appetite</button>
+              <button class="btn-ghost" onclick="openModal('exception')" data-tooltip="Document a temporary, approved departure from policy with an owner and expiry.">＋ Exception Request</button>
+              <button class="btn-primary" onclick="openModal('appetite')" data-tooltip="Change how many critical and high risks leadership will tolerate.">♜ Edit Appetite</button>
             </div>
           </div>
 
@@ -2478,7 +2547,7 @@
                   <h3>Approved Risk Exceptions</h3>
                   <p>Time-bound, accountable deviations from security policy</p>
                 </div>
-                <button class="btn-ghost" style="padding: 4px 10px; font-size: 11px;" onclick="openModal('exception')">＋ Request</button>
+                <button class="btn-ghost" style="padding: 4px 10px; font-size: 11px;" onclick="openModal('exception')" data-tooltip="Document a temporary, approved departure from policy with an owner and expiry.">＋ Request</button>
               </div>
               <div id="govExceptionsList" class="panel-flush">
               </div>
@@ -2495,7 +2564,7 @@
               <p>Validate operating effectiveness of controls through scheduled walk-throughs, automated scans, and independent validation tests.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-primary" onclick="openModal('test')">＋ Plan Control Test</button>
+              <button class="btn-primary" onclick="openModal('test')" data-tooltip="Schedule a check that a compliance control actually works in practice.">＋ Plan Control Test</button>
             </div>
           </div>
 
@@ -2505,7 +2574,7 @@
                 <h3>Control Testing Records</h3>
                 <p>Formal assessments of control operating effectiveness</p>
               </div>
-              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('test')">＋ Plan Test</button>
+              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('test')" data-tooltip="Schedule a check that a compliance control actually works in practice.">＋ Plan Test</button>
             </div>
             <div class="table-header grid-tests">
               <span>Control Test Name</span>
@@ -2528,8 +2597,8 @@
               <p>Global management console for platform administrators to provision tenant accounts, configure feature flags, manage white-labeling, and monitor fleet assurance.</p>
             </div>
             <div class="hero-actions">
-              <button class="btn-ghost" onclick="exportAllTenantsJSON()">↓ Export Roster (.json)</button>
-              <button class="btn-primary" onclick="openModal('create_tenant')">＋ Provision New Tenant</button>
+              <button class="btn-ghost" onclick="exportAllTenantsJSON()" data-tooltip="Downloads every client organization and its workspace data as one JSON file.">↓ Export Roster (.json)</button>
+              <button class="btn-primary" onclick="openModal('create_tenant')" data-tooltip="Set up a new client organization with its own isolated workspace.">＋ Provision New Tenant</button>
             </div>
           </div>
 
@@ -2555,8 +2624,8 @@
                       </p>
                     </div>
                     <div class="switch-wrap" style="margin-left: 14px;">
-                      <label class="toggle-switch">
-                        <input type="checkbox" id="ffWhiteLabelToggle" onchange="toggleWhiteLabelFlag(this.checked)">
+                      <label class="toggle-switch" data-tooltip="Turn on to let agency clients put their own branding on reports. Applies platform-wide.">
+                        <input type="checkbox" id="ffWhiteLabelToggle" aria-label="Enable agency white-labeling" onchange="toggleWhiteLabelFlag(this.checked)">
                         <span class="slider"></span>
                       </label>
                     </div>
@@ -2566,7 +2635,7 @@
                     <span style="font-size: 11px; color: var(--text-dim);">
                       Flag State: <strong id="lblFfState" style="color: var(--amber);">DISABLED (false)</strong>
                     </span>
-                    <button class="btn-ghost" id="btnConfigureWhiteLabel" style="padding: 4px 10px; font-size: 11px;" onclick="openModal('whitelabel_settings')" disabled style="opacity: 0.5;">
+                    <button class="btn-ghost" id="btnConfigureWhiteLabel" style="padding: 4px 10px; font-size: 11px; opacity: 0.5;" onclick="openModal('whitelabel_settings')" disabled data-tooltip="Set the agency name, logo mark, and report footer. Turn the flag on first.">
                       ⚙ Configure Branding
                     </button>
                   </div>
@@ -2582,8 +2651,8 @@
                       </p>
                     </div>
                     <div class="switch-wrap" style="margin-left: 14px;">
-                      <label class="toggle-switch">
-                        <input type="checkbox" checked disabled>
+                      <label class="toggle-switch" data-tooltip="Always on. Runs a real browser to test keyboard focus and screen-reader behavior.">
+                        <input type="checkbox" checked disabled aria-label="Headless browser crawler (always on)">
                         <span class="slider" style="opacity: 0.7;"></span>
                       </label>
                     </div>
@@ -2605,19 +2674,19 @@
               <div class="metric-value" style="color: var(--teal);" id="saTotalTenants">3</div>
               <small style="color: var(--text-muted);" id="saActiveTenants">3 Active Organizations</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Average safety score across every client organization on the platform.">
               <label>Fleet Average Posture</label>
               <div class="metric-value" style="color: var(--cyan);" id="saAvgPosture">84%</div>
               <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="Critical issues still open across all clients. Each needs immediate attention.">
               <label>Fleet Critical Risks</label>
               <div class="metric-value" style="color: var(--rose);" id="saTotalCritical">1</div>
               <small style="color: var(--rose);">1 requires immediate intervention</small>
             </div>
-            <div class="card metric-card">
+            <div class="card metric-card" data-tooltip="The MUSTER release you are running. Every change is logged in the changelog.">
               <label>Platform Engine</label>
-              <div class="metric-value" style="color: var(--amber);">v6.4</div>
+              <div class="metric-value" style="color: var(--amber);" id="lblAppVersion">v0.1.3</div>
               <small style="color: var(--text-muted);">WCAG 2.2 AA + AIO + Flags</small>
             </div>
           </div>
@@ -2629,7 +2698,7 @@
                 <h3>Tenant Accounts & Assigned Administrators</h3>
                 <p>Select any client organization to access their isolated workspace or copy onboarding credentials</p>
               </div>
-              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('create_tenant')">＋ Create Tenant</button>
+              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('create_tenant')" data-tooltip="Set up a new client organization with its own isolated workspace.">＋ Create Tenant</button>
             </div>
             <div class="table-header grid-superadmin-tenants">
               <span>Organization & Subdomain</span>
@@ -2660,8 +2729,8 @@
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn-ghost" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="btn-primary" id="modalSubmitBtn">Save Record</button>
+          <button type="button" class="btn-ghost" onclick="closeModal()" data-tooltip="Close without saving. Anything you typed is discarded.">Cancel</button>
+          <button type="submit" class="btn-primary" id="modalSubmitBtn" data-tooltip="Adds this record to the workspace and logs it in the audit trail.">Save Record</button>
         </div>
       </form>
     </div>
@@ -2675,7 +2744,7 @@
           <span class="eyebrow" style="color: var(--teal);">Scoring Transparency</span>
           <h3 id="scoreModalTitle" style="font-size: 22px; color: #fff; margin-top: 2px;">Score Calculation Feedback</h3>
         </div>
-        <button class="btn-ghost" style="padding: 4px 8px;" onclick="closeScoreExplainer()">✕</button>
+        <button class="btn-ghost" style="padding: 4px 8px;" onclick="closeScoreExplainer()" aria-label="Close" data-tooltip="Close this breakdown.">✕</button>
       </div>
       <p class="modal-desc" style="margin-bottom: 18px;">
         <strong>Benchmark Standard:</strong> 80/100 is Good. 90/100 is Better. 95+ is World-Class.
@@ -2698,6 +2767,9 @@
 
   <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
   <script>
+    // Product version. Bump per SemVer on every shipped change (see SOP Section 6 / Changelog).
+    const APP_VERSION = '0.1.3';
+
     // Feature Flag: White-Labeling & Agency Branding (Toggled OFF by default)
     const platformFeatureFlags = {
       whiteLabeling: false
@@ -3176,11 +3248,11 @@
           <div class="form-row">
             <div class="form-group">
               <label>Likelihood (1 to 5)</label>
-              <input type="number" min="1" max="5" name="likelihood" value="3" required>
+              <input type="number" min="1" max="5" name="likelihood" value="3" required data-tooltip="How likely this is to happen: 1 rare, 5 almost certain. Sets the heatmap position.">
             </div>
             <div class="form-group">
               <label>Impact (1 to 5)</label>
-              <input type="number" min="1" max="5" name="impact" value="4" required>
+              <input type="number" min="1" max="5" name="impact" value="4" required data-tooltip="How bad it would be: 1 minor, 5 severe. Sets the heatmap position.">
             </div>
           </div>
           <div class="form-group">
@@ -3493,7 +3565,7 @@
             </div>
             <div class="form-group">
               <label>Tenant Subdomain Slug</label>
-              <input required name="tenantSlug" placeholder="e.g. apex-payments">
+              <input required name="tenantSlug" placeholder="e.g. apex-payments" data-tooltip="Short URL-safe name for this organization. Lowercase letters, numbers, and hyphens.">
             </div>
           </div>
           <div class="form-row">
@@ -3525,7 +3597,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Cloud Data Residency Region</label>
-              <select name="region">
+              <select name="region" data-tooltip="Where this client's data is stored. EU clients usually need Frankfurt for GDPR.">
                 <option>US-East (N. Virginia)</option>
                 <option>EU-Central (Frankfurt - Strict GDPR)</option>
                 <option>US-West (Oregon)</option>
@@ -3557,13 +3629,13 @@
               </div>
               <div class="form-group">
                 <label>Brand Monogram / Avatar (2-3 chars)</label>
-                <input required name="wlBrandMark" value="${escapeHtml(wl.brandMark || 'AD')}" maxlength="4" placeholder="e.g. AD">
+                <input required name="wlBrandMark" value="${escapeHtml(wl.brandMark || 'AD')}" maxlength="4" placeholder="e.g. AD" data-tooltip="Two to three letters shown in the logo square when no image is set.">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Deliverable Branding Mode</label>
-                <select name="wlMode">
+                <select name="wlMode" data-tooltip="Whose name appears on client reports: the agency alone, both, or MUSTER.">
                   <option value="co-branded" ${wl.deliverableMode === 'co-branded' ? 'selected' : ''}>Co-Branded (Agency in partnership with 28 Foot Systems)</option>
                   <option value="white-label" ${wl.deliverableMode === 'white-label' ? 'selected' : ''}>100% White-Labeled (Agency Only)</option>
                   <option value="muster" ${wl.deliverableMode === 'muster' ? 'selected' : ''}>Standard MUSTER Brand</option>
@@ -3571,7 +3643,7 @@
               </div>
               <div class="form-group">
                 <label>Enable for Active Tenant Workspace</label>
-                <select name="wlEnabled">
+                <select name="wlEnabled" data-tooltip="Applies the custom brand to this organization only. The platform flag must also be on.">
                   <option value="true" ${wl.enabled ? 'selected' : ''}>Enabled (Use Custom Brand)</option>
                   <option value="false" ${!wl.enabled ? 'selected' : ''}>Disabled (Use Standard Brand)</option>
                 </select>
@@ -4025,7 +4097,7 @@ Temporary Password: TempMU!${Math.floor(1000 + Math.random() * 9000)}`;
             <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <small style="color: var(--teal); font-weight: 700;">+${p.pointsToTen} pts to reach 10/10</small>
-              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('aio_${p.id}')">🤖 Copy Fix</button>
+              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('aio_${p.id}')" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>
             </div>
           </div>
         `).join('');
@@ -4247,7 +4319,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13px; color: ${c.score >= 80 ? 'var(--emerald)' : 'var(--amber)'};">${c.score}/100</span>
           </div>
           <div style="text-align: right; display: flex; gap: 6px; justify-content: flex-end;">
-            <button class="btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="applyMasterUrl('${c.domain}', '${c.name}', '${c.industry}'); runUniversalAudit();">⚡ Audit</button>
+            <button class="btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="applyMasterUrl('${c.domain}', '${c.name}', '${c.industry}'); runUniversalAudit();" data-tooltip="Makes this client the active target and runs the full audit now.">⚡ Audit</button>
           </div>
         </div>
       `).join('');
@@ -4288,9 +4360,9 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <span class="pill ${t.status === 'Active' ? 'tenant-pill-active' : 'tenant-pill-suspended'}">${t.status}</span>
           </div>
           <div style="text-align: right; display: flex; gap: 6px; justify-content: flex-end;">
-            <button class="btn-primary" style="padding: 4px 9px; font-size: 11px;" onclick="switchTenant('${t.id}')">↗ Access</button>
-            <button class="btn-ghost" style="padding: 4px 7px; font-size: 11px;" onclick="copyCredentials('${t.id}')" title="Copy Login Credentials">📋</button>
-            <button class="btn-ghost" style="padding: 4px 7px; font-size: 11px;" onclick="toggleTenantStatus('${t.id}')" title="Toggle Active/Suspended">${t.status === 'Active' ? '⏸' : '▶'}</button>
+            <button class="btn-primary" style="padding: 4px 9px; font-size: 11px;" onclick="switchTenant('${t.id}')" data-tooltip="Open this organization's workspace. All views switch to its data.">↗ Access</button>
+            <button class="btn-ghost" style="padding: 4px 7px; font-size: 11px;" onclick="copyCredentials('${t.id}')" aria-label="Copy onboarding credentials" data-tooltip="Copies an onboarding summary with a sample temporary password. Not a live account.">📋</button>
+            <button class="btn-ghost" style="padding: 4px 7px; font-size: 11px;" onclick="toggleTenantStatus('${t.id}')" aria-label="${t.status === 'Active' ? 'Suspend tenant' : 'Reactivate tenant'}" data-tooltip="${t.status === 'Active' ? 'Suspends this organization. Their access pauses until reactivated.' : 'Reactivates this organization and restores their access.'}">${t.status === 'Active' ? '⏸' : '▶'}</button>
           </div>
         </div>
       `).join('');
@@ -4312,7 +4384,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <p style="font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <small style="color: var(--teal); font-weight: 700;">+${p.pointsToTen} pts</small>
-              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_${p.id}')">🤖 Copy Fix</button>
+              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_${p.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this accessibility area.">🤖 Copy Fix</button>
             </div>
           </div>
         `).join('');
@@ -4336,7 +4408,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <small style="color: var(--text-dim); font-family: var(--font-mono);">${d.location}</small>
             </div>
             <div><span style="font-size: 11.5px; color: var(--text-muted);">${d.validation}</span></div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('defect_${d.id}')">🤖 Copy Fix</button></div>
+            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('defect_${d.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this specific defect.">🤖 Copy Fix</button></div>
           </div>
         `).join('');
       }
@@ -4388,7 +4460,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             else if (score >= 4) cellClass = 'cell-med';
 
             matrixCellsHtml += `
-              <div class="matrix-cell ${cellClass}" title="Likelihood ${likelihood}, Impact ${impact} (${count} risks)">
+              <div class="matrix-cell ${cellClass}" data-tooltip="Likelihood ${likelihood} of 5, Impact ${impact} of 5: ${count} risk${count === 1 ? '' : 's'} here. Top-right is most urgent.">
                 <span class="matrix-count">${count > 0 ? count : ''}</span>
                 <span class="matrix-coord">${likelihood}×${impact}</span>
               </div>
@@ -4416,7 +4488,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(r.source)}</span></div>
             <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(r.owner)}</span></div>
             <div><span style="font-size: 12px; color: var(--teal);">${escapeHtml(r.status)}</span></div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('risk_${r.id}')">🤖 Fix</button></div>
+            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('risk_${r.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
           </div>
         `).join('');
       }
@@ -4440,7 +4512,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           </div>
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.owner)}</span></div>
           <div><span class="pill ${c.status === 'Effective' ? 'pill-approved' : (c.status === 'Deficient' ? 'pill-critical' : 'pill-pending')}">${c.status}</span></div>
-          <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('ctl_${c.code}')">🤖 Fix</button></div>
+          <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('ctl_${c.code}')" data-tooltip="Copies a prompt for an AI assistant to help satisfy this control.">🤖 Fix</button></div>
         </div>
       `).join('');
     }
@@ -4461,7 +4533,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           <div><span class="pill pill-medium">${escapeHtml(e.type)}</span></div>
           <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(e.reviewer)}</span></div>
           <div><span class="pill ${e.status === 'Approved' ? 'pill-approved' : 'pill-pending'}">${e.status}</span></div>
-          <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Artifact reviewed.')">Verify</button></div>
+          <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Artifact reviewed.')" data-tooltip="Marks this document as reviewed. Does not change its approval status yet.">Verify</button></div>
         </div>
       `).join('');
     }
@@ -4509,7 +4581,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <span class="eyebrow" style="color: var(--text-dim);">Status</span>
               <span style="font-size: 12px; color: var(--teal);">${escapeHtml(r.status)}</span>
             </div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('risk_${r.id}')">🤖 Fix</button></div>
+            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('risk_${r.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
           </div>
         `).join('');
       }
@@ -4563,7 +4635,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(t.period)}</span></div>
           <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(t.tester)}</span></div>
           <div><span class="pill ${t.result === 'Effective' ? 'pill-approved' : 'pill-critical'}">${t.result}</span></div>
-          <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Test documentation opened.')">Details</button></div>
+          <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Test documentation opened.')" data-tooltip="Opens the full test record and the evidence that was inspected.">Details</button></div>
         </div>
       `).join('');
     }
@@ -4636,7 +4708,79 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       showToast(`Preset '${val}' applied.`);
     }
 
+    // Tooltip engine: event delegation on [data-tooltip], one floating element.
+    // Shows on hover and keyboard focus, dismisses on Escape (WCAG 1.4.13),
+    // flips below the target when there is no room above, and is announced to
+    // screen readers via aria-describedby while visible.
+    function initTooltips() {
+      const tip = document.createElement('div');
+      tip.className = 'app-tooltip';
+      tip.id = 'appTooltip';
+      tip.setAttribute('role', 'tooltip');
+      document.body.appendChild(tip);
+
+      let current = null;
+      let suppressed = false;
+
+      function findTarget(node) {
+        return node && node.closest ? node.closest('[data-tooltip]') : null;
+      }
+
+      function show(target) {
+        const text = target.getAttribute('data-tooltip');
+        if (!text || suppressed) return;
+        current = target;
+        tip.textContent = text;
+        tip.classList.add('show');
+        target.setAttribute('aria-describedby', 'appTooltip');
+        position(target);
+      }
+
+      function position(target) {
+        const r = target.getBoundingClientRect();
+        const t = tip.getBoundingClientRect();
+        const gap = 8;
+        let top = r.top - t.height - gap;
+        if (top < 8) top = r.bottom + gap;
+        let left = r.left + (r.width / 2) - (t.width / 2);
+        left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+        tip.style.top = `${Math.round(top)}px`;
+        tip.style.left = `${Math.round(left)}px`;
+      }
+
+      function hide() {
+        if (current) current.removeAttribute('aria-describedby');
+        current = null;
+        tip.classList.remove('show');
+      }
+
+      document.addEventListener('mouseover', (e) => {
+        const target = findTarget(e.target);
+        if (target && target !== current) show(target);
+        else if (!target && current) hide();
+      });
+      document.addEventListener('mouseout', (e) => {
+        const target = findTarget(e.target);
+        if (target && !target.contains(e.relatedTarget)) hide();
+      });
+      document.addEventListener('focusin', (e) => {
+        const target = findTarget(e.target);
+        if (target) show(target);
+      });
+      document.addEventListener('focusout', hide);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && current) { hide(); suppressed = true; }
+      });
+      document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+      window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+      window.addEventListener('resize', () => { if (current) position(current); });
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
+      initTooltips();
+      const versionEl = document.getElementById('lblAppVersion');
+      if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
+
       // Ingest query parameters from standalone onboarding.html if provided
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('newTenant') === 'true') {
