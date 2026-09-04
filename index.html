@@ -1464,6 +1464,34 @@
       .master-url-input-wrap { min-width: 0; flex-basis: 100%; }
       .modal-dialog, .modal-dialog.wide { padding: 20px; }
     }
+
+    /* Live mode (Supabase-backed workspace) */
+    .live-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid rgba(54, 226, 201, 0.4); background: rgba(54, 226, 201, 0.12); color: var(--teal); }
+    .live-panel { margin-bottom: 20px; }
+    .live-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 18px; }
+    .live-step { padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--surface-border); background: rgba(8, 16, 36, 0.6); font-size: 11px; color: var(--text-dim); }
+    .live-step strong { display: block; color: #fff; font-size: 12px; }
+    .live-advisory { margin-top: 10px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.07); font-size: 12px; line-height: 1.55; color: #e8ecf3; }
+    .live-advisory h5 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--amber); }
+    .live-advisory p { margin: 0 0 8px; }
+    .live-advisory .law { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; border: 1px solid rgba(255,255,255,0.14); color: #d0dbe9; }
+    .live-advisory small { display: block; margin-top: 6px; color: var(--text-dim); font-size: 10.5px; }
+    .live-keybox { font-family: var(--font-mono); font-size: 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: #06101f; border: 1px solid rgba(54, 226, 201, 0.4); color: var(--teal); word-break: break-all; margin-top: 8px; }
+    .live-md h1 { font-size: 20px; margin: 0 0 10px; color: #fff; }
+    .live-md h2 { font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--teal); margin: 18px 0 8px; }
+    .live-md p { margin: 0 0 8px; font-size: 12.5px; color: #d0dbe9; line-height: 1.55; }
+    .live-md ul { margin: 0 0 10px 18px; padding: 0; }
+    .live-md li { font-size: 12.5px; color: #e2e8f0; margin-bottom: 6px; line-height: 1.5; }
+    .live-md table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 6px; }
+    .live-md th, .live-md td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--surface-border); color: #d0dbe9; font-family: var(--font-mono); }
+    .live-md th { color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .live-cite { display: inline-block; margin-left: 3px; padding: 0 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 10px; background: rgba(54, 226, 201, 0.12); color: var(--teal); border: 1px solid rgba(54, 226, 201, 0.3); }
+    .live-grid { display: grid; grid-template-columns: 1.4fr 0.8fr 0.8fr 0.7fr 0.7fr 1fr; gap: 10px; align-items: center; }
+    .live-flag-row { display: grid; grid-template-columns: 1.6fr 2fr 0.7fr 0.7fr; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--surface-border); font-size: 12px; }
+    .live-flag-row code { font-family: var(--font-mono); font-size: 11px; color: var(--teal); }
+    .live-muted { color: var(--text-dim); font-size: 11px; }
+    @media (max-width: 720px) { .live-steps { grid-template-columns: 1fr; } .live-grid, .live-flag-row { grid-template-columns: 1fr 1fr; } }
+
   </style>
 </head>
 <body>
@@ -1594,7 +1622,10 @@
           <button class="btn-primary" onclick="openModal('create_tenant')" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Set up a new client organization with its own isolated workspace.">
             ＋ Tenant
           </button>
-          <div class="status-pill" data-tooltip="This workspace runs on sample data. Nothing is being scanned live yet.">
+          <button class="btn-ghost" id="btnLiveDemo" hidden onclick="Live.showingDemo ? Live.showLive() : Live.showDemo()" data-tooltip="Switch between your live workspace and the sample data walkthrough.">◐ Show demo</button>
+          <button class="btn-primary" id="btnLiveScan" hidden onclick="Live.requestScan()" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Queues a real scan of the active website and regenerates the SITREP.">⚡ Run scan</button>
+          <button class="btn-ghost" id="btnLiveAuth" onclick="Live.openAuth()" data-tooltip="Sign in to a live workspace with real scans. Demo mode stays available.">🔐 Sign in</button>
+          <div class="status-pill" data-tooltip="Demo mode runs on sample data. Sign in to switch to a live workspace with real scans.">
             <i class="dot-live"></i>
             <span id="syncStatus">Demo workspace · sample data</span>
           </div>
@@ -2719,6 +2750,105 @@
   </div>
 
   <!-- Universal Modal Backdrop -->
+  <!-- Live mode: sign in -->
+  <div class="modal-backdrop" id="liveAuthBackdrop" onclick="if(event.target.id==='liveAuthBackdrop') Live.closeAuth()">
+    <div class="modal-dialog" style="max-width: 460px;">
+      <h3>Sign in to MUSTER</h3>
+      <p class="modal-desc">Live workspaces run on the MUSTER backend with real scans and cited SITREPs. Demo mode stays available for walkthroughs.</p>
+      <form id="liveAuthForm" onsubmit="Live.submitAuth(event, 'signin')">
+        <div class="form-group">
+          <label for="liveAuthEmail">Work email</label>
+          <input type="email" id="liveAuthEmail" name="email" required autocomplete="email" placeholder="you@company.com">
+        </div>
+        <div class="form-group">
+          <label for="liveAuthPassword">Password</label>
+          <input type="password" id="liveAuthPassword" name="password" minlength="8" autocomplete="current-password" placeholder="At least 8 characters, or leave blank for a magic link" data-tooltip="Leave blank and choose Magic link to sign in by email instead.">
+        </div>
+        <div id="liveAuthMsg" class="live-muted" role="status" aria-live="polite"></div>
+        <div class="modal-actions" style="flex-wrap: wrap;">
+          <button type="button" class="btn-ghost" onclick="Live.closeAuth()">Cancel</button>
+          <button type="button" class="btn-ghost" onclick="Live.submitAuth(event, 'magic')" data-tooltip="Emails a one-time sign-in link. No password needed.">Magic link</button>
+          <button type="button" class="btn-ghost" onclick="Live.submitAuth(event, 'signup')" data-tooltip="Creates your account, then walks you through onboarding.">Create account</button>
+          <button type="submit" class="btn-primary">Sign in</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Live mode: self-serve onboarding -->
+  <div class="modal-backdrop" id="liveOnboardBackdrop">
+    <div class="modal-dialog" style="max-width: 760px;">
+      <h3>Set up your workspace</h3>
+      <p class="modal-desc">Three steps, no human in the loop. Your first scan starts the moment you finish.</p>
+      <div class="live-steps">
+        <div class="live-step"><strong>1. Organization</strong>Name, industry, and where you operate. Laws follow your visitors, so the advisory updates as you choose.</div>
+        <div class="live-step"><strong>2. Website</strong>The first site to scan. More can be added later on Starter and above.</div>
+        <div class="live-step"><strong>3. Brand</strong>Optional. Deliver reports under your own name on Starter and above.</div>
+      </div>
+      <form id="liveOnboardForm" onsubmit="Live.submitOnboard(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="obOrgName">Organization name</label>
+            <input id="obOrgName" name="org_name" required maxlength="160" placeholder="e.g. Northstar Fintech">
+          </div>
+          <div class="form-group">
+            <label for="obIndustry">Industry</label>
+            <input id="obIndustry" name="industry" maxlength="120" placeholder="e.g. Fintech, Healthcare, Agency">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="obCountry">Country</label>
+            <select id="obCountry" name="country_code" required onchange="Live.onCountryChange(this.value)" data-tooltip="Sets which national laws appear in your advisory and compliance posture."></select>
+          </div>
+          <div class="form-group">
+            <label for="obRegion">State / Province</label>
+            <select id="obRegion" name="region_code" onchange="Live.onRegionChange()" disabled data-tooltip="Adds state-level laws such as CCPA or AODA to the advisory."><option value="">Not applicable</option></select>
+          </div>
+        </div>
+        <div id="obAdvisory" class="live-advisory" hidden></div>
+        <div class="form-row" style="margin-top: 14px;">
+          <div class="form-group">
+            <label for="obSiteUrl">Website URL</label>
+            <input id="obSiteUrl" name="website_url" type="url" required placeholder="https://www.example.com" data-tooltip="Full address including https://. This is the first site MUSTER scans.">
+          </div>
+          <div class="form-group">
+            <label for="obSiteName">Website label</label>
+            <input id="obSiteName" name="website_name" maxlength="160" placeholder="e.g. Marketing site">
+          </div>
+        </div>
+        <details style="margin-top: 6px;">
+          <summary style="cursor: pointer; font-size: 12px; color: var(--teal);">Brand your reports (optional)</summary>
+          <div class="form-row" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="obBrandName">Brand name</label>
+              <input id="obBrandName" name="brand_name" maxlength="80" placeholder="e.g. Apex Digital Assurance">
+            </div>
+            <div class="form-group">
+              <label for="obBrandMark">Monogram (2 to 4 characters)</label>
+              <input id="obBrandMark" name="brand_mark" maxlength="4" placeholder="AD">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="obBrandColor">Primary color</label>
+              <input id="obBrandColor" name="primary_color" type="color" value="#36e2c9">
+            </div>
+            <div class="form-group">
+              <label for="obSignoff">Report sign-off name</label>
+              <input id="obSignoff" name="report_signoff_name" maxlength="120" placeholder="e.g. Alex Vance, Principal">
+            </div>
+          </div>
+        </details>
+        <div id="liveOnboardMsg" class="live-muted" role="status" aria-live="polite" style="margin-top: 10px;"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="Live.closeOnboard()">Later</button>
+          <button type="submit" class="btn-primary" id="obSubmit" data-tooltip="Creates the organization and starts the first scan.">Create workspace and scan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
     <div class="modal-dialog" id="modalDialog">
       <h3 id="modalTitle">Record Item</h3>
@@ -2766,9 +2896,10 @@
   </div>
 
   <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
   <script>
     // Product version. Bump per SemVer on every shipped change (see SOP Section 6 / Changelog).
-    const APP_VERSION = '0.2.0';
+    const APP_VERSION = '0.3.0';
 
     // Feature Flag: White-Labeling & Agency Branding (Toggled OFF by default)
     const platformFeatureFlags = {
@@ -4830,6 +4961,546 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
 
       refreshAll();
     });
+
+    // =====================================================================
+    // Live mode: Supabase-backed workspace (project mgtmqucaldkaxvxglguw).
+    // Demo tenants above stay untouched. Signing in swaps the tenant store
+    // for live organizations; signing out (or "Show demo") restores it.
+    // Every data call goes through public.muster_* RPCs; RLS is enforced
+    // server-side, so this file never sees another tenant's rows.
+    // =====================================================================
+    const Live = {
+      url: 'https://mgtmqucaldkaxvxglguw.supabase.co',
+      key: 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww',
+      sb: null, session: null, active: false, showingDemo: false,
+      ws: null, org: null, website: null, overview: null, admin: null,
+      demoStore: null, demoTenantId: null, poll: null, countries: null,
+
+      init() {
+        if (!window.supabase || !window.supabase.createClient) { console.warn('supabase-js not loaded; live mode off'); return; }
+        this.sb = window.supabase.createClient(this.url, this.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+        this.sb.auth.onAuthStateChange((event, session) => {
+          this.session = session;
+          if (session && !this.active) this.enter().catch(e => this.fail(e));
+          if (!session && this.active) this.exit();
+          this.renderTopbar();
+        });
+        this.renderTopbar();
+      },
+
+      async rpc(fn, args) {
+        const { data, error } = await this.sb.rpc(fn, args || {});
+        if (error) throw new Error(error.message || String(error));
+        return data;
+      },
+      fail(e) { console.error(e); showToast(`Live: ${(e && e.message) || e}`); },
+
+      // ---------- auth ----------
+      openAuth() {
+        if (!this.sb) { showToast('Live mode is unavailable: backend client did not load.'); return; }
+        if (this.session) { this.signOut(); return; }
+        document.getElementById('liveAuthMsg').textContent = '';
+        document.getElementById('liveAuthBackdrop').classList.add('open');
+        setTimeout(() => document.getElementById('liveAuthEmail')?.focus(), 50);
+      },
+      closeAuth() { document.getElementById('liveAuthBackdrop').classList.remove('open'); },
+      async submitAuth(e, mode) {
+        e.preventDefault();
+        const email = document.getElementById('liveAuthEmail').value.trim();
+        const password = document.getElementById('liveAuthPassword').value;
+        const msg = document.getElementById('liveAuthMsg');
+        if (!email) { msg.textContent = 'Enter your email first.'; return; }
+        try {
+          if (mode === 'magic' || (mode === 'signin' && !password)) {
+            const { error } = await this.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
+            if (error) throw error;
+            msg.textContent = 'Magic link sent. Open it on this device to finish signing in.';
+            return;
+          }
+          if (mode === 'signup') {
+            if (password.length < 8) { msg.textContent = 'Password needs at least 8 characters.'; return; }
+            const { data, error } = await this.sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
+            if (error) throw error;
+            if (data.session) { this.closeAuth(); return; }
+            msg.textContent = 'Account created. Confirm the email we sent, then sign in.';
+            return;
+          }
+          const { error } = await this.sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          this.closeAuth();
+        } catch (err) { msg.textContent = err.message || String(err); }
+      },
+      async signOut() {
+        try { await this.sb.auth.signOut(); } catch (e) { this.fail(e); }
+      },
+
+      // ---------- lifecycle ----------
+      async enter() {
+        this.active = true;
+        this.showingDemo = false;
+        if (!this.demoStore) { this.demoStore = Object.assign({}, multiTenantStore); this.demoTenantId = activeTenantId; }
+        try { await this.rpc('muster_claim_invites'); } catch (_) { /* first sign-in may pre-date invites */ }
+        const status = await this.rpc('muster_onboarding_status');
+        if (status.next === 'onboard') { this.setSync('Signed in · no workspace yet'); await this.openOnboard(); return; }
+        await this.loadWorkspace();
+      },
+      exit() {
+        this.active = false;
+        this.stopPolling();
+        this.ws = this.org = this.website = this.overview = this.admin = null;
+        this.restoreDemo();
+        this.setSync('Demo workspace · sample data');
+        this.renderTopbar();
+        showToast('Signed out. Demo workspace restored.');
+      },
+      restoreDemo() {
+        if (!this.demoStore) return;
+        Object.keys(multiTenantStore).forEach(k => { if (k.startsWith('live-')) delete multiTenantStore[k]; });
+        Object.assign(multiTenantStore, this.demoStore);
+        if (multiTenantStore[this.demoTenantId]) switchTenant(this.demoTenantId);
+      },
+      showDemo() {
+        if (!this.active) return;
+        this.showingDemo = true;
+        this.restoreDemo();
+        this.setSync('Demo workspace · sample data (signed in)');
+        this.renderTopbar();
+      },
+      async showLive() {
+        this.showingDemo = false;
+        await this.loadWorkspace();
+      },
+      setSync(text) { const el = document.getElementById('syncStatus'); if (el) el.textContent = text; },
+
+      renderTopbar() {
+        const btn = document.getElementById('btnLiveAuth');
+        const scan = document.getElementById('btnLiveScan');
+        const demo = document.getElementById('btnLiveDemo');
+        if (btn) btn.textContent = this.session ? `⏻ Sign out (${this.session.user.email})` : '🔐 Sign in';
+        const liveOn = this.active && !this.showingDemo && !!this.website;
+        if (scan) scan.hidden = !liveOn;
+        if (demo) { demo.hidden = !this.active; demo.textContent = this.showingDemo ? '● Back to live' : '◐ Show demo'; }
+      },
+
+      // ---------- onboarding ----------
+      async openOnboard() {
+        const backdrop = document.getElementById('liveOnboardBackdrop');
+        backdrop.classList.add('open');
+        const sel = document.getElementById('obCountry');
+        if (!this.countries) {
+          try { this.countries = await this.rpc('muster_countries'); } catch (e) { this.fail(e); this.countries = []; }
+        }
+        sel.innerHTML = '<option value="">Select a country</option>' + this.countries.map(c =>
+          `<option value="${c.code}" ${c.code === 'US' ? 'selected' : ''}>${escapeHtml(c.name)}${c.has_profile ? '' : ' (baseline only)'}</option>`).join('');
+        await this.onCountryChange(sel.value);
+      },
+      closeOnboard() { document.getElementById('liveOnboardBackdrop').classList.remove('open'); },
+      async onCountryChange(code) {
+        const regionSel = document.getElementById('obRegion');
+        regionSel.innerHTML = '<option value="">Not applicable</option>';
+        regionSel.disabled = true;
+        if (!code) { document.getElementById('obAdvisory').hidden = true; return; }
+        try {
+          const regions = await this.rpc('muster_regions', { p_country_code: code });
+          if (regions.length) {
+            regionSel.innerHTML += regions.map(r => `<option value="${r.code}">${escapeHtml(r.name)}</option>`).join('');
+            regionSel.disabled = false;
+          }
+        } catch (e) { this.fail(e); }
+        await this.onRegionChange();
+      },
+      async onRegionChange() {
+        const code = document.getElementById('obCountry').value;
+        const region = document.getElementById('obRegion').value || null;
+        const box = document.getElementById('obAdvisory');
+        if (!code) { box.hidden = true; return; }
+        try {
+          const adv = await this.rpc('muster_jurisdiction_advisory', { p_country_code: code, p_region_code: region, p_depth: 'full' });
+          const laws = (adv.laws || []);
+          box.innerHTML = `<h5>What applies to you (${adv.law_count} laws${adv.profile_available ? '' : ', global baseline only'})</h5>` +
+            (adv.jurisdictions || []).map(j => `<p><strong>${escapeHtml(j.name)}.</strong> ${escapeHtml(j.advisory)}</p>`).join('') +
+            (laws.length ? `<div>${laws.map(l => `<span class="law" title="${escapeHtml(l.full_name)}">${escapeHtml(l.short_name)}</span>`).join('')}</div>` : '') +
+            `<small>${escapeHtml(adv.disclaimer)} Full obligations, mapped to your scan evidence, appear inside the workspace.</small>`;
+          box.hidden = false;
+        } catch (e) { this.fail(e); }
+      },
+      async submitOnboard(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        const p = Object.fromEntries(f.entries());
+        const msg = document.getElementById('liveOnboardMsg');
+        const btn = document.getElementById('obSubmit');
+        const payload = {
+          org_name: p.org_name, industry: p.industry, country_code: p.country_code, region_code: p.region_code || null,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          website_url: p.website_url, website_name: p.website_name,
+        };
+        if (p.brand_name) payload.brand = { brand_name: p.brand_name, brand_mark: p.brand_mark, primary_color: p.primary_color, report_signoff_name: p.report_signoff_name };
+        btn.disabled = true; msg.textContent = 'Creating your workspace and queuing the first scan...';
+        try {
+          const res = await this.rpc('muster_onboard', { p: payload });
+          msg.textContent = (res.next_steps || []).join(' ');
+          this.closeOnboard();
+          await this.loadWorkspace();
+          if (res.website && res.website.first_scan) this.startPolling(res.website.website_id);
+          showToast(`Workspace created. First scan #${res.website?.first_scan?.scan_id ?? ''} is running.`);
+        } catch (err) { msg.textContent = err.message || String(err); }
+        finally { btn.disabled = false; }
+      },
+
+      // ---------- workspace hydration ----------
+      async loadWorkspace() {
+        this.ws = await this.rpc('muster_my_workspace');
+        const orgs = this.ws.organizations || [];
+        if (!orgs.length) { await this.openOnboard(); return; }
+        const preferred = this.ws.preferences?.default_organization_id;
+        this.org = orgs.find(o => o.id === preferred) || orgs[0];
+        // Build one live tenant per organization; demo tenants are removed while live is showing.
+        Object.keys(multiTenantStore).forEach(k => delete multiTenantStore[k]);
+        for (const o of orgs) multiTenantStore['live-' + o.id] = this.tenantFromOrg(o);
+        await this.activateOrg(this.org);
+      },
+      tenantFromOrg(o) {
+        const site = (o.websites || [])[0];
+        const brand = o.brand || {};
+        return {
+          id: 'live-' + o.id, orgId: o.id, name: o.name, slug: String(o.id), domain: site ? this.host(site.url) : '', industry: o.industry || '',
+          tier: (o.plan_detail && o.plan_detail.name) || o.plan, region: [o.country_code, o.region_code].filter(Boolean).join('-') || 'n/a',
+          adminName: (o.members || []).find(m => m.role === 'executive')?.name || '', adminEmail: (o.members || []).find(m => m.role === 'executive')?.email || '',
+          status: 'Active', createdAt: (o.created_at || '').slice(0, 10), live: true, org: o,
+          whiteLabel: { enabled: !!brand.is_custom, agencyName: brand.brand_name, brandMark: brand.brand_mark, primaryColor: brand.primary_color,
+            deliverableMode: brand.hide_muster_attribution ? 'white-label' : (brand.is_custom ? 'co-branded' : 'muster'), customDisclaimer: brand.report_disclaimer },
+          data: null,
+        };
+      },
+      host(u) { try { return new URL(u).host; } catch (_) { return u || ''; } },
+      async activateOrg(o) {
+        this.org = o;
+        this.website = (o.websites || [])[0] || null;
+        const tenant = multiTenantStore['live-' + o.id];
+        this.overview = this.website ? await this.rpc('muster_website_overview', { p_website_id: this.website.id }) : null;
+        tenant.data = this.buildState(o, this.overview);
+        activeTenantId = tenant.id;
+        state = tenant.data;
+        platformFeatureFlags.whiteLabeling = !!(o.flags && o.flags.white_label);
+        const toggle = document.getElementById('ffWhiteLabelToggle');
+        if (toggle) { toggle.checked = platformFeatureFlags.whiteLabeling; toggle.disabled = !this.ws.is_super_admin; }
+        switchTenant(tenant.id);
+        this.setSync(`Live · ${o.name} · ${o.plan} plan`);
+        this.renderTopbar();
+        this.renderLivePanels();
+        if (this.ws.is_super_admin) this.loadAdmin().catch(e => this.fail(e));
+      },
+      sevCap(s) { return ({ critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Low' })[s] || 'Low'; },
+      lik(s) { return ({ critical: 5, high: 4, medium: 3, low: 2, info: 1 })[s] || 1; },
+      buildState(o, ov) {
+        const base = JSON.parse(JSON.stringify(defaultData));
+        const site = this.website;
+        const findings = (ov && ov.findings) || [];
+        const laws = (ov && ov.compliance && ov.compliance.laws) || [];
+        const sitrep = (ov && ov.latest_sitrep) || null;
+        const catLabel = { security: 'Automated Security Scan', privacy: 'Privacy Assessment', accessibility: 'Accessibility Audit (WCAG 2.2)', availability: 'Availability Check', third_party: 'Third-Party Inventory', governance: 'Governance Check' };
+        const posture = ov ? ov.posture_score : null;
+        base.client = {
+          name: o.name, url: site ? this.host(site.url) : '', industry: o.industry || 'Not set',
+          description: `Live workspace on the ${o.plan} plan. Jurisdiction ${[o.country_code, o.region_code].filter(Boolean).join('-') || 'not set'}.`,
+          tier: (o.plan_detail && o.plan_detail.name) || o.plan,
+          goal: 'Zero open critical findings, every SITREP claim cited to captured evidence.'
+        };
+        base.subClients = (o.websites || []).map(w => ({
+          id: `WEB-${w.id}`, name: w.name, domain: this.host(w.url), industry: o.industry || '', tier: (o.plan_detail && o.plan_detail.name) || o.plan,
+          scope: 'HTTP-native scan', score: w.posture_score ?? 0,
+          contact: w.latest_scan ? `Last scan ${String(w.latest_scan.finished_at || w.latest_scan.created_at).slice(0, 16).replace('T', ' ')} (${w.latest_scan.status})` : 'No scan yet',
+          addedAt: (w.created_at || '').slice(0, 10), websiteId: w.id
+        }));
+        base.risks = findings.map(f => ({
+          id: `F${f.id}`, title: f.title, website: f.page_url, source: catLabel[f.category] || f.category, severity: this.sevCap(f.severity),
+          likelihood: this.lik(f.severity), impact: this.lik(f.severity), owner: 'Unassigned',
+          status: f.status === 'accepted' ? 'Mitigated' : (f.risk_id ? 'In progress' : 'Open'),
+          treatment: f.remediation, escalation: `Rule ${f.rule_id} · ${f.confidence} confidence · evidence ${(f.evidence_ids || []).map(i => 'E' + i).join(', ') || 'none'} · seen ${f.occurrences}x`,
+          findingId: f.id
+        }));
+        base.controls = laws.map(l => ({
+          id: `LAW-${l.law_id}`, framework: l.jurisdiction_code, code: l.short_name, title: l.full_name, description: l.applies_when, owner: 'Executive',
+          status: ({ evidence_gap: 'Deficient', clear: 'Effective', not_scanned: 'Under Review', manual_review: 'Under Review' })[l.status] || 'Under Review'
+        }));
+        const evIndex = (sitrep && sitrep.sections && sitrep.sections.evidence_index) || [];
+        base.evidence = evIndex.map(e => ({
+          id: `E${e.evidence_id}`, title: `${e.kind.replace(/_/g, ' ')} · ${e.url}`, type: 'Scan / Audit', reviewer: 'MUSTER engine', status: 'Approved',
+          context: `HTTP ${e.http_status ?? 'n/a'} · sha256 ${String(e.sha256 || '').slice(0, 12)} · captured ${String(e.captured_at || '').slice(0, 16).replace('T', ' ')}`
+        }));
+        const due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        base.remediation = findings.filter(f => f.status === 'open' || f.status === 'reopened').slice(0, 8).map(f => ({
+          id: `REM-F${f.id}`, title: f.remediation.length > 90 ? f.remediation.slice(0, 87) + '...' : f.remediation, riskId: `F${f.id}`, owner: 'Unassigned',
+          dueDate: due, progress: 0, status: 'Not started', criteria: f.plain_english
+        }));
+        base.governance.exceptions = [];
+        base.governance.auditTrail = ((ov && ov.recent_scans) || []).slice(0, 8).map(s => ({
+          time: String(s.finished_at || s.created_at).slice(0, 16).replace('T', ' '), action: `Scan #${s.id} ${s.status}`,
+          detail: s.summary && s.summary.posture_score != null ? `Posture ${s.summary.posture_score} (${s.summary.posture_band}); ${s.summary.new} new, ${s.summary.resolved} resolved` : (s.error_message || s.trigger)
+        }));
+        base.assurance.tests = ((ov && ov.recent_scans) || []).slice(0, 6).map(s => ({
+          id: `SCAN-${s.id}`, name: `Scan #${s.id} (${s.engine_version || 'engine'})`, period: String(s.created_at).slice(0, 10), tester: 'MUSTER engine',
+          result: s.status === 'complete' ? 'Effective' : (s.status === 'failed' ? 'Exceptions Noted' : 'In progress'),
+          evidenceSummary: s.summary && s.summary.evidence != null ? `${s.summary.evidence} evidence rows, ${s.summary.new} new findings` : (s.error_message || 'Pending')
+        }));
+        // Accessibility view: one pillar per HTTP-native rule; browser engine pillars marked pending.
+        const a11yRules = [['A11Y-001', 'Page language'], ['A11Y-002', 'Page title'], ['A11Y-003', 'Image alt text'], ['A11Y-004', 'Pinch zoom'], ['A11Y-005', 'Top-level heading'], ['A11Y-006', 'Form labels'], ['A11Y-007', 'Link text']];
+        const openByRule = {};
+        findings.forEach(f => { openByRule[f.rule_id] = f; });
+        base.accessibility.overallScore = posture ?? 0;
+        base.accessibility.pillars = a11yRules.map(([rid, name], i) => {
+          const f = openByRule[rid];
+          return { id: rid, name: `${i + 1}. ${name}`, score: f ? 4 : 10, rationale: f ? f.detail : `No open finding for rule ${rid}.`, pointsToTen: f ? 6 : 0 };
+        }).concat([{ id: 'browser', name: '8. Browser engine (keyboard, contrast, ARIA)', score: 0, rationale: 'Pending: the headless browser engine is behind the browser_wcag_engine flag and not yet enabled.', pointsToTen: 10 }]);
+        base.accessibility.defects = findings.filter(f => f.category === 'accessibility').map(f => ({
+          id: `F${f.id}`, severity: f.severity === 'critical' ? 'P0' : (f.severity === 'high' ? 'P0' : 'P1'), criterion: `WCAG ${(f.framework_refs && f.framework_refs.WCAG) || ''}`.trim(),
+          criterionName: f.title, component: f.location || 'homepage', impact: f.plain_english, rootCause: f.detail, fix: f.remediation, location: f.page_url,
+          validation: `HTTP engine · evidence ${(f.evidence_ids || []).map(i => 'E' + i).join(', ')}`, status: f.status === 'open' ? 'Open' : f.status
+        }));
+        // AIO view: governance and third-party rules.
+        const gov = (rid) => openByRule[rid];
+        base.aio.domain = site ? this.host(site.url) : '';
+        base.aio.clientName = o.name;
+        base.aio.overallScore = posture ?? 0;
+        base.aio.pillars = [
+          { id: 'crawl', name: '1. Crawl governance (robots, sitemap)', score: (gov('GOV-001') || gov('GOV-002')) ? 4 : 9, rationale: (gov('GOV-001') || gov('GOV-002') || {}).detail || 'robots.txt and sitemap found.', pointsToTen: (gov('GOV-001') || gov('GOV-002')) ? 6 : 1 },
+          { id: 'entity', name: '2. Entity clarity (title, description, canonical)', score: (gov('GOV-003') || gov('GOV-005') || gov('A11Y-002')) ? 5 : 9, rationale: (gov('GOV-003') || gov('GOV-005') || gov('A11Y-002') || {}).detail || 'Title, description, and canonical present.', pointsToTen: (gov('GOV-003') || gov('GOV-005')) ? 5 : 1 },
+          { id: 'aibots', name: '3. AI crawler policy', score: gov('GOV-004') && /unaddressed/i.test(gov('GOV-004').detail) ? 3 : 8, rationale: (gov('GOV-004') || {}).detail || 'No robots.txt captured yet.', pointsToTen: 2 },
+          { id: 'thirdparty', name: '4. Third-party script surface', score: gov('TP-001') ? 6 : 10, rationale: (gov('TP-001') || {}).detail || 'No external scripts detected.', pointsToTen: gov('TP-001') ? 4 : 0 },
+        ];
+        base.aio.findings = findings.filter(f => ['governance', 'third_party'].includes(f.category)).map(f => ({
+          priority: f.severity === 'info' ? 'P2' : 'P1', pillar: f.category, finding: f.detail, remediation: f.remediation, points: `E${(f.evidence_ids || [])[0] || ''}`
+        }));
+        return base;
+      },
+
+      // ---------- scans ----------
+      async requestScan() {
+        if (!this.website) return;
+        try {
+          const r = await this.rpc('muster_request_scan', { p_website_id: this.website.id });
+          showToast(r.deduplicated ? `Scan #${r.scan_id} already in flight.` : `Scan #${r.scan_id} queued. Results in about a minute.`);
+          this.startPolling(this.website.id);
+        } catch (e) { this.fail(e); }
+      },
+      startPolling(websiteId) {
+        this.stopPolling();
+        let n = 0;
+        this.setSync(`Live · scanning ${this.org?.name || ''}...`);
+        this.poll = setInterval(async () => {
+          n++;
+          try {
+            const ov = await this.rpc('muster_website_overview', { p_website_id: websiteId });
+            const st = ov.latest_scan && ov.latest_scan.status;
+            if (st === 'complete' || st === 'failed' || n > 40) {
+              this.stopPolling();
+              await this.loadWorkspace();
+              showToast(st === 'complete' ? `Scan complete. Posture ${ov.posture_score}/100 (${ov.posture_band}).` : `Scan ended with status ${st}.`);
+            }
+          } catch (e) { this.stopPolling(); this.fail(e); }
+        }, 6000);
+      },
+      stopPolling() { if (this.poll) { clearInterval(this.poll); this.poll = null; } },
+
+      // ---------- live panels injected into existing views ----------
+      panel(id, view) {
+        let el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('div');
+          el.id = id; el.className = 'panel live-panel';
+          const hero = document.querySelector(`#${view} .hero`);
+          if (hero) hero.insertAdjacentElement('afterend', el); else document.getElementById(view)?.prepend(el);
+        }
+        return el;
+      },
+      md(text) {
+        const lines = String(text || '').split('\n');
+        let html = '', inList = false, inTable = false;
+        const cite = (s) => escapeHtml(s).replace(/\[([FE]\d+)\]/g, '<span class="live-cite">$1</span>');
+        for (const raw of lines) {
+          const line = raw.trimEnd();
+          if (/^\|.*\|$/.test(line)) {
+            if (/^\|\s*-+/.test(line)) continue;
+            const cells = line.slice(1, -1).split('|').map(c => c.trim());
+            if (!inTable) { html += '<table><tr>' + cells.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr>'; inTable = true; continue; }
+            html += '<tr>' + cells.map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>';
+            continue;
+          }
+          if (inTable) { html += '</table>'; inTable = false; }
+          if (/^- /.test(line)) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${cite(line.slice(2))}</li>`; continue; }
+          if (inList) { html += '</ul>'; inList = false; }
+          if (/^# /.test(line)) html += `<h1>${escapeHtml(line.slice(2))}</h1>`;
+          else if (/^## /.test(line)) html += `<h2>${escapeHtml(line.slice(3))}</h2>`;
+          else if (line) html += `<p>${cite(line)}</p>`;
+        }
+        if (inList) html += '</ul>';
+        if (inTable) html += '</table>';
+        return html;
+      },
+      renderLivePanels() {
+        const ov = this.overview;
+        const sitrep = ov && ov.latest_sitrep;
+        const board = this.panel('liveSitrepPanel', 'board');
+        board.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div><span class="live-badge">Live SITREP</span> <span class="live-muted" style="margin-left:8px;">${sitrep ? `Generated ${String(sitrep.generated_at).slice(0, 16).replace('T', ' ')} UTC · ${escapeHtml(sitrep.headline)}` : 'No completed scan yet.'}</span></div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="Live.requestScan()" data-tooltip="Queues a new scan and regenerates the SITREP when it completes.">⚡ Run scan</button>
+              ${sitrep ? `<button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
+            </div>
+          </div>
+          ${sitrep ? `<div class="live-md">${this.md(sitrep.content_md)}</div>` : '<p class="live-muted">Run a scan to produce the first cited SITREP for this website.</p>'}`;
+        const plain = this.panel('livePlainPanel', 'plainReport');
+        const items = (sitrep && sitrep.sections && sitrep.sections.plain_english && sitrep.sections.plain_english.items) || [];
+        plain.innerHTML = `<span class="live-badge">Live plain English</span>` + (items.length
+          ? `<ul class="live-md" style="margin-top:10px;">${items.map(i => `<li>${escapeHtml(i.text)} <span class="live-cite">F${i.finding_id}</span>${(i.evidence_ids || []).map(e => `<span class="live-cite">E${e}</span>`).join('')}</li>`).join('')}</ul>`
+          : `<p class="live-muted" style="margin-top:8px;">${sitrep ? 'No open findings. Keep scanning on schedule so this stays true.' : 'No SITREP yet.'}</p>`);
+        const comp = this.panel('liveCompliancePanel', 'controls');
+        const laws = (ov && ov.compliance && ov.compliance.laws) || [];
+        comp.innerHTML = `<span class="live-badge">Jurisdiction obligations</span> <span class="live-muted" style="margin-left:8px;">${escapeHtml((ov && ov.compliance && ov.compliance.disclaimer) || '')}</span>` +
+          (laws.length ? `<div style="margin-top:10px;">${laws.map(l => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 2fr 0.8fr;"><div><strong style="color:#fff;">${escapeHtml(l.short_name)}</strong><br><span class="live-muted">${escapeHtml(l.jurisdiction_code)} · ${escapeHtml(l.category)}</span></div><div class="live-muted">${(l.obligations || []).map(o => escapeHtml(o)).join(' · ')}</div><div><span class="pill ${l.status === 'evidence_gap' ? 'pill-high' : (l.status === 'clear' ? 'pill-low' : 'pill-pending')}">${l.status.replace('_', ' ')}${l.open_findings ? ` (${l.open_findings})` : ''}</span></div></div>`).join('')}</div>` : '<p class="live-muted" style="margin-top:8px;">Set a country on the organization to see obligations.</p>');
+        this.renderAgentsPanel();
+      },
+      renderAgentsPanel() {
+        const o = this.org; if (!o) return;
+        const el = this.panel('liveAgentsPanel', 'superadmin');
+        const agents = o.agents || [];
+        const canIssue = !!(o.flags && o.flags.agent_api);
+        el.innerHTML = `
+          <span class="live-badge">Agents and API keys · ${escapeHtml(o.name)}</span>
+          <p class="live-muted" style="margin:8px 0 10px;">Any AI agent or AI employee can work this workspace through the MCP endpoint <code style="font-family:var(--font-mono);color:var(--teal);">${this.url}/functions/v1/muster-agent</code> with header <code style="font-family:var(--font-mono);color:var(--teal);">x-muster-api-key</code>. ${canIssue ? '' : 'Issuing keys requires the Pro plan (flag agent_api).'}</p>
+          ${agents.length ? agents.map(a => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 1fr 1.6fr 0.6fr;"><div><strong style="color:#fff;">${escapeHtml(a.name)}</strong><br><span class="live-muted">${escapeHtml(a.kind)}</span></div><div>${a.active ? '<span class="pill pill-low">active</span>' : '<span class="pill pill-pending">inactive</span>'}</div><div class="live-muted">${(a.keys || []).map(k => `${escapeHtml(k.key_prefix)}… [${(k.scopes || []).join(',')}]${k.revoked_at ? ' revoked' : ''}${k.last_used_at ? ' · used ' + String(k.last_used_at).slice(0, 10) : ''}`).join('<br>') || 'no keys'}</div><div>${(a.keys || []).filter(k => !k.revoked_at).map(k => `<button class="btn-ghost" style="padding:3px 8px;font-size:10.5px;" onclick="Live.revokeKey(${k.id})">Revoke</button>`).join('')}</div></div>`).join('') : '<p class="live-muted">No agents yet.</p>'}
+          <form onsubmit="Live.createKey(event)" style="margin-top:12px; display:grid; grid-template-columns: 1.4fr 1fr 1.2fr auto; gap:8px; align-items:end;">
+            <div class="form-group" style="margin:0;"><label>Agent name</label><input name="name" required maxlength="80" placeholder="e.g. CORA" ${canIssue ? '' : 'disabled'}></div>
+            <div class="form-group" style="margin:0;"><label>Kind</label><select name="kind" ${canIssue ? '' : 'disabled'}><option value="internal_employee">AI employee</option><option value="customer_agent">Customer agent</option><option value="integration">Integration</option></select></div>
+            <div class="form-group" style="margin:0;"><label>Scopes</label><select name="scopes" ${canIssue ? '' : 'disabled'}><option value="read">read</option><option value="read,scan">read, scan</option><option value="read,scan,write">read, scan, write</option></select></div>
+            <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:11.5px;" ${canIssue ? '' : 'disabled'} data-tooltip="Issues a key shown once. Store it in the agent's secret store.">＋ Issue key</button>
+          </form>
+          <div id="liveKeyOut" hidden></div>
+          <form onsubmit="Live.invite(event)" style="margin-top:14px; display:grid; grid-template-columns: 1.6fr 1fr auto; gap:8px; align-items:end;">
+            <div class="form-group" style="margin:0;"><label>Invite a member by email</label><input name="email" type="email" required placeholder="colleague@company.com"></div>
+            <div class="form-group" style="margin:0;"><label>Role</label><select name="role"><option value="executive">Executive</option><option value="risk_owner" selected>Risk owner</option><option value="control_owner">Control owner</option><option value="contributor">Contributor</option><option value="viewer">Viewer</option></select></div>
+            <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;">Invite</button>
+          </form>`;
+      },
+      async createKey(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          const r = await this.rpc('muster_create_api_key', { p_organization_id: this.org.id, p_agent_name: f.get('name'), p_kind: f.get('kind'), p_scopes: String(f.get('scopes')).split(',') });
+          const out = document.getElementById('liveKeyOut');
+          out.hidden = false;
+          out.innerHTML = `<div class="live-keybox">${escapeHtml(r.api_key)}</div><p class="live-muted" style="margin-top:6px;">${escapeHtml(r.note)} MCP URL: ${escapeHtml(r.mcp_url)}</p><button class="btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="copyToClipboard('${r.api_key}'); showToast('API key copied.')">⧉ Copy key</button>`;
+          await this.loadWorkspace();
+          document.getElementById('liveKeyOut').replaceWith(out);
+          showToast('API key issued. Copy it now; it is shown once.');
+        } catch (err) { this.fail(err); }
+      },
+      async revokeKey(id) {
+        try { await this.rpc('muster_revoke_api_key', { p_key_id: id }); showToast('Key revoked.'); await this.loadWorkspace(); } catch (e) { this.fail(e); }
+      },
+      async invite(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          const r = await this.rpc('muster_invite', { p_organization_id: this.org.id, p_email: f.get('email'), p_role: f.get('role') });
+          showToast(r.status === 'added' ? `Added as ${r.role}.` : r.message);
+          e.target.reset();
+        } catch (err) { this.fail(err); }
+      },
+
+      // ---------- super admin console ----------
+      async loadAdmin() {
+        this.admin = await this.rpc('muster_admin_overview');
+        const a = this.admin;
+        const el = this.panel('liveAdminPanel', 'superadmin');
+        const eng = a.engine || {};
+        el.innerHTML = `
+          <span class="live-badge">Super admin console</span>
+          <div class="live-muted" style="margin:8px 0 12px;">Engine: ${eng.queued ?? 0} queued · ${eng.running ?? 0} running · ${eng.complete_24h ?? 0} complete / ${eng.failed_24h ?? 0} failed in 24h · cron ${eng.cron ? (eng.cron.active ? 'active ' + eng.cron.schedule : 'inactive') : 'missing'} · ${(a.jurisdiction_review_queue || []).length} jurisdictions due for review</div>
+          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Tenants (${(a.tenants || []).length})</h4>
+          ${(a.tenants || []).map(t => `<div class="live-grid" style="padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
+              <div><strong style="color:#fff;">${escapeHtml(t.name)}</strong><br><span class="live-muted">${escapeHtml([t.country_code, t.region_code].filter(Boolean).join('-') || 'no jurisdiction')} · ${escapeHtml(t.onboarding_status)}</span></div>
+              <div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setPlan(${t.id}, this.value)" data-tooltip="Changes the plan. Flags with plan gates update immediately.">${['trial', 'starter', 'pro', 'enterprise', 'internal'].map(p => `<option value="${p}" ${p === t.plan ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
+              <div class="live-muted">${t.members} members · ${t.websites} sites</div>
+              <div>${t.open_critical > 0 ? `<span class="pill pill-critical">${t.open_critical} critical</span>` : '<span class="pill pill-low">0 critical</span>'}</div>
+              <div class="live-muted">${t.last_scan_at ? String(t.last_scan_at).slice(0, 10) : 'never scanned'}</div>
+              <div style="text-align:right;"><button class="btn-primary" style="padding:4px 9px;font-size:11px;" onclick="Live.openTenant(${t.id})" data-tooltip="Loads this tenant's workspace.">↗ Access</button></div>
+            </div>`).join('')}
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Feature flags</h4>
+          <div class="live-flag-row" style="border-bottom:1px solid rgba(255,255,255,0.15);"><div class="live-muted">Flag</div><div class="live-muted">Description · plan minimum</div><div class="live-muted">Default</div><div class="live-muted">Kill switch</div></div>
+          ${(a.flags || []).map(f => `<div class="live-flag-row">
+              <div><code>${escapeHtml(f.key)}</code><br><span class="live-muted">${escapeHtml(f.scope)}</span></div>
+              <div class="live-muted">${escapeHtml(f.description)}${f.plan_minimum ? ` · <strong>${escapeHtml(f.plan_minimum)}+</strong>` : ''}</div>
+              <div><label class="live-muted"><input type="checkbox" ${f.default_enabled ? 'checked' : ''} onchange="Live.setFlag('${f.key}', this.checked)"> on</label></div>
+              <div><label class="live-muted"><input type="checkbox" ${f.kill_switch ? 'checked' : ''} onchange="Live.killSwitch('${f.key}', this.checked)"> off for all</label></div>
+            </div>`).join('')}
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Users (${(a.users || []).length})</h4>
+          ${(a.users || []).map(u => `<div class="live-flag-row" style="grid-template-columns: 1.4fr 1.6fr 1fr 1fr;"><div><strong style="color:#fff;">${escapeHtml(u.name || '')}</strong></div><div class="live-muted">${escapeHtml(u.email)}</div><div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setRole('${escapeHtml(u.email)}', this.value)">${['user', 'admin', 'super_admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div><div class="live-muted">${u.last_signed_in ? String(u.last_signed_in).slice(0, 10) : ''}</div></div>`).join('')}`;
+      },
+      async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
+      async setFlag(key, on) { try { await this.rpc('muster_admin_set_flag', { p_key: key, p_enabled: on }); showToast(`${key} default ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
+      async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
+      async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },
+      async openTenant(orgId) {
+        try {
+          const o = await this.rpc('muster_admin_tenant', { p_organization_id: orgId });
+          if (!multiTenantStore['live-' + o.id]) multiTenantStore['live-' + o.id] = this.tenantFromOrg(o);
+          await this.activateOrg(o);
+        } catch (e) { this.fail(e); }
+      },
+
+      // ---------- white-label (live brand) ----------
+      liveBrand() {
+        const b = this.org && this.org.brand;
+        if (!b || !b.is_custom) return null;
+        return { isCustom: true, mode: b.hide_muster_attribution ? 'white-label' : 'co-branded', name: b.brand_name, mark: b.brand_mark, eyebrow: b.eyebrow || `${b.brand_name} Assurance`, color: b.primary_color, disclaimer: b.report_disclaimer };
+      },
+      async saveBrand(payload) {
+        const p = {
+          organization_id: this.org.id, brand_name: payload.wlAgencyName, brand_mark: payload.wlBrandMark,
+          report_disclaimer: payload.wlDisclaimer, hide_muster_attribution: payload.wlMode === 'white-label',
+        };
+        try {
+          await this.rpc('muster_save_brand', { p });
+          showToast(`Brand profile saved for ${this.org.name}.`);
+          await this.loadWorkspace();
+        } catch (e) { this.fail(e); }
+      },
+    };
+
+    // Route existing UI actions through the backend while live is showing.
+    const _getActiveBrand = getActiveBrand;
+    getActiveBrand = function () {
+      if (Live.active && !Live.showingDemo) { const b = Live.liveBrand(); if (b) return b; }
+      return _getActiveBrand();
+    };
+    const _handleFormSubmit = handleFormSubmit;
+    handleFormSubmit = function (e) {
+      if (Live.active && !Live.showingDemo) {
+        const payload = Object.fromEntries(new FormData(e.target).entries());
+        if (currentModalType === 'whitelabel_settings') { e.preventDefault(); closeModal(); Live.saveBrand(payload); return; }
+        if (currentModalType === 'add_subclient') {
+          e.preventDefault(); closeModal();
+          const url = /^https?:\/\//i.test(payload.clientDomain || '') ? payload.clientDomain : `https://${payload.clientDomain}`;
+          Live.rpc('muster_add_website', { p_organization_id: Live.org.id, p_name: payload.clientName, p_url: url })
+            .then(r => { showToast(`Website added. Scan #${r.first_scan?.scan_id ?? ''} queued.`); Live.startPolling(r.website_id); return Live.loadWorkspace(); })
+            .catch(err => Live.fail(err));
+          return;
+        }
+        if (currentModalType === 'create_tenant') { e.preventDefault(); closeModal(); Live.openOnboard(); return; }
+      }
+      return _handleFormSubmit(e);
+    };
+    const _switchTenant = switchTenant;
+    switchTenant = function (tenantId) {
+      const t = multiTenantStore[tenantId];
+      if (t && t.live && Live.active && !Live.showingDemo && t.org && (!Live.org || Live.org.id !== t.orgId)) { Live.activateOrg(t.org).catch(e => Live.fail(e)); return; }
+      return _switchTenant(tenantId);
+    };
+    window.addEventListener('DOMContentLoaded', () => Live.init());
+
   </script>
 </body>
 </html>

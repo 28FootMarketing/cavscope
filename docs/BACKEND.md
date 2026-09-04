@@ -125,6 +125,14 @@ alter table muster.activity_events drop column agent_id;
 delete from vault.secrets where name = 'muster_cron_secret';
 ```
 
+## Dashboard wiring (v0.3.0)
+
+`index.html` now has two modes. Demo mode is the untouched sample data set and loads by default. Live mode activates when a Supabase Auth session exists (Sign in button in the topbar): the tenant store is swapped for the user's organizations from `muster_my_workspace`, every view is rebuilt from `muster_website_overview`, and live panels are injected for the SITREP (Board Reporting), plain-English items (Plain English PDF), jurisdiction obligations (Control Mapping), agents and API keys (Super Admin Console), and the super admin tenant, flag, and user console. "Show demo" swaps back to the sample data without signing out.
+
+Client config lives at the top of the `Live` object: project URL and the publishable key `sb_publishable_...` (public by design; RLS and RPC checks protect data).
+
+Supabase Auth settings that must be set in the dashboard (not scriptable through MCP): Site URL and Redirect URLs must include the app origin (for example `https://muster.28footsystems.com`) for magic links and email confirmation to land back in the app.
+
 ## Phase 2 and later (not started)
 
 - Browser engine (Playwright + axe-core) behind `browser_wcag_engine`; same evidence and finding contract.
