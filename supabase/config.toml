@@ -1,0 +1,12 @@
+# Supabase project configuration for MUSTER (shared 28FS project mgtmqucaldkaxvxglguw).
+# Only the pieces that matter for deploys from this repo are declared.
+project_id = "mgtmqucaldkaxvxglguw"
+
+[functions.muster-scan]
+verify_jwt = true
+entrypoint = "./functions/muster-scan/index.ts"
+
+[functions.muster-agent]
+# Custom auth: x-muster-api-key resolved in SQL. The gateway must accept agents without a Supabase JWT.
+verify_jwt = false
+entrypoint = "./functions/muster-agent/index.ts"
