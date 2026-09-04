@@ -1492,6 +1492,10 @@
     .live-muted { color: var(--text-dim); font-size: 11px; }
     @media (max-width: 720px) { .live-steps { grid-template-columns: 1fr; } .live-grid, .live-flag-row { grid-template-columns: 1fr 1fr; } }
 
+
+    .score-asof { display: block; margin-top: 6px; font-size: 10px; color: var(--text-dim); font-weight: 500; text-transform: none; letter-spacing: 0; }
+    .pill-system { background: rgba(54, 226, 201, 0.12); border-color: rgba(54, 226, 201, 0.35); color: var(--teal); }
+    .pill-client { background: rgba(148, 163, 184, 0.14); border-color: rgba(148, 163, 184, 0.35); color: #cbd5e1; }
   </style>
 </head>
 <body>
@@ -1699,6 +1703,7 @@
               <label>Fleet Conformance Average</label>
               <div class="metric-value" style="color: var(--teal);" id="subclientAvgHealth">86%</div>
               <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
+              <small class="score-asof" data-asof></small>
             </div>
             <div class="card metric-card" data-tooltip="Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs.">
               <label>Deliverables Generated</label>
@@ -1763,6 +1768,7 @@
                 <span class="denom">/ 100</span>
                 <span class="benchmark-badge benchmark-good" id="kpiPostureTier" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">80+ Good</span>
               </div>
+              <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiPostureBar" style="width: 82%;"></div></div>
               <div class="metric-sub">
                 <span id="kpiCriticalCount" class="alert">1 active critical risk</span>
@@ -1783,6 +1789,7 @@
                 <span id="kpiControlCoverage">80</span>
                 <span class="denom">%</span>
               </div>
+              <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiControlBar" style="width: 80%;"></div></div>
               <div class="metric-sub">
                 <span id="kpiControlsMet" class="ok">4 of 5 mapped</span>
@@ -1803,6 +1810,7 @@
                 <span id="kpiEvidenceReadiness">75</span>
                 <span class="denom">%</span>
               </div>
+              <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiEvidenceBar" style="width: 75%;"></div></div>
               <div class="metric-sub">
                 <span id="kpiEvidenceCount">3 approved artifacts</span>
@@ -1823,6 +1831,7 @@
                 <span id="kpiRemediationProgress">65</span>
                 <span class="denom">%</span>
               </div>
+              <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiRemediationBar" style="width: 65%;"></div></div>
               <div class="metric-sub">
                 <span class="ok">0 overdue actions</span>
@@ -1943,6 +1952,7 @@
                   <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
                   <span class="benchmark-badge benchmark-good" id="wcagOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">80+ Good · 90+ is Better</span>
                 </div>
+                <small class="score-asof" data-asof></small>
                 <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="wcagScoreSummary">
                   One P0 keyboard trap and a handful of missing icon labels are the only blockers standing between this site and a 95+ conformance rating.
                 </p>
@@ -2109,6 +2119,7 @@
                     <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
                     <span class="benchmark-badge benchmark-good" id="aioOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">64/100 · 80 is Good, 90+ is Better</span>
                   </div>
+                  <small class="score-asof" data-asof></small>
                   <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="aioScoreSummary">
                     Crawlability is blocked by client-side SPA rendering. Resolving P0 server rendering elevates this site to 88/100 immediately.
                   </p>
@@ -2147,7 +2158,7 @@
                 </div>
                 <h3 style="font-size: 17px; margin: 6px 0 10px; color: #fff;" id="aioPrizeTitle">Default AI Citation for Category Queries</h3>
                 <p style="font-size: 13px; color: #cbd7eb; line-height: 1.6;" id="aioPrizeText">
-                  By implementing server-side rendering, comprehensive Schema.org JSON-LD, and an <code>/llms.txt</code> index, your brand becomes the highest-confidence citation source in ChatGPT, Claude, and Perplexity when buyers research your category.
+                  By implementing server-side rendering, comprehensive Schema.org JSON-LD, and an <code>/llms.txt</code> index, your brand is positioned to be a higher-confidence citation source in ChatGPT, Claude, and Perplexity when buyers research your category. AI providers control final citation and ranking behavior; MUSTER improves technical readiness, not the outcome.
                 </p>
               </div>
             </div>
@@ -2228,22 +2239,25 @@
             <div class="card metric-card" data-tooltip="Easy-to-understand safety score out of 100">
               <label>Website Safety Grade</label>
               <div class="metric-value" style="color: var(--teal);" id="plainSafetyScore">82 / 100</div>
+              <small class="score-asof" data-asof></small>
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
                 <strong>80 is Good, 90+ is Better.</strong> Your site is mostly safe, but 1 locked door needs fixing.
               </p>
             </div>
 
-            <div class="card metric-card" data-tooltip="Compliance with basic safety and privacy rules">
+            <div class="card metric-card" data-tooltip="Alignment with basic safety and privacy rules we reviewed">
               <label>Rule Following (Rules Met)</label>
               <div class="metric-value" style="color: var(--cyan);" id="plainRulesScore">80%</div>
+              <small class="score-asof" data-asof></small>
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                You are following 4 out of 5 required business rules (like privacy laws and user safety).
+                Based on what we reviewed, you are meeting 4 out of 5 business rules we checked (like privacy laws and user safety).
               </p>
             </div>
 
             <div class="card metric-card" data-tooltip="Real receipts proving your website is safe">
               <label>Proof & Receipts Ready</label>
               <div class="metric-value" style="color: var(--amber);" id="plainProofScore">75%</div>
+              <small class="score-asof" data-asof></small>
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
                 We have real receipts proving that safety protections are active and working.
               </p>
@@ -2252,6 +2266,7 @@
             <div class="card metric-card" data-tooltip="Percentage of website fixes finished so far">
               <label>Fix-It Progress</label>
               <div class="metric-value" style="color: var(--purple);" id="plainFixProgress">65%</div>
+              <small class="score-asof" data-asof></small>
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
                 More than half of our repair tasks are already done. Zero repairs are late!
               </p>
@@ -2262,7 +2277,7 @@
           <div class="panel panel-body" style="margin-bottom: 24px;">
             <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">1. The Main Story (Executive Summary)</h3>
             <p style="font-size: 14px; color: #d0deef; line-height: 1.7; margin-bottom: 16px;" id="plainSummaryText">
-              Right now, your website works well for people who click around. But there is one big issue: when computer robots try to read your site, they get confused because parts of your site hide words behind complex code. Additionally, there is one security weak spot in the checkout area that needs a quick lock installed. Fixing these two items will immediately boost your score from 82 to 94.
+              Right now, your website works well for people who click around. But there is one big issue: when computer robots try to read your site, they get confused because parts of your site hide words behind complex code. Additionally, there is one security weak spot in the checkout area that needs a quick lock installed. Fixing these two items is expected to raise your MUSTER score from 82 to 94.
             </p>
 
             <h3 style="font-size: 18px; color: #fff; margin: 20px 0 12px;">2. The 3 Things We Are Fixing Right Now</h3>
@@ -2398,13 +2413,18 @@
         <section id="controls" class="view">
           <div class="hero">
             <div class="hero-content">
-              <span class="eyebrow">Compliance Traceability</span>
+              <span class="eyebrow">Framework Alignment Traceability</span>
               <h2>Framework Control Mapping</h2>
               <p>Map regulatory frameworks (SOC 2, ISO 27001, GDPR, WCAG 2.1, PCI DSS, NIST CSF) directly to underlying operational website assets and active findings.</p>
             </div>
             <div class="hero-actions">
               <button class="btn-primary" onclick="openModal('control')" data-tooltip="Link a compliance rule (SOC 2, GDPR, etc.) to this site and assign an owner.">＋ Map Control</button>
             </div>
+          </div>
+
+          <div class="simple-explainer-banner" style="background: linear-gradient(135deg, #0a251e 0%, #0d1e34 100%); border-color: #1a5647;">
+            <h4 style="color: var(--emerald);">⚖ Not a Certification or Legal Opinion</h4>
+            <p>Control mappings reflect MUSTER's technical assessment against publicly documented framework criteria (SOC 2, ISO 27001, GDPR, WCAG, PCI DSS, NIST CSF), based on the evidence reviewed to date. This is not a SOC 2 attestation, ISO certification, or legal compliance opinion &mdash; those come only from a licensed CPA firm, an accredited certification body, or counsel. "Effective" and "Deficient" statuses describe what MUSTER found, not a third-party audit result.</p>
           </div>
 
           <div class="panel">
@@ -2437,7 +2457,7 @@
             <div class="table-header grid-evidence">
               <span>Evidence Artifact</span>
               <span>Type</span>
-              <span>Reviewer</span>
+              <span>Reviewer & Source</span>
               <span>Review Status</span>
               <span style="text-align: right;">Review Action</span>
             </div>
@@ -2493,7 +2513,7 @@
               <span class="eyebrow" style="color: var(--teal);">Executive Assurance Position</span>
               <h3 id="boardHeroHeadline">1 critical risk requires prioritized executive remediation.</h3>
               <p id="boardHeroText" style="max-width: 780px; font-size: 14px; color: #b7cbdf; line-height: 1.6;">
-                The website portfolio is operating near threshold tolerance. Remediation plans are actively underway for Cross-Site Scripting vulnerabilities, while compliance with SOC 2 CC6.1 and WCAG 2.1 AA remains on track.
+                The website portfolio is operating near threshold tolerance. Remediation plans are actively underway for Cross-Site Scripting vulnerabilities, while alignment with SOC 2 CC6.1 and WCAG 2.1 AA criteria remains on track based on evidence reviewed to date.
               </p>
             </div>
             <div class="report-badge">
@@ -2514,11 +2534,13 @@
               <label>Control Assurance</label>
               <div class="metric-value" id="boardControlPct" style="color: var(--teal);">80%</div>
               <small style="color: var(--text-muted);">Assessed controls effective</small>
+              <small class="score-asof" data-asof></small>
             </div>
             <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
               <label>Evidence Readiness</label>
               <div class="metric-value" id="boardEvidencePct" style="color: var(--cyan);">75%</div>
               <small style="color: var(--text-muted);">Artifacts reviewed & approved</small>
+              <small class="score-asof" data-asof></small>
             </div>
             <div class="card metric-card" data-tooltip="Approved, time-limited departures from policy. Each has an owner and expiry date.">
               <label>Active Exceptions</label>
@@ -2709,6 +2731,7 @@
               <label>Fleet Average Posture</label>
               <div class="metric-value" style="color: var(--cyan);" id="saAvgPosture">84%</div>
               <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
+              <small class="score-asof" data-asof></small>
             </div>
             <div class="card metric-card" data-tooltip="Critical issues still open across all clients. Each needs immediate attention.">
               <label>Fleet Critical Risks</label>
@@ -2744,6 +2767,11 @@
             </div>
           </div>
         </section>
+
+        <footer style="margin-top: 32px; padding: 18px 4px; border-top: 1px solid var(--surface-border); font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+          <strong style="color: var(--text-muted);">MUSTER</strong> is provided by After Today, LLC (DBA 28 Foot Systems). Scores, control statuses, and generated deliverables in this workspace are MUSTER's own technical assessment &mdash; not a SOC 2 attestation, ISO certification, legal compliance opinion, or guarantee of AI search ranking or citation. AI-generated prompts and copy require review before use.
+          <br>Terms of Service and Privacy Policy: <strong style="color: var(--amber);">pending publication</strong> &mdash; do not represent this workspace as governed by finalized terms until these are published and linked here.
+        </footer>
 
       </div>
     </main>
@@ -2984,7 +3012,7 @@
         industry: "Fintech & Financial Services",
         description: "B2B customer checkout and authenticated asset management portal",
         tier: "Audit + Implementation Assets",
-        goal: "Become default AI citation for enterprise payment flows, achieve WCAG 2.2 AA certification, and eliminate critical XSS blockers"
+        goal: "Become default AI citation for enterprise payment flows, achieve WCAG 2.2 AA conformance, and eliminate critical XSS blockers"
       },
       subClients: [
         {
@@ -3083,10 +3111,10 @@
         { id: "CTL-05", framework: "PCI DSS", code: "6.4.3", title: "Payment Page Script Integrity & Authorization", description: "All scripts loaded and executed in browser are authorized.", owner: "Security Engineering", status: "Deficient" }
       ],
       evidence: [
-        { id: "EVD-01", title: "Q3 2026 External Web Application PenTest Report", type: "Scan / Audit", reviewer: "CISO Office", status: "Approved", context: "Confirms discovery of RSK-101 with remediation verification guidelines." },
-        { id: "EVD-02", title: "OneTrust Banner Telemetry & Consent Configuration", type: "Attestation", reviewer: "Privacy Counsel", status: "In review", context: "Validates GDPR Art. 7 compliance rollout across EU marketing traffic." },
-        { id: "EVD-03", title: "Axe DevTools Automated Accessibility Scan Log", type: "Record", reviewer: "Lead Product Designer", status: "Approved", context: "Proves 100% WCAG 2.2 AA pass rate on primary portal checkout routes." },
-        { id: "EVD-04", title: "AWS CloudFront TLS 1.3 Security Header Policy", type: "Screenshot / Config", reviewer: "DevOps Lead", status: "Approved", context: "Documents automated cipher downgrade prevention." }
+        { id: "EVD-01", title: "Q3 2026 External Web Application PenTest Report", type: "Scan / Audit", reviewer: "CISO Office", status: "Approved", source: "client", context: "Confirms discovery of RSK-101 with remediation verification guidelines." },
+        { id: "EVD-02", title: "OneTrust Banner Telemetry & Consent Configuration", type: "Attestation", reviewer: "Privacy Counsel", status: "In review", source: "client", context: "Validates GDPR Art. 7 compliance rollout across EU marketing traffic." },
+        { id: "EVD-03", title: "Axe DevTools Automated Accessibility Scan Log", type: "Record", reviewer: "Lead Product Designer", status: "Approved", source: "client", context: "Proves 100% WCAG 2.2 AA pass rate on primary portal checkout routes." },
+        { id: "EVD-04", title: "AWS CloudFront TLS 1.3 Security Header Policy", type: "Screenshot / Config", reviewer: "DevOps Lead", status: "Approved", source: "client", context: "Documents automated cipher downgrade prevention." }
       ],
       remediation: [
         { id: "REM-01", title: "Deploy CSP & Subresource Integrity on Checkout", riskId: "RSK-101", owner: "Security Engineering", dueDate: "2026-09-10", progress: 60, status: "In progress", criteria: "Zero inline unauthorized scripts permitted; SRI hashes checked." },
@@ -3748,7 +3776,7 @@
       },
       whitelabel_settings: {
         title: "🏷️ Agency White-Label & Custom Branding Settings",
-        desc: "Configure your agency's custom brand name, monogram, and deliverable co-branding preferences. (Governed by platform feature flag)",
+        desc: "Configure your agency's custom brand name, monogram, and deliverable co-branding preferences. (Governed by platform feature flag) Operator note: before enabling this for a paying agency tenant, have a signed agreement in place assigning liability for what they represent to their end client to them, not to 28 Foot Systems. This is a contract question for counsel, not a setting.",
         render: () => {
           const tenant = multiTenantStore[activeTenantId] || {};
           const wl = tenant.whiteLabel || {};
@@ -3929,6 +3957,7 @@
           type: payload.type,
           reviewer: payload.reviewer,
           status: "In review",
+          source: "client",
           context: payload.context || ''
         };
         state.evidence.unshift(newEvd);
@@ -4280,7 +4309,7 @@ Temporary Password: TempMU!${Math.floor(1000 + Math.random() * 9000)}`;
 
 ## Core Products & Platforms
 - [Enterprise Platform](https://${state.aio.domain}/platform): Full-suite software for enterprise customers.
-- [Security & Compliance](https://${state.aio.domain}/security): SOC 2 Type II certified with WCAG 2.2 AA conformance.
+- [Security & Compliance](https://${state.aio.domain}/security): Reviewed against SOC 2 Type II criteria and WCAG 2.2 AA conformance targets (not a certification).
 
 ## Key APIs & Developer Resources
 - [Developer API Reference](https://${state.aio.domain}/docs/api): REST & GraphQL interfaces for automated integration.`;
@@ -4294,7 +4323,7 @@ Domain: https://${state.aio.domain}
 Overall AIO Index: ${state.aio.overallScore}/100 (80 is Good, 90+ is Better)
 
 ## 1. Executive Summary
-The primary blocker for ${state.client.name} is client-side SPA rendering (#root shell), which prevents AI crawlers like GPTBot and ClaudeBot from indexing product specifications. Implementing server-side rendering and structured data will elevate this site to 90+ and make ${state.client.name} the default AI citation for category research.
+The primary blocker for ${state.client.name} is client-side SPA rendering (#root shell), which prevents AI crawlers like GPTBot and ClaudeBot from indexing product specifications. Implementing server-side rendering and structured data is expected to raise this site's AIO score to 90+ and position ${state.client.name} to be a higher-confidence citation source for category research. AI providers control final citation behavior, not MUSTER.
 
 ## 2. AIO Readiness Scorecard
 ${state.aio.pillars.map(p => `- **${p.name}**: ${p.score}/10 — ${p.rationale}`).join('\n')}
@@ -4304,7 +4333,7 @@ ${state.aio.findings.map(f => `- [${f.priority}] ${f.pillar}: ${f.finding} -> Fi
 
 ${b.disclaimer}`;
       copyToClipboard(md);
-      showToast("Full AIO Deliverable Markdown copied to clipboard!");
+      showToast("Deliverable copied. AI-assisted content — review before sending to a client.");
     }
 
     function downloadAioReport() {
@@ -4398,7 +4427,7 @@ ${b.disclaimer}`;
         prompt = `Act as a senior engineer. Remediate finding '${key}' for our domain ${state.client.url}. Follow MUSTER assurance standards and output production-ready code.`;
       }
       copyToClipboard(prompt);
-      showToast("🤖 LLM Fix Prompt copied to clipboard!");
+      showToast("🤖 Prompt copied. AI-generated — review before deploying to production.");
     }
 
     function copyMasterLlmAuditPrompt() {
@@ -4408,7 +4437,7 @@ ${b.disclaimer}`;
 3. SOC 2 CC6.1 and OWASP Top 10 vulnerabilities
 Provide actionable code fixes and format as a MUSTER executive brief.`;
       copyToClipboard(prompt);
-      showToast("🤖 Full Master Audit Prompt copied!");
+      showToast("🤖 Prompt copied. AI-generated — review before deploying to production.");
     }
 
     function renderSubClientsView() {
@@ -4662,7 +4691,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <small style="color: var(--text-dim); font-size: 11px;">${escapeHtml(e.context)}</small>
           </div>
           <div><span class="pill pill-medium">${escapeHtml(e.type)}</span></div>
-          <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(e.reviewer)}</span></div>
+          <div>
+            <span style="font-size: 12px; color: #e2e8f0; display: block;">${escapeHtml(e.reviewer)}</span>
+            <span class="pill ${e.source === 'system' ? 'pill-system' : 'pill-client'}" style="margin-top: 4px; font-size: 9px;" data-tooltip="${e.source === 'system' ? 'Captured directly by the MUSTER scan engine.' : 'Uploaded or attested by a person. MUSTER has not independently verified this claim.'}">${e.source === 'system' ? 'System-verified' : 'Client-submitted'}</span>
+          </div>
           <div><span class="pill ${e.status === 'Approved' ? 'pill-approved' : 'pill-pending'}">${e.status}</span></div>
           <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Artifact reviewed.')" data-tooltip="Marks this document as reviewed. Does not change its approval status yet.">Verify</button></div>
         </div>
@@ -4771,7 +4803,13 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       `).join('');
     }
 
+    function stampScoreTimestamps() {
+      const label = 'As of ' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+      document.querySelectorAll('[data-asof]').forEach(el => { el.textContent = label; });
+    }
+
     function refreshAll() {
+      stampScoreTimestamps();
       renderTenantDropdown();
       renderOverview();
       renderSubClientsView();
@@ -5226,7 +5264,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         }));
         const evIndex = (sitrep && sitrep.sections && sitrep.sections.evidence_index) || [];
         base.evidence = evIndex.map(e => ({
-          id: `E${e.evidence_id}`, title: `${e.kind.replace(/_/g, ' ')} · ${e.url}`, type: 'Scan / Audit', reviewer: 'MUSTER engine', status: 'Approved',
+          id: `E${e.evidence_id}`, title: `${e.kind.replace(/_/g, ' ')} · ${e.url}`, type: 'Scan / Audit', reviewer: 'MUSTER engine', status: 'Approved', source: 'system',
           context: `HTTP ${e.http_status ?? 'n/a'} · sha256 ${String(e.sha256 || '').slice(0, 12)} · captured ${String(e.captured_at || '').slice(0, 16).replace('T', ' ')}`
         }));
         const due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
