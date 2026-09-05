@@ -27,7 +27,8 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   not wired to the real Supabase backend. `sitrep.html` = a signed-in, tenant-scoped SITREP viewer
   (`sitrep.muster.28footsystems.com`) — reuses the same Supabase Auth session and `public.muster_*` RPCs
   as `app.html`; RLS decides what each signed-in user can see, same as everywhere else. It is real data,
-  not a demo.
+  not a demo. `sitrep-sample.html` (`sitrep.muster.28footsystems.com/sample`) is a static, no-auth,
+  fictional SITREP covering every finding category and severity — a reference/sales asset, not real data.
 - Subdomain routing is handled by `middleware.js` (Vercel Routing Middleware, using `@vercel/functions`).
   `vercel.json`'s declarative `rewrites`/`has` cannot branch on the Host header — only real code can — so
   don't reintroduce host-conditional `vercel.json` rewrites for new subdomains; add another `if (host === ...)`
