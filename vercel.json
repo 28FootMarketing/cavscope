@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "app.muster.28footsystems.com" }],
+      "destination": "/app.html"
+    }
+  ]
+}
