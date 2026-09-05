@@ -14,6 +14,10 @@ export default function middleware(request) {
     return rewrite(new URL('/onboarding.html', request.url));
   }
   if (host === 'sitrep.muster.28footsystems.com') {
+    const path = new URL(request.url).pathname;
+    if (path === '/sample' || path.startsWith('/sample/')) {
+      return rewrite(new URL('/sitrep-sample.html', request.url));
+    }
     return rewrite(new URL('/sitrep.html', request.url));
   }
   return next();
