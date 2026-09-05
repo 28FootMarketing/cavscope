@@ -3815,6 +3815,34 @@
               <label>Custom Deliverable Footer / Disclaimer</label>
               <textarea name="wlDisclaimer" placeholder="e.g. Prepared exclusively for our client by Apex Digital Assurance. All rights reserved.">${escapeHtml(wl.customDisclaimer || '')}</textarea>
             </div>
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--surface-border);">
+              <h4 style="font-size: 13px; color: #fff; margin-bottom: 4px;">Your Pricing to Your Clients</h4>
+              <p style="font-size: 11.5px; color: var(--text-dim); margin-bottom: 14px;" data-tooltip="This is what you charge, not what 28 Foot Systems charges you for the platform. MUSTER stores it for your reference only and never processes this payment.">What you charge your own clients for access under your brand. 28 Foot Systems has no part in this — you set the price and collect it however you choose.</p>
+              <div class="form-row">
+                <div class="form-group">
+                  <label data-tooltip="The amount you bill each client. Leave blank if you quote custom pricing per client.">Your Price</label>
+                  <input type="number" step="0.01" min="0" name="wlClientPriceAmount" value="${escapeHtml(wl.clientPriceAmount ?? '')}" placeholder="e.g. 499.00">
+                </div>
+                <div class="form-group">
+                  <label data-tooltip="How often you bill your clients this amount.">Billing Cadence</label>
+                  <select name="wlClientPriceCadence" data-tooltip="How often you bill your clients this amount.">
+                    <option value="" ${!wl.clientPriceCadence ? 'selected' : ''}>Not set</option>
+                    <option value="monthly" ${wl.clientPriceCadence === 'monthly' ? 'selected' : ''}>Monthly</option>
+                    <option value="annual" ${wl.clientPriceCadence === 'annual' ? 'selected' : ''}>Annual</option>
+                    <option value="one_time" ${wl.clientPriceCadence === 'one_time' ? 'selected' : ''}>One-time</option>
+                    <option value="custom" ${wl.clientPriceCadence === 'custom' ? 'selected' : ''}>Custom / varies per client</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label data-tooltip="Where your clients actually pay you — your own Stripe Payment Link, PayPal.me, invoicing tool, or checkout page. MUSTER only stores this link; it never processes the payment.">Your Payment Link (optional)</label>
+                <input type="url" name="wlClientPaymentUrl" value="${escapeHtml(wl.clientPaymentUrl || '')}" placeholder="e.g. https://buy.stripe.com/your-link">
+              </div>
+              <div class="form-group">
+                <label data-tooltip="Any context you want to remember about your own pricing — a discount policy, what's included, etc.">Pricing Notes (optional)</label>
+                <textarea name="wlClientPricingNote" placeholder="e.g. Includes monthly SITREP + quarterly review call.">${escapeHtml(wl.clientPricingNote || '')}</textarea>
+              </div>
+            </div>
           `;
         }
       }
@@ -3860,7 +3888,11 @@
             agencyName: payload.wlAgencyName,
             brandMark: payload.wlBrandMark,
             deliverableMode: payload.wlMode,
-            customDisclaimer: payload.wlDisclaimer
+            customDisclaimer: payload.wlDisclaimer,
+            clientPriceAmount: payload.wlClientPriceAmount,
+            clientPriceCadence: payload.wlClientPriceCadence,
+            clientPaymentUrl: payload.wlClientPaymentUrl,
+            clientPricingNote: payload.wlClientPricingNote
           };
           applyBrandToUI();
           showToast(`Saved white-label branding for ${tenant.name}.`);
@@ -5565,6 +5597,8 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         const p = {
           organization_id: this.org.id, brand_name: payload.wlAgencyName, brand_mark: payload.wlBrandMark,
           report_disclaimer: payload.wlDisclaimer, hide_muster_attribution: payload.wlMode === 'white-label',
+          client_price_amount: payload.wlClientPriceAmount, client_price_cadence: payload.wlClientPriceCadence,
+          client_payment_url: payload.wlClientPaymentUrl, client_pricing_note: payload.wlClientPricingNote,
         };
         try {
           await this.rpc('muster_save_brand', { p });

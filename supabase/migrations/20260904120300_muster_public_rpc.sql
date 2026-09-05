@@ -687,6 +687,9 @@ begin
   if coalesce((p->>'hide_muster_attribution')::boolean, false) and not muster.has_flag(v_org, 'hide_attribution') then
     raise exception 'attribution removal requires the Pro plan' using errcode = '42501';
   end if;
+  if coalesce(p->>'client_payment_url', '') <> '' and p->>'client_payment_url' !~* '^https?://' then
+    raise exception 'client payment link must start with http:// or https://' using errcode = '22023';
+  end if;
 
   select id into v_existing from muster.brand_profiles
   where organization_id = v_org and website_id is not distinct from v_site;
@@ -694,7 +697,8 @@ begin
   if v_existing is null then
     insert into muster.brand_profiles (organization_id, website_id, brand_name, brand_mark, eyebrow, primary_color, accent_color,
       logo_url, favicon_url, custom_domain, support_email, support_url, report_disclaimer, report_signoff_name, report_signoff_title,
-      welcome_message, tone, locale, hide_muster_attribution, created_by_id)
+      welcome_message, tone, locale, hide_muster_attribution, client_price_amount, client_price_cadence, client_payment_url,
+      client_pricing_note, created_by_id)
     values (v_org, v_site, left(p->>'brand_name', 80), upper(left(coalesce(nullif(p->>'brand_mark', ''), left(p->>'brand_name', 2)), 4)),
       left(coalesce(nullif(p->>'eyebrow', ''), 'Website Assurance'), 80),
       coalesce(nullif(p->>'primary_color', ''), '#36e2c9'), coalesce(nullif(p->>'accent_color', ''), '#f5b942'),
@@ -703,7 +707,9 @@ begin
       coalesce(nullif(p->>'report_disclaimer', ''), 'Prepared under the MUSTER Assurance Framework by 28 Foot Systems. All rights reserved.'),
       nullif(p->>'report_signoff_name', ''), nullif(p->>'report_signoff_title', ''), nullif(p->>'welcome_message', ''),
       coalesce(nullif(p->>'tone', ''), 'executive'), coalesce(nullif(p->>'locale', ''), 'en-US'),
-      coalesce((p->>'hide_muster_attribution')::boolean, false), muster.current_user_id())
+      coalesce((p->>'hide_muster_attribution')::boolean, false),
+      nullif(p->>'client_price_amount', '')::numeric, nullif(p->>'client_price_cadence', ''),
+      nullif(p->>'client_payment_url', ''), nullif(p->>'client_pricing_note', ''), muster.current_user_id())
     returning * into b;
   else
     update muster.brand_profiles set
@@ -719,7 +725,11 @@ begin
       report_signoff_name = nullif(p->>'report_signoff_name', ''), report_signoff_title = nullif(p->>'report_signoff_title', ''),
       welcome_message = nullif(p->>'welcome_message', ''),
       tone = coalesce(nullif(p->>'tone', ''), 'executive'), locale = coalesce(nullif(p->>'locale', ''), 'en-US'),
-      hide_muster_attribution = coalesce((p->>'hide_muster_attribution')::boolean, false)
+      hide_muster_attribution = coalesce((p->>'hide_muster_attribution')::boolean, false),
+      client_price_amount = nullif(p->>'client_price_amount', '')::numeric,
+      client_price_cadence = nullif(p->>'client_price_cadence', ''),
+      client_payment_url = nullif(p->>'client_payment_url', ''),
+      client_pricing_note = nullif(p->>'client_pricing_note', '')
     where id = v_existing returning * into b;
   end if;
 
