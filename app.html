@@ -1445,6 +1445,7 @@
       .sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); box-shadow: 20px 0 50px rgba(0,0,0,0.8); }
       .sidebar.open { transform: translateX(0); }
       .menu-toggle { display: block; }
+      .topbar { position: relative; z-index: 55; }
       .grid-4 { grid-template-columns: repeat(2, 1fr); }
       .grid-2, .grid-2-asym, .grid-3 { grid-template-columns: 1fr; }
       .topbar { height: auto; flex-wrap: wrap; row-gap: 12px; padding: 14px 20px; }
@@ -4318,9 +4319,9 @@ Temporary Password: TempMU!${Math.floor(1000 + Math.random() * 9000)}`;
       }
     }
 
-    function copyFullAioMarkdown() {
+    function buildAioMarkdown() {
       const b = getActiveBrand();
-      const md = `# AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}
+      return `# AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}
 Domain: https://${state.aio.domain}
 Overall AIO Index: ${state.aio.overallScore}/100 (80 is Good, 90+ is Better)
 
@@ -4334,17 +4335,15 @@ ${state.aio.pillars.map(p => `- **${p.name}**: ${p.score}/10 — ${p.rationale}`
 ${state.aio.findings.map(f => `- [${f.priority}] ${f.pillar}: ${f.finding} -> Fix: ${f.remediation} (${f.points})`).join('\n')}
 
 ${b.disclaimer}`;
-      copyToClipboard(md);
+    }
+
+    function copyFullAioMarkdown() {
+      copyToClipboard(buildAioMarkdown());
       showToast("Deliverable copied. AI-assisted content — review before sending to a client.");
     }
 
     function downloadAioReport() {
-      const b = getActiveBrand();
-      const content = `# AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}
-Domain: https://${state.aio.domain}
-Timestamp: ${new Date().toISOString()}
-
-${b.disclaimer}`;
+      const content = buildAioMarkdown();
       const blob = new Blob([content], { type: "text/markdown" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
