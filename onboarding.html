@@ -819,9 +819,12 @@
           <p>Select the regulatory and technical engines to initialize for this tenant, and designate the primary organizational administrator.</p>
         </div>
 
-        <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 6px;">
-          Active Assurance Framework Engines
-        </label>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px;">
+          <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.08em;">
+            Active Assurance Framework Engines
+          </label>
+          <span id="frameworkRecoNote" style="font-size: 11px; color: var(--teal);" data-tooltip="Pre-selected from the industry chosen in Step 1. Every engine below stays toggleable — nothing here is locked."></span>
+        </div>
 
         <div class="framework-grid">
           <label class="framework-card selected" onclick="toggleFramework(this)" data-tooltip="Checks the tenant's sites against WCAG 2.2 AA accessibility criteria.">
@@ -854,22 +857,29 @@
           </label>
         </div>
 
+        <p style="margin-top: 10px; font-size: 11.5px; color: var(--text-muted);" data-tooltip="These run on every tenant regardless of which engines above are enabled — they're baseline health checks, not compliance frameworks.">
+          Every tenant also gets 2 always-on availability checks (uptime, TLS/DNS health) and 1 third-party script inventory check — included at every tier, not shown as a toggle above.
+        </p>
+
         <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--surface-border);">
           <span class="eyebrow" style="margin-bottom: 12px;">Primary Tenant Administrator</span>
 
           <div class="form-row">
             <div class="form-group">
               <label data-tooltip="The person who will receive login credentials for this tenant.">Administrator Full Name</label>
-              <input type="text" id="inAdminName" placeholder="e.g. Jordan Mercer" value="Jordan Mercer">
+              <input type="text" id="inAdminName" placeholder="e.g. Jordan Mercer">
             </div>
             <div class="form-group">
               <label data-tooltip="Where the temporary access key and workspace invite will be sent.">Administrator Work Email</label>
-              <input type="email" id="inAdminEmail" placeholder="e.g. security-lead@apexpayments.com" value="security-lead@apexpayments.com">
+              <input type="email" id="inAdminEmail" placeholder="e.g. security-lead@company.com">
             </div>
           </div>
           <div class="form-group">
-            <label data-tooltip="Determines which assurance engines and features this tenant has access to.">License & Engagement Tier</label>
-            <select id="inTier">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+              <label data-tooltip="Determines which assurance engines and features this tenant has access to.">License & Engagement Tier</label>
+              <span id="tierRecoNote" style="font-size: 11px; color: var(--teal);"></span>
+            </div>
+            <select id="inTier" onchange="tierManuallyEdited = true">
               <option value="Enterprise Full Assurance">Enterprise Full Assurance (All Engines)</option>
               <option value="Standard AIO + Compliance">Standard AIO + Compliance</option>
               <option value="Continuous Governance Retainer">Continuous Governance Retainer</option>
@@ -932,6 +942,7 @@
     let currentStep = 1;
     let inspectionCompleted = false;
     let slugManuallyEdited = false;
+    let tierManuallyEdited = false;
     let generatedPassword = `Temp28F!${Math.floor(1000 + Math.random() * 9000)}`;
 
     function slugify(text) {
@@ -968,6 +979,7 @@
         showToast("Please allow pre-flight inspection to complete first.");
         return;
       }
+      if (stepNumber === 4 && !validateStep3()) return;
 
       if (stepNumber === 1 && currentStep === 2) {
         inspectionCompleted = false;
@@ -988,6 +1000,9 @@
 
       if (stepNumber === 2 && !inspectionCompleted) {
         runInspectionSimulation();
+      }
+      if (stepNumber === 3) {
+        applyStep3Recommendations();
       }
     }
 
@@ -1129,8 +1144,79 @@
       cardEl.classList.toggle('selected', chk.checked);
     }
 
+    function setFrameworkChecked(checkboxId, checked) {
+      const chk = document.getElementById(checkboxId);
+      chk.checked = checked;
+      chk.closest('.framework-card').classList.toggle('selected', checked);
+    }
+
+    /* Step 3 recommendations: WCAG a11y and AIO/GEO apply to every public site,
+       so both stay on by default. SOC 2 vs. GDPR privacy is the vertical-specific
+       signal — it tracks whether the industry's primary exposure is system/data
+       security (SOC 2) or handling of regulated personal data (privacy). */
+    const industryFrameworkMap = {
+      'Fintech & Financial Services': { soc2: true, privacy: true, reason: 'payments trigger both PCI/SOC 2 controls and financial privacy rules (GLBA)' },
+      'Healthcare & Life Sciences (HIPAA)': { soc2: true, privacy: true, reason: 'HIPAA requires both security safeguards and patient privacy protections' },
+      'Enterprise B2B SaaS & Cloud': { soc2: true, privacy: false, reason: 'enterprise buyers require a SOC 2 report; direct consumer-data exposure is lower' },
+      'Logistics & Supply Chain Tech': { soc2: true, privacy: false, reason: 'risk centers on system security and third-party integrations, not consumer data' },
+      'Ecommerce & Omnichannel Retail': { soc2: true, privacy: true, reason: 'ecommerce stores payment data (PCI/SOC 2) and consumer PII (GDPR/CCPA)' },
+      'Digital Agency & IT Consultancy': { soc2: true, privacy: false, reason: 'agencies inherit client security posture; script sprawl is the main exposure' },
+      'Legal & Professional Services': { soc2: true, privacy: true, reason: 'client confidentiality mirrors both security controls and privacy law' },
+      'Higher Education & EdTech': { soc2: false, privacy: true, reason: 'FERPA and student-data privacy are the primary exposure' },
+      'Government & Public Sector': { soc2: true, privacy: true, reason: 'FedRAMP-adjacent security expectations plus public-records privacy obligations' },
+      'Insurance & Insurtech': { soc2: true, privacy: true, reason: 'insurers handle regulated financial data and sensitive personal/health data' },
+      'Real Estate & PropTech': { soc2: false, privacy: true, reason: 'buyer/tenant PII is the main exposure; security stakes are comparatively lower' },
+      'Manufacturing & Industrial IoT': { soc2: true, privacy: false, reason: 'IoT/OT security and vendor risk dominate; limited consumer data' },
+      'Media, Publishing & Entertainment': { soc2: false, privacy: true, reason: 'reader/subscriber tracking and consent are the main exposure' },
+      'Energy, Utilities & CleanTech': { soc2: true, privacy: false, reason: 'critical-infrastructure security posture is the primary concern' },
+      'Non-Profit & NGO Associations': { soc2: false, privacy: true, reason: 'donor data privacy and consent are the main exposure' },
+    };
+    const defaultIndustryFramework = { soc2: true, privacy: true, reason: 'unmapped verticals default to the fullest coverage until reviewed' };
+
+    const tierByTenancyMode = {
+      'Direct Enterprise Organization': 'Enterprise Full Assurance',
+      'Agency / Partner (Multi-Client Engine)': 'Continuous Governance Retainer',
+    };
+
+    function applyStep3Recommendations() {
+      const industry = document.getElementById('inIndustry').value;
+      const rec = industryFrameworkMap[industry] || defaultIndustryFramework;
+
+      setFrameworkChecked('chkA11y', true);
+      setFrameworkChecked('chkAIO', true);
+      setFrameworkChecked('chkSOC2', rec.soc2);
+      setFrameworkChecked('chkPrivacy', rec.privacy);
+      document.getElementById('frameworkRecoNote').textContent = `Recommended for ${industry}: ${rec.reason}`;
+
+      const tenancyMode = document.getElementById('inTenancyMode').value;
+      const recommendedTier = tierByTenancyMode[tenancyMode];
+      const tierNote = document.getElementById('tierRecoNote');
+      if (recommendedTier) {
+        tierNote.textContent = `Suggested: ${recommendedTier}`;
+        if (!tierManuallyEdited) document.getElementById('inTier').value = recommendedTier;
+      } else {
+        tierNote.textContent = '';
+      }
+    }
+
+    function validateStep3() {
+      const adminName = document.getElementById('inAdminName').value.trim();
+      const adminEmail = document.getElementById('inAdminEmail').value.trim();
+      if (!adminName || !adminEmail) {
+        showToast("Please enter the administrator's name and work email.");
+        return false;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
+        showToast("Please enter a valid administrator email address.");
+        return false;
+      }
+      return true;
+    }
+
     /* Finalize Onboarding & Generate Deep Link */
     function completeProvisioning() {
+      if (!validateStep3()) return;
+
       const orgName = document.getElementById('inOrgName').value.trim();
       const orgSlug = document.getElementById('inOrgSlug').value.trim() || orgName.toLowerCase().replace(/[^a-z0-9]/g, '-');
       const domain = document.getElementById('inDomain').value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
