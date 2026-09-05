@@ -13,5 +13,8 @@ export default function middleware(request) {
   if (host === 'onboarding.muster.28footsystems.com') {
     return rewrite(new URL('/onboarding.html', request.url));
   }
+  if (host === 'sitrep.muster.28footsystems.com') {
+    return rewrite(new URL('/sitrep.html', request.url));
+  }
   return next();
 }
