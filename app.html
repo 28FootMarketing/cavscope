@@ -1635,6 +1635,7 @@
           </div>
           <button class="btn-ghost" onclick="showView('plainReport')" data-tooltip="Open a jargon-free version of this report you can print for a client.">📖 Plain English PDF</button>
           <button class="btn-ghost" onclick="exportDataJSON()" data-tooltip="Downloads this client's full workspace as a JSON file for backup or sharing.">↓ Export JSON</button>
+          <button class="btn-ghost" onclick="exportDataMarkdown()" data-tooltip="Downloads this client's full workspace as a readable Markdown file.">↓ Export Markdown</button>
           <button class="btn-primary" onclick="openModal('risk')" data-tooltip="Log a new issue with its severity, owner, and treatment plan.">＋ Record Risk</button>
         </div>
       </header>
@@ -4834,6 +4835,71 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       a.download = `muster-assurance-${state.client.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
       a.click();
       showToast("Workspace snapshot downloaded.");
+    }
+
+    function exportDataMarkdown() {
+      const c = state.client || {};
+      const esc = v => (v === undefined || v === null || v === '') ? '—' : String(v);
+      const lines = [];
+
+      lines.push(`# MUSTER Workspace Export — ${esc(c.name)}`);
+      lines.push('');
+      lines.push(`Generated ${new Date().toLocaleString()}`);
+      lines.push('');
+      lines.push('## Client');
+      lines.push('');
+      lines.push(`- **Name:** ${esc(c.name)}`);
+      lines.push(`- **URL:** ${esc(c.url)}`);
+      lines.push(`- **Industry:** ${esc(c.industry)}`);
+      lines.push(`- **Description:** ${esc(c.description)}`);
+      lines.push(`- **Tier:** ${esc(c.tier)}`);
+      lines.push(`- **Goal:** ${esc(c.goal)}`);
+      lines.push('');
+
+      lines.push(`## Risk Register (${(state.risks || []).length})`);
+      lines.push('');
+      lines.push('| ID | Title | Website | Severity | Status | Owner | Treatment |');
+      lines.push('|---|---|---|---|---|---|---|');
+      (state.risks || []).forEach(r => {
+        lines.push(`| ${esc(r.id)} | ${esc(r.title)} | ${esc(r.website)} | ${esc(r.severity)} | ${esc(r.status)} | ${esc(r.owner)} | ${esc(r.treatment)} |`);
+      });
+      lines.push('');
+
+      lines.push(`## Control Mapping (${(state.controls || []).length})`);
+      lines.push('');
+      lines.push('| ID | Framework | Code | Title | Owner | Status |');
+      lines.push('|---|---|---|---|---|---|');
+      (state.controls || []).forEach(ctl => {
+        lines.push(`| ${esc(ctl.id)} | ${esc(ctl.framework)} | ${esc(ctl.code)} | ${esc(ctl.title)} | ${esc(ctl.owner)} | ${esc(ctl.status)} |`);
+      });
+      lines.push('');
+
+      lines.push(`## Evidence Library (${(state.evidence || []).length})`);
+      lines.push('');
+      lines.push('| ID | Title | Type | Source | Reviewer | Status |');
+      lines.push('|---|---|---|---|---|---|');
+      (state.evidence || []).forEach(e => {
+        lines.push(`| ${esc(e.id)} | ${esc(e.title)} | ${esc(e.type)} | ${esc(e.source)} | ${esc(e.reviewer)} | ${esc(e.status)} |`);
+      });
+      lines.push('');
+
+      lines.push(`## Remediation Plan (${(state.remediation || []).length})`);
+      lines.push('');
+      lines.push('| ID | Title | Risk | Owner | Due | Progress | Status |');
+      lines.push('|---|---|---|---|---|---|---|');
+      (state.remediation || []).forEach(r => {
+        lines.push(`| ${esc(r.id)} | ${esc(r.title)} | ${esc(r.riskId)} | ${esc(r.owner)} | ${esc(r.dueDate)} | ${esc(r.progress)}% | ${esc(r.status)} |`);
+      });
+      lines.push('');
+      lines.push('---');
+      lines.push('_MUSTER scores and findings are a technical assessment, not a compliance certification or legal opinion._');
+
+      const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(lines.join('\n'));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `muster-assurance-${state.client.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.md`;
+      a.click();
+      showToast("Workspace snapshot downloaded as Markdown.");
     }
 
     function exportClientsJSON() {
