@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "app.muster.28footsystems.com" }],
+      "destination": "/app.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "onboarding.muster.28footsystems.com" }],
+      "destination": "/onboarding.html"
+    }
+  ]
+}
