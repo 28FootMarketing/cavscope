@@ -646,7 +646,7 @@
         <span class="dot-live"></span>
         <span>Automated Provisioning Hub</span>
       </div>
-      <a href="index.html" class="btn-ghost" style="padding: 7px 14px; font-size: 12px;" data-tooltip="Already provisioned a tenant? Go to your existing workspace instead of starting a new one.">
+      <a href="https://app.muster.28footsystems.com/" class="btn-ghost" style="padding: 7px 14px; font-size: 12px;" data-tooltip="Already provisioned a tenant? Go to your existing workspace instead of starting a new one.">
         ↗ Existing Workspace
       </a>
     </div>
@@ -903,7 +903,7 @@
           <h2 style="font-family: var(--font-serif); font-size: 28px; color: #fff; margin: 6px 0 8px;" id="lblSuccessTenant">
             Apex Global Payments Workspace is Ready
           </h2>
-          <p style="color: var(--text-muted); max-width: 620px; font-size: 13.5px; line-height: 1.6;">
+          <p style="color: var(--text-muted); max-width: 620px; font-size: 13.5px; line-height: 1.6;" id="lblSuccessSummary">
             Your isolated tenant partition has been seeded with initial WCAG 2.2 AA defect findings, AIO structured data templates, and SOC 2 CC6.1 controls.
           </p>
         </div>
@@ -914,6 +914,8 @@
           <div><strong>Monitored Domain:</strong> <span id="outDomain">portal.apexpayments.com</span></div>
           <div><strong>Cloud Data Region:</strong> <span id="outRegion">US-East (N. Virginia)</span></div>
           <div><strong>Assigned Admin:</strong> <span id="outAdmin">Jordan Mercer (security-lead@apexpayments.com)</span></div>
+          <div><strong>Assurance Engines:</strong> <span id="outEngines" data-tooltip="The frameworks enabled in Step 3 for this tenant.">WCAG 2.2 AA, AIO/GEO, SOC 2, GDPR Privacy</span></div>
+          <div><strong>Engagement Tier:</strong> <span id="outTier">Enterprise Full Assurance</span></div>
           <div><strong>Temporary Access Key:</strong> <span id="outPassword" style="color: var(--amber);" data-tooltip="One-time password — the administrator should change this on first login.">Temp28F!9241</span></div>
           <div><strong>Provisioning Timestamp:</strong> <span id="outTimestamp">2026-09-02 13:30:00 EDT</span></div>
         </div>
@@ -944,6 +946,21 @@
     let slugManuallyEdited = false;
     let tierManuallyEdited = false;
     let generatedPassword = `Temp28F!${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // onboarding.muster and app.muster are separate subdomains routed by middleware.js
+    // on Host header alone, so a relative link from this page can't reach the app --
+    // it always resolves back to onboarding.html regardless of path. Must be absolute.
+    const APP_WORKSPACE_URL = 'https://app.muster.28footsystems.com/';
+
+    function selectedEngineLabels() {
+      const engines = [
+        { id: 'chkA11y', label: 'WCAG 2.2 AA' },
+        { id: 'chkAIO', label: 'AIO/GEO' },
+        { id: 'chkSOC2', label: 'SOC 2' },
+        { id: 'chkPrivacy', label: 'GDPR Privacy' },
+      ];
+      return engines.filter(e => document.getElementById(e.id).checked).map(e => e.label);
+    }
 
     function slugify(text) {
       return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -1226,12 +1243,18 @@
       const adminEmail = document.getElementById('inAdminEmail').value.trim();
       const tier = document.getElementById('inTier').value;
       const tenantId = `tenant-${orgSlug}`;
+      const engines = selectedEngineLabels();
 
       document.getElementById('lblSuccessTenant').textContent = `${orgName} Workspace Provisioned`;
+      document.getElementById('lblSuccessSummary').textContent = engines.length
+        ? `Your isolated tenant partition has been seeded with initial ${engines.join(', ')} findings for the ${industry} baseline.`
+        : `Your isolated tenant partition is provisioned with no assurance engines enabled -- go back to Step 3 to turn on at least one.`;
       document.getElementById('outTenantId').textContent = tenantId;
       document.getElementById('outDomain').textContent = domain;
       document.getElementById('outRegion').textContent = region;
       document.getElementById('outAdmin').textContent = `${adminName} (${adminEmail})`;
+      document.getElementById('outEngines').textContent = engines.length ? engines.join(', ') : 'None selected';
+      document.getElementById('outTier').textContent = tier;
       document.getElementById('outPassword').textContent = generatedPassword;
       document.getElementById('outTimestamp').textContent = new Date().toLocaleString();
 
@@ -1266,7 +1289,7 @@
         tier: tier
       });
 
-      window.location.href = `index.html?${params.toString()}`;
+      window.location.href = `${APP_WORKSPACE_URL}?${params.toString()}`;
     }
 
     function copyCredentials() {
@@ -1276,9 +1299,11 @@ Tenant ID: ${document.getElementById('outTenantId').textContent}
 Domain: https://${document.getElementById('outDomain').textContent}
 Cloud Region: ${document.getElementById('outRegion').textContent}
 Administrator: ${document.getElementById('outAdmin').textContent}
+Assurance Engines: ${document.getElementById('outEngines').textContent}
+Engagement Tier: ${document.getElementById('outTier').textContent}
 Temporary Access Key: ${document.getElementById('outPassword').textContent}
 Provisioned At: ${document.getElementById('outTimestamp').textContent}
-Workspace URL: ${window.location.origin}/index.html`;
+Workspace URL: ${APP_WORKSPACE_URL}`;
 
       copyToClipboard(text);
       showToast("Credentials copied to clipboard.");
@@ -1290,12 +1315,14 @@ Workspace URL: ${window.location.origin}/index.html`;
         organization: document.getElementById('inOrgName').value,
         domain: document.getElementById('outDomain').textContent,
         industry: document.getElementById('inIndustry').value,
+        tenancyMode: document.getElementById('inTenancyMode').value,
         region: document.getElementById('outRegion').textContent,
         admin: {
           name: document.getElementById('inAdminName').value,
           email: document.getElementById('inAdminEmail').value,
           temporaryKey: generatedPassword
         },
+        engagementTier: document.getElementById('inTier').value,
         assuranceEngines: {
           wcag22AA: document.getElementById('chkA11y').checked,
           aioGEO: document.getElementById('chkAIO').checked,
