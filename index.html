@@ -628,7 +628,7 @@
           <li>MUSTER / 28 Foot Systems branding</li>
         </ul>
         <p class="price-excludes" data-tooltip="These require the MUSTER Partner tier instead.">Does not include white-labeling, commercial client usage, client management, or removal of MUSTER branding.</p>
-        <a class="btn-primary price-cta" href="app.html" data-tooltip="Opens the MUSTER workspace to start your own organization's governance assessment.">Start With MUSTER →</a>
+        <a class="btn-primary price-cta" id="musterCta" data-tooltip="Opens a short intake so you can start your MUSTER subscription.">Start With MUSTER →</a>
       </div>
 
       <div class="price-card featured" id="cardPartner">
@@ -656,7 +656,7 @@
           <li>Custom domain or subdomain capability where technically supported</li>
           <li>Expansion billing based on active client organizations</li>
         </ul>
-        <a class="btn-primary price-cta" href="app.html" data-tooltip="Opens the MUSTER workspace to start onboarding your first client organization.">Become a MUSTER Partner →</a>
+        <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens a short intake so you can start your MUSTER Partner subscription.">Become a MUSTER Partner →</a>
       </div>
 
       <div class="price-card enterprise-card" id="cardEnterprise">
@@ -735,11 +735,27 @@
   // scheduling link (Calendly, GHL) or a confirmed monitored inbox before launch.
   const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Enterprise%20Inquiry';
 
+  // Checkout phase 1 (sales-assisted): payment is collected inside GHL itself
+  // (native invoicing / Stripe-connect), not a separate MUSTER-owned Stripe
+  // account. These are placeholder GHL funnel/form URLs -- swap the base URL
+  // once real ones exist; keep the query params, GHL's form should capture
+  // them as hidden fields into the src:/product:/intent: tag taxonomy. Once
+  // a GHL workflow marks a deal won, it calls the muster-ghl-webhook Edge
+  // Function to actually provision the tenant on the correct paid plan.
+  const GHL_MUSTER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-signup';
+  const GHL_PARTNER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-partner-signup';
+
+  function buildGhlUrl(base, product, intent) {
+    const params = new URLSearchParams({ src: 'pricing_page', product, intent });
+    return `${base}?${params.toString()}`;
+  }
+
   let pricingStage = 'seed';
 
   function renderPricing() {
     const stage = PRICING[pricingStage];
     const isSeed = pricingStage === 'seed';
+    const intent = isSeed ? 'seed_signup' : 'fruit_signup';
 
     document.getElementById('musterPrice').textContent = `$${stage.tenant.monthly}`;
     document.getElementById('partnerPrice').textContent = `$${stage.partner.monthly}`;
@@ -755,6 +771,9 @@
     document.getElementById('btnFruit').setAttribute('aria-pressed', String(!isSeed));
     document.getElementById('btnSeed').classList.toggle('active', isSeed);
     document.getElementById('btnFruit').classList.toggle('active', !isSeed);
+
+    document.getElementById('musterCta').href = buildGhlUrl(GHL_MUSTER_SIGNUP_URL, 'muster', intent);
+    document.getElementById('partnerCta').href = buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', intent);
   }
 
   function setPricingStage(stage) {
