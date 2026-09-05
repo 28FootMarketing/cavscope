@@ -325,6 +325,34 @@
     @media (prefers-reduced-motion: reduce) {
       .btn-primary { transition: none; }
     }
+
+    /* ---------- Tooltips ---------- */
+    .app-tooltip {
+      position: fixed;
+      z-index: 300;
+      max-width: 280px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: #0d1a33;
+      border: 1px solid #2e4a78;
+      color: #e6eefb;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(3px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
+    [data-tooltip] { cursor: help; }
+    a[data-tooltip], button[data-tooltip] { cursor: pointer; }
+    [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
   </style>
 </head>
 <body>
@@ -333,9 +361,9 @@
   <div class="wrap statusbar-inner">
     <div class="brand"><span class="dot"></span>MUSTER <small>/ AI GOVERNANCE</small></div>
     <div class="statusbar-meta">
-      <span>STATUS <b>MONITORING</b></span>
-      <span>REPORT <b>SITREP</b></span>
-      <a class="nav-link" href="app.html">Open Workspace →</a>
+      <span data-tooltip="MUSTER is actively watching for shadow AI, data exposure, and policy gaps — not a one-time scan.">STATUS <b>MONITORING</b></span>
+      <span data-tooltip="SITREP: Situation Report — the plain-English executive summary MUSTER generates from its findings.">REPORT <b>SITREP</b></span>
+      <a class="nav-link" href="app.html" data-tooltip="Go to the MUSTER workspace to sign in or run an assessment.">Open Workspace →</a>
     </div>
   </div>
 </div>
@@ -351,22 +379,22 @@
       <p class="lede">MUSTER gives leaders a clear operational picture of AI risk.</p>
       <p class="lede">The outcome is a SITREP: a plain-English executive report that shows what is happening, what is exposed, what needs proof, and what must happen next.</p>
       <div class="cta-row">
-        <a class="btn-primary" href="#directive">Request Your AI Governance SITREP →</a>
-        <span class="cta-note">No agents installed. No workflow disrupted.</span>
+        <a class="btn-primary" href="#directive" data-tooltip="Scroll to the request form at the bottom of this page.">Request Your AI Governance SITREP →</a>
+        <span class="cta-note" data-tooltip="No browser extension, agent, or software installation is required to get assessed.">No agents installed. No workflow disrupted.</span>
       </div>
     </div>
 
     <div class="sitrep-panel">
       <div class="sitrep-head">
-        <span class="tag">Sitrep · Illustrative Excerpt</span>
-        <span class="id">AI-GOV-0417</span>
+        <span class="tag" data-tooltip="This panel shows fictional sample data so you can see the report's shape — it is not a real assessment.">Sitrep · Illustrative Excerpt</span>
+        <span class="id" data-tooltip="Internal reference ID MUSTER assigns to each generated SITREP.">AI-GOV-0417</span>
       </div>
       <div class="sitrep-body">
         <div class="sitrep-org">Sample Organization — Professional Services, 60 employees</div>
         <div class="sitrep-target">Scope: AI tool usage, all departments</div>
 
         <div class="gauge-row">
-          <div class="gauge">
+          <div class="gauge" data-tooltip="AI Risk Posture Score: one number from 0-100 summarizing exposure across all findings. Higher is safer.">
             <svg viewBox="0 0 108 108">
               <circle cx="54" cy="54" r="46" fill="none" stroke="#1f3358" stroke-width="9"></circle>
               <circle cx="54" cy="54" r="46" fill="none" stroke="#fbbf24" stroke-width="9"
@@ -375,15 +403,15 @@
             <div class="gauge-value"><span class="num">63</span><span class="of100">/ 100</span></div>
           </div>
           <div class="gauge-label">
-            <div class="band">● AMBER POSTURE</div>
+            <div class="band" data-tooltip="Amber means governance gaps exist but nothing critical has been breached yet — the window to act is now.">● AMBER POSTURE</div>
             <div class="desc">Governance gaps present. No critical breach detected — action needed before one occurs.</div>
           </div>
         </div>
 
         <div class="finding-peek">
-          <div class="fp-row"><span class="fp-code">F&#8209;01</span><span class="fp-sev" style="background:#fbbf24"></span><span class="fp-text"><b>Shadow AI usage</b> — 4 unapproved tools identified across marketing &amp; HR</span></div>
-          <div class="fp-row"><span class="fp-code">F&#8209;03</span><span class="fp-sev" style="background:#f6516a"></span><span class="fp-text"><b>Data exposure</b> — client contracts pasted into a consumer chatbot</span></div>
-          <div class="fp-row"><span class="fp-code">F&#8209;07</span><span class="fp-sev" style="background:#36e2c9"></span><span class="fp-text"><b>Remediation</b> — 30-day plan attached, 3 owners assigned</span></div>
+          <div class="fp-row"><span class="fp-code" data-tooltip="Finding code: a unique reference MUSTER cites throughout the SITREP for this specific issue.">F&#8209;01</span><span class="fp-sev" style="background:#fbbf24" data-tooltip="Medium severity — worth fixing soon, not an emergency."></span><span class="fp-text"><b>Shadow AI usage</b> — 4 unapproved tools identified across marketing &amp; HR</span></div>
+          <div class="fp-row"><span class="fp-code" data-tooltip="Finding code: a unique reference MUSTER cites throughout the SITREP for this specific issue.">F&#8209;03</span><span class="fp-sev" style="background:#f6516a" data-tooltip="High severity — this is the kind of finding that becomes a real incident if left alone."></span><span class="fp-text"><b>Data exposure</b> — client contracts pasted into a consumer chatbot</span></div>
+          <div class="fp-row"><span class="fp-code" data-tooltip="Finding code: a unique reference MUSTER cites throughout the SITREP for this specific issue.">F&#8209;07</span><span class="fp-sev" style="background:#36e2c9" data-tooltip="Informational — a planning item, not a risk by itself."></span><span class="fp-text"><b>Remediation</b> — 30-day plan attached, 3 owners assigned</span></div>
         </div>
       </div>
       <div class="sitrep-foot">SAMPLE DATA — FOR ILLUSTRATION ONLY, NOT AN ACTUAL ASSESSMENT</div>
@@ -393,34 +421,34 @@
   <section class="block">
     <div class="block-head">
       <h2>What MUSTER Finds</h2>
-      <span class="count">8 finding classes</span>
+      <span class="count" data-tooltip="The fixed set of finding classes MUSTER's AI-governance assessment checks for.">8 finding classes</span>
     </div>
     <div class="ledger">
-      <div class="ledger-row"><span class="ledger-code">F&#8209;01</span><span class="ledger-text">Shadow AI usage across departments</span><span class="ledger-cat">Shadow AI</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;02</span><span class="ledger-text">Unapproved tools and workflows</span><span class="ledger-cat">Access</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;03</span><span class="ledger-text">Sensitive data exposure risks</span><span class="ledger-cat">Data</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;04</span><span class="ledger-text">Missing AI policies</span><span class="ledger-cat">Policy</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;05</span><span class="ledger-text">Weak approval processes</span><span class="ledger-cat">Process</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;06</span><span class="ledger-text">HR, hiring, marketing, and automation risks</span><span class="ledger-cat">Operations</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;07</span><span class="ledger-text">Missing evidence for governance and compliance</span><span class="ledger-cat">Evidence</span></div>
-      <div class="ledger-row"><span class="ledger-code">F&#8209;08</span><span class="ledger-text">Remediation priorities leadership can act on</span><span class="ledger-cat">Remediation</span></div>
+      <div class="ledger-row" data-tooltip="Employees using ChatGPT, Claude, or other AI tools that IT never approved or knows about."><span class="ledger-code">F&#8209;01</span><span class="ledger-text">Shadow AI usage across departments</span><span class="ledger-cat">Shadow AI</span></div>
+      <div class="ledger-row" data-tooltip="Tools and workflows running in production without going through any approval process."><span class="ledger-code">F&#8209;02</span><span class="ledger-text">Unapproved tools and workflows</span><span class="ledger-cat">Access</span></div>
+      <div class="ledger-row" data-tooltip="Client, employee, or financial data that could be pasted into or read by a third-party AI tool."><span class="ledger-code">F&#8209;03</span><span class="ledger-text">Sensitive data exposure risks</span><span class="ledger-cat">Data</span></div>
+      <div class="ledger-row" data-tooltip="No written policy exists yet on what AI tools staff can use and how."><span class="ledger-code">F&#8209;04</span><span class="ledger-text">Missing AI policies</span><span class="ledger-cat">Policy</span></div>
+      <div class="ledger-row" data-tooltip="Nobody has to sign off before a new AI tool goes into use."><span class="ledger-code">F&#8209;05</span><span class="ledger-text">Weak approval processes</span><span class="ledger-cat">Process</span></div>
+      <div class="ledger-row" data-tooltip="AI use in hiring, HR decisions, marketing claims, or automated workflows that carries its own compliance exposure."><span class="ledger-code">F&#8209;06</span><span class="ledger-text">HR, hiring, marketing, and automation risks</span><span class="ledger-cat">Operations</span></div>
+      <div class="ledger-row" data-tooltip="If a regulator or client asked for proof of your AI governance today, you would not have it ready."><span class="ledger-code">F&#8209;07</span><span class="ledger-text">Missing evidence for governance and compliance</span><span class="ledger-cat">Evidence</span></div>
+      <div class="ledger-row" data-tooltip="A ranked list of what to fix first, so leadership can act instead of just reading a report."><span class="ledger-code">F&#8209;08</span><span class="ledger-text">Remediation priorities leadership can act on</span><span class="ledger-cat">Remediation</span></div>
     </div>
   </section>
 
   <section class="block">
     <div class="block-head">
       <h2>The SITREP Includes</h2>
-      <span class="count">8 sections</span>
+      <span class="count" data-tooltip="Every SITREP MUSTER generates follows this same fixed structure, in this order.">8 sections</span>
     </div>
     <div class="toc">
-      <div class="toc-item"><span class="toc-num">01</span><div><div class="toc-title">AI Risk Posture Score</div><div class="toc-sub">One number, one band, board-ready</div></div></div>
-      <div class="toc-item"><span class="toc-num">02</span><div><div class="toc-title">AI Tool Inventory</div><div class="toc-sub">Every tool in use, approved or not</div></div></div>
-      <div class="toc-item"><span class="toc-num">03</span><div><div class="toc-title">Policy Gap Review</div><div class="toc-sub">What's written down vs. what's practiced</div></div></div>
-      <div class="toc-item"><span class="toc-num">04</span><div><div class="toc-title">Data Exposure Review</div><div class="toc-sub">Where sensitive data can leave the building</div></div></div>
-      <div class="toc-item"><span class="toc-num">05</span><div><div class="toc-title">Control Mapping</div><div class="toc-sub">Findings mapped to governance frameworks</div></div></div>
-      <div class="toc-item"><span class="toc-num">06</span><div><div class="toc-title">Evidence Readiness Checklist</div><div class="toc-sub">What you could actually show an auditor today</div></div></div>
-      <div class="toc-item"><span class="toc-num">07</span><div><div class="toc-title">30-Day Remediation Plan</div><div class="toc-sub">Ranked, owned, and dated</div></div></div>
-      <div class="toc-item"><span class="toc-num">08</span><div><div class="toc-title">Executive Summary for Leadership</div><div class="toc-sub">The version that goes to the board</div></div></div>
+      <div class="toc-item" data-tooltip="A single 0-100 score with a green/amber/red band, meant to be read in one glance by a board or executive."><span class="toc-num">01</span><div><div class="toc-title">AI Risk Posture Score</div><div class="toc-sub">One number, one band, board-ready</div></div></div>
+      <div class="toc-item" data-tooltip="A full list of every AI tool detected in use, whether IT approved it or not."><span class="toc-num">02</span><div><div class="toc-title">AI Tool Inventory</div><div class="toc-sub">Every tool in use, approved or not</div></div></div>
+      <div class="toc-item" data-tooltip="Compares your written AI policies (if any) against what employees are actually doing."><span class="toc-num">03</span><div><div class="toc-title">Policy Gap Review</div><div class="toc-sub">What's written down vs. what's practiced</div></div></div>
+      <div class="toc-item" data-tooltip="Identifies where client, employee, or financial data could leave your control through an AI tool."><span class="toc-num">04</span><div><div class="toc-title">Data Exposure Review</div><div class="toc-sub">Where sensitive data can leave the building</div></div></div>
+      <div class="toc-item" data-tooltip="Ties each finding to the governance framework it falls under, so nothing is orphaned from a standard."><span class="toc-num">05</span><div><div class="toc-title">Control Mapping</div><div class="toc-sub">Findings mapped to governance frameworks</div></div></div>
+      <div class="toc-item" data-tooltip="A concrete checklist of proof you could hand an auditor or regulator right now — and what's missing."><span class="toc-num">06</span><div><div class="toc-title">Evidence Readiness Checklist</div><div class="toc-sub">What you could actually show an auditor today</div></div></div>
+      <div class="toc-item" data-tooltip="Each fix assigned an owner and a due date within the next 30 days, ranked by priority."><span class="toc-num">07</span><div><div class="toc-title">30-Day Remediation Plan</div><div class="toc-sub">Ranked, owned, and dated</div></div></div>
+      <div class="toc-item" data-tooltip="A short, jargon-free summary written for people who won't read the full report."><span class="toc-num">08</span><div><div class="toc-title">Executive Summary for Leadership</div><div class="toc-sub">The version that goes to the board</div></div></div>
     </div>
   </section>
 
@@ -428,14 +456,14 @@
     <div class="block-head"><h2>Who It Is For</h2></div>
     <p class="roster-intro">MUSTER is built for leadership teams using AI without a clear governance system in place — regardless of industry or size.</p>
     <div class="roster">
-      <span class="roster-chip">Business owners</span>
-      <span class="roster-chip">Agencies</span>
-      <span class="roster-chip">Nonprofits</span>
-      <span class="roster-chip">Schools</span>
-      <span class="roster-chip">Consultants</span>
-      <span class="roster-chip">Healthcare-adjacent organizations</span>
-      <span class="roster-chip">Professional service firms</span>
-      <span class="roster-chip">Leadership teams</span>
+      <span class="roster-chip" data-tooltip="Any owner accountable for the business's data and reputation, regardless of team size.">Business owners</span>
+      <span class="roster-chip" data-tooltip="Agencies running AI tools across multiple client accounts, where one bad exposure affects every client.">Agencies</span>
+      <span class="roster-chip" data-tooltip="Nonprofits handling donor and beneficiary data under their own compliance obligations.">Nonprofits</span>
+      <span class="roster-chip" data-tooltip="Schools and districts handling student records, subject to FERPA and similar student-privacy rules.">Schools</span>
+      <span class="roster-chip" data-tooltip="Independent consultants whose reputation depends on how they handle client information.">Consultants</span>
+      <span class="roster-chip" data-tooltip="Organizations adjacent to healthcare that touch patient-related data without being a covered entity themselves.">Healthcare-adjacent organizations</span>
+      <span class="roster-chip" data-tooltip="Law, accounting, and advisory firms bound by client confidentiality obligations.">Professional service firms</span>
+      <span class="roster-chip" data-tooltip="Any leadership team that needs to be able to answer for how AI is used under them.">Leadership teams</span>
     </div>
   </section>
 
@@ -447,7 +475,7 @@
       <p>That is where MUSTER comes in.</p>
     </div>
     <div>
-      <p class="pull">"Nobody approved it" is not a defense once the data is already out.</p>
+      <p class="pull" data-tooltip="Regulators, clients, and courts generally hold the organization responsible, not the individual employee who used an unapproved tool.">"Nobody approved it" is not a defense once the data is already out.</p>
       <p class="pull-caption">— the gap MUSTER is built to close</p>
     </div>
   </section>
@@ -456,17 +484,89 @@
     <div class="directive">
       <h2>Get Your AI Governance SITREP</h2>
       <p>Know what is happening before a client, regulator, employee, or attorney asks first.</p>
-      <a class="btn-primary" href="app.html">Request Your AI Governance SITREP →</a>
+      <a class="btn-primary" href="app.html" data-tooltip="Opens the MUSTER workspace to sign in or start an assessment.">Request Your AI Governance SITREP →</a>
     </div>
   </section>
 
   <footer>
     <div class="foot-row">
       <div class="foot-brand">MUSTER — AI Governance, prepared by After Today, LLC (DBA 28 Foot Systems)</div>
-      <div class="foot-disclaimer">MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.</div>
+      <div class="foot-disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.</div>
     </div>
   </footer>
 
 </div>
+
+<script>
+  // Tooltip engine: event delegation on [data-tooltip], one floating element.
+  // Shows on hover and keyboard focus, dismisses on Escape (WCAG 1.4.13),
+  // flips below the target when there is no room above, and is announced to
+  // screen readers via aria-describedby while visible.
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => {
+      const target = findTarget(e.target);
+      if (target) show(target);
+    });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && current) { hide(); suppressed = true; }
+    });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', initTooltips);
+</script>
 </body>
 </html>
