@@ -105,6 +105,7 @@
     }
     .nav-link:hover { border-color: var(--teal); color: var(--teal); }
     @media (max-width: 720px) { .statusbar-meta span:not(.nav-link-wrap) { display: none; } }
+    @media (max-width: 560px) { .nav-link.pricing-link { display: none; } }
 
     /* ---------- Hero ---------- */
     .hero {
@@ -297,6 +298,114 @@
     }
     .pull-caption { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-dim); margin-top: 14px; letter-spacing: 0.04em; }
 
+    /* ---------- Pricing ---------- */
+    .pricing-toggle {
+      display: inline-flex;
+      border: 1px solid var(--surface-border-strong);
+      border-radius: 9px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 36px;
+      background: var(--surface-card);
+    }
+    .toggle-btn {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 10px 20px;
+      min-height: 44px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    #btnSeed.active { background: var(--teal); color: #04211c; border-color: var(--teal); }
+    #btnFruit.active { background: var(--amber); color: #2b1c02; border-color: var(--amber); }
+    .toggle-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px) { .pricing-grid { grid-template-columns: 1fr; max-width: 460px; } }
+
+    .price-card {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border-strong);
+      border-radius: 12px;
+      padding: 30px 26px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      position: relative;
+    }
+    .price-card.featured {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px var(--teal-glow), 0 24px 50px rgba(0,0,0,0.35);
+    }
+    .price-card.enterprise-card { background: var(--surface-raised); }
+
+    .price-highlight {
+      position: absolute;
+      top: -12px;
+      left: 26px;
+      background: var(--teal);
+      color: #04211c;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+
+    .price-card-head h3 { font-family: var(--font-display); font-size: 21px; margin: 0 0 4px; color: var(--text); }
+    .price-purpose { font-size: 13.5px; color: var(--text-muted); margin: 0; }
+
+    .price-amount { display: flex; align-items: baseline; gap: 7px; }
+    .price-num { font-family: var(--font-mono); font-size: 32px; font-weight: 700; color: var(--text); }
+    .price-cadence { font-family: var(--font-mono); font-size: 13px; color: var(--text-dim); }
+
+    .price-badge {
+      display: inline-flex;
+      align-self: flex-start;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border-radius: 5px;
+      border: 1px solid var(--teal);
+      color: var(--teal);
+    }
+    .price-badge.fruit { border-color: var(--amber); color: var(--amber); }
+
+    .price-allowance, .price-lock { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.55; }
+    .price-lock { font-size: 11.5px; color: var(--text-dim); font-family: var(--font-mono); }
+
+    .price-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; flex-grow: 1; }
+    .price-features li { font-size: 13.5px; color: var(--text-muted); padding-left: 20px; position: relative; }
+    .price-features li::before { content: '✓'; position: absolute; left: 0; color: var(--teal); font-weight: 700; }
+    .price-features.enterprise-list li::before { content: '–'; color: var(--text-dim); font-weight: 400; }
+    .price-features li.price-features-note { padding-left: 0; color: var(--text-dim); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em; }
+    .price-features li.price-features-note::before { content: none; }
+
+    .price-excludes, .price-note { font-size: 12px; color: var(--text-dim); margin: 0; line-height: 1.55; }
+
+    .price-cta { justify-content: center; margin-top: auto; text-align: center; }
+
+    @media (max-width: 640px) {
+      .pricing-toggle { width: 100%; }
+      .toggle-btn { flex: 1; }
+    }
+
     /* ---------- Closing directive ---------- */
     .directive {
       background: var(--surface-card);
@@ -363,6 +472,7 @@
     <div class="statusbar-meta">
       <span data-tooltip="MUSTER is actively watching for shadow AI, data exposure, and policy gaps — not a one-time scan.">STATUS <b>MONITORING</b></span>
       <span data-tooltip="SITREP: Situation Report — the plain-English executive summary MUSTER generates from its findings.">REPORT <b>SITREP</b></span>
+      <a class="nav-link pricing-link" href="#pricing" data-tooltip="Jump to MUSTER, MUSTER Partner, and MUSTER Enterprise pricing.">Pricing</a>
       <a class="nav-link" href="app.html" data-tooltip="Go to the MUSTER workspace to sign in or run an assessment.">Open Workspace →</a>
     </div>
   </div>
@@ -480,6 +590,102 @@
     </div>
   </section>
 
+  <section class="block" id="pricing">
+    <div class="block-head">
+      <h2>Pricing</h2>
+      <span class="count" data-tooltip="No hidden add-on tiers -- three plans, chosen by who you're governing AI for.">Three plans</span>
+    </div>
+
+    <div class="pricing-toggle" role="group" aria-label="Pricing stage">
+      <button type="button" class="toggle-btn active" id="btnSeed" aria-pressed="true" data-tooltip="Founding-stage pricing for MUSTER and MUSTER Partner. The Partner rate locks in while you stay continuously subscribed and in good standing.">Seed Pricing</button>
+      <button type="button" class="toggle-btn" id="btnFruit" aria-pressed="false" data-tooltip="Standard ongoing pricing for MUSTER and MUSTER Partner, after the Seed stage closes.">Fruit Pricing</button>
+    </div>
+
+    <div class="pricing-grid">
+
+      <div class="price-card" id="cardMuster">
+        <div class="price-card-head">
+          <h3>MUSTER</h3>
+          <p class="price-purpose">We govern our own organization.</p>
+        </div>
+        <div class="price-amount"><span class="price-num" id="musterPrice">$97</span><span class="price-cadence">/month</span></div>
+        <ul class="price-features">
+          <li>One primary organization</li>
+          <li>AI governance workspace</li>
+          <li>AI inventory</li>
+          <li>Risk register</li>
+          <li>Policy tracking</li>
+          <li>Control mapping</li>
+          <li>Evidence management</li>
+          <li>Remediation tracking</li>
+          <li>Executive SITREP generation</li>
+          <li>Executive reporting</li>
+          <li>Website assurance</li>
+          <li>Accessibility assessments</li>
+          <li>AIO/GEO assessments</li>
+          <li>Historical assessment tracking</li>
+          <li>Internal users within reasonable plan limits</li>
+          <li>MUSTER / 28 Foot Systems branding</li>
+        </ul>
+        <p class="price-excludes" data-tooltip="These require the MUSTER Partner tier instead.">Does not include white-labeling, commercial client usage, client management, or removal of MUSTER branding.</p>
+        <a class="btn-primary price-cta" href="app.html" data-tooltip="Opens the MUSTER workspace to start your own organization's governance assessment.">Start With MUSTER →</a>
+      </div>
+
+      <div class="price-card featured" id="cardPartner">
+        <span class="price-highlight">Built For Agencies &amp; Consultants</span>
+        <div class="price-card-head">
+          <h3>MUSTER Partner</h3>
+          <p class="price-purpose">We use MUSTER with our clients.</p>
+        </div>
+        <div class="price-amount"><span class="price-num" id="partnerPrice">$197</span><span class="price-cadence">/month</span></div>
+        <span class="price-badge" id="partnerBadge">Founding Partner Pricing</span>
+        <p class="price-allowance" id="partnerAllowance">Includes <b>5</b> active client organizations. Additional organizations: <b>$39</b>/month each.</p>
+        <p class="price-lock" id="partnerLock">Locked while continuously subscribed and in good standing.</p>
+        <ul class="price-features">
+          <li class="price-features-note">Everything in MUSTER, plus:</li>
+          <li>White-label capability</li>
+          <li>Custom branding</li>
+          <li>Branded SITREPs</li>
+          <li>Branded executive reports</li>
+          <li>Client organization management</li>
+          <li>Commercial usage rights</li>
+          <li>Partner dashboard</li>
+          <li>Multi-tenant client workspaces</li>
+          <li>Custom brand identity</li>
+          <li>Removal of MUSTER / 28 Foot Systems customer-facing branding where appropriate</li>
+          <li>Custom domain or subdomain capability where technically supported</li>
+          <li>Expansion billing based on active client organizations</li>
+        </ul>
+        <a class="btn-primary price-cta" href="app.html" data-tooltip="Opens the MUSTER workspace to start onboarding your first client organization.">Become a MUSTER Partner →</a>
+      </div>
+
+      <div class="price-card enterprise-card" id="cardEnterprise">
+        <div class="price-card-head">
+          <h3>MUSTER Enterprise</h3>
+          <p class="price-purpose">Our governance environment is larger or more complex.</p>
+        </div>
+        <div class="price-amount"><span class="price-num" data-tooltip="Enterprise pricing is scoped during discovery, not published -- it depends on how many organizations, departments, and websites are involved.">Custom Pricing</span></div>
+        <ul class="price-features enterprise-list">
+          <li class="price-features-note">Depending on scope:</li>
+          <li>Multiple organizations, departments, or business units</li>
+          <li>Multiple websites</li>
+          <li>Enterprise AI inventory</li>
+          <li>Advanced risk &amp; control mapping</li>
+          <li>Custom governance frameworks</li>
+          <li>Executive and board-level SITREPs</li>
+          <li>Role-based access controls</li>
+          <li>Advanced audit logging</li>
+          <li>Enterprise integrations &amp; API access</li>
+          <li>Dedicated onboarding &amp; implementation support</li>
+          <li>Priority support &amp; SLA options</li>
+        </ul>
+        <p class="price-note" data-tooltip="Not every Enterprise customer receives every feature listed above -- scope, features, and price are set during a discovery conversation.">Enterprise scope is determined during discovery.</p>
+        <a class="btn-primary price-cta" id="enterpriseCta" data-tooltip="Opens an email to 28 Foot Systems to start an Enterprise discovery conversation.">Talk to 28 Foot Systems →</a>
+      </div>
+
+    </div>
+  </section>
+
   <section class="block" id="directive" style="border-top: none; padding-top: 0;">
     <div class="directive">
       <h2>Get Your AI Governance SITREP</h2>
@@ -498,6 +704,74 @@
 </div>
 
 <script>
+  // Centralized pricing config -- every price/allowance shown on the page reads
+  // from here. To change a number, change it once, here; never hardcode a price
+  // string into markup elsewhere.
+  //
+  // Entitlement mapping (for when this wires into real billing/feature-flags --
+  // not implemented yet, see muster.feature_flags): MUSTER Partner corresponds to
+  // white_label_enabled + commercial_use_enabled + client_management_enabled +
+  // custom_branding_enabled + custom_domain_enabled + partner_dashboard_enabled.
+  // MUSTER Enterprise corresponds to enterprise_enabled. None of these flag keys
+  // exist in muster.feature_flags today -- the existing internal plan axis
+  // (trial/starter/pro/enterprise/internal, set in app.html's admin panel) does
+  // not currently line up with these three public tiers (e.g. white-label is
+  // already granted on the existing "starter" plan). Reconciling the two is a
+  // separate decision, intentionally not made here.
+  const PRICING = {
+    seed: {
+      tenant: { monthly: 97 },
+      partner: { monthly: 197, includedOrganizations: 5, additionalOrganizationPrice: 39 },
+    },
+    fruit: {
+      tenant: { monthly: 197 },
+      partner: { monthly: 497, includedOrganizations: 10, additionalOrganizationPrice: 49 },
+    },
+    enterprise: { requiresSalesCall: true, publicPrice: null },
+  };
+
+  // No booking calendar, contact form, or phone number exists anywhere in this
+  // project yet. This is a placeholder destination -- replace with a real
+  // scheduling link (Calendly, GHL) or a confirmed monitored inbox before launch.
+  const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Enterprise%20Inquiry';
+
+  let pricingStage = 'seed';
+
+  function renderPricing() {
+    const stage = PRICING[pricingStage];
+    const isSeed = pricingStage === 'seed';
+
+    document.getElementById('musterPrice').textContent = `$${stage.tenant.monthly}`;
+    document.getElementById('partnerPrice').textContent = `$${stage.partner.monthly}`;
+    document.getElementById('partnerAllowance').innerHTML =
+      `Includes <b>${stage.partner.includedOrganizations}</b> active client organizations. Additional organizations: <b>$${stage.partner.additionalOrganizationPrice}</b>/month each.`;
+
+    const badge = document.getElementById('partnerBadge');
+    badge.textContent = isSeed ? 'Founding Partner Pricing' : 'Standard Pricing';
+    badge.classList.toggle('fruit', !isSeed);
+    document.getElementById('partnerLock').hidden = !isSeed;
+
+    document.getElementById('btnSeed').setAttribute('aria-pressed', String(isSeed));
+    document.getElementById('btnFruit').setAttribute('aria-pressed', String(!isSeed));
+    document.getElementById('btnSeed').classList.toggle('active', isSeed);
+    document.getElementById('btnFruit').classList.toggle('active', !isSeed);
+  }
+
+  function setPricingStage(stage) {
+    if (stage === pricingStage) return;
+    pricingStage = stage;
+    renderPricing();
+  }
+
+  function initPricing() {
+    document.getElementById('btnSeed').addEventListener('click', () => setPricingStage('seed'));
+    document.getElementById('btnFruit').addEventListener('click', () => setPricingStage('fruit'));
+    document.getElementById('enterpriseCta').href = ENTERPRISE_CONTACT_HREF;
+    renderPricing();
+  }
+
+  window.addEventListener('DOMContentLoaded', initPricing);
+
   // Tooltip engine: event delegation on [data-tooltip], one floating element.
   // Shows on hover and keyboard focus, dismisses on Escape (WCAG 1.4.13),
   // flips below the target when there is no room above, and is announced to
