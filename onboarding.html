@@ -574,17 +574,6 @@
       transform: translateY(0);
     }
 
-    .demo-banner {
-      background: rgba(251, 191, 36, 0.08);
-      border-bottom: 1px solid rgba(251, 191, 36, 0.35);
-      color: #fde3a7;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      text-align: center;
-      padding: 8px 16px;
-      letter-spacing: 0.02em;
-    }
-
     @media (max-width: 768px) {
       .header { padding: 0 20px; }
       .form-row, .framework-grid { grid-template-columns: 1fr; }
@@ -596,11 +585,9 @@
 </head>
 <body>
 
-  <div class="demo-banner">⚠ Simulated walkthrough — this demonstrates the onboarding experience with sample data. It does not create a real tenant. To provision an actual workspace, use <strong>Sign Up</strong> inside the workspace.</div>
-
   <!-- Topbar Header -->
   <header class="header">
-    <a href="https://muster.28footsystems.com/" class="brand">
+    <a href="#" class="brand">
       <div class="brand-mark">28F</div>
       <div class="brand-text">
         <span class="eyebrow">Enterprise Cloud</span>
@@ -613,7 +600,7 @@
         <span class="dot-live"></span>
         <span>Automated Provisioning Hub</span>
       </div>
-      <a href="https://app.muster.28footsystems.com/" class="btn-ghost" style="padding: 7px 14px; font-size: 12px;">
+      <a href="index.html" class="btn-ghost" style="padding: 7px 14px; font-size: 12px;">
         ↗ Existing Workspace
       </a>
     </div>
@@ -1034,7 +1021,7 @@
         tier: tier
       });
 
-      window.location.href = `https://app.muster.28footsystems.com/?${params.toString()}`;
+      window.location.href = `index.html?${params.toString()}`;
     }
 
     function copyCredentials() {
@@ -1046,7 +1033,7 @@ Cloud Region: ${document.getElementById('outRegion').textContent}
 Administrator: ${document.getElementById('outAdmin').textContent}
 Temporary Access Key: ${document.getElementById('outPassword').textContent}
 Provisioned At: ${document.getElementById('outTimestamp').textContent}
-Workspace URL: https://app.muster.28footsystems.com/`;
+Workspace URL: ${window.location.origin}/index.html`;
 
       copyToClipboard(text);
       showToast("Credentials copied to clipboard.");
