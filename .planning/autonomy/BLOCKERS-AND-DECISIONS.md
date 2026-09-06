@@ -4,7 +4,13 @@ Decisions only Anthony can make. Nothing here is resolved by guessing or by pick
 
 ---
 
-## B-1 — GHL sales-assisted checkout vs. Stripe self-serve checkout vs. both
+## B-1 — RESOLVED (2026-09-08): Stripe self-serve for MUSTER base, GHL stays for Partner/Enterprise
+
+Anthony chose "Stripe self-serve" (Option 2 below). Implemented as PRD-003: live Stripe Product/Prices/Payment Links for the base `muster` tier, `muster-stripe-webhook`, and a `muster.pending_commercial_grants` table applied by the existing self-serve onboarding wizard rather than the dead `muster.onboard_client`. See `docs/BACKEND.md`'s "Checkout paths" section for the live IDs and `prds/PRD-003-stripe-selfserve-checkout.md` for full detail.
+
+One residual manual step: Anthony must register the webhook endpoint in the Stripe dashboard (URL: `https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-stripe-webhook`, event: `checkout.session.completed`) and add the resulting signing secret as `STRIPE_WEBHOOK_SECRET` in Supabase Edge Function secrets -- no tool available to either of us can create a Stripe webhook endpoint or read/set a Supabase Edge Function secret. Until that's done, real checkouts will complete and charge correctly in Stripe, but the webhook will never fire, so no account will be invited and no plan will be granted -- the payment and the provisioning would be silently disconnected. Do not advertise the live Payment Link URLs publicly until this is confirmed working end-to-end.
+
+## B-1 (original text, retained for context) — GHL sales-assisted checkout vs. Stripe self-serve checkout vs. both
 
 **What's actually deployed (verified, FIND-004, FIND-010):**
 - **Path A (GHL, working):** `muster-ghl-webhook` edge function, live, git-tracked, tested end-to-end this session. Fires only when a human sales rep marks a GHL deal "Closed Won." Provisions via `public.muster_ghl_provision`.

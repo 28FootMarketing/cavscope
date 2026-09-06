@@ -6,8 +6,8 @@
 PRD-001 (critical-finding alerts)         -- IMPLEMENTED, live (2026-09-08)
 PRD-002 (retroactive migration files)     -- IMPLEMENTED (2026-09-08)
 PRD-004 (minimal CI)                      -- independent, ready now
-PRD-003 (finish chosen checkout path)     -- BLOCKED on B-1
-PRD-005 (GHL<->MUSTER plan reconciliation)-- BLOCKED on B-1 (needs to know which path is authoritative)
+PRD-003 (finish chosen checkout path)     -- IMPLEMENTED (2026-09-08); one manual step outstanding, see below
+PRD-005 (GHL<->MUSTER plan reconciliation)-- still open; now scoped to GHL-side only (Stripe side is self-reconciling via the grant table)
 PRD-006 (tenant offboarding)              -- BLOCKED on B-3 (retention policy)
 PRD-007 (support ticketing wiring)        -- BLOCKED on B-4 (ownership decision)
 ```

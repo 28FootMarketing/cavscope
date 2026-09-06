@@ -22,8 +22,8 @@ Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 | Agent / AI-employee ready | Done | `agents`, `api_keys`, `muster-agent` edge function (MCP + REST) |
 | Risk auto-triage | Done | `muster.autotriage()`, cron `muster-autotriage-15min`; promotes open critical/high/medium findings to `risks` + `remediation_actions` with severity-scaled due dates, auto-mitigates on rescan |
 | Critical-finding tenant alerts | Done | `muster.notification_outbox`, `muster-alert-dispatch` edge function, cron `muster-alert-dispatch-5min`; emails org `executive`/`risk_owner` members via Resend when `autotriage` opens a critical/high risk. Per-org opt-out: `organizations.critical_alerts_enabled` |
-| GHL sales-assisted checkout | Done | `muster-ghl-webhook`, requires a human to mark the GHL deal Closed Won -- see "Checkout paths" below |
-| Stripe self-serve checkout | **Not wired, do not use** | `muster.onboard_client` exists in the schema but has no calling edge function, no populated `stripe_price_id` values, and a known role-constraint bug -- see "Checkout paths" below |
+| GHL sales-assisted checkout (MUSTER Partner/Enterprise) | Done | `muster-ghl-webhook`, requires a human to mark the GHL deal Closed Won -- see "Checkout paths" below |
+| Stripe self-serve checkout (MUSTER base tier) | Done | Live Stripe Payment Links + `muster-stripe-webhook` + `muster.pending_commercial_grants`, applied by the existing self-serve onboarding wizard -- see "Checkout paths" below. `muster.onboard_client` (the earlier, buggy, unreachable attempt at this) stays dead and unused |
 
 ## Layout
 
@@ -137,12 +137,14 @@ Client config lives at the top of the `Live` object: project URL and the publish
 
 Supabase Auth settings that must be set in the dashboard (not scriptable through MCP): Site URL and Redirect URLs must include the app origin (for example `https://muster.28footsystems.com`) for magic links and email confirmation to land back in the app.
 
-## Checkout paths (read before touching either one)
+## Checkout paths
 
-Two independent, non-reconciled tenant-provisioning paths exist. Do not build on either without reading `.planning/autonomy/BLOCKERS-AND-DECISIONS.md` B-1 first -- picking wrong means rebuilding.
+Resolved 2026-09-08 (`.planning/autonomy/BLOCKERS-AND-DECISIONS.md` B-1): **MUSTER base tier is Stripe self-serve; MUSTER Partner/Enterprise stay GHL sales-assisted.** Two genuinely different commercial motions for two genuinely different tiers, not an accidental duplicate.
 
-- **GHL sales-assisted (working):** a human marks a GHL deal Closed Won, its workflow calls `muster-ghl-webhook`, which calls `public.muster_ghl_provision`. Live, tested end-to-end.
-- **Stripe self-serve (dead):** `muster.onboard_client` was deployed directly to the database on 2026-09-06 with no edge function ever built to call it and no `commercial_pricing.stripe_price_id` values populated -- it cannot be reached. It also has a known bug: it inserts `organization_members.role = 'owner'`, which the live check constraint rejects (only `executive`/`risk_owner`/`control_owner`/`contributor`/`viewer` are allowed). Do not wire a caller to this without fixing that first.
+- **MUSTER base tier -- Stripe self-serve (live).** Two live Payment Links, one per pricing stage (`https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t` seed, `https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u` fruit), each carrying `metadata: {tier, stage}`. `muster-stripe-webhook` verifies the Stripe signature, handles `checkout.session.completed`, invites the Supabase Auth user if new, and records a `muster.pending_commercial_grants` row keyed by email -- **it does not create the organization itself**. The organization is created the normal way, when the buyer actually runs the existing self-serve onboarding wizard in `app.html` (`muster_onboard` -> `muster.do_onboard`); `do_onboard` now checks for a pending grant matching the user's email right after creating the org and applies the real plan/stage instead of leaving it on `trial`. Deliberately reuses the already-verified onboarding path instead of building a second one. Product: `prod_VCwq3MBRwc16WC`. Prices: `price_1UCWx0JijfcmbDDBLEFrn3Et` (seed, $97/mo), `price_1UCWx0JijfcmbDDBKaHbJyGW` (fruit, $197/mo) -- also recorded in `muster.commercial_pricing.stripe_price_id`.
+  - Requires the `STRIPE_WEBHOOK_SECRET` edge function secret (from registering the webhook endpoint in the Stripe dashboard, pointed at `muster-stripe-webhook`, subscribed to `checkout.session.completed` -- not done via MCP, no tool exposes webhook-endpoint creation).
+- **MUSTER Partner/Enterprise -- GHL sales-assisted (live).** Unchanged: a human marks a GHL deal Closed Won, its workflow calls `muster-ghl-webhook`, which calls `public.muster_ghl_provision`.
+- **`muster.onboard_client`:** stays dead and unused (deployed 2026-09-06, no caller, buggy `organization_members.role = 'owner'` insert -- see migration `20260906012143`'s header comment). The Stripe flow above does not use it and never will; do not resurrect it.
 
 ## Critical-finding alerts
 
