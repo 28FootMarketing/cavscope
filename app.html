@@ -5555,6 +5555,13 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         el.innerHTML = `
           <span class="live-badge">Super admin console</span>
           <div class="live-muted" style="margin:8px 0 12px;">Engine: ${eng.queued ?? 0} queued · ${eng.running ?? 0} running · ${eng.complete_24h ?? 0} complete / ${eng.failed_24h ?? 0} failed in 24h · cron ${eng.cron ? (eng.cron.active ? 'active ' + eng.cron.schedule : 'inactive') : 'missing'} · ${(a.jurisdiction_review_queue || []).length} jurisdictions due for review</div>
+          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Public pricing</h4>
+          <div class="live-grid" style="grid-template-columns: 1.4fr 0.7fr 1fr 1.4fr; padding:8px 0 16px; font-size:12px; align-items:center;">
+            <div class="live-muted" data-tooltip="Controls which price index.html shows publicly for MUSTER and MUSTER Partner. Seed/Fruit is an internal pricing-stage label, not a software feature -- it never changes what a tenant's plan includes.">Current stage: <strong style="color:#fff;">${escapeHtml((a.pricing || {}).current_stage || 'unknown')}</strong></div>
+            <div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setPricingStage(this.value)" data-tooltip="Takes effect immediately on the public pricing page -- no deploy needed.">${['seed', 'fruit'].map(s => `<option value="${s}" ${s === (a.pricing || {}).current_stage ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+            <div class="live-muted">MUSTER: $${(((a.pricing || {}).muster || {}).monthly_price_cents ?? 0) / 100}/mo</div>
+            <div class="live-muted">Partner: $${(((a.pricing || {}).muster_partner || {}).monthly_price_cents ?? 0) / 100}/mo, ${((a.pricing || {}).muster_partner || {}).included_client_orgs ?? '?'} included</div>
+          </div>
           <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Tenants (${(a.tenants || []).length})</h4>
           ${(a.tenants || []).map(t => `<div class="live-grid" style="padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
               <div><strong style="color:#fff;">${escapeHtml(t.name)}</strong><br><span class="live-muted">${escapeHtml([t.country_code, t.region_code].filter(Boolean).join('-') || 'no jurisdiction')} · ${escapeHtml(t.onboarding_status)}</span></div>
@@ -5576,6 +5583,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           ${(a.users || []).map(u => `<div class="live-flag-row" style="grid-template-columns: 1.4fr 1.6fr 1fr 1fr;"><div><strong style="color:#fff;">${escapeHtml(u.name || '')}</strong></div><div class="live-muted">${escapeHtml(u.email)}</div><div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setRole('${escapeHtml(u.email)}', this.value)">${['user', 'admin', 'super_admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div><div class="live-muted">${u.last_signed_in ? String(u.last_signed_in).slice(0, 10) : ''}</div></div>`).join('')}`;
       },
       async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
+      async setPricingStage(stage) { try { await this.rpc('muster_admin_set_pricing_stage', { p_stage: stage }); showToast(`Public pricing stage set to ${stage}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
       async setFlag(key, on) { try { await this.rpc('muster_admin_set_flag', { p_key: key, p_enabled: on }); showToast(`${key} default ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },

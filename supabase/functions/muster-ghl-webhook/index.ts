@@ -20,7 +20,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //     "industry": "...",                       // optional
 //     "country_code": "US",                    // optional, defaults to "US"
 //     "region_code": "US-PA",                  // optional
-//     "ghl_contact_id": "..."                  // optional, logged for traceability
+//     "ghl_contact_id": "...",                 // optional, logged for traceability
+//     "ghl_opportunity_id": "..."              // optional; required for the GHL write-back
 //   }
 //
 // What this does: resolves or invites the admin's Supabase Auth account,
@@ -29,13 +30,22 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // duplicated here), then immediately sets the org onto the plan the tier
 // maps to (muster -> starter, muster_partner -> pro, muster_enterprise ->
 // enterprise) instead of leaving it on the trial plan do_onboard defaults to.
+// After a successful provision, if GHL_API_KEY/GHL_LOCATION_ID are configured
+// and ghl_opportunity_id was provided, it writes the new org id back onto the
+// GHL opportunity's "Muster Org ID" custom field (an opportunity-model field,
+// matching Muster Tier/Stage/Industry/Region Code -- confirmed live via the
+// custom_fields diagnostic below that all four already live on the
+// opportunity, not the contact, so Muster Org ID follows the same model).
 //
-// What this does NOT do: write the new muster_org_id back to the GHL contact
-// as a custom field, or collect payment. Both need a GHL API key/location id,
-// which isn't in this project's Vault -- see the checkout-flow scoping notes.
-// A brand-new admin gets Supabase Auth's own invite email (no Resend key is
-// configured for this project either); an admin who already has an account
-// is reused as-is and gets no email.
+// Diagnostic-only paths (same x-muster-secret auth, no writes, no test data
+// created in GHL):
+//   POST { "diagnostic": "location" }      -- confirms GHL_LOCATION_ID points
+//                                              at the intended sub-account
+//   POST { "diagnostic": "custom_fields" } -- lists that location's custom
+//                                              fields so the real field id
+//                                              for "Muster Org ID" can be
+//                                              read off once it's created,
+//                                              instead of guessing one
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -45,6 +55,30 @@ function json(body: unknown, status = 200) {
 
 const TIER_VALUES = ["muster", "muster_partner", "muster_enterprise"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const GHL_API_BASE = "https://services.leadconnectorhq.com";
+const GHL_API_VERSION = "2021-07-28";
+
+async function ghlFetch(path: string, init: RequestInit = {}) {
+  const apiKey = Deno.env.get("GHL_API_KEY");
+  if (!apiKey) return { ok: false, status: 0, body: { error: "GHL_API_KEY is not set" } };
+  const res = await fetch(`${GHL_API_BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Version: GHL_API_VERSION,
+      Accept: "application/json",
+      "content-type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = await res.text().catch(() => null);
+  }
+  return { ok: res.ok, status: res.status, body };
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -60,12 +94,29 @@ Deno.serve(async (req: Request) => {
     return json({ error: "invalid JSON body" }, 400);
   }
 
+  if (body.diagnostic === "location") {
+    const locationId = Deno.env.get("GHL_LOCATION_ID");
+    if (!locationId) return json({ error: "GHL_LOCATION_ID is not set" }, 500);
+    const result = await ghlFetch(`/locations/${locationId}`);
+    return json({ diagnostic: "location", location_id_used: locationId, ghl_status: result.status, ghl_response: result.body }, result.ok ? 200 : 502);
+  }
+
+  if (body.diagnostic === "custom_fields") {
+    const locationId = Deno.env.get("GHL_LOCATION_ID");
+    if (!locationId) return json({ error: "GHL_LOCATION_ID is not set" }, 500);
+    const model = typeof body.model === "string" ? body.model : "contact";
+    const result = await ghlFetch(`/locations/${locationId}/customFields?model=${encodeURIComponent(model)}`);
+    return json({ diagnostic: "custom_fields", model, ghl_status: result.status, ghl_response: result.body }, result.ok ? 200 : 502);
+  }
+
   const tier = String(body.tier ?? "");
   const stage = body.stage != null ? String(body.stage) : null;
   const orgName = String(body.org_name ?? "").trim();
   const domain = String(body.domain ?? "").trim();
   const adminName = String(body.admin_name ?? "").trim();
   const adminEmail = String(body.admin_email ?? "").trim().toLowerCase();
+  const ghlContactId = body.ghl_contact_id != null ? String(body.ghl_contact_id) : null;
+  const ghlOpportunityId = body.ghl_opportunity_id != null ? String(body.ghl_opportunity_id) : null;
 
   if (!TIER_VALUES.includes(tier)) {
     return json({ error: `tier must be one of ${TIER_VALUES.join(", ")}` }, 400);
@@ -104,7 +155,7 @@ Deno.serve(async (req: Request) => {
     admin_email: adminEmail,
     tier,
     stage,
-    ghl_contact_id: body.ghl_contact_id ?? null,
+    ghl_contact_id: ghlContactId,
   };
 
   const { data: organization, error: provisionErr } = await db.rpc("muster_ghl_provision", {
@@ -113,5 +164,33 @@ Deno.serve(async (req: Request) => {
   });
   if (provisionErr) return json({ error: provisionErr.message }, 400);
 
-  return json({ provisioned: true, admin_invited: invited, organization });
+  // Write the new org id back to the GHL opportunity, best-effort. A failure
+  // here never undoes the provisioning above -- the tenant is real either
+  // way -- it's reported back in the response so a failure is visible, not
+  // silent. The "Muster Org ID" custom field's id is looked up by name at
+  // call time rather than hardcoded, since GHL assigns its own opaque field
+  // id when the field is created and there's no way to know it in advance.
+  // Targets the opportunity (not the contact) because Muster Tier/Stage/
+  // Industry/Region Code all live on the opportunity model -- confirmed live
+  // via the custom_fields diagnostic -- and a field created on one model
+  // isn't writable through the other model's update endpoint.
+  let ghlWriteback: { attempted: boolean; ok?: boolean; status?: number; error?: unknown } = { attempted: false };
+  const orgId = (organization as Record<string, unknown> | null)?.id;
+  const locationId = Deno.env.get("GHL_LOCATION_ID");
+  if (ghlOpportunityId && orgId != null && Deno.env.get("GHL_API_KEY") && locationId) {
+    const fieldsResult = await ghlFetch(`/locations/${locationId}/customFields?model=opportunity`);
+    const fields = (fieldsResult.body as { customFields?: Array<{ id: string; name: string }> } | null)?.customFields ?? [];
+    const orgIdField = fields.find((f) => f.name?.toLowerCase() === "muster org id");
+    if (!orgIdField) {
+      ghlWriteback = { attempted: true, ok: false, error: 'no GHL opportunity custom field named "Muster Org ID" was found on this location' };
+    } else {
+      const result = await ghlFetch(`/opportunities/${ghlOpportunityId}`, {
+        method: "PUT",
+        body: JSON.stringify({ customFields: [{ id: orgIdField.id, field_value: String(orgId) }] }),
+      });
+      ghlWriteback = { attempted: true, ok: result.ok, status: result.status, error: result.ok ? undefined : result.body };
+    }
+  }
+
+  return json({ provisioned: true, admin_invited: invited, organization, ghl_writeback: ghlWriteback });
 });

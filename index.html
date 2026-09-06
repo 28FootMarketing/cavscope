@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 
   <style>
     :root {
@@ -299,33 +300,6 @@
     .pull-caption { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-dim); margin-top: 14px; letter-spacing: 0.04em; }
 
     /* ---------- Pricing ---------- */
-    .pricing-toggle {
-      display: inline-flex;
-      border: 1px solid var(--surface-border-strong);
-      border-radius: 9px;
-      padding: 4px;
-      gap: 4px;
-      margin-bottom: 36px;
-      background: var(--surface-card);
-    }
-    .toggle-btn {
-      font-family: var(--font-mono);
-      font-size: 12.5px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      padding: 10px 20px;
-      min-height: 44px;
-      border-radius: 6px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    }
-    #btnSeed.active { background: var(--teal); color: #04211c; border-color: var(--teal); }
-    #btnFruit.active { background: var(--amber); color: #2b1c02; border-color: var(--amber); }
-    .toggle-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
-
     .pricing-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -400,11 +374,6 @@
     .price-excludes, .price-note { font-size: 12px; color: var(--text-dim); margin: 0; line-height: 1.55; }
 
     .price-cta { justify-content: center; margin-top: auto; text-align: center; }
-
-    @media (max-width: 640px) {
-      .pricing-toggle { width: 100%; }
-      .toggle-btn { flex: 1; }
-    }
 
     /* ---------- Closing directive ---------- */
     .directive {
@@ -596,11 +565,6 @@
       <span class="count" data-tooltip="No hidden add-on tiers -- three plans, chosen by who you're governing AI for.">Three plans</span>
     </div>
 
-    <div class="pricing-toggle" role="group" aria-label="Pricing stage">
-      <button type="button" class="toggle-btn active" id="btnSeed" aria-pressed="true" data-tooltip="Founding-stage pricing for MUSTER and MUSTER Partner. The Partner rate locks in while you stay continuously subscribed and in good standing.">Seed Pricing</button>
-      <button type="button" class="toggle-btn" id="btnFruit" aria-pressed="false" data-tooltip="Standard ongoing pricing for MUSTER and MUSTER Partner, after the Seed stage closes.">Fruit Pricing</button>
-    </div>
-
     <div class="pricing-grid">
 
       <div class="price-card" id="cardMuster">
@@ -704,31 +668,25 @@
 </div>
 
 <script>
-  // Centralized pricing config -- every price/allowance shown on the page reads
-  // from here. To change a number, change it once, here; never hardcode a price
-  // string into markup elsewhere.
+  // Seed/Fruit is an internal pricing-stage decision, not a software feature --
+  // it never gates entitlements (see muster.feature_flags: those key off tier
+  // alone) and visitors don't choose it. There is exactly one live price per
+  // tier, set by a 28FS super-admin in app.html's admin panel, read here from
+  // muster_public_pricing() (anon-readable by design). The HTML above ships
+  // with the Seed-stage numbers as a static fallback -- if this fetch fails
+  // (network issue, JS disabled) the page still shows a correct, if possibly
+  // stale, price rather than blank content.
   //
   // Entitlement mapping (for when this wires into real billing/feature-flags --
   // not implemented yet, see muster.feature_flags): MUSTER Partner corresponds to
   // white_label_enabled + commercial_use_enabled + client_management_enabled +
   // custom_branding_enabled + custom_domain_enabled + partner_dashboard_enabled.
-  // MUSTER Enterprise corresponds to enterprise_enabled. None of these flag keys
-  // exist in muster.feature_flags today -- the existing internal plan axis
-  // (trial/starter/pro/enterprise/internal, set in app.html's admin panel) does
-  // not currently line up with these three public tiers (e.g. white-label is
-  // already granted on the existing "starter" plan). Reconciling the two is a
-  // separate decision, intentionally not made here.
-  const PRICING = {
-    seed: {
-      tenant: { monthly: 97 },
-      partner: { monthly: 197, includedOrganizations: 5, additionalOrganizationPrice: 39 },
-    },
-    fruit: {
-      tenant: { monthly: 197 },
-      partner: { monthly: 497, includedOrganizations: 10, additionalOrganizationPrice: 49 },
-    },
-    enterprise: { requiresSalesCall: true, publicPrice: null },
-  };
+  // MUSTER Enterprise corresponds to enterprise_enabled. The existing internal
+  // plan axis (trial/starter/pro/enterprise/internal, set in app.html's admin
+  // panel) maps tier -> plan (muster -> starter, muster_partner -> pro,
+  // muster_enterprise -> enterprise); Seed/Fruit plays no part in that mapping.
+  const SB_URL = 'https://mgtmqucaldkaxvxglguw.supabase.co';
+  const SB_KEY = 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww';
 
   // No booking calendar, contact form, or phone number exists anywhere in this
   // project yet. This is a placeholder destination -- replace with a real
@@ -750,43 +708,41 @@
     return `${base}?${params.toString()}`;
   }
 
-  let pricingStage = 'seed';
-
-  function renderPricing() {
-    const stage = PRICING[pricingStage];
-    const isSeed = pricingStage === 'seed';
+  function applyPricing(stage, muster, partner) {
+    const isSeed = stage === 'seed';
     const intent = isSeed ? 'seed_signup' : 'fruit_signup';
 
-    document.getElementById('musterPrice').textContent = `$${stage.tenant.monthly}`;
-    document.getElementById('partnerPrice').textContent = `$${stage.partner.monthly}`;
-    document.getElementById('partnerAllowance').innerHTML =
-      `Includes <b>${stage.partner.includedOrganizations}</b> active client organizations. Additional organizations: <b>$${stage.partner.additionalOrganizationPrice}</b>/month each.`;
+    if (muster && typeof muster.monthly_price_cents === 'number') {
+      document.getElementById('musterPrice').textContent = `$${Math.round(muster.monthly_price_cents / 100)}`;
+    }
+    if (partner && typeof partner.monthly_price_cents === 'number') {
+      document.getElementById('partnerPrice').textContent = `$${Math.round(partner.monthly_price_cents / 100)}`;
+      document.getElementById('partnerAllowance').innerHTML =
+        `Includes <b>${partner.included_client_orgs}</b> active client organizations. Additional organizations: <b>$${Math.round(partner.additional_org_price_cents / 100)}</b>/month each.`;
+    }
 
     const badge = document.getElementById('partnerBadge');
     badge.textContent = isSeed ? 'Founding Partner Pricing' : 'Standard Pricing';
     badge.classList.toggle('fruit', !isSeed);
     document.getElementById('partnerLock').hidden = !isSeed;
 
-    document.getElementById('btnSeed').setAttribute('aria-pressed', String(isSeed));
-    document.getElementById('btnFruit').setAttribute('aria-pressed', String(!isSeed));
-    document.getElementById('btnSeed').classList.toggle('active', isSeed);
-    document.getElementById('btnFruit').classList.toggle('active', !isSeed);
-
     document.getElementById('musterCta').href = buildGhlUrl(GHL_MUSTER_SIGNUP_URL, 'muster', intent);
     document.getElementById('partnerCta').href = buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', intent);
   }
 
-  function setPricingStage(stage) {
-    if (stage === pricingStage) return;
-    pricingStage = stage;
-    renderPricing();
-  }
-
-  function initPricing() {
-    document.getElementById('btnSeed').addEventListener('click', () => setPricingStage('seed'));
-    document.getElementById('btnFruit').addEventListener('click', () => setPricingStage('fruit'));
+  async function initPricing() {
     document.getElementById('enterpriseCta').href = ENTERPRISE_CONTACT_HREF;
-    renderPricing();
+    applyPricing('seed', null, null); // static fallback already baked into the HTML
+
+    if (!window.supabase || !window.supabase.createClient) return;
+    try {
+      const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
+      const { data, error } = await sb.rpc('muster_public_pricing');
+      if (error || !data) return;
+      applyPricing(data.current_stage, data.muster, data.muster_partner);
+    } catch {
+      // Network or RLS failure: the static fallback rendered above stays.
+    }
   }
 
   window.addEventListener('DOMContentLoaded', initPricing);
