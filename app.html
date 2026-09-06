@@ -5555,6 +5555,23 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         el.innerHTML = `
           <span class="live-badge">Super admin console</span>
           <div class="live-muted" style="margin:8px 0 12px;">Engine: ${eng.queued ?? 0} queued · ${eng.running ?? 0} running · ${eng.complete_24h ?? 0} complete / ${eng.failed_24h ?? 0} failed in 24h · cron ${eng.cron ? (eng.cron.active ? 'active ' + eng.cron.schedule : 'inactive') : 'missing'} · ${(a.jurisdiction_review_queue || []).length} jurisdictions due for review</div>
+          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;" data-tooltip="Open findings from the muster-watchdog health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters. Empty means nothing is currently flagged, not that nothing was checked.">Open incidents (${(a.incidents || []).length})</h4>
+          ${(a.incidents || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None open.</div>' : (a.incidents || []).map(i => `<div class="live-grid" style="grid-template-columns: 0.7fr 1.6fr 1fr 0.8fr 1.2fr; padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px; align-items:center;">
+              <div><span class="pill pill-${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></div>
+              <div><strong style="color:#fff;">${escapeHtml(i.affected_operation)}</strong><br><span class="live-muted">${escapeHtml(i.source)} · seen ${i.occurrence_count}x</span></div>
+              <div class="live-muted">first ${String(i.first_seen_at).slice(0, 16).replace('T', ' ')}<br>last ${String(i.last_seen_at).slice(0, 16).replace('T', ' ')}</div>
+              <div class="live-muted">${escapeHtml(i.status)}</div>
+              <div style="text-align:right;"><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.updateIncident(${i.id}, this.value)" data-tooltip="Move this incident through triage. Closing does not undo whatever caused it -- only marks it handled.">
+                <option value="">Update status…</option>
+                ${['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'].map(s => `<option value="${s}">${s}</option>`).join('')}
+              </select></div>
+            </div>`).join('')}
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="Health of the outbound critical-finding email queue to tenants. Dead-letter means a send failed 5 times and stopped retrying -- worth checking Resend's own logs.">Alert delivery</h4>
+          <div class="live-grid" style="grid-template-columns: 1fr 1fr 1fr; padding:8px 0 16px; font-size:12px;">
+            <div class="live-muted">Pending: <strong style="color:#fff;">${(a.alerts || {}).pending ?? 0}</strong></div>
+            <div class="live-muted">Dead-letter: <strong style="color:${((a.alerts || {}).failed_dead_letter ?? 0) > 0 ? '#ffa4b2' : '#fff'};">${(a.alerts || {}).failed_dead_letter ?? 0}</strong></div>
+            <div class="live-muted">Sent (24h): <strong style="color:#fff;">${(a.alerts || {}).sent_24h ?? 0}</strong></div>
+          </div>
           <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Public pricing</h4>
           <div class="live-grid" style="grid-template-columns: 1.4fr 0.7fr 1fr 1.4fr; padding:8px 0 16px; font-size:12px; align-items:center;">
             <div class="live-muted" data-tooltip="Controls which price index.html shows publicly for MUSTER and MUSTER Partner. Seed/Fruit is an internal pricing-stage label, not a software feature -- it never changes what a tenant's plan includes.">Current stage: <strong style="color:#fff;">${escapeHtml((a.pricing || {}).current_stage || 'unknown')}</strong></div>
@@ -5579,6 +5596,24 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <div><label class="live-muted"><input type="checkbox" ${f.default_enabled ? 'checked' : ''} onchange="Live.setFlag('${f.key}', this.checked)"> on</label></div>
               <div><label class="live-muted"><input type="checkbox" ${f.kill_switch ? 'checked' : ''} onchange="Live.killSwitch('${f.key}', this.checked)"> off for all</label></div>
             </div>`).join('')}
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="Per-tenant exceptions to the flag defaults above -- a specific org turned on or off independent of its plan.">Per-org flag overrides (${(a.overrides || []).length})</h4>
+          ${(a.overrides || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None set.</div>' : (a.overrides || []).map(o => `<div class="live-grid" style="grid-template-columns: 1fr 1fr 0.6fr 1.6fr; padding:6px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
+              <div class="live-muted">${o.organization_id ? `org #${o.organization_id}` : (o.user_id ? `user #${o.user_id}` : '')}</div>
+              <div><code>${escapeHtml(o.flag_key)}</code></div>
+              <div class="live-muted">${o.enabled ? 'on' : 'off'}</div>
+              <div class="live-muted">${escapeHtml(o.reason || '')}${o.expires_at ? ` · expires ${String(o.expires_at).slice(0, 10)}` : ''}</div>
+            </div>`).join('')}
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="AI agents and their API keys not scoped to any single tenant -- platform-level automation and integrations.">Platform agents (${(a.platform_agents || []).length})</h4>
+          ${(a.platform_agents || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None.</div>' : (a.platform_agents || []).map(pa => `<div style="padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
+              <strong style="color:#fff;">${escapeHtml(pa.name)}</strong> <span class="live-muted">(${escapeHtml(pa.kind)}) ${pa.active ? '' : '· inactive'}</span>
+              ${(pa.keys || []).map(k => `<div class="live-muted" style="padding-left:12px;">${escapeHtml(k.key_prefix)}… · scopes: ${escapeHtml((k.scopes || []).join(', '))} ${k.revoked_at ? '· revoked' : (k.last_used_at ? '· last used ' + String(k.last_used_at).slice(0, 10) : '· never used')}</div>`).join('')}
+            </div>`).join('')}
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="Jurisdictions whose law rows haven't been reviewed by a human in over 180 days -- this is a research/legal task, not something to automate.">Jurisdictions due for review (${(a.jurisdiction_review_queue || []).length})</h4>
+          ${(a.jurisdiction_review_queue || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None overdue.</div>' : (a.jurisdiction_review_queue || []).map(j => `<div class="live-grid" style="grid-template-columns: 1fr 1fr 1fr; padding:6px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
+              <div>${escapeHtml(j.name)} <span class="live-muted">(${escapeHtml(j.code)})</span></div>
+              <div class="live-muted">${j.laws} law rows</div>
+              <div class="live-muted">last reviewed ${j.reviewed_at ? String(j.reviewed_at).slice(0, 10) : 'never'}</div>
+            </div>`).join('')}
           <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Users (${(a.users || []).length})</h4>
           ${(a.users || []).map(u => `<div class="live-flag-row" style="grid-template-columns: 1.4fr 1.6fr 1fr 1fr;"><div><strong style="color:#fff;">${escapeHtml(u.name || '')}</strong></div><div class="live-muted">${escapeHtml(u.email)}</div><div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setRole('${escapeHtml(u.email)}', this.value)">${['user', 'admin', 'super_admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div><div class="live-muted">${u.last_signed_in ? String(u.last_signed_in).slice(0, 10) : ''}</div></div>`).join('')}`;
       },
@@ -5587,6 +5622,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       async setFlag(key, on) { try { await this.rpc('muster_admin_set_flag', { p_key: key, p_enabled: on }); showToast(`${key} default ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },
+      async updateIncident(id, status) { if (!status) return; try { await this.rpc('muster_admin_update_incident', { p_id: id, p_status: status }); showToast(`Incident #${id} marked ${status}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
       async openTenant(orgId) {
         try {
           const o = await this.rpc('muster_admin_tenant', { p_organization_id: orgId });
