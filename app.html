@@ -901,6 +901,13 @@
     .grid-wcag-defects { grid-template-columns: 90px 1.2fr 2fr 1.4fr 120px 110px; }
     .grid-superadmin-tenants { grid-template-columns: 1.6fr 1.4fr 1.2fr 1.1fr 100px 140px; }
     .grid-subclients { grid-template-columns: 1.8fr 1.4fr 1.1fr 1fr 100px 150px; }
+    .grid-admin-tenants { grid-template-columns: 1.8fr 0.9fr 1fr 0.9fr 1fr 130px; }
+    .grid-admin-runs { grid-template-columns: 1.8fr 0.8fr 1fr 1fr; }
+    .grid-admin-incidents { grid-template-columns: 0.7fr 1.8fr 1.1fr 0.8fr 1.3fr; }
+    .grid-admin-flags { grid-template-columns: 1.4fr 2fr 0.7fr 0.9fr; }
+    .grid-admin-overrides { grid-template-columns: 1fr 1fr 0.6fr 1.6fr; }
+    .grid-admin-jurisdictions { grid-template-columns: 1.4fr 0.8fr 1fr; }
+    .grid-admin-users { grid-template-columns: 1.6fr 1.8fr 1fr 1fr; }
 
     .tenant-pill-active { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7; }
     .tenant-pill-suspended { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: #ffa4b2; }
@@ -2660,6 +2667,10 @@
             </div>
           </div>
 
+          <!-- Sample walkthrough content below -- hidden once a real super admin's
+               live data loads (see Live.loadAdmin), which renders its own properly
+               componentized panels instead of reusing these fake/static ones. -->
+          <div id="superadminDemoBlocks">
           <!-- FEATURE FLAGS CONTROL PANEL -->
           <div class="panel" style="margin-bottom: 24px; border-color: rgba(56, 189, 248, 0.4);">
             <div class="panel-head" style="background: rgba(12, 32, 60, 0.5);">
@@ -2770,6 +2781,7 @@
             <div id="superAdminTenantsList" class="list">
               <!-- Rendered via renderSuperAdminView() -->
             </div>
+          </div>
           </div>
         </section>
 
@@ -4946,12 +4958,17 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
     }
 
     function exportAllTenantsJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(multiTenantStore, null, 2));
+      // Live super admins export the real roster (Live.admin.tenants, already
+      // fetched by loadAdmin); anyone still on the demo walkthrough exports the
+      // sample multiTenantStore -- never a mix of the two.
+      const live = Live.active && !Live.showingDemo && Live.admin;
+      const payload = live ? Live.admin.tenants : multiTenantStore;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
       const a = document.createElement('a');
       a.href = dataStr;
       a.download = `muster-platform-tenants-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
-      showToast("Platform tenant roster exported.");
+      showToast(live ? "Real tenant roster exported." : "Sample tenant roster exported.");
     }
 
     function loadPreset(val) {
@@ -5613,89 +5630,176 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           this.rpc('muster_admin_url_runs'),
         ]);
         const a = this.admin;
+        const demoBlocks = document.getElementById('superadminDemoBlocks');
+        if (demoBlocks) demoBlocks.hidden = true;
         const el = this.panel('liveAdminPanel', 'superadmin');
-        const eng = a.engine || {};
+        const eng = a.engine || {}, alerts = a.alerts || {}, pricing = a.pricing || {};
+        const tenants = a.tenants || [], incidents = a.incidents || [], flags = a.flags || [];
+        const overrides = a.overrides || [], agents = a.platform_agents || [];
+        const jurisdictions = a.jurisdiction_review_queue || [], users = a.users || [];
+        const criticalTenants = tenants.filter(t => t.open_critical > 0).length;
+        const inFlight = (eng.queued ?? 0) + (eng.running ?? 0);
+        const failed24 = eng.failed_24h ?? 0, complete24 = eng.complete_24h ?? 0;
+        const deadLetter = alerts.failed_dead_letter ?? 0, pending = alerts.pending ?? 0, sent24 = alerts.sent_24h ?? 0;
+
         el.innerHTML = `
-          <span class="live-badge">Super admin console</span>
-          <div class="live-muted" style="margin:8px 0 12px;">Engine: ${eng.queued ?? 0} queued · ${eng.running ?? 0} running · ${eng.complete_24h ?? 0} complete / ${eng.failed_24h ?? 0} failed in 24h · cron ${eng.cron ? (eng.cron.active ? 'active ' + eng.cron.schedule : 'inactive') : 'missing'} · ${(a.jurisdiction_review_queue || []).length} jurisdictions due for review</div>
-          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;" data-tooltip="Runs a real scan against any URL on the live MUSTER engine -- for showing a prospect their actual site's findings on the spot, not sample data. Results are kept in a dedicated internal sandbox and never mix into a tenant's risk register.">Run a URL scan</h4>
-          <form onsubmit="Live.runAdminUrl(event); return false;" style="display:flex; gap:6px; margin:0 0 8px;">
-            <input type="text" id="adminUrlInput" placeholder="https://prospect-site.com" required
-              style="flex:1; padding:6px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0d1a38; color:#fff;"
-              data-tooltip="The site to scan. https:// is assumed if you leave the scheme off.">
-            <button class="btn-primary" type="submit" style="padding:6px 14px; font-size:12px;" data-tooltip="Queues a real scan on the live engine. Usually finishes within a couple of minutes -- reopen this panel to see the result.">▶ Run</button>
-          </form>
-          <div id="adminUrlRunResult" style="margin-bottom:8px;"></div>
-          <div style="max-height:220px; overflow-y:auto; margin-bottom:16px;" data-tooltip="Every URL run through this tool, most recent first. Click one to see its findings.">
-            ${(this.adminUrlRuns || []).length === 0 ? '<div class="live-muted" style="padding:4px 0;">No ad-hoc runs yet.</div>' : (this.adminUrlRuns || []).map(w => `
-              <div class="live-grid" style="grid-template-columns: 1.6fr 0.7fr 0.9fr 1fr; padding:6px 0; border-bottom:1px solid var(--surface-border); font-size:12px; align-items:center; cursor:pointer;" onclick="Live.viewAdminUrlRun(${w.id})">
-                <div style="color:#fff;">${escapeHtml(w.url)}</div>
-                <div class="live-muted">${w.posture_score != null ? w.posture_score + '/100' : '—'} <span style="text-transform:capitalize;">${escapeHtml(w.posture_band || '')}</span></div>
-                <div class="live-muted">${escapeHtml((w.latest_scan || {}).status || 'none')}</div>
-                <div class="live-muted">${w.open_findings ?? 0} open findings</div>
+          <div class="grid-4">
+            <div class="card metric-card" data-tooltip="Every organization currently provisioned on the platform.">
+              <div class="metric-card-top"><label>Total Tenants</label><div class="metric-icon-wrap">⌂</div></div>
+              <div class="metric-value"><span>${tenants.length}</span></div>
+              <div class="metric-sub"><span class="${criticalTenants > 0 ? 'alert' : 'ok'}">${criticalTenants} with open critical</span><span>${users.length} users</span></div>
+            </div>
+            <div class="card metric-card" data-tooltip="Open findings from muster-watchdog's health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters. Empty means nothing is currently flagged, not that nothing was checked.">
+              <div class="metric-card-top"><label>Open Incidents</label><div class="metric-icon-wrap">⚠</div></div>
+              <div class="metric-value"><span style="color:${incidents.length > 0 ? 'var(--rose)' : '#fff'};">${incidents.length}</span></div>
+              <div class="metric-sub"><span class="${incidents.length > 0 ? 'alert' : 'ok'}">${incidents.length > 0 ? 'needs triage' : 'none open'}</span><span>watchdog checks</span></div>
+            </div>
+            <div class="card metric-card" data-tooltip="Scans currently queued or running on the live engine, plus completions/failures in the last 24 hours.">
+              <div class="metric-card-top"><label>Scan Engine</label><div class="metric-icon-wrap">⟳</div></div>
+              <div class="metric-value"><span>${inFlight}</span><span class="denom">in flight</span></div>
+              <div class="metric-sub"><span class="${failed24 > 0 ? 'alert' : 'ok'}">${failed24} failed (24h)</span><span>${complete24} complete</span></div>
+            </div>
+            <div class="card metric-card" data-tooltip="Health of the outbound critical-finding email queue to tenants. Dead-letter means a send failed 5 times and stopped retrying -- worth checking Resend's own logs.">
+              <div class="metric-card-top"><label>Alert Delivery</label><div class="metric-icon-wrap">✉</div></div>
+              <div class="metric-value"><span style="color:${deadLetter > 0 ? 'var(--rose)' : '#fff'};">${deadLetter}</span><span class="denom">dead-letter</span></div>
+              <div class="metric-sub"><span>${pending} pending</span><span>${sent24} sent (24h)</span></div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head">
+              <div><h3>▶ Run a URL Scan</h3><p>Runs a real scan against any URL on the live engine -- for showing a prospect their actual findings on the spot. Kept in an internal sandbox, never a tenant's risk register.</p></div>
+            </div>
+            <div class="panel-body">
+              <form onsubmit="Live.runAdminUrl(event); return false;" style="display:flex; gap:10px; margin-bottom:16px;">
+                <input type="text" id="adminUrlInput" placeholder="https://prospect-site.com" required
+                  style="flex:1; padding:10px 14px; font-size:13px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                  data-tooltip="The site to scan. https:// is assumed if you leave the scheme off.">
+                <button class="btn-primary" type="submit" data-tooltip="Queues a real scan on the live engine. Usually finishes within a couple of minutes -- reopen this panel to see the result.">▶ Run Scan</button>
+              </form>
+              <div id="adminUrlRunResult"></div>
+            </div>
+            ${(this.adminUrlRuns || []).length ? `
+              <div class="table-header grid-admin-runs" data-tooltip="Every URL run through this tool, most recent first. Click one to see its findings."><span>URL</span><span>Score</span><span>Status</span><span>Findings</span></div>
+              <div class="list">
+                ${(this.adminUrlRuns || []).map(w => `<div class="table-row grid-admin-runs" style="cursor:pointer;" onclick="Live.viewAdminUrlRun(${w.id})">
+                  <div style="color:#fff; font-size:12.5px;">${escapeHtml(w.url)}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${w.posture_score != null ? w.posture_score + '/100' : '—'} <span style="text-transform:capitalize;">${escapeHtml(w.posture_band || '')}</span></div>
+                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml((w.latest_scan || {}).status || 'none')}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${w.open_findings ?? 0} open</div>
+                </div>`).join('')}
+              </div>` : `<div class="panel-body" style="padding-top:0; color:var(--text-dim); font-size:12.5px;">No ad-hoc runs yet.</div>`}
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Tenant Accounts (${tenants.length})</h3><p>Every organization on the platform. Change a plan directly, or open its workspace.</p></div></div>
+            ${tenants.length ? `
+              <div class="table-header grid-admin-tenants"><span>Organization</span><span>Plan</span><span>Members / Sites</span><span>Critical</span><span>Last Scan</span><span style="text-align:right;">Action</span></div>
+              <div class="list">
+                ${tenants.map(t => `<div class="table-row grid-admin-tenants">
+                  <div><strong style="color:#fff; font-size:13px; display:block;">${escapeHtml(t.name)}</strong><small style="color:var(--text-dim);">${escapeHtml([t.country_code, t.region_code].filter(Boolean).join('-') || 'no jurisdiction')} · ${escapeHtml(t.onboarding_status)}</small></div>
+                  <div><select class="filter-select" style="padding:4px 8px; font-size:11.5px;" onchange="Live.setPlan(${t.id}, this.value)" data-tooltip="Changes the plan. Flags with plan gates update immediately.">${['trial', 'starter', 'pro', 'enterprise', 'internal'].map(p => `<option value="${p}" ${p === t.plan ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
+                  <div style="color:var(--text-dim); font-size:12px;">${t.members} members · ${t.websites} sites</div>
+                  <div>${t.open_critical > 0 ? `<span class="pill pill-critical">${t.open_critical} critical</span>` : '<span class="pill pill-low">0 critical</span>'}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${t.last_scan_at ? String(t.last_scan_at).slice(0, 10) : 'never scanned'}</div>
+                  <div style="text-align:right;"><button class="btn-primary" style="padding:5px 11px; font-size:11.5px;" onclick="Live.openTenant(${t.id})" data-tooltip="Loads this tenant's workspace.">↗ Access</button></div>
+                </div>`).join('')}
+              </div>` : `<div class="panel-body" style="color:var(--text-dim); font-size:12.5px;">No tenants yet.</div>`}
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Open Incidents (${incidents.length})</h3><p>From muster-watchdog's health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters.</p></div></div>
+            ${incidents.length ? `
+              <div class="table-header grid-admin-incidents"><span>Severity</span><span>Operation</span><span>First / Last Seen</span><span>Status</span><span style="text-align:right;">Update</span></div>
+              <div class="list">
+                ${incidents.map(i => `<div class="table-row grid-admin-incidents">
+                  <div><span class="pill pill-${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></div>
+                  <div><strong style="color:#fff; font-size:12.5px; display:block;">${escapeHtml(i.affected_operation)}</strong><small style="color:var(--text-dim);">${escapeHtml(i.source)} · seen ${i.occurrence_count}x</small></div>
+                  <div style="color:var(--text-dim); font-size:11.5px;">${String(i.first_seen_at).slice(0, 16).replace('T', ' ')}<br>${String(i.last_seen_at).slice(0, 16).replace('T', ' ')}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(i.status)}</div>
+                  <div style="text-align:right;"><select class="filter-select" style="padding:4px 8px; font-size:11px;" onchange="Live.updateIncident(${i.id}, this.value)" data-tooltip="Move this incident through triage. Closing does not undo whatever caused it -- only marks it handled.">
+                    <option value="">Update status…</option>
+                    ${['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'].map(s => `<option value="${s}">${s}</option>`).join('')}
+                  </select></div>
+                </div>`).join('')}
+              </div>` : `<div class="panel-body" style="color:var(--emerald); font-size:12.5px;">None open.</div>`}
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head">
+              <div><h3>Public Pricing</h3><p>Controls which price index.html shows publicly for MUSTER and MUSTER Partner. Seed/Fruit is an internal pricing-stage label -- it never changes what a tenant's plan includes.</p></div>
+              <select class="filter-select" style="padding:5px 10px; font-size:12px;" onchange="Live.setPricingStage(this.value)" data-tooltip="Takes effect immediately on the public pricing page -- no deploy needed.">${['seed', 'fruit'].map(s => `<option value="${s}" ${s === pricing.current_stage ? 'selected' : ''}>${s}</option>`).join('')}</select>
+            </div>
+            <div class="panel-body" style="display:flex; gap:36px; flex-wrap:wrap;">
+              <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">Current stage</small><strong style="color:#fff; font-size:14px; text-transform:capitalize;">${escapeHtml(pricing.current_stage || 'unknown')}</strong></div>
+              <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">MUSTER</small><strong style="color:#fff; font-size:14px;">$${(((pricing.muster || {}).monthly_price_cents ?? 0) / 100).toFixed(0)}/mo</strong></div>
+              <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">MUSTER Partner</small><strong style="color:#fff; font-size:14px;">$${(((pricing.muster_partner || {}).monthly_price_cents ?? 0) / 100).toFixed(0)}/mo · ${(pricing.muster_partner || {}).included_client_orgs ?? '?'} included</strong></div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Feature Flags</h3><p>Platform-wide defaults. A flag with a plan minimum only applies at that tier and above.</p></div></div>
+            <div class="table-header grid-admin-flags"><span>Flag</span><span>Description</span><span>Default</span><span>Kill Switch</span></div>
+            <div class="list">
+              ${flags.map(f => `<div class="table-row grid-admin-flags">
+                <div><code style="color:var(--teal); font-size:11.5px;">${escapeHtml(f.key)}</code><br><small style="color:var(--text-dim);">${escapeHtml(f.scope)}</small></div>
+                <div style="color:var(--text-muted); font-size:12px;">${escapeHtml(f.description)}${f.plan_minimum ? ` · <strong style="color:#fff;">${escapeHtml(f.plan_minimum)}+</strong>` : ''}</div>
+                <div class="switch-wrap"><label class="toggle-switch" data-tooltip="Default on/off for every org, unless overridden per-org below."><input type="checkbox" ${f.default_enabled ? 'checked' : ''} onchange="Live.setFlag('${f.key}', this.checked)"><span class="slider"></span></label></div>
+                <div class="switch-wrap"><label class="toggle-switch" data-tooltip="Forces this flag off for everyone, ignoring the default and every override."><input type="checkbox" ${f.kill_switch ? 'checked' : ''} onchange="Live.killSwitch('${f.key}', this.checked)"><span class="slider"></span></label></div>
               </div>`).join('')}
+            </div>
           </div>
-          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;" data-tooltip="Open findings from the muster-watchdog health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters. Empty means nothing is currently flagged, not that nothing was checked.">Open incidents (${(a.incidents || []).length})</h4>
-          ${(a.incidents || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None open.</div>' : (a.incidents || []).map(i => `<div class="live-grid" style="grid-template-columns: 0.7fr 1.6fr 1fr 0.8fr 1.2fr; padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px; align-items:center;">
-              <div><span class="pill pill-${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></div>
-              <div><strong style="color:#fff;">${escapeHtml(i.affected_operation)}</strong><br><span class="live-muted">${escapeHtml(i.source)} · seen ${i.occurrence_count}x</span></div>
-              <div class="live-muted">first ${String(i.first_seen_at).slice(0, 16).replace('T', ' ')}<br>last ${String(i.last_seen_at).slice(0, 16).replace('T', ' ')}</div>
-              <div class="live-muted">${escapeHtml(i.status)}</div>
-              <div style="text-align:right;"><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.updateIncident(${i.id}, this.value)" data-tooltip="Move this incident through triage. Closing does not undo whatever caused it -- only marks it handled.">
-                <option value="">Update status…</option>
-                ${['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'].map(s => `<option value="${s}">${s}</option>`).join('')}
-              </select></div>
-            </div>`).join('')}
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="Health of the outbound critical-finding email queue to tenants. Dead-letter means a send failed 5 times and stopped retrying -- worth checking Resend's own logs.">Alert delivery</h4>
-          <div class="live-grid" style="grid-template-columns: 1fr 1fr 1fr; padding:8px 0 16px; font-size:12px;">
-            <div class="live-muted">Pending: <strong style="color:#fff;">${(a.alerts || {}).pending ?? 0}</strong></div>
-            <div class="live-muted">Dead-letter: <strong style="color:${((a.alerts || {}).failed_dead_letter ?? 0) > 0 ? '#ffa4b2' : '#fff'};">${(a.alerts || {}).failed_dead_letter ?? 0}</strong></div>
-            <div class="live-muted">Sent (24h): <strong style="color:#fff;">${(a.alerts || {}).sent_24h ?? 0}</strong></div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Per-Org Flag Overrides (${overrides.length})</h3><p>Exceptions to the defaults above -- a specific org or user turned on or off independent of plan.</p></div></div>
+            ${overrides.length ? `
+              <div class="table-header grid-admin-overrides"><span>Target</span><span>Flag</span><span>State</span><span>Reason / Expiry</span></div>
+              <div class="list">
+                ${overrides.map(o => `<div class="table-row grid-admin-overrides">
+                  <div style="color:var(--text-dim); font-size:12px;">${o.organization_id ? `org #${o.organization_id}` : (o.user_id ? `user #${o.user_id}` : '')}</div>
+                  <div><code style="color:var(--teal); font-size:11.5px;">${escapeHtml(o.flag_key)}</code></div>
+                  <div><span class="pill ${o.enabled ? 'pill-low' : 'pill-high'}">${o.enabled ? 'on' : 'off'}</span></div>
+                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(o.reason || '')}${o.expires_at ? ` · expires ${String(o.expires_at).slice(0, 10)}` : ''}</div>
+                </div>`).join('')}
+              </div>` : `<div class="panel-body" style="color:var(--text-dim); font-size:12.5px;">None set.</div>`}
           </div>
-          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Public pricing</h4>
-          <div class="live-grid" style="grid-template-columns: 1.4fr 0.7fr 1fr 1.4fr; padding:8px 0 16px; font-size:12px; align-items:center;">
-            <div class="live-muted" data-tooltip="Controls which price index.html shows publicly for MUSTER and MUSTER Partner. Seed/Fruit is an internal pricing-stage label, not a software feature -- it never changes what a tenant's plan includes.">Current stage: <strong style="color:#fff;">${escapeHtml((a.pricing || {}).current_stage || 'unknown')}</strong></div>
-            <div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setPricingStage(this.value)" data-tooltip="Takes effect immediately on the public pricing page -- no deploy needed.">${['seed', 'fruit'].map(s => `<option value="${s}" ${s === (a.pricing || {}).current_stage ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-            <div class="live-muted">MUSTER: $${(((a.pricing || {}).muster || {}).monthly_price_cents ?? 0) / 100}/mo</div>
-            <div class="live-muted">Partner: $${(((a.pricing || {}).muster_partner || {}).monthly_price_cents ?? 0) / 100}/mo, ${((a.pricing || {}).muster_partner || {}).included_client_orgs ?? '?'} included</div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Platform Agents (${agents.length})</h3><p>AI agents and API keys not scoped to any single tenant -- platform-level automation and integrations.</p></div></div>
+            <div class="panel-body">
+              ${agents.length ? agents.map(pa => `<div style="padding:10px 0; border-bottom:1px solid var(--surface-border);">
+                <strong style="color:#fff; font-size:13px;">${escapeHtml(pa.name)}</strong> <span style="color:var(--text-dim); font-size:11.5px;">(${escapeHtml(pa.kind)})${pa.active ? '' : ' · inactive'}</span>
+                ${(pa.keys || []).map(k => `<div style="padding-left:14px; margin-top:4px; color:var(--text-dim); font-size:11.5px;">${escapeHtml(k.key_prefix)}… · scopes: ${escapeHtml((k.scopes || []).join(', '))} ${k.revoked_at ? '· revoked' : (k.last_used_at ? '· last used ' + String(k.last_used_at).slice(0, 10) : '· never used')}</div>`).join('')}
+              </div>`).join('') : `<div style="color:var(--text-dim); font-size:12.5px;">None.</div>`}
+            </div>
           </div>
-          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Tenants (${(a.tenants || []).length})</h4>
-          ${(a.tenants || []).map(t => `<div class="live-grid" style="padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
-              <div><strong style="color:#fff;">${escapeHtml(t.name)}</strong><br><span class="live-muted">${escapeHtml([t.country_code, t.region_code].filter(Boolean).join('-') || 'no jurisdiction')} · ${escapeHtml(t.onboarding_status)}</span></div>
-              <div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setPlan(${t.id}, this.value)" data-tooltip="Changes the plan. Flags with plan gates update immediately.">${['trial', 'starter', 'pro', 'enterprise', 'internal'].map(p => `<option value="${p}" ${p === t.plan ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
-              <div class="live-muted">${t.members} members · ${t.websites} sites</div>
-              <div>${t.open_critical > 0 ? `<span class="pill pill-critical">${t.open_critical} critical</span>` : '<span class="pill pill-low">0 critical</span>'}</div>
-              <div class="live-muted">${t.last_scan_at ? String(t.last_scan_at).slice(0, 10) : 'never scanned'}</div>
-              <div style="text-align:right;"><button class="btn-primary" style="padding:4px 9px;font-size:11px;" onclick="Live.openTenant(${t.id})" data-tooltip="Loads this tenant's workspace.">↗ Access</button></div>
-            </div>`).join('')}
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Feature flags</h4>
-          <div class="live-flag-row" style="border-bottom:1px solid rgba(255,255,255,0.15);"><div class="live-muted">Flag</div><div class="live-muted">Description · plan minimum</div><div class="live-muted">Default</div><div class="live-muted">Kill switch</div></div>
-          ${(a.flags || []).map(f => `<div class="live-flag-row">
-              <div><code>${escapeHtml(f.key)}</code><br><span class="live-muted">${escapeHtml(f.scope)}</span></div>
-              <div class="live-muted">${escapeHtml(f.description)}${f.plan_minimum ? ` · <strong>${escapeHtml(f.plan_minimum)}+</strong>` : ''}</div>
-              <div><label class="live-muted"><input type="checkbox" ${f.default_enabled ? 'checked' : ''} onchange="Live.setFlag('${f.key}', this.checked)"> on</label></div>
-              <div><label class="live-muted"><input type="checkbox" ${f.kill_switch ? 'checked' : ''} onchange="Live.killSwitch('${f.key}', this.checked)"> off for all</label></div>
-            </div>`).join('')}
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="Per-tenant exceptions to the flag defaults above -- a specific org turned on or off independent of its plan.">Per-org flag overrides (${(a.overrides || []).length})</h4>
-          ${(a.overrides || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None set.</div>' : (a.overrides || []).map(o => `<div class="live-grid" style="grid-template-columns: 1fr 1fr 0.6fr 1.6fr; padding:6px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
-              <div class="live-muted">${o.organization_id ? `org #${o.organization_id}` : (o.user_id ? `user #${o.user_id}` : '')}</div>
-              <div><code>${escapeHtml(o.flag_key)}</code></div>
-              <div class="live-muted">${o.enabled ? 'on' : 'off'}</div>
-              <div class="live-muted">${escapeHtml(o.reason || '')}${o.expires_at ? ` · expires ${String(o.expires_at).slice(0, 10)}` : ''}</div>
-            </div>`).join('')}
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="AI agents and their API keys not scoped to any single tenant -- platform-level automation and integrations.">Platform agents (${(a.platform_agents || []).length})</h4>
-          ${(a.platform_agents || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None.</div>' : (a.platform_agents || []).map(pa => `<div style="padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
-              <strong style="color:#fff;">${escapeHtml(pa.name)}</strong> <span class="live-muted">(${escapeHtml(pa.kind)}) ${pa.active ? '' : '· inactive'}</span>
-              ${(pa.keys || []).map(k => `<div class="live-muted" style="padding-left:12px;">${escapeHtml(k.key_prefix)}… · scopes: ${escapeHtml((k.scopes || []).join(', '))} ${k.revoked_at ? '· revoked' : (k.last_used_at ? '· last used ' + String(k.last_used_at).slice(0, 10) : '· never used')}</div>`).join('')}
-            </div>`).join('')}
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;" data-tooltip="Jurisdictions whose law rows haven't been reviewed by a human in over 180 days -- this is a research/legal task, not something to automate.">Jurisdictions due for review (${(a.jurisdiction_review_queue || []).length})</h4>
-          ${(a.jurisdiction_review_queue || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None overdue.</div>' : (a.jurisdiction_review_queue || []).map(j => `<div class="live-grid" style="grid-template-columns: 1fr 1fr 1fr; padding:6px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
-              <div>${escapeHtml(j.name)} <span class="live-muted">(${escapeHtml(j.code)})</span></div>
-              <div class="live-muted">${j.laws} law rows</div>
-              <div class="live-muted">last reviewed ${j.reviewed_at ? String(j.reviewed_at).slice(0, 10) : 'never'}</div>
-            </div>`).join('')}
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Users (${(a.users || []).length})</h4>
-          ${(a.users || []).map(u => `<div class="live-flag-row" style="grid-template-columns: 1.4fr 1.6fr 1fr 1fr;"><div><strong style="color:#fff;">${escapeHtml(u.name || '')}</strong></div><div class="live-muted">${escapeHtml(u.email)}</div><div><select class="filter-select" style="padding:3px 6px;font-size:11px;" onchange="Live.setRole('${escapeHtml(u.email)}', this.value)">${['user', 'admin', 'super_admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div><div class="live-muted">${u.last_signed_in ? String(u.last_signed_in).slice(0, 10) : ''}</div></div>`).join('')}`;
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Jurisdictions Due for Review (${jurisdictions.length})</h3><p>Law rows not reviewed by a human in over 180 days -- a research/legal task, not something to automate.</p></div></div>
+            ${jurisdictions.length ? `
+              <div class="table-header grid-admin-jurisdictions"><span>Jurisdiction</span><span>Law Rows</span><span>Last Reviewed</span></div>
+              <div class="list">
+                ${jurisdictions.map(j => `<div class="table-row grid-admin-jurisdictions">
+                  <div style="color:#fff; font-size:12.5px;">${escapeHtml(j.name)} <span style="color:var(--text-dim);">(${escapeHtml(j.code)})</span></div>
+                  <div style="color:var(--text-dim); font-size:12px;">${j.laws} rows</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${j.reviewed_at ? String(j.reviewed_at).slice(0, 10) : 'never'}</div>
+                </div>`).join('')}
+              </div>` : `<div class="panel-body" style="color:var(--emerald); font-size:12.5px;">None overdue.</div>`}
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head"><div><h3>Users (${users.length})</h3><p>Every registered user and their platform role.</p></div></div>
+            <div class="table-header grid-admin-users"><span>Name</span><span>Email</span><span>Role</span><span>Last Signed In</span></div>
+            <div class="list">
+              ${users.map(u => `<div class="table-row grid-admin-users">
+                <div style="color:#fff; font-size:12.5px;">${escapeHtml(u.name || '')}</div>
+                <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(u.email)}</div>
+                <div><select class="filter-select" style="padding:4px 8px; font-size:11.5px;" onchange="Live.setRole('${escapeHtml(u.email)}', this.value)">${['user', 'admin', 'super_admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+                <div style="color:var(--text-dim); font-size:12px;">${u.last_signed_in ? String(u.last_signed_in).slice(0, 10) : ''}</div>
+              </div>`).join('')}
+            </div>
+          </div>
+        `;
       },
       async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setPricingStage(stage) { try { await this.rpc('muster_admin_set_pricing_stage', { p_stage: stage }); showToast(`Public pricing stage set to ${stage}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
