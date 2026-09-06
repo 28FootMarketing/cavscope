@@ -2,7 +2,7 @@
 
 ## Tooltips are mandatory on every page
 
-Every page in this repo (`index.html`, `app.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
+Every page in this repo (`index.html`, `app.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
 tooltips on its interactive and informational elements — buttons, links, nav items, form fields,
 status indicators, data points, badges, chips, and anything else a user might not immediately
 understand. This is a standing requirement; do not wait to be asked again per page or per change.
@@ -28,16 +28,24 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   not a demo. `sitrep-sample.html` (`sitrep.muster.28footsystems.com/sample`) is the **one remaining**
   static, no-auth, fictional SITREP covering every finding category and severity — a reference/sales
   asset, not real data.
-- `onboarding.html` is a **retired** simulated sales-demo onboarding wizard — its pre-flight scan and
-  generated credentials were scripted, never wired to the real Supabase backend. The
-  `onboarding.muster.28footsystems.com` subdomain now redirects to `sitrep-sample.html` (see
-  `middleware.js`) instead of serving it, so there is only one demo surface in the funnel. The file is
-  kept in the repo, unlinked, in case it's revived; don't route new traffic to it. In its place, a super
-  admin can run a real scan against any URL from `app.html`'s admin console ("Run a URL scan") and get
-  back real findings from the live engine — see `muster_admin_run_url` / `muster_admin_website_overview`
-  / `muster_admin_url_runs` in `supabase/migrations/20260908050000_muster_admin_url_runner.sql`. Ad-hoc
-  URLs run this way are parked in a dedicated internal sandbox org (`organizations.is_admin_sandbox`),
-  never in a real tenant's risk register.
+- `onboarding.html` (`onboarding.muster.28footsystems.com`) is the **real**, server-enforced guided
+  onboarding wizard for a paid client provisioned via `muster.onboard_client()` (Stripe checkout ->
+  Supabase Auth invite -> this page). It is not a demo and has no local/client-side state machine: every
+  gate lives in Postgres (`muster.onboarding_steps`, `public.muster_onboarding_state()`,
+  `public.muster_onboarding_complete_step()`) — the page just renders whichever step the backend says is
+  current and posts back to it. See `supabase/migrations/20260908055000_muster_guided_onboarding.sql`
+  (as originally applied) and `20260908060000_muster_onboarding_fixes.sql` (a security-grant hardening
+  pass plus two validation fixes found on review — read the latter's header comment before touching this
+  system again). `onboard_client()` itself is not yet wired to anything live: the `muster-onboard` Stripe
+  webhook that's meant to call it hasn't been built, so this page is only reachable today via a manually
+  issued Supabase Auth invite against an org seeded by `muster.onboarding_seed()`.
+- A super admin can also run a real scan against any URL from `app.html`'s admin console ("Run a URL
+  scan") and get back real findings from the live engine — see `muster_admin_run_url` /
+  `muster_admin_website_overview` / `muster_admin_url_runs` in
+  `supabase/migrations/20260908050000_muster_admin_url_runner.sql`. Ad-hoc URLs run this way are parked
+  in a dedicated internal sandbox org (`organizations.is_admin_sandbox`), never in a real tenant's risk
+  register. This is separate from the guided onboarding flow above and from `sitrep-sample.html` — three
+  different tools for three different jobs, not competing demos.
 - Subdomain routing is handled by `middleware.js` (Vercel Routing Middleware, using `@vercel/functions`).
   `vercel.json`'s declarative `rewrites`/`has` cannot branch on the Host header — only real code can — so
   don't reintroduce host-conditional `vercel.json` rewrites for new subdomains; add another `if (host === ...)`
