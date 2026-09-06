@@ -693,14 +693,22 @@
   // scheduling link (Calendly, GHL) or a confirmed monitored inbox before launch.
   const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Enterprise%20Inquiry';
 
-  // Checkout phase 1 (sales-assisted): payment is collected inside GHL itself
-  // (native invoicing / Stripe-connect), not a separate MUSTER-owned Stripe
-  // account. These are placeholder GHL funnel/form URLs -- swap the base URL
-  // once real ones exist; keep the query params, GHL's form should capture
-  // them as hidden fields into the src:/product:/intent: tag taxonomy. Once
-  // a GHL workflow marks a deal won, it calls the muster-ghl-webhook Edge
-  // Function to actually provision the tenant on the correct paid plan.
-  const GHL_MUSTER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-signup';
+  // MUSTER (base tier): real self-serve checkout, live Stripe Payment
+  // Links, one per pricing stage (BLOCKERS-AND-DECISIONS.md B-1). No sales
+  // conversation, no GHL step -- paying here invites the buyer's Supabase
+  // Auth account and records a pending plan grant that the existing
+  // self-serve onboarding wizard (app.html) applies the moment they create
+  // their organization. See muster-stripe-webhook and PRD-003.
+  const STRIPE_MUSTER_SEED_PAYMENT_LINK = 'https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t';
+  const STRIPE_MUSTER_FRUIT_PAYMENT_LINK = 'https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u';
+
+  // MUSTER Partner/Enterprise: still sales-assisted, payment collected
+  // inside GHL itself (native invoicing / Stripe-connect), not this Stripe
+  // account. This is a placeholder GHL funnel/form URL -- swap the base
+  // URL once a real one exists; keep the query params, GHL's form should
+  // capture them as hidden fields into the src:/product:/intent: tag
+  // taxonomy. Once a GHL workflow marks a deal won, it calls the
+  // muster-ghl-webhook Edge Function to provision the tenant.
   const GHL_PARTNER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-partner-signup';
 
   function buildGhlUrl(base, product, intent) {
@@ -726,7 +734,7 @@
     badge.classList.toggle('fruit', !isSeed);
     document.getElementById('partnerLock').hidden = !isSeed;
 
-    document.getElementById('musterCta').href = buildGhlUrl(GHL_MUSTER_SIGNUP_URL, 'muster', intent);
+    document.getElementById('musterCta').href = isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK;
     document.getElementById('partnerCta').href = buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', intent);
   }
 
