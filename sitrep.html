@@ -185,6 +185,7 @@
       <div class="brand"><span class="dot"></span>MUSTER <small>/ SITREP VIEWER</small></div>
       <div class="topbar-right">
         <select class="picker" id="websitePicker" onchange="onWebsiteChange(this.value)" data-tooltip="Switch which of your organization's websites this report covers." hidden></select>
+        <select class="picker" id="historyPicker" onchange="onHistoryChange(this.value)" data-tooltip="View a previous SITREP for this website, to compare posture over time." hidden></select>
         <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this report.">▣ Print / PDF</button>
         <button class="btn-ghost" id="btnSignOut" onclick="signOut()" data-tooltip="Sign out of this SITREP viewer.">⏻ Sign out</button>
       </div>
@@ -294,6 +295,7 @@
         const sitrep = await rpc('muster_sitrep', { p_sitrep_id: Number(requestedSitrep) });
         currentWebsiteId = sitrep.website_id;
         picker.value = String(currentWebsiteId);
+        await loadHistory(currentWebsiteId, sitrep.id);
         renderSitrep(sitrep);
         return;
       } catch (e) { /* fall through to default website */ }
@@ -308,10 +310,31 @@
     currentWebsiteId = Number(websiteId);
     try {
       const sitrep = await rpc('muster_latest_sitrep', { p_website_id: currentWebsiteId });
+      await loadHistory(currentWebsiteId, sitrep ? sitrep.id : null);
       if (!sitrep) {
         renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the MUSTER workspace.');
         return;
       }
+      renderSitrep(sitrep);
+    } catch (e) {
+      renderError(`Could not load this SITREP: ${e.message}`);
+    }
+  }
+
+  async function loadHistory(websiteId, selectedId) {
+    const picker = document.getElementById('historyPicker');
+    try {
+      const history = await rpc('muster_sitrep_history', { p_website_id: websiteId, p_limit: 20 });
+      if (!history.length) { picker.hidden = true; picker.innerHTML = ''; return; }
+      picker.innerHTML = history.map(h => `<option value="${h.id}">${new Date(h.generated_at).toLocaleDateString()} — ${h.posture_score}/100 (${h.posture_band})${h.status === 'final' ? ' · current' : ''}</option>`).join('');
+      if (selectedId != null) picker.value = String(selectedId);
+      picker.hidden = false;
+    } catch (e) { picker.hidden = true; }
+  }
+
+  async function onHistoryChange(sitrepId) {
+    try {
+      const sitrep = await rpc('muster_sitrep', { p_sitrep_id: Number(sitrepId) });
       renderSitrep(sitrep);
     } catch (e) {
       renderError(`Could not load this SITREP: ${e.message}`);
@@ -421,6 +444,7 @@
 
       <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
         MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
+        ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation.">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
       </footer>
     `;
   }
