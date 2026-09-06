@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="MUSTER SITREP — comprehensive sample covering every finding category and severity." />
   <title>MUSTER — Sample SITREP</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -59,7 +62,7 @@
     .topbar-inner { max-width: 980px; margin: 0 auto; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
     .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-serif); font-size: 18px; font-weight: 700; }
     .brand small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500; }
-    .brand .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px rgba(251,191,36,0.4); display: inline-block; margin-right: 2px; }
+    .brand-mark { height: 22px; width: auto; align-self: center; filter: drop-shadow(0 0 6px rgba(251,191,36,0.4)); }
     .sample-banner {
       font-family: var(--font-mono); font-size: 11px; color: var(--amber);
       border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.08);
@@ -163,7 +166,7 @@
 
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><span class="dot"></span>MUSTER <small>/ SAMPLE SITREP</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SAMPLE SITREP</small></div>
       <div class="sample-banner" data-tooltip="Every finding, evidence row, and score on this page is fictional, built to show the full range of what a SITREP covers. It is not a real assessment of any organization.">⚠ ILLUSTRATIVE SAMPLE — NOT A REAL ASSESSMENT</div>
       <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this sample.">▣ Print / PDF</button>
     </div>
