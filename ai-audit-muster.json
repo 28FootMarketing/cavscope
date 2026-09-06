@@ -1,0 +1,418 @@
+{
+  "format": "bigsteele-ai-audit/1",
+  "brand": "Big Steele AI Audit",
+  "generated_at": "2026-09-06T04:22:45.893Z",
+  "repo": "muster",
+  "app": "muster",
+  "files_considered": 25,
+  "skipped": [],
+  "score": {
+    "total": 25,
+    "grade": "F",
+    "level": {
+      "n": 1,
+      "name": "Automated",
+      "meaning": "Programs can call it and work runs without a person, but no model is in the loop."
+    },
+    "profile": {
+      "key": "product",
+      "title": "Product",
+      "meaning": "Software people use directly; AI and automation serve the customer in the product.",
+      "source": "default"
+    },
+    "groups": [
+      {
+        "key": "surfaces",
+        "title": "Automated surfaces",
+        "earned": 9,
+        "max": 25,
+        "weight": 25,
+        "weighted": 9
+      },
+      {
+        "key": "ai",
+        "title": "AI systems",
+        "earned": 0,
+        "max": 25,
+        "weight": 25,
+        "weighted": 0
+      },
+      {
+        "key": "agents",
+        "title": "Agents",
+        "earned": 5,
+        "max": 25,
+        "weight": 25,
+        "weighted": 5
+      },
+      {
+        "key": "autonomy",
+        "title": "Autonomy and operability",
+        "earned": 11,
+        "max": 25,
+        "weight": 25,
+        "weighted": 11
+      }
+    ],
+    "criteria": [
+      {
+        "group": "surfaces",
+        "key": "api",
+        "label": "API handlers a program can call",
+        "max": 10,
+        "earned": 5,
+        "next": "Expose the app's operations as API handlers; 20 or more earns the full ten.",
+        "applicable": true,
+        "gain": 5
+      },
+      {
+        "group": "surfaces",
+        "key": "openapi",
+        "label": "A machine-readable API description",
+        "max": 4,
+        "earned": 0,
+        "next": "Publish an OpenAPI file or a GraphQL schema so an agent can read what exists without a person; the handlers you already have then count in full toward Reach. A capability inventory or typed contract schemas earn half.",
+        "applicable": true,
+        "gain": 4
+      },
+      {
+        "group": "surfaces",
+        "key": "webhooks",
+        "label": "Inbound webhooks from other systems",
+        "max": 4,
+        "earned": 2,
+        "next": "Receive events from the systems you depend on (payments, calendars, CRMs) with a signature check.",
+        "applicable": true,
+        "gain": 2
+      },
+      {
+        "group": "surfaces",
+        "key": "schedules",
+        "label": "Work that runs on a schedule",
+        "max": 4,
+        "earned": 2,
+        "next": "Add scheduled jobs for the work a person currently remembers to do.",
+        "applicable": true,
+        "gain": 2
+      },
+      {
+        "group": "surfaces",
+        "key": "queues",
+        "label": "Queues or event pipelines",
+        "max": 3,
+        "earned": 0,
+        "next": "Put long or retried work on a queue or an event pipeline instead of a request.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "ai",
+        "key": "provider",
+        "label": "A model provider integrated",
+        "max": 8,
+        "earned": 0,
+        "next": "Call a model from the server side; a second provider or a router earns the last two.",
+        "applicable": true,
+        "gain": 8
+      },
+      {
+        "group": "ai",
+        "key": "prompts",
+        "label": "Prompts written down as code",
+        "max": 4,
+        "earned": 0,
+        "next": "Keep system prompts in files under version control, one per job.",
+        "applicable": true,
+        "gain": 4
+      },
+      {
+        "group": "ai",
+        "key": "structured",
+        "label": "Structured output the software acts on",
+        "max": 4,
+        "earned": 0,
+        "next": "Ask the model for a schema (JSON schema, zod, structured output) so its answer can drive code, not only a chat.",
+        "applicable": true,
+        "gain": 4
+      },
+      {
+        "group": "ai",
+        "key": "retrieval",
+        "label": "Retrieval over your own data",
+        "max": 4,
+        "earned": 0,
+        "next": "Embed your data and search it (pgvector or a vector store) so the model answers from your records.",
+        "applicable": true,
+        "gain": 4
+      },
+      {
+        "group": "ai",
+        "key": "modalities",
+        "label": "Voice or vision",
+        "max": 3,
+        "earned": 0,
+        "next": "Add a voice or image path where your customers already speak or send pictures.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "ai",
+        "key": "server",
+        "label": "AI runs on the server, not only in the browser",
+        "max": 2,
+        "earned": 0,
+        "next": "Move model calls behind a server function so keys stay server-side and agents can call them too.",
+        "applicable": true,
+        "gain": 2
+      },
+      {
+        "group": "agents",
+        "key": "tools",
+        "label": "Tools a model may call",
+        "max": 9,
+        "earned": 5,
+        "next": "Define tools (functions with schemas) for the model; eight or more distinct tools earns the full nine.",
+        "applicable": true,
+        "gain": 4
+      },
+      {
+        "group": "agents",
+        "key": "loop",
+        "label": "A loop that lets the model act until done",
+        "max": 5,
+        "earned": 0,
+        "next": "Let the model call tools in a loop (maxSteps, tool_use handling, an agent runner) instead of one answer.",
+        "applicable": true,
+        "gain": 5
+      },
+      {
+        "group": "agents",
+        "key": "mcp_server",
+        "label": "An MCP server exposing the software",
+        "max": 5,
+        "earned": 0,
+        "next": "Ship an MCP server so any agent (Claude, Cursor, ChatGPT) can operate your software directly.",
+        "applicable": true,
+        "gain": 5
+      },
+      {
+        "group": "agents",
+        "key": "orchestration",
+        "label": "Orchestration or MCP client use",
+        "max": 3,
+        "earned": 0,
+        "next": "Chain steps in a workflow engine or graph, or consume other systems' MCP tools.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "agents",
+        "key": "memory",
+        "label": "Memory kept between runs",
+        "max": 3,
+        "earned": 0,
+        "next": "Store threads, runs and agent memory in tables so work survives a restart and a second run knows the first.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "autonomy",
+        "key": "reach",
+        "label": "Reach: machine surfaces against human pages",
+        "max": 8,
+        "earned": 8,
+        "next": "Every operation a person does in a page should be reachable by a handler or a tool; the ratio is what scores.",
+        "applicable": true,
+        "gain": 0
+      },
+      {
+        "group": "autonomy",
+        "key": "mutating",
+        "label": "Machine surfaces that change things",
+        "max": 4,
+        "earned": 0,
+        "next": "Let handlers and tools write, not only read: create the record, send the thing, close the loop.",
+        "applicable": true,
+        "gain": 4
+      },
+      {
+        "group": "autonomy",
+        "key": "observability",
+        "label": "Observability of what ran",
+        "max": 3,
+        "earned": 0,
+        "next": "Trace and log every run (Sentry, Langfuse, OpenTelemetry, structured logs) so a failure is visible without a customer.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "autonomy",
+        "key": "reliability",
+        "label": "Retries, backoff, idempotency",
+        "max": 3,
+        "earned": 0,
+        "next": "Retry with backoff and make writes idempotent so an agent can safely try again.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "autonomy",
+        "key": "evals",
+        "label": "Evals or tests of AI behaviour",
+        "max": 3,
+        "earned": 0,
+        "next": "Write evals for the prompts and tools; a change to a prompt should fail a test before it fails a customer.",
+        "applicable": true,
+        "gain": 3
+      },
+      {
+        "group": "autonomy",
+        "key": "guardrails",
+        "label": "Guardrails and a human gate",
+        "max": 2,
+        "earned": 1,
+        "next": "Rate limits and authenticated surfaces earn one; a human approval gate for the risky actions earns the other.",
+        "applicable": true,
+        "gain": 1
+      },
+      {
+        "group": "autonomy",
+        "key": "docs",
+        "label": "Documentation written for agents",
+        "max": 2,
+        "earned": 2,
+        "next": "Add AGENTS.md or llms.txt (and a server card for MCP) so an agent can learn the system without a person.",
+        "applicable": true,
+        "gain": 0
+      }
+    ],
+    "refused_waivers": []
+  },
+  "gate": {
+    "threshold": 25,
+    "pass": true,
+    "rule": "score 25 or more and level 1 Automated or above"
+  },
+  "groups": [
+    {
+      "key": "surfaces",
+      "title": "Automated surfaces",
+      "evidence": [
+        {
+          "what": "API handlers (route files, serverless functions, framework routes)",
+          "files": [
+            "supabase/functions/muster-agent/index.ts",
+            "supabase/functions/muster-ghl-webhook/index.ts",
+            "supabase/functions/muster-scan/index.ts"
+          ],
+          "count": 3
+        },
+        {
+          "what": "Inbound webhooks (handlers or signature checks)",
+          "files": [
+            "supabase/functions/muster-ghl-webhook/index.ts"
+          ],
+          "count": 1
+        },
+        {
+          "what": "Schedules (cron jobs, scheduled functions, workflows)",
+          "files": [
+            "supabase/migrations/20260904120400_muster_cron.sql"
+          ],
+          "count": 1
+        }
+      ],
+      "facts": {
+        "api_handlers": 3,
+        "supabase_functions": 3,
+        "contract_schemas": 0,
+        "capability_inventory": 0,
+        "described": "none",
+        "openapi": false,
+        "graphql": false,
+        "webhooks": 1,
+        "schedules": 1,
+        "queues": 0,
+        "pages": 0
+      }
+    },
+    {
+      "key": "ai",
+      "title": "AI systems",
+      "evidence": [],
+      "facts": {
+        "providers": [],
+        "ai_files": 0,
+        "models": [],
+        "prompts": 0,
+        "structured_output": 0,
+        "retrieval": 0,
+        "voice": [],
+        "vision": 0,
+        "ai_server_files": 0
+      }
+    },
+    {
+      "key": "agents",
+      "title": "Agents",
+      "evidence": [
+        {
+          "what": "Tool definitions",
+          "files": [
+            "supabase/functions/muster-agent/index.ts"
+          ],
+          "count": 1
+        }
+      ],
+      "facts": {
+        "tools": 1,
+        "tool_names": [],
+        "loops": 0,
+        "agent_frameworks": [],
+        "mcp_server": 0,
+        "mcp_client": 0,
+        "orchestration": 0,
+        "memory": 0
+      }
+    },
+    {
+      "key": "autonomy",
+      "title": "Autonomy and operability",
+      "evidence": [
+        {
+          "what": "Reach: 3 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
+          "files": [],
+          "count": 2
+        },
+        {
+          "what": "Guardrails (rate limits 0, authenticated machine surfaces 3, moderation / redaction / cost caps 0)",
+          "files": [
+            "supabase/functions/muster-agent/index.ts",
+            "supabase/functions/muster-ghl-webhook/index.ts",
+            "supabase/functions/muster-scan/index.ts"
+          ],
+          "count": 3
+        },
+        {
+          "what": "Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card)",
+          "files": [
+            "CLAUDE.md"
+          ],
+          "count": 1
+        }
+      ],
+      "facts": {
+        "reach": 1,
+        "reach_if_described": 1,
+        "machine_surfaces": 2,
+        "mutating": 0,
+        "observability": 0,
+        "reliability": 0,
+        "evals": 0,
+        "guardrails": 3,
+        "human_gate": 0,
+        "agent_docs": 1
+      }
+    }
+  ]
+}
