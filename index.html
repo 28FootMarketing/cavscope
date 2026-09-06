@@ -592,7 +592,8 @@
           <li>MUSTER / 28 Foot Systems branding</li>
         </ul>
         <p class="price-excludes" data-tooltip="These require the MUSTER Partner tier instead.">Does not include white-labeling, commercial client usage, client management, or removal of MUSTER branding.</p>
-        <a class="btn-primary price-cta" id="musterCta" data-tooltip="Opens a short intake so you can start your MUSTER subscription.">Start With MUSTER →</a>
+        <p class="price-note" data-tooltip="We're focused on onboarding MUSTER Partner agencies and consultants right now. Standalone self-serve signup will reopen later.">Self-serve signup is paused while we onboard MUSTER Partner agencies and consultants.</p>
+        <a class="btn-primary price-cta" id="musterCta" data-tooltip="Emails us about MUSTER for your own organization — self-serve signup is paused right now.">Ask About MUSTER →</a>
       </div>
 
       <div class="price-card featured" id="cardPartner">
@@ -693,14 +694,20 @@
   // scheduling link (Calendly, GHL) or a confirmed monitored inbox before launch.
   const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Enterprise%20Inquiry';
 
-  // MUSTER (base tier): real self-serve checkout, live Stripe Payment
-  // Links, one per pricing stage (BLOCKERS-AND-DECISIONS.md B-1). No sales
-  // conversation, no GHL step -- paying here invites the buyer's Supabase
-  // Auth account and records a pending plan grant that the existing
-  // self-serve onboarding wizard (app.html) applies the moment they create
-  // their organization. See muster-stripe-webhook and PRD-003.
+  // MUSTER (base tier) self-serve checkout: PAUSED. Only MUSTER Partner is
+  // meant to be active right now (explicit decision). The real self-serve
+  // path still exists end to end -- live Stripe Payment Links below, the
+  // backend accepting them via muster-stripe-webhook/PRD-003, and
+  // muster.feature_flags.self_serve_onboarding, which was turned off to
+  // match (see muster_admin_set_flag in app.html's admin console, or flip
+  // it back directly) -- it's just not linked from this CTA, so a visitor
+  // can't pay here and then hit a disabled-onboarding error afterward. To
+  // reactivate: re-enable that flag AND restore the musterCta.href line
+  // below.
   const STRIPE_MUSTER_SEED_PAYMENT_LINK = 'https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t';
   const STRIPE_MUSTER_FRUIT_PAYMENT_LINK = 'https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u';
+  const MUSTER_SELF_SERVE_PAUSED = true;
+  const MUSTER_PAUSED_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Interest';
 
   // MUSTER Partner/Enterprise: still sales-assisted, payment collected
   // inside GHL itself (native invoicing / Stripe-connect), not this Stripe
@@ -734,7 +741,9 @@
     badge.classList.toggle('fruit', !isSeed);
     document.getElementById('partnerLock').hidden = !isSeed;
 
-    document.getElementById('musterCta').href = isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK;
+    document.getElementById('musterCta').href = MUSTER_SELF_SERVE_PAUSED
+      ? MUSTER_PAUSED_CONTACT_HREF
+      : (isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK);
     document.getElementById('partnerCta').href = buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', intent);
   }
 
