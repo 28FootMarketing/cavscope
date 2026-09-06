@@ -6,6 +6,14 @@ import { rewrite, next } from '@vercel/functions';
 // Middleware instead, which runs real code per request.
 export default function middleware(request) {
   const host = request.headers.get('host') || '';
+  const path = new URL(request.url).pathname;
+
+  // Shared static assets (favicons, the logo) must resolve on every
+  // subdomain untouched -- without this, a same-origin request like
+  // /assets/favicon-32.png on app.muster... would get rewritten to
+  // app.html below, same as any other path, and the browser would receive
+  // that page's HTML mislabeled as an image.
+  if (path.startsWith('/assets/')) return next();
 
   if (host === 'app.muster.28footsystems.com') {
     return rewrite(new URL('/app.html', request.url));
@@ -14,7 +22,6 @@ export default function middleware(request) {
     return rewrite(new URL('/onboarding.html', request.url));
   }
   if (host === 'sitrep.muster.28footsystems.com') {
-    const path = new URL(request.url).pathname;
     if (path === '/sample' || path.startsWith('/sample/')) {
       return rewrite(new URL('/sitrep-sample.html', request.url));
     }
