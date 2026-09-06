@@ -908,6 +908,11 @@
     .grid-admin-overrides { grid-template-columns: 1fr 1fr 0.6fr 1.6fr; }
     .grid-admin-jurisdictions { grid-template-columns: 1.4fr 0.8fr 1fr; }
     .grid-admin-users { grid-template-columns: 1.6fr 1.8fr 1fr 1fr; }
+    .grid-live-findings { grid-template-columns: 1fr 280px; }
+    .grid-live-jurisdictions { grid-template-columns: 1.3fr 2.2fr 1fr; }
+    .grid-live-members { grid-template-columns: 1.3fr 1.6fr 1fr; }
+    .grid-live-invites { grid-template-columns: 1.6fr 1fr 1fr; }
+    .grid-live-agents { grid-template-columns: 1.2fr 0.8fr 1.8fr 0.8fr; }
 
     .tenant-pill-active { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7; }
     .tenant-pill-suspended { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: #ffa4b2; }
@@ -2239,6 +2244,7 @@
             </div>
           </div>
 
+          <div id="plainReportDemoBlocks">
           <div class="simple-explainer-banner">
             <h4>💡 How to Read This Report</h4>
             <p id="lblPlainExplainerBody">
@@ -2317,6 +2323,7 @@
             <div style="margin-top: 24px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11.5px; color: var(--text-dim);" id="plainReportFooterNotice">
               Prepared under the MUSTER Assurance Framework by 28 Foot Systems. All rights reserved.
             </div>
+          </div>
           </div>
         </section>
 
@@ -2434,6 +2441,7 @@
             </div>
           </div>
 
+          <div id="controlsDemoBlocks">
           <div class="simple-explainer-banner" style="background: linear-gradient(135deg, #0a251e 0%, #0d1e34 100%); border-color: #1a5647;">
             <h4 style="color: var(--emerald);">⚖ Not a Certification or Legal Opinion</h4>
             <p>Control mappings reflect MUSTER's technical assessment against publicly documented framework criteria (SOC 2, ISO 27001, GDPR, WCAG, PCI DSS, NIST CSF), based on the evidence reviewed to date. This is not a SOC 2 attestation, ISO certification, or legal compliance opinion &mdash; those come only from a licensed CPA firm, an accredited certification body, or counsel. "Effective" and "Deficient" statuses describe what MUSTER found, not a third-party audit result.</p>
@@ -2449,6 +2457,7 @@
             </div>
             <div id="controlTableBody" class="list">
             </div>
+          </div>
           </div>
         </section>
 
@@ -2519,6 +2528,7 @@
             </div>
           </div>
 
+          <div id="boardDemoBlocks">
           <!-- Board Executive Hero Banner -->
           <div class="report-hero">
             <div>
@@ -2559,6 +2569,7 @@
               <div class="metric-value" id="boardExceptionCount" style="color: var(--amber);">1</div>
               <small style="color: var(--text-muted);">Time-bound & governed</small>
             </div>
+          </div>
           </div>
         </section>
 
@@ -5527,75 +5538,165 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         return html;
       },
       renderLivePanels() {
+        ['superadminDemoBlocks', 'boardDemoBlocks', 'plainReportDemoBlocks', 'controlsDemoBlocks'].forEach(id => {
+          const dbEl = document.getElementById(id);
+          if (dbEl) dbEl.hidden = true;
+        });
         const ov = this.overview;
         const sitrep = ov && ov.latest_sitrep;
+
         const board = this.panel('liveSitrepPanel', 'board');
         board.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-            <div><span class="live-badge">Live SITREP</span> <span class="live-muted" style="margin-left:8px;">${sitrep ? `Generated ${String(sitrep.generated_at).slice(0, 16).replace('T', ' ')} UTC · ${escapeHtml(sitrep.headline)}` : 'No completed scan yet.'}</span></div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <select class="filter-select" style="padding:4px 6px;font-size:11px;" onchange="Live.setScanCadence(${this.website ? this.website.id : 'null'}, this.value)" data-tooltip="How often this website is scanned automatically. Takes effect on the next cron cycle.">
+          <div class="panel-head">
+            <div>
+              <h3>Live SITREP <span class="live-badge">Live</span></h3>
+              <p>${sitrep ? `Generated ${String(sitrep.generated_at).slice(0, 16).replace('T', ' ')} UTC &middot; ${escapeHtml(sitrep.headline)}` : 'No completed scan yet.'}</p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <select class="filter-select" style="padding:6px 8px;font-size:11.5px;" onchange="Live.setScanCadence(${this.website ? this.website.id : 'null'}, this.value)" data-tooltip="How often this website is scanned automatically. Takes effect on the next cron cycle.">
                 ${[[60, 'Hourly'], [360, 'Every 6h'], [1440, 'Daily'], [10080, 'Weekly']].map(([m, label]) => `<option value="${m}" ${(ov && ov.scan_settings && ov.scan_settings.cadence_minutes) === m ? 'selected' : ''}>${label}</option>`).join('')}
               </select>
-              <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="Live.requestScan()" data-tooltip="Queues a new scan and regenerates the SITREP when it completes.">⚡ Run scan</button>
-              ${sitrep ? `<button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
+              <button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="Live.requestScan()" data-tooltip="Queues a new scan and regenerates the SITREP when it completes.">⚡ Run scan</button>
+              ${sitrep ? `<button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
             </div>
           </div>
-          ${sitrep ? `<div class="live-md">${this.md(sitrep.content_md)}</div>` : '<p class="live-muted">Run a scan to produce the first cited SITREP for this website.</p>'}`;
+          <div class="panel-body">
+            ${sitrep ? `<div class="live-md">${this.md(sitrep.content_md)}</div>` : '<p class="live-muted">Run a scan to produce the first cited SITREP for this website.</p>'}
+          </div>`;
+
         const plain = this.panel('livePlainPanel', 'plainReport');
         const items = (sitrep && sitrep.sections && sitrep.sections.plain_english && sitrep.sections.plain_english.items) || [];
-        plain.innerHTML = `<span class="live-badge">Live plain English</span>` + (items.length
-          ? `<ul class="live-md" style="margin-top:10px;">${items.map(i => `<li style="margin-bottom:6px;">${escapeHtml(i.text)} <span class="live-cite">F${i.finding_id}</span>${(i.evidence_ids || []).map(e => `<span class="live-cite">E${e}</span>`).join('')}
-                <span style="display:inline-flex; gap:6px; margin-left:8px; vertical-align:middle;">
-                  <select class="filter-select" style="padding:2px 5px;font-size:10.5px;" onchange="Live.updateFindingStatus(${i.finding_id}, this.value)" data-tooltip="Change this finding's status.">
-                    <option value="">Status…</option>
-                    <option value="open">Open</option>
-                    <option value="reopened">Reopened</option>
-                    <option value="accepted">Accepted risk</option>
-                    <option value="resolved">Resolved</option>
-                  </select>
-                  <button class="btn-ghost" style="padding:2px 7px;font-size:10.5px;" onclick="Live.promoteFinding(${i.finding_id})" data-tooltip="Manually opens a tracked risk with a remediation action, before autotriage would otherwise get to it.">→ Promote to risk</button>
-                </span>
-              </li>`).join('')}</ul>`
-          : `<p class="live-muted" style="margin-top:8px;">${sitrep ? 'No open findings. Keep scanning on schedule so this stays true.' : 'No SITREP yet.'}</p>`);
+        plain.innerHTML = `
+          <div class="panel-head">
+            <div>
+              <h3>Live Plain English Findings</h3>
+              <p>${sitrep ? `${items.length} open finding${items.length === 1 ? '' : 's'}, explained without jargon` : 'No SITREP yet.'}</p>
+            </div>
+          </div>
+          ${items.length ? `
+          <div class="table-header grid-live-findings">
+            <span>Finding</span>
+            <span style="text-align:right;">Status / Action</span>
+          </div>
+          <div class="list">
+            ${items.map(i => `
+            <div class="table-row grid-live-findings">
+              <div>${escapeHtml(i.text)} <span class="live-cite">F${i.finding_id}</span>${(i.evidence_ids || []).map(e => `<span class="live-cite">E${e}</span>`).join('')}</div>
+              <div style="display:flex; gap:6px; align-items:center; justify-content:flex-end;">
+                <select class="filter-select" style="padding:4px 6px;font-size:10.5px;" onchange="Live.updateFindingStatus(${i.finding_id}, this.value)" data-tooltip="Change this finding's status.">
+                  <option value="">Status…</option>
+                  <option value="open">Open</option>
+                  <option value="reopened">Reopened</option>
+                  <option value="accepted">Accepted risk</option>
+                  <option value="resolved">Resolved</option>
+                </select>
+                <button class="btn-ghost" style="padding:4px 9px;font-size:10.5px;" onclick="Live.promoteFinding(${i.finding_id})" data-tooltip="Manually opens a tracked risk with a remediation action, before autotriage would otherwise get to it.">→ Promote to risk</button>
+              </div>
+            </div>`).join('')}
+          </div>` : `<div class="panel-body"><p class="live-muted">${sitrep ? 'No open findings. Keep scanning on schedule so this stays true.' : 'No SITREP yet.'}</p></div>`}`;
+
         const comp = this.panel('liveCompliancePanel', 'controls');
         const laws = (ov && ov.compliance && ov.compliance.laws) || [];
-        comp.innerHTML = `<span class="live-badge">Jurisdiction obligations</span> <span class="live-muted" style="margin-left:8px;">${escapeHtml((ov && ov.compliance && ov.compliance.disclaimer) || '')}</span>` +
-          (laws.length ? `<div style="margin-top:10px;">${laws.map(l => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 2fr 0.8fr;"><div><strong style="color:#fff;">${escapeHtml(l.short_name)}</strong><br><span class="live-muted">${escapeHtml(l.jurisdiction_code)} · ${escapeHtml(l.category)}</span></div><div class="live-muted">${(l.obligations || []).map(o => escapeHtml(o)).join(' · ')}</div><div><span class="pill ${l.status === 'evidence_gap' ? 'pill-high' : (l.status === 'clear' ? 'pill-low' : 'pill-pending')}">${l.status.replace('_', ' ')}${l.open_findings ? ` (${l.open_findings})` : ''}</span></div></div>`).join('')}</div>` : '<p class="live-muted" style="margin-top:8px;">Set a country on the organization to see obligations.</p>');
+        comp.innerHTML = `
+          <div class="panel-head">
+            <div>
+              <h3>Jurisdiction Obligations</h3>
+              <p>${escapeHtml((ov && ov.compliance && ov.compliance.disclaimer) || 'Set a country on the organization to see obligations.')}</p>
+            </div>
+          </div>
+          ${laws.length ? `
+          <div class="table-header grid-live-jurisdictions">
+            <span>Framework / Jurisdiction</span>
+            <span>Obligations</span>
+            <span>Status</span>
+          </div>
+          <div class="list">
+            ${laws.map(l => `
+            <div class="table-row grid-live-jurisdictions">
+              <div><strong style="color:#fff;">${escapeHtml(l.short_name)}</strong><br><span class="live-muted">${escapeHtml(l.jurisdiction_code)} · ${escapeHtml(l.category)}</span></div>
+              <div class="live-muted">${(l.obligations || []).map(o => escapeHtml(o)).join(' · ')}</div>
+              <div><span class="pill ${l.status === 'evidence_gap' ? 'pill-high' : (l.status === 'clear' ? 'pill-low' : 'pill-pending')}">${l.status.replace('_', ' ')}${l.open_findings ? ` (${l.open_findings})` : ''}</span></div>
+            </div>`).join('')}
+          </div>` : ''}`;
+
         this.renderAgentsPanel();
       },
       renderAgentsPanel() {
         const o = this.org; if (!o) return;
+        const dbEl = document.getElementById('superadminDemoBlocks');
+        if (dbEl) dbEl.hidden = true;
         const el = this.panel('liveAgentsPanel', 'superadmin');
         const agents = o.agents || [];
         const canIssue = !!(o.flags && o.flags.agent_api);
         const members = o.members || [];
         const invites = this.pendingInvites || [];
         el.innerHTML = `
-          <span class="live-badge">Team · ${escapeHtml(o.name)}</span>
-          <h4 style="margin:10px 0 6px; font-size:12px; color:#fff;">Members (${members.length})</h4>
-          ${members.map(m => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 1.6fr 1fr;"><div><strong style="color:#fff;">${escapeHtml(m.name || '')}</strong></div><div class="live-muted">${escapeHtml(m.email)}</div><div class="live-muted">${escapeHtml(m.role)}</div></div>`).join('')}
-          ${invites.length ? `<h4 style="margin:12px 0 6px; font-size:12px; color:#fff;" data-tooltip="Invited but not yet claimed -- the invitee needs to sign up with this email to join.">Pending invites (${invites.length})</h4>
-          ${invites.map(i => `<div class="live-flag-row" style="grid-template-columns: 1.6fr 1fr 1fr;"><div class="live-muted">${escapeHtml(i.email)}</div><div class="live-muted">${escapeHtml(i.role)}</div><div class="live-muted">sent ${String(i.created_at).slice(0, 10)}</div></div>`).join('')}` : ''}
-          <form onsubmit="Live.invite(event)" style="margin-top:14px; display:grid; grid-template-columns: 1.6fr 1fr auto; gap:8px; align-items:end;">
-            <div class="form-group" style="margin:0;"><label>Invite a member by email</label><input name="email" type="email" required placeholder="colleague@company.com"></div>
-            <div class="form-group" style="margin:0;"><label>Role</label><select name="role"><option value="executive">Executive</option><option value="risk_owner" selected>Risk owner</option><option value="control_owner">Control owner</option><option value="contributor">Contributor</option><option value="viewer">Viewer</option></select></div>
-            <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;">Invite</button>
-          </form>
-          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Notifications</h4>
-          <label class="live-muted" style="display:flex; align-items:center; gap:8px; padding:4px 0 16px;" data-tooltip="When on, MUSTER emails your executives and risk owners the moment a new critical or high risk is found. Turning this off does not stop the risk from being tracked -- only the email.">
-            <input type="checkbox" ${o.critical_alerts_enabled !== false ? 'checked' : ''} onchange="Live.setAlertPreference(this.checked)"> Email critical-finding alerts to executives and risk owners
-          </label>
-          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Agents and API keys</h4>
-          <p class="live-muted" style="margin:8px 0 10px;">Any AI agent or AI employee can work this workspace through the MCP endpoint <code style="font-family:var(--font-mono);color:var(--teal);">${this.url}/functions/v1/muster-agent</code> with header <code style="font-family:var(--font-mono);color:var(--teal);">x-muster-api-key</code>. ${canIssue ? '' : 'Issuing keys requires the Pro plan (flag agent_api).'}</p>
-          ${agents.length ? agents.map(a => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 1fr 1.6fr 0.6fr;"><div><strong style="color:#fff;">${escapeHtml(a.name)}</strong><br><span class="live-muted">${escapeHtml(a.kind)}</span></div><div>${a.active ? '<span class="pill pill-low">active</span>' : '<span class="pill pill-pending">inactive</span>'}</div><div class="live-muted">${(a.keys || []).map(k => `${escapeHtml(k.key_prefix)}… [${(k.scopes || []).join(',')}]${k.revoked_at ? ' revoked' : ''}${k.last_used_at ? ' · used ' + String(k.last_used_at).slice(0, 10) : ''}`).join('<br>') || 'no keys'}</div><div>${(a.keys || []).filter(k => !k.revoked_at).map(k => `<button class="btn-ghost" style="padding:3px 8px;font-size:10.5px;" onclick="Live.revokeKey(${k.id})">Revoke</button>`).join('')}</div></div>`).join('') : '<p class="live-muted">No agents yet.</p>'}
-          <form onsubmit="Live.createKey(event)" style="margin-top:12px; display:grid; grid-template-columns: 1.4fr 1fr 1.2fr auto; gap:8px; align-items:end;">
-            <div class="form-group" style="margin:0;"><label>Agent name</label><input name="name" required maxlength="80" placeholder="e.g. CORA" ${canIssue ? '' : 'disabled'}></div>
-            <div class="form-group" style="margin:0;"><label>Kind</label><select name="kind" ${canIssue ? '' : 'disabled'}><option value="internal_employee">AI employee</option><option value="customer_agent">Customer agent</option><option value="integration">Integration</option></select></div>
-            <div class="form-group" style="margin:0;"><label>Scopes</label><select name="scopes" ${canIssue ? '' : 'disabled'}><option value="read">read</option><option value="read,scan">read, scan</option><option value="read,scan,write">read, scan, write</option></select></div>
-            <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:11.5px;" ${canIssue ? '' : 'disabled'} data-tooltip="Issues a key shown once. Store it in the agent's secret store.">＋ Issue key</button>
-          </form>
-          <div id="liveKeyOut" hidden></div>`;
+          <div class="panel-head">
+            <div>
+              <h3>Team · ${escapeHtml(o.name)}</h3>
+              <p>Members, pending invites, alert preferences, and AI agent API keys for this workspace</p>
+            </div>
+          </div>
+          <div class="table-header grid-live-members">
+            <span>Name</span>
+            <span>Email</span>
+            <span>Role</span>
+          </div>
+          <div class="list">
+            ${members.map(m => `<div class="table-row grid-live-members"><div><strong style="color:#fff;">${escapeHtml(m.name || '—')}</strong></div><div class="live-muted">${escapeHtml(m.email)}</div><div class="live-muted">${escapeHtml(m.role)}</div></div>`).join('')}
+          </div>
+          ${invites.length ? `
+          <div class="panel-head" style="border-top:1px solid var(--surface-border);">
+            <div><h3 style="font-size:13px;" data-tooltip="Invited but not yet claimed -- the invitee needs to sign up with this email to join.">Pending invites (${invites.length})</h3></div>
+          </div>
+          <div class="table-header grid-live-invites">
+            <span>Email</span>
+            <span>Role</span>
+            <span>Sent</span>
+          </div>
+          <div class="list">
+            ${invites.map(i => `<div class="table-row grid-live-invites"><div class="live-muted">${escapeHtml(i.email)}</div><div class="live-muted">${escapeHtml(i.role)}</div><div class="live-muted">${String(i.created_at).slice(0, 10)}</div></div>`).join('')}
+          </div>` : ''}
+          <div class="panel-body" style="border-top:1px solid var(--surface-border);">
+            <form onsubmit="Live.invite(event)" style="display:grid; grid-template-columns: 1.6fr 1fr auto; gap:8px; align-items:end; margin-bottom:18px;">
+              <div class="form-group" style="margin:0;"><label>Invite a member by email</label><input name="email" type="email" required placeholder="colleague@company.com"></div>
+              <div class="form-group" style="margin:0;"><label>Role</label><select name="role"><option value="executive">Executive</option><option value="risk_owner" selected>Risk owner</option><option value="control_owner">Control owner</option><option value="contributor">Contributor</option><option value="viewer">Viewer</option></select></div>
+              <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;" data-tooltip="Sends a signup invite for this workspace at this role.">Invite</button>
+            </form>
+            <label class="live-muted" style="display:flex; align-items:center; gap:8px;" data-tooltip="When on, MUSTER emails your executives and risk owners the moment a new critical or high risk is found. Turning this off does not stop the risk from being tracked -- only the email.">
+              <input type="checkbox" ${o.critical_alerts_enabled !== false ? 'checked' : ''} onchange="Live.setAlertPreference(this.checked)"> Email critical-finding alerts to executives and risk owners
+            </label>
+          </div>
+          <div class="panel-head" style="border-top:1px solid var(--surface-border);">
+            <div>
+              <h3>Agents &amp; API Keys</h3>
+              <p>Any AI agent or AI employee can work this workspace through the MCP endpoint <code style="font-family:var(--font-mono);color:var(--teal);">${this.url}/functions/v1/muster-agent</code> with header <code style="font-family:var(--font-mono);color:var(--teal);">x-muster-api-key</code>. ${canIssue ? '' : 'Issuing keys requires the Pro plan (flag agent_api).'}</p>
+            </div>
+          </div>
+          ${agents.length ? `
+          <div class="table-header grid-live-agents">
+            <span>Agent</span>
+            <span>Status</span>
+            <span>Keys</span>
+            <span style="text-align:right;">Action</span>
+          </div>
+          <div class="list">
+            ${agents.map(a => `<div class="table-row grid-live-agents">
+              <div><strong style="color:#fff;">${escapeHtml(a.name)}</strong><br><span class="live-muted">${escapeHtml(a.kind)}</span></div>
+              <div>${a.active ? '<span class="pill pill-low">active</span>' : '<span class="pill pill-pending">inactive</span>'}</div>
+              <div class="live-muted">${(a.keys || []).map(k => `${escapeHtml(k.key_prefix)}… [${(k.scopes || []).join(',')}]${k.revoked_at ? ' revoked' : ''}${k.last_used_at ? ' · used ' + String(k.last_used_at).slice(0, 10) : ''}`).join('<br>') || 'no keys'}</div>
+              <div style="text-align:right;">${(a.keys || []).filter(k => !k.revoked_at).map(k => `<button class="btn-ghost" style="padding:3px 8px;font-size:10.5px;" onclick="Live.revokeKey(${k.id})" data-tooltip="Immediately invalidates this key. Any agent using it will start getting 401s.">Revoke</button>`).join('')}</div>
+            </div>`).join('')}
+          </div>` : `<div class="panel-body"><p class="live-muted">No agents yet.</p></div>`}
+          <div class="panel-body" style="border-top:1px solid var(--surface-border);">
+            <form onsubmit="Live.createKey(event)" style="display:grid; grid-template-columns: 1.4fr 1fr 1.2fr auto; gap:8px; align-items:end;">
+              <div class="form-group" style="margin:0;"><label>Agent name</label><input name="name" required maxlength="80" placeholder="e.g. CORA" ${canIssue ? '' : 'disabled'}></div>
+              <div class="form-group" style="margin:0;"><label>Kind</label><select name="kind" ${canIssue ? '' : 'disabled'}><option value="internal_employee">AI employee</option><option value="customer_agent">Customer agent</option><option value="integration">Integration</option></select></div>
+              <div class="form-group" style="margin:0;"><label>Scopes</label><select name="scopes" ${canIssue ? '' : 'disabled'}><option value="read">read</option><option value="read,scan">read, scan</option><option value="read,scan,write">read, scan, write</option></select></div>
+              <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:11.5px;" ${canIssue ? '' : 'disabled'} data-tooltip="Issues a key shown once. Store it in the agent's secret store.">＋ Issue key</button>
+            </form>
+            <div id="liveKeyOut" hidden></div>
+          </div>`;
       },
       async createKey(e) {
         e.preventDefault();
