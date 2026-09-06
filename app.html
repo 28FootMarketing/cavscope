@@ -1571,10 +1571,10 @@
           <span>Assurance Testing</span>
         </button>
 
-        <div class="nav-label" style="margin-top: 10px;">Platform Administration</div>
-        <button data-view="superadmin" style="color: #fde68a;" data-tooltip="Platform-wide controls: tenants, feature flags, and white-labeling.">
-          <span class="ico">👑</span>
-          <span>Super Admin Console</span>
+        <div class="nav-label" style="margin-top: 10px;" id="navSuperAdminLabel">Platform Administration</div>
+        <button data-view="superadmin" style="color: #fde68a;" id="navSuperAdminBtn" data-tooltip="Platform-wide controls: tenants, feature flags, and white-labeling.">
+          <span class="ico" id="navSuperAdminIcon">👑</span>
+          <span id="navSuperAdminText">Super Admin Console</span>
           <span class="nav-count" id="badgeTenantCount" style="background: rgba(251, 191, 36, 0.2); color: #fde68a;">3</span>
         </button>
       </nav>
@@ -5315,12 +5315,24 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.website = (o.websites || [])[0] || null;
         const tenant = multiTenantStore['live-' + o.id];
         this.overview = this.website ? await this.rpc('muster_website_overview', { p_website_id: this.website.id }) : null;
+        this.risks = this.website ? await this.rpc('muster_risks', { p_website_id: this.website.id }) : [];
+        this.appetite = await this.rpc('muster_risk_appetite', { p_organization_id: o.id });
+        this.pendingInvites = await this.rpc('muster_pending_invites', { p_organization_id: o.id });
         tenant.data = this.buildState(o, this.overview);
         activeTenantId = tenant.id;
         state = tenant.data;
         platformFeatureFlags.whiteLabeling = !!(o.flags && o.flags.white_label);
         const toggle = document.getElementById('ffWhiteLabelToggle');
         if (toggle) { toggle.checked = platformFeatureFlags.whiteLabeling; toggle.disabled = !this.ws.is_super_admin; }
+        // This nav tab holds real tenant self-service (team, API keys, alert
+        // preferences) alongside platform-wide super-admin controls. A regular
+        // member shouldn't have to open something literally labeled "Super Admin
+        // Console" to find their own team/invite/API-key tools.
+        const navLabel = document.getElementById('navSuperAdminLabel'), navText = document.getElementById('navSuperAdminText'), navIcon = document.getElementById('navSuperAdminIcon'), navBadge = document.getElementById('badgeTenantCount');
+        if (navLabel && navText && navIcon) {
+          if (this.ws.is_super_admin) { navLabel.textContent = 'Platform Administration'; navText.textContent = 'Super Admin Console'; navIcon.textContent = '👑'; if (navBadge) navBadge.hidden = false; }
+          else { navLabel.textContent = 'Workspace'; navText.textContent = 'Team & API Keys'; navIcon.textContent = '👥'; if (navBadge) navBadge.hidden = true; }
+        }
         switchTenant(tenant.id);
         this.setSync(`Live · ${o.name} · ${o.plan} plan`);
         this.renderTopbar();
@@ -5349,12 +5361,19 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           contact: w.latest_scan ? `Last scan ${String(w.latest_scan.finished_at || w.latest_scan.created_at).slice(0, 16).replace('T', ' ')} (${w.latest_scan.status})` : 'No scan yet',
           addedAt: (w.created_at || '').slice(0, 10), websiteId: w.id
         }));
-        base.risks = findings.map(f => ({
-          id: `F${f.id}`, title: f.title, website: f.page_url, source: catLabel[f.category] || f.category, severity: this.sevCap(f.severity),
-          likelihood: this.lik(f.severity), impact: this.lik(f.severity), owner: 'Unassigned',
-          status: f.status === 'accepted' ? 'Mitigated' : (f.risk_id ? 'In progress' : 'Open'),
-          treatment: f.remediation, escalation: `Rule ${f.rule_id} · ${f.confidence} confidence · evidence ${(f.evidence_ids || []).map(i => 'E' + i).join(', ') || 'none'} · seen ${f.occurrences}x`,
-          findingId: f.id
+        // Real auto-triaged risk register (muster.risks, populated by muster.autotriage()
+        // every 15 minutes for critical/high/medium findings) -- not raw findings. Findings
+        // that haven't been promoted yet, and low-severity ones autotriage never touches,
+        // stay visible in the Plain English panel instead (it reads ov.findings directly).
+        const risks = this.risks || [];
+        const riskStatusLabel = { open: 'Open', mitigated: 'Mitigated', in_progress: 'In progress', accepted: 'Accepted' };
+        base.risks = risks.map(r => ({
+          id: `R${r.id}`, title: r.title, website: site ? this.host(site.url) : '', source: catLabel[r.category] || r.category, severity: this.sevCap(r.severity),
+          likelihood: this.lik(r.severity), impact: this.lik(r.severity), owner: r.owner_name || 'Unassigned',
+          status: riskStatusLabel[r.status] || r.status,
+          treatment: r.treatment_plan || r.description,
+          escalation: `Treatment: ${r.treatment || 'n/a'} · Residual score ${r.residual_score ?? 'n/a'}${r.target_date ? ` · Target ${String(r.target_date).slice(0, 10)}` : ''}`,
+          riskId: r.id
         }));
         base.controls = laws.map(l => ({
           id: `LAW-${l.law_id}`, framework: l.jurisdiction_code, code: l.short_name, title: l.full_name, description: l.applies_when, owner: 'Executive',
@@ -5365,11 +5384,24 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           id: `E${e.evidence_id}`, title: `${e.kind.replace(/_/g, ' ')} · ${e.url}`, type: 'Scan / Audit', reviewer: 'MUSTER engine', status: 'Approved', source: 'system',
           context: `HTTP ${e.http_status ?? 'n/a'} · sha256 ${String(e.sha256 || '').slice(0, 12)} · captured ${String(e.captured_at || '').slice(0, 16).replace('T', ' ')}`
         }));
-        const due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-        base.remediation = findings.filter(f => f.status === 'open' || f.status === 'reopened').slice(0, 8).map(f => ({
-          id: `REM-F${f.id}`, title: f.remediation.length > 90 ? f.remediation.slice(0, 87) + '...' : f.remediation, riskId: `F${f.id}`, owner: 'Unassigned',
-          dueDate: due, progress: 0, status: 'Not started', criteria: f.plain_english
-        }));
+        // Real remediation actions (muster.remediation_actions), nested under their risk --
+        // not a synthesized 30-day placeholder. remediationStatusLabel mirrors the demo's
+        // three-state model (not_started/in_progress/verified in the real schema).
+        const remStatusLabel = { not_started: 'Not started', in_progress: 'In progress', verified: 'Completed' };
+        base.remediation = risks.flatMap(r => (r.remediation_actions || []).map(a => ({
+          id: `REM-${a.id}`, title: a.title, riskId: `R${r.id}`, owner: a.owner_name || 'Unassigned',
+          dueDate: a.due_date ? String(a.due_date).slice(0, 10) : '', progress: a.progress ?? 0,
+          status: remStatusLabel[a.status] || a.status, criteria: a.description
+        })));
+        const appetite = this.appetite;
+        const cadenceLabel = { monthly: 'Monthly', quarterly: 'Quarterly', semi_annual: 'Semi-Annual', annual: 'Annual' };
+        if (appetite) {
+          base.governance.appetite = {
+            statement: appetite.statement, criticalTolerance: appetite.critical_threshold, highTolerance: appetite.high_threshold,
+            cadence: cadenceLabel[appetite.review_cadence] || appetite.review_cadence, status: 'Formally Approved',
+            nextReview: appetite.next_review_at ? String(appetite.next_review_at).slice(0, 10) : ''
+          };
+        }
         base.governance.exceptions = [];
         base.governance.auditTrail = ((ov && ov.recent_scans) || []).slice(0, 8).map(s => ({
           time: String(s.finished_at || s.created_at).slice(0, 16).replace('T', ' '), action: `Scan #${s.id} ${s.status}`,
@@ -5481,7 +5513,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         board.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
             <div><span class="live-badge">Live SITREP</span> <span class="live-muted" style="margin-left:8px;">${sitrep ? `Generated ${String(sitrep.generated_at).slice(0, 16).replace('T', ' ')} UTC · ${escapeHtml(sitrep.headline)}` : 'No completed scan yet.'}</span></div>
-            <div style="display:flex; gap:6px;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <select class="filter-select" style="padding:4px 6px;font-size:11px;" onchange="Live.setScanCadence(${this.website ? this.website.id : 'null'}, this.value)" data-tooltip="How often this website is scanned automatically. Takes effect on the next cron cycle.">
+                ${[[60, 'Hourly'], [360, 'Every 6h'], [1440, 'Daily'], [10080, 'Weekly']].map(([m, label]) => `<option value="${m}" ${(ov && ov.scan_settings && ov.scan_settings.cadence_minutes) === m ? 'selected' : ''}>${label}</option>`).join('')}
+              </select>
               <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="Live.requestScan()" data-tooltip="Queues a new scan and regenerates the SITREP when it completes.">⚡ Run scan</button>
               ${sitrep ? `<button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
             </div>
@@ -5490,7 +5525,18 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         const plain = this.panel('livePlainPanel', 'plainReport');
         const items = (sitrep && sitrep.sections && sitrep.sections.plain_english && sitrep.sections.plain_english.items) || [];
         plain.innerHTML = `<span class="live-badge">Live plain English</span>` + (items.length
-          ? `<ul class="live-md" style="margin-top:10px;">${items.map(i => `<li>${escapeHtml(i.text)} <span class="live-cite">F${i.finding_id}</span>${(i.evidence_ids || []).map(e => `<span class="live-cite">E${e}</span>`).join('')}</li>`).join('')}</ul>`
+          ? `<ul class="live-md" style="margin-top:10px;">${items.map(i => `<li style="margin-bottom:6px;">${escapeHtml(i.text)} <span class="live-cite">F${i.finding_id}</span>${(i.evidence_ids || []).map(e => `<span class="live-cite">E${e}</span>`).join('')}
+                <span style="display:inline-flex; gap:6px; margin-left:8px; vertical-align:middle;">
+                  <select class="filter-select" style="padding:2px 5px;font-size:10.5px;" onchange="Live.updateFindingStatus(${i.finding_id}, this.value)" data-tooltip="Change this finding's status.">
+                    <option value="">Status…</option>
+                    <option value="open">Open</option>
+                    <option value="reopened">Reopened</option>
+                    <option value="accepted">Accepted risk</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                  <button class="btn-ghost" style="padding:2px 7px;font-size:10.5px;" onclick="Live.promoteFinding(${i.finding_id})" data-tooltip="Manually opens a tracked risk with a remediation action, before autotriage would otherwise get to it.">→ Promote to risk</button>
+                </span>
+              </li>`).join('')}</ul>`
           : `<p class="live-muted" style="margin-top:8px;">${sitrep ? 'No open findings. Keep scanning on schedule so this stays true.' : 'No SITREP yet.'}</p>`);
         const comp = this.panel('liveCompliancePanel', 'controls');
         const laws = (ov && ov.compliance && ov.compliance.laws) || [];
@@ -5503,8 +5549,24 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         const el = this.panel('liveAgentsPanel', 'superadmin');
         const agents = o.agents || [];
         const canIssue = !!(o.flags && o.flags.agent_api);
+        const members = o.members || [];
+        const invites = this.pendingInvites || [];
         el.innerHTML = `
-          <span class="live-badge">Agents and API keys · ${escapeHtml(o.name)}</span>
+          <span class="live-badge">Team · ${escapeHtml(o.name)}</span>
+          <h4 style="margin:10px 0 6px; font-size:12px; color:#fff;">Members (${members.length})</h4>
+          ${members.map(m => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 1.6fr 1fr;"><div><strong style="color:#fff;">${escapeHtml(m.name || '')}</strong></div><div class="live-muted">${escapeHtml(m.email)}</div><div class="live-muted">${escapeHtml(m.role)}</div></div>`).join('')}
+          ${invites.length ? `<h4 style="margin:12px 0 6px; font-size:12px; color:#fff;" data-tooltip="Invited but not yet claimed -- the invitee needs to sign up with this email to join.">Pending invites (${invites.length})</h4>
+          ${invites.map(i => `<div class="live-flag-row" style="grid-template-columns: 1.6fr 1fr 1fr;"><div class="live-muted">${escapeHtml(i.email)}</div><div class="live-muted">${escapeHtml(i.role)}</div><div class="live-muted">sent ${String(i.created_at).slice(0, 10)}</div></div>`).join('')}` : ''}
+          <form onsubmit="Live.invite(event)" style="margin-top:14px; display:grid; grid-template-columns: 1.6fr 1fr auto; gap:8px; align-items:end;">
+            <div class="form-group" style="margin:0;"><label>Invite a member by email</label><input name="email" type="email" required placeholder="colleague@company.com"></div>
+            <div class="form-group" style="margin:0;"><label>Role</label><select name="role"><option value="executive">Executive</option><option value="risk_owner" selected>Risk owner</option><option value="control_owner">Control owner</option><option value="contributor">Contributor</option><option value="viewer">Viewer</option></select></div>
+            <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;">Invite</button>
+          </form>
+          <h4 style="margin:16px 0 6px; font-size:12px; color:#fff;">Notifications</h4>
+          <label class="live-muted" style="display:flex; align-items:center; gap:8px; padding:4px 0 16px;" data-tooltip="When on, MUSTER emails your executives and risk owners the moment a new critical or high risk is found. Turning this off does not stop the risk from being tracked -- only the email.">
+            <input type="checkbox" ${o.critical_alerts_enabled !== false ? 'checked' : ''} onchange="Live.setAlertPreference(this.checked)"> Email critical-finding alerts to executives and risk owners
+          </label>
+          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;">Agents and API keys</h4>
           <p class="live-muted" style="margin:8px 0 10px;">Any AI agent or AI employee can work this workspace through the MCP endpoint <code style="font-family:var(--font-mono);color:var(--teal);">${this.url}/functions/v1/muster-agent</code> with header <code style="font-family:var(--font-mono);color:var(--teal);">x-muster-api-key</code>. ${canIssue ? '' : 'Issuing keys requires the Pro plan (flag agent_api).'}</p>
           ${agents.length ? agents.map(a => `<div class="live-flag-row" style="grid-template-columns: 1.2fr 1fr 1.6fr 0.6fr;"><div><strong style="color:#fff;">${escapeHtml(a.name)}</strong><br><span class="live-muted">${escapeHtml(a.kind)}</span></div><div>${a.active ? '<span class="pill pill-low">active</span>' : '<span class="pill pill-pending">inactive</span>'}</div><div class="live-muted">${(a.keys || []).map(k => `${escapeHtml(k.key_prefix)}… [${(k.scopes || []).join(',')}]${k.revoked_at ? ' revoked' : ''}${k.last_used_at ? ' · used ' + String(k.last_used_at).slice(0, 10) : ''}`).join('<br>') || 'no keys'}</div><div>${(a.keys || []).filter(k => !k.revoked_at).map(k => `<button class="btn-ghost" style="padding:3px 8px;font-size:10.5px;" onclick="Live.revokeKey(${k.id})">Revoke</button>`).join('')}</div></div>`).join('') : '<p class="live-muted">No agents yet.</p>'}
           <form onsubmit="Live.createKey(event)" style="margin-top:12px; display:grid; grid-template-columns: 1.4fr 1fr 1.2fr auto; gap:8px; align-items:end;">
@@ -5513,12 +5575,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <div class="form-group" style="margin:0;"><label>Scopes</label><select name="scopes" ${canIssue ? '' : 'disabled'}><option value="read">read</option><option value="read,scan">read, scan</option><option value="read,scan,write">read, scan, write</option></select></div>
             <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:11.5px;" ${canIssue ? '' : 'disabled'} data-tooltip="Issues a key shown once. Store it in the agent's secret store.">＋ Issue key</button>
           </form>
-          <div id="liveKeyOut" hidden></div>
-          <form onsubmit="Live.invite(event)" style="margin-top:14px; display:grid; grid-template-columns: 1.6fr 1fr auto; gap:8px; align-items:end;">
-            <div class="form-group" style="margin:0;"><label>Invite a member by email</label><input name="email" type="email" required placeholder="colleague@company.com"></div>
-            <div class="form-group" style="margin:0;"><label>Role</label><select name="role"><option value="executive">Executive</option><option value="risk_owner" selected>Risk owner</option><option value="control_owner">Control owner</option><option value="contributor">Contributor</option><option value="viewer">Viewer</option></select></div>
-            <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;">Invite</button>
-          </form>`;
+          <div id="liveKeyOut" hidden></div>`;
       },
       async createKey(e) {
         e.preventDefault();
@@ -5650,6 +5707,38 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           await this.loadWorkspace();
         } catch (e) { this.fail(e); }
       },
+      async saveRiskAppetite(payload) {
+        const cadenceKey = { Monthly: 'monthly', Quarterly: 'quarterly', 'Semi-Annual': 'semi_annual', Annual: 'annual' };
+        const p = {
+          statement: payload.statement,
+          critical_threshold: parseInt(payload.criticalTolerance || 0),
+          high_threshold: parseInt(payload.highTolerance || 0),
+          review_cadence: cadenceKey[payload.cadence] || 'quarterly',
+          next_review_at: payload.nextReview || null,
+        };
+        try {
+          await this.rpc('muster_save_risk_appetite', { p_organization_id: this.org.id, p });
+          showToast('Risk appetite updated.');
+          await this.activateOrg(this.org);
+        } catch (e) { this.fail(e); }
+      },
+      async updateFindingStatus(findingId, status) {
+        if (!status) return;
+        try { await this.rpc('muster_update_finding_status', { p_finding_id: findingId, p_status: status }); showToast(`Finding #${findingId} marked ${status}.`); await this.activateOrg(this.org); }
+        catch (e) { this.fail(e); }
+      },
+      async promoteFinding(findingId) {
+        try { await this.rpc('muster_promote_finding_to_risk', { p_finding_id: findingId }); showToast(`Finding #${findingId} promoted to the risk register.`); await this.activateOrg(this.org); }
+        catch (e) { this.fail(e); }
+      },
+      async setScanCadence(websiteId, minutes) {
+        try { await this.rpc('muster_update_scan_settings', { p_website_id: websiteId, p_enabled: true, p_cadence_minutes: parseInt(minutes) }); showToast('Scan cadence updated.'); await this.activateOrg(this.org); }
+        catch (e) { this.fail(e); }
+      },
+      async setAlertPreference(enabled) {
+        try { await this.rpc('muster_set_org_alert_preference', { p_organization_id: this.org.id, p_enabled: enabled }); showToast(`Critical-finding email alerts ${enabled ? 'enabled' : 'disabled'}.`); await this.loadWorkspace(); }
+        catch (e) { this.fail(e); }
+      },
     };
 
     // Route existing UI actions through the backend while live is showing.
@@ -5672,6 +5761,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           return;
         }
         if (currentModalType === 'create_tenant') { e.preventDefault(); closeModal(); Live.openOnboard(); return; }
+        if (currentModalType === 'appetite') { e.preventDefault(); closeModal(); Live.saveRiskAppetite(payload); return; }
       }
       return _handleFormSubmit(e);
     };
