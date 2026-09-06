@@ -3,1438 +3,665 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="28 Foot Systems — Automated Client Tenant Onboarding and Pre-Flight Assurance Inspection" />
-  <title>28 Foot Systems — Automated Client Tenant Onboarding</title>
-
+  <meta name="description" content="MUSTER guided onboarding — a server-enforced, seven-step setup for your workspace." />
+  <title>MUSTER — Guided Onboarding</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 
   <style>
     :root {
-      --bg: #050914;
-      --bg-gradient: radial-gradient(circle at 80% 10%, #102e4c 0%, #050914 55%), radial-gradient(circle at 15% 90%, #15223c 0%, #050914 50%);
-      --surface: #0a1324;
-      --surface-card: #0e1a32;
-      --surface-elevated: #142344;
-      --surface-border: #1f3458;
-      --surface-hover: #182b52;
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-border: #1f3358;
+      --surface-hover: #192b50;
 
-      --text: #f0f5ff;
-      --text-muted: #8fa0ba;
-      --text-dim: #5c6f8d;
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
 
       --teal: #36e2c9;
-      --teal-dim: #104245;
-      --teal-glow: rgba(54, 226, 201, 0.28);
-
-      --cyan: #38bdf8;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
       --amber: #fbbf24;
       --rose: #f43f5e;
-      --purple: #a855f7;
       --emerald: #10b981;
 
       --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       --font-serif: 'Cinzel', Georgia, serif;
       --font-mono: 'JetBrains Mono', monospace;
-
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
-      --radius-full: 9999px;
-
-      --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
-      --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.25);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
     body {
       background: var(--bg-gradient);
       background-color: var(--bg);
       color: var(--text);
       font-family: var(--font-sans);
-      font-size: 14px;
-      line-height: 1.5;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
-
-    /* Top Navigation Bar */
-    .header {
-      height: 72px;
-      border-bottom: 1px solid var(--surface-border);
-      padding: 0 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(8, 15, 30, 0.7);
-      backdrop-filter: blur(14px);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .brand-mark {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #4ef2db, #0ea5e9);
-      display: grid;
-      place-items: center;
-      color: #031525;
-      font-weight: 900;
-      font-size: 17px;
-      box-shadow: 0 0 22px rgba(54, 226, 201, 0.4);
-      flex-shrink: 0;
-      letter-spacing: -0.04em;
-    }
-
-    .brand-text strong {
-      display: block;
-      font-size: 15.5px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: #fff;
-    }
-
-    .eyebrow {
-      display: block;
-      color: var(--teal);
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid var(--surface-border);
-      background: rgba(14, 24, 46, 0.6);
-      border-radius: var(--radius-full);
-      padding: 6px 14px;
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .dot-live {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--teal);
-      box-shadow: 0 0 10px var(--teal);
-      animation: pulse 2s infinite ease-in-out;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.35); opacity: 0.6; }
-    }
-
-    /* Stepper Navigation */
-    .stepper-container {
-      max-width: 960px;
-      margin: 32px auto 0;
-      padding: 0 24px;
-      width: 100%;
-    }
-
-    .stepper {
-      display: flex;
-      justify-content: space-between;
-      position: relative;
-    }
-
-    .stepper::before {
-      content: '';
-      position: absolute;
-      top: 18px;
-      left: 36px;
-      right: 36px;
-      height: 2px;
-      background: var(--surface-border);
-      z-index: 1;
-    }
-
-    .step-item {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-
-    .step-circle {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--surface);
-      border: 2px solid var(--surface-border);
-      color: var(--text-dim);
-      display: grid;
-      place-items: center;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 700;
-      transition: all 0.25s ease;
-    }
-
-    .step-item.active .step-circle {
-      border-color: var(--teal);
-      background: var(--teal);
-      color: #031525;
-      box-shadow: 0 0 16px rgba(54, 226, 201, 0.4);
-    }
-
-    .step-item.completed .step-circle {
-      border-color: var(--emerald);
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--emerald);
-    }
-
-    .step-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      transition: color 0.2s ease;
-    }
-
-    .step-item.active .step-title {
-      color: #fff;
-    }
-
-    .step-item.completed .step-title {
-      color: var(--emerald);
-    }
-
-    /* Container Card */
-    .main-wrapper {
-      max-width: 960px;
-      margin: 28px auto 60px;
-      padding: 0 24px;
-      width: 100%;
-      flex-grow: 1;
-    }
-
-    .card {
-      background: linear-gradient(145deg, #0e1b34 0%, #091224 100%);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--radius-lg);
-      padding: 36px 40px;
-      box-shadow: var(--shadow-card);
-      position: relative;
-    }
-
-    .step-pane {
-      display: none;
-      animation: fadeIn 0.3s ease forwards;
-    }
-
-    .step-pane.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Form Fields */
-    .section-head {
-      margin-bottom: 24px;
-    }
-
-    .section-head h2 {
-      font-family: var(--font-serif);
-      font-size: 26px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 6px;
-    }
-
-    .section-head p {
-      color: var(--text-muted);
-      font-size: 13.5px;
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
+    a { color: inherit; }
+    code { font-family: var(--font-mono); }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 28px 100px; }
+
+    .topbar {
+      border-bottom: 1px solid var(--surface-border);
+      background: rgba(6, 10, 22, 0.72);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 30;
     }
+    .topbar-inner { max-width: 900px; margin: 0 auto; padding: 16px 28px; }
+    .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-serif); font-size: 18px; font-weight: 700; }
+    .brand small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500; }
+    .brand .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal-glow); display: inline-block; margin-right: 2px; }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      font-size: 11px;
-      font-weight: 700;
-      color: #cbd5e1;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%;
-      background: #060d1e;
-      border: 1.5px solid #233a60;
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      color: #fff;
-      font-family: var(--font-sans);
-      font-size: 13.5px;
-      font-weight: 500;
-      outline: none;
-      transition: all 0.2s ease;
-    }
-
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-      border-color: var(--teal);
-      box-shadow: 0 0 16px rgba(54, 226, 201, 0.2);
-    }
-
-    .input-url-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .input-url-wrap .url-prefix {
-      position: absolute;
-      left: 14px;
-      color: var(--teal);
+    select, button, input, textarea { font-family: var(--font-sans); }
+    .btn-ghost, .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 6px; padding: 9px 16px; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid var(--surface-border);
+      background: var(--surface-card); color: var(--text);
       font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 13px;
-      pointer-events: none;
     }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-primary { background: var(--teal); color: #04211c; border-color: var(--teal); }
+    .btn-primary:hover { box-shadow: 0 0 0 3px var(--teal-glow); }
+    .btn-primary:disabled, .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 
-    .input-url-wrap input {
-      padding-left: 85px;
+    label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 14px 0 6px; }
+    label:first-of-type { margin-top: 0; }
+    .hint { text-transform: none; font-weight: 500; letter-spacing: normal; color: var(--text-dim); }
+    input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {
+      width: 100%; background: var(--surface-card); border: 1px solid var(--surface-border); border-radius: 6px;
+      padding: 10px 12px; color: var(--text); font-size: 13.5px; outline: none;
     }
+    input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }
+    textarea { resize: vertical; min-height: 90px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-    /* Buttons */
-    .btn-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 32px;
-      padding-top: 24px;
-      border-top: 1px solid var(--surface-border);
+    .center-msg { max-width: 420px; margin: 100px auto; text-align: center; }
+    .center-msg h1 { font-family: var(--font-serif); font-size: 24px; margin-bottom: 10px; }
+    .center-msg p { color: var(--text-muted); font-size: 14px; margin-bottom: 22px; }
+
+    .onboarding-grid { display: grid; grid-template-columns: 220px 1fr; gap: 28px; padding: 36px 0; align-items: start; }
+    @media (max-width: 720px) { .onboarding-grid { grid-template-columns: 1fr; } }
+
+    .stepper { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 88px; }
+    .stepper-item { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-left: 2px solid transparent; padding-left: 12px; }
+    .stepper-dot {
+      width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex-shrink: 0;
+      background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text-dim);
     }
+    .stepper-label { font-size: 12.5px; color: var(--text-dim); }
+    .stepper-current { border-left-color: var(--teal); }
+    .stepper-current .stepper-dot { background: var(--teal); border-color: var(--teal); color: #04211c; }
+    .stepper-current .stepper-label { color: var(--text); font-weight: 700; }
+    .stepper-done .stepper-dot { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); }
+    .stepper-done .stepper-label { color: var(--text-muted); }
 
-    button.btn-primary {
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 12px 24px;
-      background: linear-gradient(135deg, var(--teal), #22d3ee);
-      color: #031c24;
-      font-family: var(--font-sans);
-      font-size: 13.5px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 6px 20px rgba(54, 226, 201, 0.35);
-      transition: all 0.2s ease;
+    .step-panel { min-width: 0; }
+    .step-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 12px; padding: 28px 30px; }
+    .step-card h2 { font-family: var(--font-serif); font-size: 20px; margin: 0 0 8px; }
+    .step-desc { color: var(--text-muted); font-size: 14px; margin: 0 0 18px; }
+    .step-msg { font-size: 12.5px; color: var(--rose); min-height: 16px; margin: 10px 0 4px; }
+    .step-msg.ok { color: var(--emerald); }
+
+    .code-block {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: #04070f; border: 1px solid var(--surface-border); border-radius: 8px; padding: 12px 14px;
+      margin-bottom: 16px; overflow-x: auto;
     }
+    .code-block code { font-size: 12px; color: var(--teal); white-space: nowrap; }
 
-    button.btn-primary:hover {
-      background: linear-gradient(135deg, #5ef4df, #38bdf8);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 25px rgba(54, 226, 201, 0.5);
+    .repeat-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .repeat-row input { margin: 0; }
+
+    .sev-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .sev-chip {
+      font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 4px; display: inline-block;
     }
+    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
+    .sev-medium { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+    .sev-low, .sev-info { background: rgba(54, 226, 201, 0.15); color: var(--teal); }
 
-    button.btn-ghost {
-      border: 1px solid var(--surface-border);
-      border-radius: var(--radius-md);
-      padding: 11px 20px;
-      background: rgba(17, 30, 56, 0.5);
-      color: var(--text);
-      font-family: var(--font-sans);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
+    .claim-list { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px; }
+    .claim { font-size: 13.5px; color: var(--text); padding-left: 16px; position: relative; }
+    .claim::before { content: '—'; position: absolute; left: 0; color: var(--text-dim); }
+
+    .scan-pulse {
+      width: 14px; height: 14px; border-radius: 50%; background: var(--teal);
+      box-shadow: 0 0 0 0 var(--teal-glow); animation: pulse 1.6s ease-out infinite; margin: 6px 0 4px;
     }
-
-    button.btn-ghost:hover {
-      background: var(--surface-hover);
-      border-color: #3b5079;
-      color: #fff;
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(54, 226, 201, 0.5); }
+      70% { box-shadow: 0 0 0 14px rgba(54, 226, 201, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(54, 226, 201, 0); }
     }
+    @media (prefers-reduced-motion: reduce) { .scan-pulse { animation: none; } }
 
-    /* Interactive Terminal Simulator */
-    .terminal-box {
-      background: #030815;
-      border: 1px solid #1e365c;
-      border-radius: var(--radius-md);
-      padding: 18px 22px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: #9ab4d6;
-      min-height: 220px;
-      max-height: 280px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      box-shadow: inset 0 4px 18px rgba(0, 0, 0, 0.7);
-    }
+    .ack-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin: 4px 0 6px; text-transform: none; font-weight: 500; }
+    .ack-row input { width: auto; }
 
-    .terminal-line {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .done-card { text-align: center; }
 
-    .t-time { color: var(--text-dim); font-size: 10.5px; }
-    .t-ok { color: var(--teal); font-weight: 600; }
-    .t-warn { color: var(--amber); }
-    .t-crit { color: var(--rose); font-weight: 600; }
-
-    /* Selection Cards for Frameworks */
-    .framework-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-top: 8px;
-    }
-
-    .framework-card {
-      border: 1px solid var(--surface-border);
-      border-radius: var(--radius-md);
-      padding: 14px 16px;
-      background: rgba(10, 20, 42, 0.6);
-      cursor: pointer;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      transition: all 0.2s ease;
-    }
-
-    .framework-card:hover {
-      border-color: #2b4b7c;
-      background: rgba(16, 32, 64, 0.7);
-    }
-
-    .framework-card.selected {
-      border-color: var(--teal);
-      background: rgba(54, 226, 201, 0.08);
-      box-shadow: inset 0 0 12px rgba(54, 226, 201, 0.1);
-    }
-
-    .framework-card input[type="checkbox"] {
-      margin-top: 3px;
-      accent-color: var(--teal);
-      cursor: pointer;
-    }
-
-    .framework-info strong {
-      display: block;
-      color: #fff;
-      font-size: 13px;
-    }
-
-    .framework-info span {
-      display: block;
-      color: var(--text-muted);
-      font-size: 11.5px;
-      margin-top: 2px;
-    }
-
-    /* Preset Quick Chips */
-    .preset-chip-list {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-
-    .preset-chip {
-      background: rgba(18, 36, 68, 0.5);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--radius-full);
-      padding: 5px 12px;
-      font-size: 11px;
-      color: #b0c4de;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .preset-chip:hover {
-      background: #19335a;
-      color: #fff;
-      border-color: var(--teal);
-    }
-
-    /* Success Screen Assets */
-    .success-badge {
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      background: rgba(54, 226, 201, 0.12);
-      border: 1px solid var(--teal);
-      display: grid;
-      place-items: center;
-      color: var(--teal);
-      font-size: 28px;
-      margin-bottom: 16px;
-      box-shadow: 0 0 30px rgba(54, 226, 201, 0.3);
-    }
-
-    .credentials-box {
-      background: #040816;
-      border: 1px solid #1f375e;
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: #cbdbee;
-      margin: 18px 0;
-      position: relative;
-    }
-
-    .copy-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: #102244;
-      border: 1px solid #284777;
-      color: var(--teal);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .copy-btn:hover {
-      background: var(--teal);
-      color: #031525;
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 28px;
-      right: 28px;
-      background: #0d2a32;
-      border: 1px solid var(--teal);
-      border-radius: var(--radius-md);
-      padding: 12px 18px;
-      color: #e0fffb;
-      font-size: 12.5px;
-      font-weight: 600;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transform: translateY(120%);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .toast.show {
-      transform: translateY(0);
-    }
-
-    @media (max-width: 768px) {
-      .header { padding: 0 20px; }
-      .form-row, .framework-grid { grid-template-columns: 1fr; }
-      .card { padding: 24px 20px; }
-      .stepper { overflow-x: auto; gap: 20px; }
-      .stepper::before { display: none; }
-    }
-
-    /* Tooltips */
+    /* ---------- Tooltips ---------- */
     .app-tooltip {
-      position: fixed;
-      z-index: 300;
-      max-width: 280px;
-      padding: 8px 11px;
-      border-radius: 8px;
-      background: #0d1a33;
-      border: 1px solid #2e4a78;
-      color: #e6eefb;
-      font-family: var(--font-sans);
-      font-size: 12px;
-      font-weight: 500;
-      line-height: 1.45;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(3px);
-      transition: opacity 0.12s ease, transform 0.12s ease;
+      position: fixed; z-index: 300; max-width: 280px; padding: 8px 11px; border-radius: 8px;
+      background: #0d1a33; border: 1px solid #2e4a78; color: #e6eefb;
+      font-family: var(--font-sans); font-size: 12px; font-weight: 500; line-height: 1.45;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); pointer-events: none; opacity: 0;
+      transform: translateY(3px); transition: opacity 0.12s ease, transform 0.12s ease;
     }
     .app-tooltip.show { opacity: 1; transform: translateY(0); }
     @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
     [data-tooltip] { cursor: help; }
-    a[data-tooltip], button[data-tooltip], .preset-chip[data-tooltip], .framework-card[data-tooltip] { cursor: pointer; }
+    a[data-tooltip], button[data-tooltip], select[data-tooltip] { cursor: pointer; }
     [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
-    /* Pre-flight result panel */
-    .scan-result { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--surface-border); animation: fadeIn 0.35s ease forwards; }
-    .score-row { display: flex; align-items: center; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
-    .gauge { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
-    .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-    .gauge-value { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-value .num { font-family: var(--font-mono); font-size: 22px; font-weight: 700; line-height: 1; }
-    .gauge-value .of100 { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
-    .band-label { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
-    .band-desc { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; max-width: 48ch; }
-    .finding-list { display: flex; flex-direction: column; gap: 8px; }
-    .finding-row { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; padding: 10px 12px; background: rgba(10, 20, 42, 0.5); border: 1px solid var(--surface-border); border-radius: 8px; }
-    .finding-code { font-family: var(--font-mono); font-size: 10.5px; color: var(--teal); flex-shrink: 0; width: 62px; }
-    .finding-text { color: var(--text-muted); flex: 1; }
-    .finding-ref { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-top: 2px; }
-    .sev-chip { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
-    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
-    .sev-medium { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
-    .sev-low, .sev-info { background: rgba(54, 226, 201, 0.15); color: var(--teal); }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
 
-  <!-- Topbar Header -->
-  <header class="header">
-    <a href="#" class="brand">
-      <div class="brand-mark">28F</div>
-      <div class="brand-text">
-        <span class="eyebrow">Enterprise Cloud</span>
-        <strong>28 Foot Systems</strong>
-      </div>
-    </a>
-
-    <div class="header-actions">
-      <div class="status-badge" data-tooltip="This wizard walks through provisioning a new client tenant step by step.">
-        <span class="dot-live"></span>
-        <span>Automated Provisioning Hub</span>
-      </div>
-      <a href="https://app.muster.28footsystems.com/" class="btn-ghost" style="padding: 7px 14px; font-size: 12px;" data-tooltip="Already provisioned a tenant? Go to your existing workspace instead of starting a new one.">
-        ↗ Existing Workspace
-      </a>
-    </div>
-  </header>
-
-  <!-- Stepper Indicator -->
-  <div class="stepper-container">
-    <div class="stepper" id="stepper">
-      <div class="step-item active" data-step="1" onclick="jumpToStep(1)" data-tooltip="Name the client organization and the primary domain to assess.">
-        <div class="step-circle">1</div>
-        <span class="step-title">Organization & Domain</span>
-      </div>
-      <div class="step-item" data-step="2" onclick="jumpToStep(2)" data-tooltip="Automated diagnostics run against the domain before setup continues.">
-        <div class="step-circle">2</div>
-        <span class="step-title">Pre-Flight Inspection</span>
-      </div>
-      <div class="step-item" data-step="3" onclick="jumpToStep(3)" data-tooltip="Choose which assurance frameworks apply and who the tenant admin is.">
-        <div class="step-circle">3</div>
-        <span class="step-title">Assurance Scope</span>
-      </div>
-      <div class="step-item" data-step="4" onclick="jumpToStep(4)" data-tooltip="Provisioning is complete and credentials are ready.">
-        <div class="step-circle">4</div>
-        <span class="step-title">Workspace Ready</span>
-      </div>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span>MUSTER <small>/ GUIDED ONBOARDING</small></div>
     </div>
   </div>
 
-  <!-- Main Wizard Form Container -->
-  <main class="main-wrapper">
-    <div class="card">
+  <div class="wrap">
 
-      <!-- ================= STEP 1: ORGANIZATION & DOMAIN ================= -->
-      <section class="step-pane active" id="step1">
-        <div class="section-head">
-          <span class="eyebrow">Step 01 / Automated Provisioning</span>
-          <h2>Organization & Primary Digital Property</h2>
-          <p>Provide your client organization credentials and enter the primary domain to be scanned, monitored, and audited under your dedicated 28 Foot Systems tenant partition.</p>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label data-tooltip="The client's official business name, as it should appear on reports.">Organization / Client Legal Name</label>
-            <input type="text" id="inOrgName" placeholder="e.g. Apex Global Payments" value="Apex Global Payments" oninput="onOrgNameInput(this.value)">
-          </div>
-          <div class="form-group">
-            <label data-tooltip="A short, URL-safe identifier used to reference this tenant internally. Fills in automatically from the name above until you edit it directly.">Subdomain Slug (Tenant ID)</label>
-            <input type="text" id="inOrgSlug" placeholder="e.g. apex-payments" value="apex-payments" oninput="slugManuallyEdited = true">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label data-tooltip="The main domain MUSTER will scan, monitor, and audit for this tenant.">Primary Production Web Address (URL to Run It All)</label>
-          <div class="input-url-wrap">
-            <span class="url-prefix">https:// 🔒</span>
-            <input type="text" id="inDomain" placeholder="portal.apexpayments.com" value="portal.apexpayments.com">
-          </div>
-          <div style="margin-top: 6px; font-size: 11.5px; color: var(--teal);">
-            💡 <em>Note: Any additional URLs for your own business or client accounts can be added at any time inside your workspace.</em>
-          </div>
-          <div class="preset-chip-list">
-            <span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Preset Target:</span>
-            <button type="button" class="preset-chip" onclick="applyPreset('Apex Global Payments', 'apex-payments', 'portal.apexpayments.com', 'Fintech & Financial Services')" data-tooltip="Fill the form with a sample fintech client to see how the wizard behaves.">Apex Global (Fintech Portal)</button>
-            <button type="button" class="preset-chip" onclick="clearStep1()" data-tooltip="Empty every field on this step so you can start from scratch.">✕ Clear</button>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label data-tooltip="Sets the industry context used for jurisdiction and framework recommendations.">Industry Vertical</label>
-            <select id="inIndustry">
-              <option value="Fintech & Financial Services">Fintech & Financial Services</option>
-              <option value="Healthcare & Life Sciences (HIPAA)">Healthcare & Life Sciences (HIPAA / HITECH)</option>
-              <option value="Enterprise B2B SaaS & Cloud">Enterprise B2B SaaS & Cloud Platforms</option>
-              <option value="Logistics & Supply Chain Tech">Logistics, Freight & Supply Chain Tech</option>
-              <option value="Ecommerce & Omnichannel Retail">Ecommerce & Omnichannel Retail</option>
-              <option value="Digital Agency & IT Consultancy">Digital Agency & IT Consultancy (Multi-Client Service)</option>
-              <option value="Legal & Professional Services">Legal, Advisory & Professional Services</option>
-              <option value="Higher Education & EdTech">Higher Education & EdTech</option>
-              <option value="Government & Public Sector">Government & Public Sector (Section 508 / FedRAMP)</option>
-              <option value="Insurance & Insurtech">Insurance & Insurtech</option>
-              <option value="Real Estate & PropTech">Real Estate & PropTech</option>
-              <option value="Manufacturing & Industrial IoT">Manufacturing & Industrial IoT</option>
-              <option value="Media, Publishing & Entertainment">Media, Publishing & Entertainment</option>
-              <option value="Energy, Utilities & CleanTech">Energy, Utilities & CleanTech</option>
-              <option value="Non-Profit & NGO Associations">Non-Profit & NGO Associations</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label data-tooltip="This determines who your clients are and how billing/branding work below — pick carefully, it's hard to change later.">Tenancy Model / Operating Mode</label>
-            <select id="inTenancyMode" onchange="onTenancyModeChange(this.value)">
-              <option value="Agency / Partner (Multi-Client Engine)" selected data-tooltip="You are a reseller or consultancy. You add and manage many client websites under one login, and can bill each client on your own terms.">Agency / Partner (Run audits &amp; assurance for your own clients)</option>
-              <option value="Direct Enterprise Organization" data-tooltip="You are assessing your own company's own website(s) only. There is no downstream client.">Direct Enterprise Organization (Internal brand properties)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" id="tenancyModeNote" style="margin-top: -8px; font-size: 11.5px; color: var(--text-dim); line-height: 1.55;" data-tooltip="White-label branding (your logo, your domain, your name on reports) is a separate setting you turn on after provisioning, from Whitelabel Settings — it isn't required just because you picked Agency/Partner here.">
-            <strong style="color: var(--teal);">Agency / Partner:</strong> you can add unlimited client websites and, once provisioned, optionally turn on white-label branding so your clients see your name, logo, and (on a Pro+ plan) your own domain instead of MUSTER's. Until you enable that, your clients access reports at MUSTER's own domain.
-          </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label data-tooltip="Where tenant data is physically stored, relevant for GDPR and other data-sovereignty rules. Pick the region closest to where the organization is actually located.">Cloud Data Residency (GDPR / Sovereignty)</label>
-            <select id="inRegion">
-              <option value="US-East (N. Virginia)">US-East (N. Virginia - Fast US)</option>
-              <option value="EU-Central (Frankfurt)">EU-Central (Frankfurt - Strict GDPR)</option>
-              <option value="US-West (Oregon)">US-West (Oregon)</option>
-              <option value="UK-South (London)">UK-South (London)</option>
-              <option value="AP-Southeast (Singapore)">AP-Southeast (Singapore)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="btn-row">
-          <span style="font-size: 12px; color: var(--text-dim);" data-tooltip="Each tenant's data lives in its own isolated partition, never shared with other tenants.">All data strictly segregated in tenant namespace.</span>
-          <button type="button" class="btn-primary" onclick="proceedToStep2()" data-tooltip="Save this organization and domain, then start the pre-flight scan.">
-            <span>Execute Pre-Flight Scan ›</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- ================= STEP 2: PRE-FLIGHT AUDIT & TELEMETRY ================= -->
-      <section class="step-pane" id="step2">
-        <div class="section-head">
-          <span class="eyebrow">Step 02 / Telemetry Probing</span>
-          <h2>Automated Pre-Flight Inspection</h2>
-          <p>Running automated surface diagnostics across AI bot crawlability, WCAG 2.2 Level AA accessibility landmarks, transport encryption, and regulatory headers.</p>
-        </div>
-
-        <div class="terminal-box" id="scanTerminal" data-tooltip="Live log of the automated pre-flight diagnostics as they run.">
-          <div class="terminal-line"><span class="t-time">[SYS]</span> <span>Pre-flight audit engine initialized. Ready to probe target.</span></div>
-        </div>
-
-        <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--text-muted);">
-          <div id="scanStatusText">Status: Idle</div>
-          <button type="button" class="btn-ghost" style="padding: 5px 12px; font-size: 11px;" onclick="runInspectionSimulation()" data-tooltip="Run the pre-flight diagnostics again against the same domain.">
-            ↻ Re-run Inspection
-          </button>
-        </div>
-
-        <div class="scan-result" id="scanResult" hidden>
-          <div class="score-row">
-            <div class="gauge" data-tooltip="Preview posture score: a rough 0-100 read from this quick pre-flight pass. The full scan after provisioning is far more thorough.">
-              <svg viewBox="0 0 92 92">
-                <circle cx="46" cy="46" r="40" fill="none" stroke="#1f3458" stroke-width="8"></circle>
-                <circle id="scanGaugeArc" cx="46" cy="46" r="40" fill="none" stroke="var(--amber)" stroke-width="8" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251"></circle>
-              </svg>
-              <div class="gauge-value"><span class="num" id="scanScoreNum">—</span><span class="of100">/ 100</span></div>
-            </div>
-            <div>
-              <div class="band-label" id="scanBandLabel">● PENDING</div>
-              <div class="band-desc" id="scanBandDesc">Preview posture based on this pre-flight pass. Provisioning runs the full 31-check MUSTER engine.</div>
-            </div>
-          </div>
-          <div class="finding-list" id="scanFindingList"></div>
-        </div>
-
-        <div class="btn-row">
-          <button type="button" class="btn-ghost" onclick="jumpToStep(1)" data-tooltip="Return to the organization and domain step.">‹ Back</button>
-          <button type="button" class="btn-primary" id="btnStep2Next" onclick="proceedToStep3()" disabled style="opacity: 0.5;" data-tooltip="Enabled once the pre-flight inspection finishes.">
-            <span>Configure Assurance Scope ›</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- ================= STEP 3: ASSURANCE SCOPE & ADMIN ================= -->
-      <section class="step-pane" id="step3">
-        <div class="section-head">
-          <span class="eyebrow">Step 03 / Framework Bundling</span>
-          <h2>Assurance Scope & Administrator Credentials</h2>
-          <p>Select the regulatory and technical engines to initialize for this tenant, and designate the primary organizational administrator.</p>
-        </div>
-
-        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px;">
-          <label style="font-size: 11px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.08em;">
-            Active Assurance Framework Engines
-          </label>
-          <span id="frameworkRecoNote" style="font-size: 11px; color: var(--teal);" data-tooltip="Pre-selected from the industry chosen in Step 1. Every engine below stays toggleable — nothing here is locked."></span>
-        </div>
-
-        <div class="framework-grid">
-          <label class="framework-card selected" onclick="toggleFramework(this)" data-tooltip="Checks the tenant's sites against WCAG 2.2 AA accessibility criteria.">
-            <input type="checkbox" id="chkA11y" checked>
-            <div class="framework-info">
-              <strong>WCAG 2.2 Level AA Accessibility</strong>
-              <span>12 architectural pillars, P0–P4 defect register & POUR conformance</span>
-            </div>
-          </label>
-          <label class="framework-card selected" onclick="toggleFramework(this)" data-tooltip="Assesses how readable the site is to AI crawlers and generative search engines.">
-            <input type="checkbox" id="chkAIO" checked>
-            <div class="framework-info">
-              <strong>AIO / GEO Optimization Engine</strong>
-              <span>Crawlability, JSON-LD Schema injection & /llms.txt generation</span>
-            </div>
-          </label>
-          <label class="framework-card selected" onclick="toggleFramework(this)" data-tooltip="Maps findings to SOC 2 security controls and builds an evidence trail.">
-            <input type="checkbox" id="chkSOC2" checked>
-            <div class="framework-info">
-              <strong>SOC 2 Type II & Security Risk</strong>
-              <span>5×5 exposure matrix, CC6.1 controls & continuous evidence library</span>
-            </div>
-          </label>
-          <label class="framework-card selected" onclick="toggleFramework(this)" data-tooltip="Checks for GDPR-required consent banners and tracking-tag behavior.">
-            <input type="checkbox" id="chkPrivacy" checked>
-            <div class="framework-info">
-              <strong>GDPR & Privacy Compliance</strong>
-              <span>Article 7 consent banner verification, tracking tag telemetry</span>
-            </div>
-          </label>
-        </div>
-
-        <p style="margin-top: 10px; font-size: 11.5px; color: var(--text-muted);" data-tooltip="These run on every tenant regardless of which engines above are enabled — they're baseline health checks, not compliance frameworks.">
-          Every tenant also gets 2 always-on availability checks (uptime, TLS/DNS health) and 1 third-party script inventory check — included at every tier, not shown as a toggle above.
-        </p>
-
-        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--surface-border);">
-          <span class="eyebrow" style="margin-bottom: 12px;">Primary Tenant Administrator</span>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label data-tooltip="The person who will receive login credentials for this tenant.">Administrator Full Name</label>
-              <input type="text" id="inAdminName" placeholder="e.g. Jordan Mercer">
-            </div>
-            <div class="form-group">
-              <label data-tooltip="Where the temporary access key and workspace invite will be sent.">Administrator Work Email</label>
-              <input type="email" id="inAdminEmail" placeholder="e.g. security-lead@company.com">
-            </div>
-          </div>
-          <div class="form-group">
-            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
-              <label data-tooltip="Determines which assurance engines and features this tenant has access to.">License & Engagement Tier</label>
-              <span id="tierRecoNote" style="font-size: 11px; color: var(--teal);"></span>
-            </div>
-            <select id="inTier" onchange="tierManuallyEdited = true">
-              <option value="Enterprise Full Assurance">Enterprise Full Assurance (All Engines)</option>
-              <option value="Standard AIO + Compliance">Standard AIO + Compliance</option>
-              <option value="Continuous Governance Retainer">Continuous Governance Retainer</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="btn-row">
-          <button type="button" class="btn-ghost" onclick="jumpToStep(2)" data-tooltip="Return to the pre-flight inspection step.">‹ Back</button>
-          <button type="button" class="btn-primary" onclick="completeProvisioning()" data-tooltip="Finalize the tenant with the selected frameworks and administrator.">
-            <span>⚡ Complete Tenant Provisioning ›</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- ================= STEP 4: WORKSPACE READY & LAUNCH ================= -->
-      <section class="step-pane" id="step4">
-        <div style="text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;">
-          <div class="success-badge">✓</div>
-          <span class="eyebrow" style="color: var(--teal);">Provisioning Successful</span>
-          <h2 style="font-family: var(--font-serif); font-size: 28px; color: #fff; margin: 6px 0 8px;" id="lblSuccessTenant">
-            Apex Global Payments Workspace is Ready
-          </h2>
-          <p style="color: var(--text-muted); max-width: 620px; font-size: 13.5px; line-height: 1.6;" id="lblSuccessSummary">
-            Your isolated tenant partition has been seeded with initial WCAG 2.2 AA defect findings, AIO structured data templates, and SOC 2 CC6.1 controls.
-          </p>
-        </div>
-
-        <div class="credentials-box" id="credentialsBox">
-          <button type="button" class="copy-btn" onclick="copyCredentials()" data-tooltip="Copy all credentials below to your clipboard as plain text.">📋 Copy Credentials</button>
-          <div><strong>Tenant Identifier:</strong> <span id="outTenantId" style="color: var(--teal);" data-tooltip="Unique internal ID for this tenant.">tenant-apex-payments</span></div>
-          <div><strong>Monitored Domain:</strong> <span id="outDomain">portal.apexpayments.com</span></div>
-          <div><strong>Cloud Data Region:</strong> <span id="outRegion">US-East (N. Virginia)</span></div>
-          <div><strong>Assigned Admin:</strong> <span id="outAdmin">Jordan Mercer (security-lead@apexpayments.com)</span></div>
-          <div><strong>Assurance Engines:</strong> <span id="outEngines" data-tooltip="The frameworks enabled in Step 3 for this tenant.">WCAG 2.2 AA, AIO/GEO, SOC 2, GDPR Privacy</span></div>
-          <div><strong>Engagement Tier:</strong> <span id="outTier">Enterprise Full Assurance</span></div>
-          <div><strong>Temporary Access Key:</strong> <span id="outPassword" style="color: var(--amber);" data-tooltip="One-time password — the administrator should change this on first login.">Temp28F!9241</span></div>
-          <div><strong>Provisioning Timestamp:</strong> <span id="outTimestamp">2026-09-02 13:30:00 EDT</span></div>
-        </div>
-
-        <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 24px;">
-          <button type="button" class="btn-ghost" onclick="downloadTenantJson()" data-tooltip="Download a JSON file recording this tenant's setup for your records.">
-            ↓ Export Provisioning Roster (.json)
-          </button>
-          <button type="button" class="btn-primary" id="btnLaunchWorkspace" onclick="launchTenantWorkspace()" style="padding: 14px 30px; font-size: 14px;" data-tooltip="Open the new tenant's workspace to start using it.">
-            <span>🚀 Launch 28 Foot Systems Workspace</span>
-          </button>
-        </div>
-      </section>
-
+    <div id="loadingState" class="center-msg">
+      <p>Loading your onboarding…</p>
     </div>
-  </main>
 
-  <!-- Floating Toast -->
-  <div class="toast" id="toast">
-    <span style="color: var(--teal); font-size: 16px;">✓</span>
-    <span id="toastMessage">Action completed successfully.</span>
+    <div id="noSessionState" class="center-msg" hidden>
+      <h1>Onboarding link required</h1>
+      <p>Open the invite link from your email to begin. If you've lost it, contact whoever set up your MUSTER workspace.</p>
+    </div>
+
+    <div id="noOnboardingState" class="center-msg" hidden>
+      <h1>Nothing to onboard</h1>
+      <p>Your onboarding is already complete, or there's no guided setup in progress for this account.</p>
+      <a class="btn-primary" href="https://app.muster.28footsystems.com" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+    </div>
+
+    <div id="fatalState" class="center-msg" hidden>
+      <h1>Something went wrong</h1>
+      <p id="fatalMsg"></p>
+    </div>
+
+    <div id="onboardingRoot" hidden>
+      <div class="onboarding-grid">
+        <aside class="stepper" id="stepper" data-tooltip="Your progress. Each step unlocks only once the one before it is verified server-side — this isn't a checklist you can skip ahead on."></aside>
+        <div class="step-panel" id="stepPanel"></div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- ================= JAVASCRIPT LOGIC ================= -->
-  <script>
-    let currentStep = 1;
-    let inspectionCompleted = false;
-    let slugManuallyEdited = false;
-    let tierManuallyEdited = false;
-    let generatedPassword = `Temp28F!${Math.floor(1000 + Math.random() * 9000)}`;
-    function regenerateTemporaryPassword() { generatedPassword = `Temp28F!${Math.floor(1000 + Math.random() * 9000)}`; }
+<script>
+  const SB_URL = 'https://mgtmqucaldkaxvxglguw.supabase.co';
+  const SB_KEY = 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww';
+  let sb = null;
+  let state = null;
+  let scanPollTimer = null;
+  let scanPollStarted = null;
 
-    // onboarding.muster and app.muster are separate subdomains routed by middleware.js
-    // on Host header alone, so a relative link from this page can't reach the app --
-    // it always resolves back to onboarding.html regardless of path. Must be absolute.
-    const APP_WORKSPACE_URL = 'https://app.muster.28footsystems.com/';
-
-    function selectedEngineLabels() {
-      const engines = [
-        { id: 'chkA11y', label: 'WCAG 2.2 AA' },
-        { id: 'chkAIO', label: 'AIO/GEO' },
-        { id: 'chkSOC2', label: 'SOC 2' },
-        { id: 'chkPrivacy', label: 'GDPR Privacy' },
-      ];
-      return engines.filter(e => document.getElementById(e.id).checked).map(e => e.label);
+  function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      showFatal('Could not load the sign-in service. Refresh and try again.');
+      return;
     }
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) loadState(); else showState('noSessionState');
+    });
+  }
 
-    function slugify(text) {
-      return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  async function rpc(fn, args) {
+    const { data, error } = await sb.rpc(fn, args || {});
+    if (error) throw new Error(error.message || String(error));
+    return data;
+  }
+
+  function showState(id) {
+    ['loadingState', 'noSessionState', 'noOnboardingState', 'fatalState', 'onboardingRoot'].forEach(s => {
+      document.getElementById(s).hidden = s !== id;
+    });
+  }
+  function showFatal(msg) {
+    document.getElementById('fatalMsg').textContent = msg;
+    showState('fatalState');
+  }
+  function showStepError(elId, msg, ok) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.toggle('ok', !!ok);
+  }
+
+  async function loadState() {
+    showState('loadingState');
+    clearScanPoll();
+    try {
+      state = await rpc('muster_onboarding_state');
+    } catch (e) {
+      showFatal(`Could not load onboarding: ${e.message}`);
+      return;
     }
+    if (state.error === 'no_onboarding_in_progress') { showState('noOnboardingState'); return; }
+    showState('onboardingRoot');
+    render();
+  }
 
-    function onOrgNameInput(name) {
-      if (slugManuallyEdited) return;
-      document.getElementById('inOrgSlug').value = slugify(name);
+  async function completeStep(key, payload) {
+    state = await rpc('muster_onboarding_complete_step', { p_step_key: key, p_payload: payload || {} });
+    render();
+  }
+
+  function currentStep() {
+    return (state.steps || []).find(s => !s.completed_at) || null;
+  }
+
+  function render() {
+    renderStepper();
+    const step = currentStep();
+    const panel = document.getElementById('stepPanel');
+    if (!step) { panel.innerHTML = renderDone(); return; }
+    switch (step.key) {
+      case 'account': panel.innerHTML = renderAccountStep(); break;
+      case 'organization': panel.innerHTML = renderOrgStep(); break;
+      case 'website': panel.innerHTML = renderWebsiteStep(); break;
+      case 'risk_appetite': panel.innerHTML = renderAppetiteStep(); break;
+      case 'team': panel.innerHTML = renderTeamStep(); break;
+      case 'first_scan': panel.innerHTML = renderScanStep(); attemptFirstScan(); break;
+      case 'sitrep': panel.innerHTML = renderSitrepLoading(); loadSitrepStep(); break;
+      default: panel.innerHTML = `<div class="step-card"><p class="step-desc">Unknown step "${escapeHtml(step.key)}". Refresh to try again.</p></div>`;
     }
+  }
 
-    function clearStep1() {
-      document.getElementById('inOrgName').value = '';
-      document.getElementById('inOrgSlug').value = '';
-      document.getElementById('inDomain').value = '';
-      document.getElementById('inIndustry').selectedIndex = 0;
-      slugManuallyEdited = false;
-      showToast('Step 1 cleared.');
-      document.getElementById('inOrgName').focus();
+  function renderStepper() {
+    const cur = currentStep();
+    document.getElementById('stepper').innerHTML = (state.steps || []).map(s => {
+      const done = !!s.completed_at;
+      const isCurrent = cur && cur.key === s.key;
+      const status = done ? 'done' : (isCurrent ? 'current' : 'locked');
+      const tip = done ? 'Completed.' : (isCurrent ? 'You are here.' : 'Locked until the earlier steps are complete.');
+      return `<div class="stepper-item stepper-${status}" data-tooltip="${escapeHtml(tip)}">
+        <span class="stepper-dot">${done ? '✓' : s.step_no}</span>
+        <span class="stepper-label">${escapeHtml(s.title)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- Step 1: account ----------
+  function renderAccountStep() {
+    return `
+      <div class="step-card">
+        <h2>Step 1 of 7 — Secure your account</h2>
+        <p class="step-desc">You're signed in via your invite link. Set a real password before continuing.</p>
+        <form onsubmit="return submitAccount(event)">
+          <label for="pw1">New password</label>
+          <input type="password" id="pw1" minlength="8" required autocomplete="new-password" data-tooltip="At least 8 characters.">
+          <label for="pw2">Confirm password</label>
+          <input type="password" id="pw2" minlength="8" required autocomplete="new-password">
+          <div class="step-msg" id="accountMsg"></div>
+          <button type="submit" class="btn-primary">Set password & continue →</button>
+        </form>
+      </div>`;
+  }
+  async function submitAccount(e) {
+    e.preventDefault();
+    const pw1 = document.getElementById('pw1').value;
+    const pw2 = document.getElementById('pw2').value;
+    if (pw1 !== pw2) { showStepError('accountMsg', 'Passwords do not match.'); return false; }
+    try {
+      const { error } = await sb.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+      await completeStep('account', { password_set: true });
+    } catch (err) { showStepError('accountMsg', err.message || String(err)); }
+    return false;
+  }
+
+  // ---------- Step 2: organization ----------
+  function timezoneField(selected) {
+    let zones = [];
+    try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = []; }
+    let guess = '';
+    try { guess = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { /* noop */ }
+    const val = selected || guess;
+    if (!zones.length) {
+      return `<input type="text" id="fTimezone" value="${escapeHtml(val)}" required data-tooltip="IANA timezone, e.g. America/New_York.">`;
     }
+    if (val && !zones.includes(val)) zones = [val, ...zones];
+    return `<select id="fTimezone" required data-tooltip="Used to time-stamp your SITREPs and schedule scans.">
+      ${zones.map(z => `<option value="${escapeHtml(z)}" ${z === val ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
+    </select>`;
+  }
+  function renderOrgStep() {
+    const o = state.organization || {};
+    return `
+      <div class="step-card">
+        <h2>Step 2 of 7 — Confirm your organization</h2>
+        <p class="step-desc">This is what shows on your SITREPs and in your workspace.</p>
+        <form onsubmit="return submitOrg(event)">
+          <label for="fName">Organization name</label>
+          <input type="text" id="fName" value="${escapeHtml(o.name || '')}" required minlength="2">
+          <label for="fIndustry">Industry</label>
+          <input type="text" id="fIndustry" value="${escapeHtml(o.industry || '')}" required minlength="2" placeholder="e.g. Fintech SaaS">
+          <label for="fCountry">Country code <span class="hint">(2 letters, e.g. US)</span></label>
+          <input type="text" id="fCountry" value="${escapeHtml(o.country_code || '')}" required maxlength="2" minlength="2"
+            style="text-transform:uppercase;" oninput="this.value = this.value.toUpperCase()">
+          <label for="fTimezone">Timezone</label>
+          ${timezoneField(o.timezone)}
+          <div class="step-msg" id="orgMsg"></div>
+          <button type="submit" class="btn-primary">Save & continue →</button>
+        </form>
+      </div>`;
+  }
+  async function submitOrg(e) {
+    e.preventDefault();
+    try {
+      await completeStep('organization', {
+        name: document.getElementById('fName').value.trim(),
+        industry: document.getElementById('fIndustry').value.trim(),
+        country_code: document.getElementById('fCountry').value.trim().toUpperCase(),
+        timezone: document.getElementById('fTimezone').value.trim(),
+      });
+    } catch (err) { showStepError('orgMsg', err.message || String(err)); }
+    return false;
+  }
 
-    function onTenancyModeChange(mode) {
-      const note = document.getElementById('tenancyModeNote');
-      if (mode === 'Direct Enterprise Organization') {
-        note.innerHTML = '<strong style="color: var(--teal);">Direct Enterprise:</strong> every website you add belongs to your own organization. There is no downstream client, so white-label branding and per-client billing do not apply — reports are for internal use.';
-      } else {
-        note.innerHTML = '<strong style="color: var(--teal);">Agency / Partner:</strong> you can add unlimited client websites and, once provisioned, optionally turn on white-label branding so your clients see your name, logo, and (on a Pro+ plan) your own domain instead of MUSTER\'s. Until you enable that, your clients access reports at MUSTER\'s own domain.';
-      }
-    }
-
-    function jumpToStep(stepNumber) {
-      if (stepNumber === 2 && !validateStep1()) return;
-      if (stepNumber > 2 && !inspectionCompleted) {
-        showToast("Please allow pre-flight inspection to complete first.");
+  // ---------- Step 3: website verification ----------
+  function renderWebsiteStep() {
+    const w = state.website || {};
+    const tag = `<meta name="muster-verification" content="${w.verification_token || ''}">`;
+    return `
+      <div class="step-card">
+        <h2>Step 3 of 7 — Verify you own the website</h2>
+        <p class="step-desc">Paste this exact tag into the <code>&lt;head&gt;</code> of <strong>${escapeHtml(w.url || '')}</strong>, then click Verify. Scanning stays off until this passes.</p>
+        <div class="code-block" data-tooltip="Copy this tag exactly, including the quotes, into your site's <head>.">
+          <code id="verifyTag">${escapeHtml(tag)}</code>
+          <button type="button" class="btn-ghost" onclick="copyVerifyTag()" data-tooltip="Copies the tag above to your clipboard.">⧉ Copy</button>
+        </div>
+        <div class="step-msg" id="websiteMsg"></div>
+        <button type="button" class="btn-primary" id="verifyBtn" onclick="verifyWebsite()" data-tooltip="Fetches your site right now and checks for the tag above.">Verify ownership →</button>
+      </div>`;
+  }
+  function copyVerifyTag() {
+    const text = document.getElementById('verifyTag').textContent;
+    navigator.clipboard?.writeText(text).then(
+      () => showStepError('websiteMsg', 'Copied to clipboard.', true),
+      () => showStepError('websiteMsg', 'Could not copy — select and copy the tag manually.')
+    );
+  }
+  async function verifyWebsite() {
+    const btn = document.getElementById('verifyBtn');
+    btn.disabled = true;
+    showStepError('websiteMsg', 'Checking your site…', true);
+    try {
+      const { data, error } = await sb.functions.invoke('muster-verify-site');
+      if (error) throw error;
+      if (!data.ok) {
+        const reasons = {
+          tag_not_found: 'The tag was not found on your homepage yet. Make sure it is saved and live, then try again.',
+          fetch_failed: `Could not fetch your site: ${data.detail || 'unknown error'}.`,
+          no_onboarding_website: 'No website found for your onboarding. Refresh the page.',
+          mark_failed: 'Verification succeeded but saving it failed. Try again.',
+        };
+        showStepError('websiteMsg', reasons[data.reason] || `Verification failed: ${data.reason || 'unknown reason'}.`);
+        btn.disabled = false;
         return;
       }
-      if (stepNumber === 4 && !validateStep3()) return;
+      await completeStep('website', {});
+    } catch (err) {
+      showStepError('websiteMsg', err.message || String(err));
+      btn.disabled = false;
+    }
+  }
 
-      if (stepNumber === 1 && currentStep === 2) {
-        inspectionCompleted = false;
-      }
-
-      currentStep = stepNumber;
-      document.querySelectorAll('.step-pane').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.step-item').forEach(i => {
-        const s = parseInt(i.dataset.step);
-        i.classList.remove('active');
-        if (s === currentStep) i.classList.add('active');
-        if (s < currentStep) i.classList.add('completed');
-        else i.classList.remove('completed');
+  // ---------- Step 4: risk appetite ----------
+  function renderAppetiteStep() {
+    const ra = state.risk_appetite || {};
+    return `
+      <div class="step-card">
+        <h2>Step 4 of 7 — Set your risk appetite</h2>
+        <p class="step-desc">This defines what MUSTER treats as acceptable exposure for your organization.</p>
+        <form onsubmit="return submitAppetite(event)">
+          <label for="raStatement">Risk appetite statement <span class="hint" id="raCount">(min 40 characters)</span></label>
+          <textarea id="raStatement" rows="4" required
+            oninput="document.getElementById('raCount').textContent = '(' + this.value.length + '/40 min)'"
+            data-tooltip="What risk your organization will and will not accept, in your own words.">${escapeHtml(ra.statement && ra.statement !== 'Default risk appetite pending client review.' ? ra.statement : '')}</textarea>
+          <div class="two-col">
+            <div>
+              <label for="raCritical">Critical threshold</label>
+              <input type="number" id="raCritical" min="0" value="${ra.critical_threshold ?? 0}" required data-tooltip="Number of open critical findings that trigger immediate escalation.">
+            </div>
+            <div>
+              <label for="raHigh">High threshold</label>
+              <input type="number" id="raHigh" min="0" value="${ra.high_threshold ?? 2}" required data-tooltip="Must be at least the critical threshold.">
+            </div>
+          </div>
+          <label for="raCadence">Review cadence</label>
+          <select id="raCadence" required data-tooltip="How often this statement gets formally re-reviewed.">
+            ${[['monthly', 'Monthly'], ['quarterly', 'Quarterly'], ['semi_annual', 'Semi-Annual'], ['annual', 'Annual']]
+              .map(([v, l]) => `<option value="${v}" ${(ra.review_cadence || 'quarterly') === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+          <div class="step-msg" id="appetiteMsg"></div>
+          <button type="submit" class="btn-primary">Save & continue →</button>
+        </form>
+      </div>`;
+  }
+  async function submitAppetite(e) {
+    e.preventDefault();
+    const statement = document.getElementById('raStatement').value.trim();
+    const critical = parseInt(document.getElementById('raCritical').value, 10);
+    const high = parseInt(document.getElementById('raHigh').value, 10);
+    if (statement.length < 40) { showStepError('appetiteMsg', 'Statement must be at least 40 characters.'); return false; }
+    if (high < critical) { showStepError('appetiteMsg', 'High threshold must be at least the critical threshold.'); return false; }
+    try {
+      await completeStep('risk_appetite', {
+        statement, critical_threshold: critical, high_threshold: high,
+        review_cadence: document.getElementById('raCadence').value,
       });
+    } catch (err) { showStepError('appetiteMsg', err.message || String(err)); }
+    return false;
+  }
 
-      const activePane = document.getElementById(`step${stepNumber}`);
-      if (activePane) activePane.classList.add('active');
+  // ---------- Step 5: team ----------
+  function renderTeamStep() {
+    return `
+      <div class="step-card">
+        <h2>Step 5 of 7 — Risk owner & SITREP recipients</h2>
+        <p class="step-desc">You (the account owner) are the risk owner. Add at least one email to receive SITREPs.</p>
+        <form onsubmit="return submitTeam(event)">
+          <label>SITREP recipients <span class="hint">(at least one)</span></label>
+          <div id="recipientRows" class="repeat-rows">
+            <div class="repeat-row"><input type="email" class="recipient-input" placeholder="you@company.com" required></div>
+          </div>
+          <button type="button" class="btn-ghost" onclick="addRow('recipientRows','recipient-input')" data-tooltip="Add another email to the recipient list.">+ Add recipient</button>
 
-      if (stepNumber === 2 && !inspectionCompleted) {
-        runInspectionSimulation();
-      }
-      if (stepNumber === 3) {
-        applyStep3Recommendations();
-      }
+          <label style="margin-top:18px;">Invite teammates <span class="hint">(optional)</span></label>
+          <div id="inviteRows" class="repeat-rows">
+            <div class="repeat-row"><input type="email" class="invite-input" placeholder="teammate@company.com"></div>
+          </div>
+          <button type="button" class="btn-ghost" onclick="addRow('inviteRows','invite-input')" data-tooltip="Sends a workspace invite once your onboarding is complete.">+ Add teammate</button>
+
+          <div class="step-msg" id="teamMsg"></div>
+          <button type="submit" class="btn-primary" style="margin-top:18px;">Save & continue →</button>
+        </form>
+      </div>`;
+  }
+  function addRow(containerId, cls) {
+    const row = document.createElement('div');
+    row.className = 'repeat-row';
+    row.innerHTML = `<input type="email" class="${cls}" placeholder="name@company.com">`;
+    document.getElementById(containerId).appendChild(row);
+  }
+  async function submitTeam(e) {
+    e.preventDefault();
+    const recipients = [...document.querySelectorAll('.recipient-input')].map(i => i.value.trim()).filter(Boolean);
+    const invites = [...document.querySelectorAll('.invite-input')].map(i => i.value.trim()).filter(Boolean);
+    if (!recipients.length) { showStepError('teamMsg', 'At least one SITREP recipient email is required.'); return false; }
+    try { await completeStep('team', { sitrep_recipients: recipients, invites }); }
+    catch (err) { showStepError('teamMsg', err.message || String(err)); }
+    return false;
+  }
+
+  // ---------- Step 6: first scan ----------
+  function renderScanStep() {
+    return `
+      <div class="step-card">
+        <h2>Step 6 of 7 — Run your first scan</h2>
+        <p class="step-desc" id="scanStatus">Queuing your first scan…</p>
+        <div class="scan-pulse" data-tooltip="MUSTER is fetching and checking your site right now. This usually takes under two minutes."></div>
+      </div>`;
+  }
+  function clearScanPoll() {
+    if (scanPollTimer) { clearInterval(scanPollTimer); scanPollTimer = null; }
+    scanPollStarted = null;
+  }
+  function updateScanStatus() {
+    const el = document.getElementById('scanStatus');
+    if (!el) return;
+    const secs = Math.max(0, Math.round((Date.now() - scanPollStarted) / 1000));
+    el.textContent = `Scanning your site… ${secs}s elapsed. This usually finishes in under two minutes.`;
+  }
+  async function attemptFirstScan() {
+    clearScanPoll();
+    try {
+      await completeStep('first_scan', {});
+      return;
+    } catch (e) {
+      if (!/first scan queued/i.test(e.message || '')) { showStepError('scanStatus', e.message || String(e)); return; }
+      scanPollStarted = Date.now();
+      updateScanStatus();
+      scanPollTimer = setInterval(async () => {
+        try {
+          await rpc('muster_onboarding_complete_step', { p_step_key: 'first_scan', p_payload: {} }).then(next => { state = next; clearScanPoll(); render(); });
+        } catch (e2) {
+          if (/first scan queued/i.test(e2.message || '')) updateScanStatus();
+          else { clearScanPoll(); showStepError('scanStatus', e2.message || String(e2)); }
+        }
+      }, 6000);
+    }
+  }
+
+  // ---------- Step 7: SITREP ----------
+  function renderSitrepLoading() {
+    return `<div class="step-card"><h2>Step 7 of 7 — Read your first SITREP</h2><p class="step-desc">Loading your report…</p></div>`;
+  }
+  async function loadSitrepStep() {
+    let sitrep = null;
+    try { sitrep = await rpc('muster_latest_sitrep', { p_website_id: state.website.id }); } catch (e) { /* render scan summary only */ }
+    const scan = state.latest_scan || {};
+    const summary = scan.summary || {};
+    const bySev = summary.open_by_severity || {};
+    const board = sitrep && sitrep.sections && sitrep.sections.board_report;
+    document.getElementById('stepPanel').innerHTML = `
+      <div class="step-card">
+        <h2>Step 7 of 7 — Read your first SITREP</h2>
+        ${sitrep ? `
+          <p class="step-desc">${escapeHtml(sitrep.headline || 'Situation Report')}</p>
+          <div class="sev-chip-row">
+            ${['critical', 'high', 'medium', 'low', 'info'].filter(s => bySev[s]).map(s => `<span class="sev-chip sev-${s}">${bySev[s]} ${s}</span>`).join('') || '<span class="sev-chip sev-low">0 open findings</span>'}
+          </div>
+          ${board && board.claims && board.claims.length ? `<div class="claim-list">${board.claims.slice(0, 5).map(c => `<div class="claim">${escapeHtml(c.text)}</div>`).join('')}</div>` : ''}
+          <p class="step-desc" style="margin-top:4px;" data-tooltip="One number from 0-100 summarizing exposure across all open findings. Higher is safer.">Posture score: <strong style="color:var(--text);">${sitrep.posture_score ?? '—'}/100</strong> (${escapeHtml(sitrep.posture_band || 'unknown')})</p>
+        ` : `<p class="step-desc">Scan complete — ${summary.new ?? 0} new finding(s), ${summary.resolved ?? 0} resolved. Your full report is generating; it will be in your workspace shortly.</p>`}
+        <label class="ack-row"><input type="checkbox" id="ackBox"> I've read this SITREP</label>
+        <div class="step-msg" id="sitrepMsg"></div>
+        <button type="button" class="btn-primary" onclick="submitSitrepAck()">Finish onboarding →</button>
+      </div>`;
+  }
+  async function submitSitrepAck() {
+    if (!document.getElementById('ackBox').checked) { showStepError('sitrepMsg', 'Check the box to confirm you read the report.'); return; }
+    try { await completeStep('sitrep', { acknowledged: true }); }
+    catch (err) { showStepError('sitrepMsg', err.message || String(err)); }
+  }
+
+  function renderDone() {
+    return `
+      <div class="step-card done-card">
+        <h2>You're all set</h2>
+        <p class="step-desc">Onboarding is complete. Your workspace is live and scanning on the cadence you set.</p>
+        <a class="btn-primary" href="https://app.muster.28footsystems.com" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+      </div>`;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // Tooltip engine: event delegation on [data-tooltip], works for dynamically rendered content too.
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
     }
 
-    function validateStep1() {
-      const org = document.getElementById('inOrgName').value.trim();
-      const domain = document.getElementById('inDomain').value.trim();
-      if (!org || !domain) {
-        showToast("Please enter both organization name and domain.");
-        return false;
-      }
-      return true;
-    }
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => { const t = findTarget(e.target); if (t) show(t); });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) { hide(); suppressed = true; } });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
 
-    function proceedToStep2() {
-      if (validateStep1()) {
-        jumpToStep(2);
-      }
-    }
-
-    function proceedToStep3() {
-      jumpToStep(3);
-    }
-
-    function applyPreset(org, slug, domain, industry) {
-      document.getElementById('inOrgName').value = org;
-      document.getElementById('inOrgSlug').value = slug;
-      document.getElementById('inDomain').value = domain;
-      document.getElementById('inIndustry').value = industry;
-      showToast(`Selected preset target: ${domain}`);
-    }
-
-    /* Automated Live Terminal Inspection Simulation */
-    // One tailored finding per industry vertical, on top of 3 universal checks below.
-    // Every code is a real MUSTER scan rule so this preview uses the same vocabulary
-    // as the actual engine (see supabase/migrations/..._muster_phase1_scan_engine.sql).
-    const industryFindingMap = {
-      'Fintech & Financial Services': { code: 'SEC-004', severity: 'critical', text: 'Missing Content-Security-Policy on payment-adjacent pages.', ref: 'PCI DSS 4.2.1' },
-      'Healthcare & Life Sciences (HIPAA)': { code: 'PRIV-001', severity: 'high', text: 'No privacy policy or HIPAA Notice of Privacy Practices link found.', ref: 'HIPAA 45 CFR 164.520' },
-      'Government & Public Sector': { code: 'A11Y-003', severity: 'high', text: 'Images missing alternative text on primary navigation.', ref: 'Section 508 / ADA Title II' },
-      'Insurance & Insurtech': { code: 'SEC-011', severity: 'medium', text: 'Session cookie set without Secure / HttpOnly flags on the quote portal.', ref: 'SOC 2 CC6.1' },
-      'Digital Agency & IT Consultancy': { code: 'TP-001', severity: 'info', text: '9 external scripts identified across 6 hosts on client subdomains.', ref: 'SOC 2 CC9.2' },
-      'Higher Education & EdTech': { code: 'A11Y-006', severity: 'medium', text: 'Course enrollment form fields missing accessible labels.', ref: 'WCAG 1.3.1' },
-      'Non-Profit & NGO Associations': { code: 'PRIV-002', severity: 'low', text: 'Donation-page trackers loaded before consent could be verified.', ref: 'GDPR Art. 6, Art. 7' },
-    };
-    const defaultIndustryFinding = { code: 'SEC-002', severity: 'medium', text: 'Missing Strict-Transport-Security header on the primary domain.', ref: 'NIST CSF PR.DS-2' };
-
-    const severityWeight = { critical: 25, high: 15, medium: 8, low: 4, info: 1 };
-
-    function scoreBand(score) {
-      if (score >= 85) return { band: 'GREEN', color: 'var(--emerald)' };
-      if (score >= 60) return { band: 'AMBER', color: 'var(--amber)' };
-      return { band: 'RED', color: 'var(--rose)' };
-    }
-
-    let scanRunToken = 0;
-
-    async function runInspectionSimulation() {
-      const myToken = ++scanRunToken;
-      const stillCurrent = () => myToken === scanRunToken;
-
-      const domain = document.getElementById('inDomain').value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-      const industry = document.getElementById('inIndustry').value;
-      const terminal = document.getElementById('scanTerminal');
-      const statusText = document.getElementById('scanStatusText');
-      const nextBtn = document.getElementById('btnStep2Next');
-      const resultPanel = document.getElementById('scanResult');
-
-      terminal.innerHTML = '';
-      resultPanel.hidden = true;
-      inspectionCompleted = false;
-      nextBtn.disabled = true;
-      nextBtn.style.opacity = '0.5';
-      statusText.innerHTML = `<span style="color: var(--teal);">⚡ Probing https://${domain}...</span>`;
-
-      function appendLog(msg, type = '') {
-        if (!stillCurrent()) return;
-        const line = document.createElement('div');
-        line.className = 'terminal-line';
-        line.innerHTML = `<span class="t-time">[${new Date().toLocaleTimeString()}]</span> <span class="${type}">${msg}</span>`;
-        terminal.appendChild(line);
-        terminal.scrollTop = terminal.scrollHeight;
-      }
-
-      const industryFinding = industryFindingMap[industry] || defaultIndustryFinding;
-      const findings = [
-        { code: 'GOV-004', severity: 'medium', text: 'AI crawler access not yet decided; robots.txt allows or blocks nothing deliberately.', ref: 'AIO readiness' },
-        { code: 'A11Y-007', severity: 'medium', text: 'Navigation links have no discernible text for assistive technology.', ref: 'WCAG 2.4.4' },
-        industryFinding,
-      ];
-
-      appendLog(`[28F-DISCOVERY] Connecting to target host: https://${domain}...`);
-      await sleep(350);
-      appendLog(`Transport Security: TLS 1.3 negotiated with strict HSTS preload check.`, 't-ok');
-      await sleep(400);
-      appendLog(`Querying AI Crawlers: curl -A "GPTBot" https://${domain}/robots.txt...`);
-      await sleep(450);
-      appendLog(`[${findings[0].code}] ${findings[0].text}`, 't-warn');
-      await sleep(400);
-      appendLog(`Testing Accessibility (WCAG 2.2 AA): Inspecting DOM landmarks and focus order...`);
-      await sleep(400);
-      appendLog(`[${findings[1].code}] ${findings[1].text}`, 't-warn');
-      await sleep(350);
-      appendLog(`Scanning for ${industry} baseline: ${industryFinding.ref}...`);
-      await sleep(400);
-      const industryType = industryFinding.severity === 'critical' || industryFinding.severity === 'high' ? 't-crit' : 't-warn';
-      appendLog(`[${findings[2].code}] ${findings[2].text}`, industryType);
-      await sleep(350);
-      appendLog(`Checking Consent Management: OneTrust / Cookiebot banner script detected.`, 't-ok');
-      await sleep(300);
-      appendLog(`[SUCCESS] Pre-flight discovery complete. Preview posture baseline generated.`, 't-ok');
-
-      if (!stillCurrent()) return;
-
-      const score = Math.max(5, 100 - findings.reduce((sum, f) => sum + (severityWeight[f.severity] || 0), 0));
-      const { band, color } = scoreBand(score);
-      const circumference = 251;
-      document.getElementById('scanGaugeArc').setAttribute('stroke', color);
-      document.getElementById('scanGaugeArc').setAttribute('stroke-dashoffset', String(circumference - (circumference * score / 100)));
-      document.getElementById('scanScoreNum').textContent = score;
-      document.getElementById('scanScoreNum').style.color = color;
-      document.getElementById('scanBandLabel').textContent = `● ${band} POSTURE (PREVIEW)`;
-      document.getElementById('scanBandLabel').style.color = color;
-      document.getElementById('scanFindingList').innerHTML = findings.map(f => `
-        <div class="finding-row">
-          <span class="finding-code">${f.code}</span>
-          <div class="finding-text">${f.text}<div class="finding-ref">${f.ref}</div></div>
-          <span class="sev-chip sev-${f.severity}">${f.severity}</span>
-        </div>`).join('');
-      resultPanel.hidden = false;
-
-      inspectionCompleted = true;
-      statusText.innerHTML = `<span style="color: var(--emerald);">✓ Discovery Finished — Ready to Proceed</span>`;
-      nextBtn.disabled = false;
-      nextBtn.style.opacity = '1';
-    }
-
-    function toggleFramework(cardEl) {
-      const chk = cardEl.querySelector('input[type="checkbox"]');
-      cardEl.classList.toggle('selected', chk.checked);
-    }
-
-    function setFrameworkChecked(checkboxId, checked) {
-      const chk = document.getElementById(checkboxId);
-      chk.checked = checked;
-      chk.closest('.framework-card').classList.toggle('selected', checked);
-    }
-
-    /* Step 3 recommendations: WCAG a11y and AIO/GEO apply to every public site,
-       so both stay on by default. SOC 2 vs. GDPR privacy is the vertical-specific
-       signal — it tracks whether the industry's primary exposure is system/data
-       security (SOC 2) or handling of regulated personal data (privacy). */
-    const industryFrameworkMap = {
-      'Fintech & Financial Services': { soc2: true, privacy: true, reason: 'payments trigger both PCI/SOC 2 controls and financial privacy rules (GLBA)' },
-      'Healthcare & Life Sciences (HIPAA)': { soc2: true, privacy: true, reason: 'HIPAA requires both security safeguards and patient privacy protections' },
-      'Enterprise B2B SaaS & Cloud': { soc2: true, privacy: false, reason: 'enterprise buyers require a SOC 2 report; direct consumer-data exposure is lower' },
-      'Logistics & Supply Chain Tech': { soc2: true, privacy: false, reason: 'risk centers on system security and third-party integrations, not consumer data' },
-      'Ecommerce & Omnichannel Retail': { soc2: true, privacy: true, reason: 'ecommerce stores payment data (PCI/SOC 2) and consumer PII (GDPR/CCPA)' },
-      'Digital Agency & IT Consultancy': { soc2: true, privacy: false, reason: 'agencies inherit client security posture; script sprawl is the main exposure' },
-      'Legal & Professional Services': { soc2: true, privacy: true, reason: 'client confidentiality mirrors both security controls and privacy law' },
-      'Higher Education & EdTech': { soc2: false, privacy: true, reason: 'FERPA and student-data privacy are the primary exposure' },
-      'Government & Public Sector': { soc2: true, privacy: true, reason: 'FedRAMP-adjacent security expectations plus public-records privacy obligations' },
-      'Insurance & Insurtech': { soc2: true, privacy: true, reason: 'insurers handle regulated financial data and sensitive personal/health data' },
-      'Real Estate & PropTech': { soc2: false, privacy: true, reason: 'buyer/tenant PII is the main exposure; security stakes are comparatively lower' },
-      'Manufacturing & Industrial IoT': { soc2: true, privacy: false, reason: 'IoT/OT security and vendor risk dominate; limited consumer data' },
-      'Media, Publishing & Entertainment': { soc2: false, privacy: true, reason: 'reader/subscriber tracking and consent are the main exposure' },
-      'Energy, Utilities & CleanTech': { soc2: true, privacy: false, reason: 'critical-infrastructure security posture is the primary concern' },
-      'Non-Profit & NGO Associations': { soc2: false, privacy: true, reason: 'donor data privacy and consent are the main exposure' },
-    };
-    const defaultIndustryFramework = { soc2: true, privacy: true, reason: 'unmapped verticals default to the fullest coverage until reviewed' };
-
-    const tierByTenancyMode = {
-      'Direct Enterprise Organization': 'Enterprise Full Assurance',
-      'Agency / Partner (Multi-Client Engine)': 'Continuous Governance Retainer',
-    };
-
-    function applyStep3Recommendations() {
-      const industry = document.getElementById('inIndustry').value;
-      const rec = industryFrameworkMap[industry] || defaultIndustryFramework;
-
-      setFrameworkChecked('chkA11y', true);
-      setFrameworkChecked('chkAIO', true);
-      setFrameworkChecked('chkSOC2', rec.soc2);
-      setFrameworkChecked('chkPrivacy', rec.privacy);
-      document.getElementById('frameworkRecoNote').textContent = `Recommended for ${industry}: ${rec.reason}`;
-
-      const tenancyMode = document.getElementById('inTenancyMode').value;
-      const recommendedTier = tierByTenancyMode[tenancyMode];
-      const tierNote = document.getElementById('tierRecoNote');
-      if (recommendedTier) {
-        tierNote.textContent = `Suggested: ${recommendedTier}`;
-        if (!tierManuallyEdited) document.getElementById('inTier').value = recommendedTier;
-      } else {
-        tierNote.textContent = '';
-      }
-    }
-
-    function validateStep3() {
-      const adminName = document.getElementById('inAdminName').value.trim();
-      const adminEmail = document.getElementById('inAdminEmail').value.trim();
-      if (!adminName || !adminEmail) {
-        showToast("Please enter the administrator's name and work email.");
-        return false;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-        showToast("Please enter a valid administrator email address.");
-        return false;
-      }
-      return true;
-    }
-
-    /* Finalize Onboarding & Generate Deep Link */
-    function completeProvisioning() {
-      if (!validateStep3()) return;
-      regenerateTemporaryPassword();
-
-      const orgName = document.getElementById('inOrgName').value.trim();
-      const orgSlug = document.getElementById('inOrgSlug').value.trim() || orgName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const domain = document.getElementById('inDomain').value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-      const industry = document.getElementById('inIndustry').value;
-      const region = document.getElementById('inRegion').value;
-      const adminName = document.getElementById('inAdminName').value.trim();
-      const adminEmail = document.getElementById('inAdminEmail').value.trim();
-      const tier = document.getElementById('inTier').value;
-      const tenantId = `tenant-${orgSlug}`;
-      const engines = selectedEngineLabels();
-
-      document.getElementById('lblSuccessTenant').textContent = `${orgName} Workspace Provisioned`;
-      document.getElementById('lblSuccessSummary').textContent = engines.length
-        ? `Your isolated tenant partition has been seeded with initial ${engines.join(', ')} findings for the ${industry} baseline.`
-        : `Your isolated tenant partition is provisioned with no assurance engines enabled -- go back to Step 3 to turn on at least one.`;
-      document.getElementById('outTenantId').textContent = tenantId;
-      document.getElementById('outDomain').textContent = domain;
-      document.getElementById('outRegion').textContent = region;
-      document.getElementById('outAdmin').textContent = `${adminName} (${adminEmail})`;
-      document.getElementById('outEngines').textContent = engines.length ? engines.join(', ') : 'None selected';
-      document.getElementById('outTier').textContent = tier;
-      document.getElementById('outPassword').textContent = generatedPassword;
-      document.getElementById('outTimestamp').textContent = new Date().toLocaleString();
-
-      jumpToStep(4);
-      showToast(`Tenant "${orgName}" successfully provisioned!`);
-    }
-
-    /* Launch Workspace with Auto-Ingestion */
-    function launchTenantWorkspace() {
-      const orgName = document.getElementById('inOrgName').value.trim();
-      const orgSlug = document.getElementById('inOrgSlug').value.trim() || orgName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const domain = document.getElementById('inDomain').value.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-      const industry = document.getElementById('inIndustry').value;
-      const tenancyMode = document.getElementById('inTenancyMode').value;
-      const region = document.getElementById('inRegion').value;
-      const adminName = document.getElementById('inAdminName').value.trim();
-      const adminEmail = document.getElementById('inAdminEmail').value.trim();
-      const tier = document.getElementById('inTier').value;
-
-      // Construct deep link passing full tenant provisioning params
-      const params = new URLSearchParams({
-        newTenant: 'true',
-        tenantId: `tenant-${orgSlug}`,
-        name: orgName,
-        slug: orgSlug,
-        domain: domain,
-        industry: industry,
-        tenancyMode: tenancyMode,
-        region: region,
-        adminName: adminName,
-        adminEmail: adminEmail,
-        tier: tier
-      });
-
-      window.location.href = `${APP_WORKSPACE_URL}?${params.toString()}`;
-    }
-
-    function copyCredentials() {
-      const box = document.getElementById('credentialsBox');
-      const text = `28 Foot Systems — Client Tenant Onboarding Credentials
-Tenant ID: ${document.getElementById('outTenantId').textContent}
-Domain: https://${document.getElementById('outDomain').textContent}
-Cloud Region: ${document.getElementById('outRegion').textContent}
-Administrator: ${document.getElementById('outAdmin').textContent}
-Assurance Engines: ${document.getElementById('outEngines').textContent}
-Engagement Tier: ${document.getElementById('outTier').textContent}
-Temporary Access Key: ${document.getElementById('outPassword').textContent}
-Provisioned At: ${document.getElementById('outTimestamp').textContent}
-Workspace URL: ${APP_WORKSPACE_URL}`;
-
-      copyToClipboard(text);
-      showToast("Credentials copied to clipboard.");
-    }
-
-    function downloadTenantJson() {
-      const data = {
-        tenantId: document.getElementById('outTenantId').textContent,
-        organization: document.getElementById('inOrgName').value,
-        domain: document.getElementById('outDomain').textContent,
-        industry: document.getElementById('inIndustry').value,
-        tenancyMode: document.getElementById('inTenancyMode').value,
-        region: document.getElementById('outRegion').textContent,
-        admin: {
-          name: document.getElementById('inAdminName').value,
-          email: document.getElementById('inAdminEmail').value,
-          temporaryKey: generatedPassword
-        },
-        engagementTier: document.getElementById('inTier').value,
-        assuranceEngines: {
-          wcag22AA: document.getElementById('chkA11y').checked,
-          aioGEO: document.getElementById('chkAIO').checked,
-          soc2Security: document.getElementById('chkSOC2').checked,
-          gdprPrivacy: document.getElementById('chkPrivacy').checked
-        },
-        provisionedAt: new Date().toISOString()
-      };
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `28foot-tenant-${document.getElementById('inOrgSlug').value}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast("Provisioning manifest downloaded.");
-    }
-
-    function copyToClipboard(text) {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-9999px";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        document.execCommand('copy');
-      } catch (err) {}
-      document.body.removeChild(textArea);
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toastMessage').textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3200);
-    }
-
-    function sleep(ms) {
-      return new Promise(res => setTimeout(res, ms));
-    }
-
-    // Tooltip engine: event delegation on [data-tooltip], one floating element.
-    function initTooltips() {
-      const tip = document.createElement('div');
-      tip.className = 'app-tooltip';
-      tip.id = 'appTooltip';
-      tip.setAttribute('role', 'tooltip');
-      document.body.appendChild(tip);
-
-      let current = null;
-      let suppressed = false;
-
-      function findTarget(node) {
-        return node && node.closest ? node.closest('[data-tooltip]') : null;
-      }
-
-      function show(target) {
-        const text = target.getAttribute('data-tooltip');
-        if (!text || suppressed) return;
-        current = target;
-        tip.textContent = text;
-        tip.classList.add('show');
-        target.setAttribute('aria-describedby', 'appTooltip');
-        position(target);
-      }
-
-      function position(target) {
-        const r = target.getBoundingClientRect();
-        const t = tip.getBoundingClientRect();
-        const gap = 8;
-        let top = r.top - t.height - gap;
-        if (top < 8) top = r.bottom + gap;
-        let left = r.left + (r.width / 2) - (t.width / 2);
-        left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
-        tip.style.top = `${Math.round(top)}px`;
-        tip.style.left = `${Math.round(left)}px`;
-      }
-
-      function hide() {
-        if (current) current.removeAttribute('aria-describedby');
-        current = null;
-        tip.classList.remove('show');
-      }
-
-      document.addEventListener('mouseover', (e) => {
-        const target = findTarget(e.target);
-        if (target && target !== current) show(target);
-        else if (!target && current) hide();
-      });
-      document.addEventListener('mouseout', (e) => {
-        const target = findTarget(e.target);
-        if (target && !target.contains(e.relatedTarget)) hide();
-      });
-      document.addEventListener('focusin', (e) => {
-        const target = findTarget(e.target);
-        if (target) show(target);
-      });
-      document.addEventListener('focusout', hide);
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && current) { hide(); suppressed = true; }
-      });
-      document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
-      window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
-      window.addEventListener('resize', () => { if (current) position(current); });
-    }
-
-    window.addEventListener('DOMContentLoaded', initTooltips);
-  </script>
+  window.addEventListener('DOMContentLoaded', () => { initTooltips(); init(); });
+</script>
 </body>
 </html>
