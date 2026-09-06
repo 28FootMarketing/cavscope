@@ -16,6 +16,9 @@ export default function middleware(request) {
   if (path.startsWith('/assets/')) return next();
 
   if (host === 'app.muster.28footsystems.com') {
+    if (path === '/signin' || path.startsWith('/signin/')) {
+      return rewrite(new URL('/signin.html', request.url));
+    }
     return rewrite(new URL('/app.html', request.url));
   }
   if (host === 'onboarding.muster.28footsystems.com') {
