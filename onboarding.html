@@ -946,6 +946,7 @@
     let slugManuallyEdited = false;
     let tierManuallyEdited = false;
     let generatedPassword = `Temp28F!${Math.floor(1000 + Math.random() * 9000)}`;
+    function regenerateTemporaryPassword() { generatedPassword = `Temp28F!${Math.floor(1000 + Math.random() * 9000)}`; }
 
     // onboarding.muster and app.muster are separate subdomains routed by middleware.js
     // on Host header alone, so a relative link from this page can't reach the app --
@@ -1233,6 +1234,7 @@
     /* Finalize Onboarding & Generate Deep Link */
     function completeProvisioning() {
       if (!validateStep3()) return;
+      regenerateTemporaryPassword();
 
       const orgName = document.getElementById('inOrgName').value.trim();
       const orgSlug = document.getElementById('inOrgSlug').value.trim() || orgName.toLowerCase().replace(/[^a-z0-9]/g, '-');
