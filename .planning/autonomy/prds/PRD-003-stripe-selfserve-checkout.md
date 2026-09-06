@@ -1,10 +1,14 @@
 # PRD-003 — Stripe self-serve checkout for the MUSTER base tier
 
-## Status: IMPLEMENTED, live, but NOT fully end-to-end until Anthony completes one manual step (2026-09-08)
+## Status: IMPLEMENTED and LIVE (2026-09-08)
 
 Resolves BLOCKERS-AND-DECISIONS.md B-1: MUSTER base tier is Stripe self-serve; MUSTER Partner/Enterprise stay GHL sales-assisted (unchanged).
 
-**Critical residual item, blocking full automation:** the Stripe webhook endpoint has not been registered in the Stripe dashboard yet (no tool available to either Claude or Anthony's connected integrations can create one), so `STRIPE_WEBHOOK_SECRET` does not yet exist as a Supabase Edge Function secret. **The Payment Link URLs are live and will accept real payments right now** -- but until the endpoint is registered, a real payment will succeed in Stripe while the webhook never fires, meaning no account gets invited and no plan gets granted. Payment and provisioning would be silently disconnected. Anthony must, before these links are advertised anywhere real: in the Stripe dashboard, Developers -> Webhooks -> Add endpoint, URL `https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-stripe-webhook`, event `checkout.session.completed`; then add the resulting signing secret as `STRIPE_WEBHOOK_SECRET` in Supabase (Edge Functions -> Secrets, project `mgtmqucaldkaxvxglguw`).
+**Both configuration halves confirmed, independently:**
+- Stripe side: webhook endpoint `we_1UCXWFJijfcmbDDBlfgn2lQQ` ("muster") registered, live mode, status enabled, URL `https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-stripe-webhook`, subscribed to `checkout.session.completed`. Confirmed via `STRIPE_LIST_V2_CORE_EVENT_DESTINATIONS`.
+- Supabase side: `STRIPE_WEBHOOK_SECRET` is set. Confirmed by probing the live function with a bogus `stripe-signature` header -- it returned `401 {"error":"invalid signature"}`, not the `500 "STRIPE_WEBHOOK_SECRET is not set"` it would return if the secret were missing.
+
+**Not performed, by explicit decision:** a real end-to-end live purchase (pay -> webhook fires -> grant recorded -> onboarding applies the plan). Anthony chose to ship on the strength of the piece-by-piece verification above rather than run a real live-mode charge to prove the full chain. This is a genuine, accepted residual gap, not a false "fully verified" claim -- if the first real customer purchase doesn't flow through correctly, check (in order): the webhook endpoint's recent delivery attempts in the Stripe dashboard, `muster.pending_commercial_grants` for a matching row, and `muster.do_onboard`'s grant-lookup query.
 
 ## What was built
 
