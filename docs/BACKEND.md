@@ -20,6 +20,10 @@ Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 | White-label + personalization | Done | `brand_profiles` (org default, per-website override), `user_preferences` |
 | Super admin + feature flags | Done | `users.role = super_admin`, `feature_flags`, `feature_flag_overrides`, `muster_admin_*` RPCs |
 | Agent / AI-employee ready | Done | `agents`, `api_keys`, `muster-agent` edge function (MCP + REST) |
+| Risk auto-triage | Done | `muster.autotriage()`, cron `muster-autotriage-15min`; promotes open critical/high/medium findings to `risks` + `remediation_actions` with severity-scaled due dates, auto-mitigates on rescan |
+| Critical-finding tenant alerts | Done | `muster.notification_outbox`, `muster-alert-dispatch` edge function, cron `muster-alert-dispatch-5min`; emails org `executive`/`risk_owner` members via Resend when `autotriage` opens a critical/high risk. Per-org opt-out: `organizations.critical_alerts_enabled` |
+| GHL sales-assisted checkout | Done | `muster-ghl-webhook`, requires a human to mark the GHL deal Closed Won -- see "Checkout paths" below |
+| Stripe self-serve checkout | **Not wired, do not use** | `muster.onboard_client` exists in the schema but has no calling edge function, no populated `stripe_price_id` values, and a known role-constraint bug -- see "Checkout paths" below |
 
 ## Layout
 
@@ -132,6 +136,17 @@ delete from vault.secrets where name = 'muster_cron_secret';
 Client config lives at the top of the `Live` object: project URL and the publishable key `sb_publishable_...` (public by design; RLS and RPC checks protect data).
 
 Supabase Auth settings that must be set in the dashboard (not scriptable through MCP): Site URL and Redirect URLs must include the app origin (for example `https://muster.28footsystems.com`) for magic links and email confirmation to land back in the app.
+
+## Checkout paths (read before touching either one)
+
+Two independent, non-reconciled tenant-provisioning paths exist. Do not build on either without reading `.planning/autonomy/BLOCKERS-AND-DECISIONS.md` B-1 first -- picking wrong means rebuilding.
+
+- **GHL sales-assisted (working):** a human marks a GHL deal Closed Won, its workflow calls `muster-ghl-webhook`, which calls `public.muster_ghl_provision`. Live, tested end-to-end.
+- **Stripe self-serve (dead):** `muster.onboard_client` was deployed directly to the database on 2026-09-06 with no edge function ever built to call it and no `commercial_pricing.stripe_price_id` values populated -- it cannot be reached. It also has a known bug: it inserts `organization_members.role = 'owner'`, which the live check constraint rejects (only `executive`/`risk_owner`/`control_owner`/`contributor`/`viewer` are allowed). Do not wire a caller to this without fixing that first.
+
+## Critical-finding alerts
+
+`muster.autotriage()` (cron `muster-autotriage-15min`, offset `:07/:22/:37/:52` to avoid stampeding `muster-scan-due`) queues one row in `muster.notification_outbox` per newly-opened critical/high risk, addressed to that org's `executive`/`risk_owner` members, unless `organizations.critical_alerts_enabled = false`. `muster-alert-dispatch` (cron every 5 minutes) claims pending rows via `public.muster_engine_claim_alerts` and sends through Resend (`RESEND_API_KEY` edge function secret; from address `alerts@mail.28footsystems.com`). A failed send is requeued to `pending` for up to 5 total attempts (the 5-minute cron interval is the backoff), then dead-lettered to a terminal `failed` status, visible via `muster_admin_overview().alerts`. One alert per risk id, ever (unique index on `notification_outbox(entity_type, entity_id, category)`).
 
 ## Phase 2 and later (not started)
 

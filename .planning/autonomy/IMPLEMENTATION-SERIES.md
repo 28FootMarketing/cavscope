@@ -3,8 +3,8 @@
 ## Dependency graph
 
 ```
-PRD-001 (critical-finding alerts)         -- independent, ready now (Task 4 partial-blocked on B-2's RESEND_API_KEY)
-PRD-002 (retroactive migration files)     -- independent, ready now, zero risk
+PRD-001 (critical-finding alerts)         -- IMPLEMENTED, live (2026-09-08)
+PRD-002 (retroactive migration files)     -- IMPLEMENTED (2026-09-08)
 PRD-004 (minimal CI)                      -- independent, ready now
 PRD-003 (finish chosen checkout path)     -- BLOCKED on B-1
 PRD-005 (GHL<->MUSTER plan reconciliation)-- BLOCKED on B-1 (needs to know which path is authoritative)

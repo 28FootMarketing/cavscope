@@ -1,5 +1,13 @@
 # PRD-001 — Outbound tenant alerts on newly-opened critical/high risks
 
+## Status: IMPLEMENTED and LIVE (2026-09-08)
+
+All 7 tasks applied to the live project. Deployed: `muster.notification_outbox`, `organizations.critical_alerts_enabled`, the extended `muster.autotriage()`, `public.muster_engine_claim_alerts`/`muster_engine_resolve_alert`, `muster-alert-dispatch` edge function (ACTIVE), cron `muster-alert-dispatch-5min`, and the `alerts` block in `muster_admin_overview()`. Verified end-to-end live via a synthetic outbox row (org id 3, fake recipient under `mail.28footsystems.com`, deleted after the test) sent through the real HTTP path (`pg_net` -> edge function -> Resend) -- result `{"claimed":1,"sent":1,"failed":0}`, row observed in terminal `sent` state, then cleaned up.
+
+One difference from the original spec: `muster_engine_resolve_alert`'s first version (as originally written in this PRD) had no retry path -- any failure went straight to terminal `failed`. Caught before relying on it and fixed to requeue to `pending` for up to 5 attempts (backed off by the 5-minute cron interval) before dead-lettering. The migration file and this PRD's Task 3/4 text reflect the fixed version.
+
+See BLOCKERS-AND-DECISIONS.md B-2 for one residual follow-up (which Resend API key is actually in use).
+
 ## Header
 
 - **Closes:** WORKFLOW-COVERAGE T-07 (MISSING_CONFIRMED), partially unblocks T-09 (SITREP distribution, future PRD)
