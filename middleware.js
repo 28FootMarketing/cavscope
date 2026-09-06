@@ -11,7 +11,11 @@ export default function middleware(request) {
     return rewrite(new URL('/app.html', request.url));
   }
   if (host === 'onboarding.muster.28footsystems.com') {
-    return rewrite(new URL('/onboarding.html', request.url));
+    // Retired: the scripted "pre-flight scan" wizard duplicated what the
+    // super admin's real URL runner now does for real (see app.html's
+    // admin console). Route the old subdomain to the one remaining demo
+    // asset instead of a dead page.
+    return rewrite(new URL('/sitrep-sample.html', request.url));
   }
   if (host === 'sitrep.muster.28footsystems.com') {
     const path = new URL(request.url).pathname;

@@ -5605,13 +5605,33 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
 
       // ---------- super admin console ----------
       async loadAdmin() {
-        this.admin = await this.rpc('muster_admin_overview');
+        [this.admin, this.adminUrlRuns] = await Promise.all([
+          this.rpc('muster_admin_overview'),
+          this.rpc('muster_admin_url_runs'),
+        ]);
         const a = this.admin;
         const el = this.panel('liveAdminPanel', 'superadmin');
         const eng = a.engine || {};
         el.innerHTML = `
           <span class="live-badge">Super admin console</span>
           <div class="live-muted" style="margin:8px 0 12px;">Engine: ${eng.queued ?? 0} queued · ${eng.running ?? 0} running · ${eng.complete_24h ?? 0} complete / ${eng.failed_24h ?? 0} failed in 24h · cron ${eng.cron ? (eng.cron.active ? 'active ' + eng.cron.schedule : 'inactive') : 'missing'} · ${(a.jurisdiction_review_queue || []).length} jurisdictions due for review</div>
+          <h4 style="margin:0 0 6px; font-size:12px; color:#fff;" data-tooltip="Runs a real scan against any URL on the live MUSTER engine -- for showing a prospect their actual site's findings on the spot, not sample data. Results are kept in a dedicated internal sandbox and never mix into a tenant's risk register.">Run a URL scan</h4>
+          <form onsubmit="Live.runAdminUrl(event); return false;" style="display:flex; gap:6px; margin:0 0 8px;">
+            <input type="text" id="adminUrlInput" placeholder="https://prospect-site.com" required
+              style="flex:1; padding:6px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0d1a38; color:#fff;"
+              data-tooltip="The site to scan. https:// is assumed if you leave the scheme off.">
+            <button class="btn-primary" type="submit" style="padding:6px 14px; font-size:12px;" data-tooltip="Queues a real scan on the live engine. Usually finishes within a couple of minutes -- reopen this panel to see the result.">▶ Run</button>
+          </form>
+          <div id="adminUrlRunResult" style="margin-bottom:8px;"></div>
+          <div style="max-height:220px; overflow-y:auto; margin-bottom:16px;" data-tooltip="Every URL run through this tool, most recent first. Click one to see its findings.">
+            ${(this.adminUrlRuns || []).length === 0 ? '<div class="live-muted" style="padding:4px 0;">No ad-hoc runs yet.</div>' : (this.adminUrlRuns || []).map(w => `
+              <div class="live-grid" style="grid-template-columns: 1.6fr 0.7fr 0.9fr 1fr; padding:6px 0; border-bottom:1px solid var(--surface-border); font-size:12px; align-items:center; cursor:pointer;" onclick="Live.viewAdminUrlRun(${w.id})">
+                <div style="color:#fff;">${escapeHtml(w.url)}</div>
+                <div class="live-muted">${w.posture_score != null ? w.posture_score + '/100' : '—'} <span style="text-transform:capitalize;">${escapeHtml(w.posture_band || '')}</span></div>
+                <div class="live-muted">${escapeHtml((w.latest_scan || {}).status || 'none')}</div>
+                <div class="live-muted">${w.open_findings ?? 0} open findings</div>
+              </div>`).join('')}
+          </div>
           <h4 style="margin:0 0 6px; font-size:12px; color:#fff;" data-tooltip="Open findings from the muster-watchdog health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters. Empty means nothing is currently flagged, not that nothing was checked.">Open incidents (${(a.incidents || []).length})</h4>
           ${(a.incidents || []).length === 0 ? '<div class="live-muted" style="padding:4px 0 16px;">None open.</div>' : (a.incidents || []).map(i => `<div class="live-grid" style="grid-template-columns: 0.7fr 1.6fr 1fr 0.8fr 1.2fr; padding:8px 0; border-bottom:1px solid var(--surface-border); font-size:12px; align-items:center;">
               <div><span class="pill pill-${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></div>
@@ -5680,6 +5700,44 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },
       async updateIncident(id, status) { if (!status) return; try { await this.rpc('muster_admin_update_incident', { p_id: id, p_status: status }); showToast(`Incident #${id} marked ${status}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
+      async runAdminUrl(e) {
+        e.preventDefault();
+        const input = document.getElementById('adminUrlInput');
+        const url = (input.value || '').trim();
+        if (!url) return;
+        try {
+          const r = await this.rpc('muster_admin_run_url', { p_url: url });
+          showToast(r.created ? `Website added and scan queued (#${r.first_scan?.scan_id ?? ''}).` : `Scan ${r.first_scan?.deduplicated ? 'already in flight' : 'queued'} (#${r.first_scan?.scan_id ?? ''}).`);
+          input.value = '';
+          await this.loadAdmin();
+          await this.viewAdminUrlRun(r.website_id);
+        } catch (err) { this.fail(err); }
+      },
+      async viewAdminUrlRun(websiteId) {
+        const el = document.getElementById('adminUrlRunResult');
+        if (!el) return;
+        try {
+          const o = await this.rpc('muster_admin_website_overview', { p_website_id: websiteId });
+          const scan = o.latest_scan || {};
+          const sevPill = s => ['critical', 'high', 'medium', 'low'].includes(s) ? s : 'low';
+          el.innerHTML = `
+            <div style="border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:10px 12px; background:#0d1a38;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="color:#fff;">${escapeHtml(o.url)}</strong>
+                <span data-tooltip="Overall assurance score for this URL's most recent completed scan. Falls back to a clean 100 until the first scan finishes.">${o.posture_score ?? '—'}/100 <span style="text-transform:capitalize;">${escapeHtml(o.posture_band || '')}</span></span>
+              </div>
+              <div class="live-muted" style="margin-bottom:8px;" data-tooltip="Status of the most recent scan run against this URL.">Scan #${scan.id ?? '—'}: ${escapeHtml(scan.status || 'none')}${scan.finished_at ? ' · finished ' + String(scan.finished_at).slice(0, 16).replace('T', ' ') : ''}${scan.error_message ? ' · ' + escapeHtml(scan.error_message) : ''}</div>
+              ${(o.findings || []).length === 0 ? `<div class="live-muted">${scan.status === 'complete' ? 'No open findings.' : 'Findings will appear here once the scan completes.'}</div>` : `
+                <div style="max-height:240px; overflow-y:auto;">
+                  ${(o.findings || []).map(f => `<div class="live-grid" style="grid-template-columns: 0.6fr 2fr 1fr; padding:5px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
+                    <div><span class="pill pill-${sevPill(f.severity)}">${escapeHtml(f.severity)}</span></div>
+                    <div style="color:#fff;">${escapeHtml(f.title)}<br><span class="live-muted">${escapeHtml(f.page_url || '')}</span></div>
+                    <div class="live-muted">${escapeHtml(f.category || '')}</div>
+                  </div>`).join('')}
+                </div>`}
+            </div>`;
+        } catch (err) { this.fail(err); }
+      },
       async openTenant(orgId) {
         try {
           const o = await this.rpc('muster_admin_tenant', { p_organization_id: orgId });
