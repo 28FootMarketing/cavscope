@@ -56,7 +56,7 @@ end;
 $$;
 
 create trigger trg_queue_evidence_for_embedding
-after insert on muster.evidences
+after insert on muster.scan_evidence
 for each row
 execute function muster.queue_evidence_for_embedding();
 

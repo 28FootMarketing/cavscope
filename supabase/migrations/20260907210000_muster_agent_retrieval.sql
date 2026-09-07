@@ -35,7 +35,7 @@ create index if not exists idx_finding_embeddings_vector on muster.finding_embed
 -- Evidence embeddings for semantic search
 create table if not exists muster.evidence_embeddings (
   id bigint primary key,
-  evidence_id bigint not null references muster.evidences(id) on delete cascade,
+  evidence_id bigint not null references muster.scan_evidence(id) on delete cascade,
   organization_id bigint not null,
   website_id bigint not null,
   chunk_text text not null,
@@ -51,15 +51,15 @@ create index if not exists idx_evidence_embeddings_vector on muster.evidence_emb
 
 -- RLS policies for finding embeddings
 alter table muster.finding_embeddings enable row level security;
-create policy "org scope" on muster.finding_embeddings for select using (organization_id = auth.jwt()->>'organization_id'::bigint or (select auth.role() = 'service_role'));
+create policy "org scope" on muster.finding_embeddings for select using (organization_id = (auth.jwt()->>'organization_id')::bigint or (select auth.role() = 'service_role'));
 
 -- RLS policies for evidence embeddings
 alter table muster.evidence_embeddings enable row level security;
-create policy "org scope" on muster.evidence_embeddings for select using (organization_id = auth.jwt()->>'organization_id'::bigint or (select auth.role() = 'service_role'));
+create policy "org scope" on muster.evidence_embeddings for select using (organization_id = (auth.jwt()->>'organization_id')::bigint or (select auth.role() = 'service_role'));
 
 -- Search findings by meaning (similarity search)
 create or replace function muster.q_search_findings(p_website_id bigint, p_query_embedding public.vector, p_limit int = 10, p_threshold float = 0.6)
-returns table(finding_id bigint, title text, category text, severity text, chunk_text text, similarity float)
+returns table(finding_id bigint, title text, rule_id text, severity text, chunk_text text, similarity float)
 language sql
 stable
 set search_path = ''
@@ -67,15 +67,15 @@ as $$
   select
     f.id,
     f.title,
-    f.category,
+    f.rule_id,
     f.severity,
     fe.chunk_text,
-    (1 - (fe.embedding <=> p_query_embedding))::float as similarity
+    (1 - (fe.embedding <-> p_query_embedding))::float as similarity
   from muster.finding_embeddings fe
   join muster.findings f on f.id = fe.finding_id
   where fe.website_id = p_website_id
     and f.status in ('open', 'reopened')
-    and (1 - (fe.embedding <=> p_query_embedding))::float >= p_threshold
+    and (1 - (fe.embedding <-> p_query_embedding))::float >= p_threshold
   order by similarity desc
   limit p_limit;
 $$;
@@ -88,16 +88,17 @@ stable
 set search_path = ''
 as $$
   select
-    e.id,
-    e.finding_id,
+    se.id,
+    fe.finding_id,
     ee.chunk_text,
-    (1 - (ee.embedding <=> p_query_embedding))::float as similarity
+    (1 - (ee.embedding <-> p_query_embedding))::float as similarity
   from muster.evidence_embeddings ee
-  join muster.evidences e on e.id = ee.evidence_id
-  join muster.findings f on f.id = e.finding_id
+  join muster.scan_evidence se on se.id = ee.evidence_id
+  join muster.finding_evidence fe on fe.evidence_id = se.id
+  join muster.findings f on f.id = fe.finding_id
   where ee.website_id = p_website_id
     and f.status in ('open', 'reopened')
-    and (1 - (ee.embedding <=> p_query_embedding))::float >= p_threshold
+    and (1 - (ee.embedding <-> p_query_embedding))::float >= p_threshold
   order by similarity desc
   limit p_limit;
 $$;
@@ -116,7 +117,7 @@ as $$
       'inputSchema', jsonb_build_object('type', 'object', 'required', jsonb_build_array('website_id'), 'properties', jsonb_build_object('website_id', jsonb_build_object('type', 'integer')))),
     jsonb_build_object('name', 'list_findings', 'scope', 'read', 'description', 'Findings for a website filtered by status (open, reopened, resolved, accepted, false_positive).',
       'inputSchema', jsonb_build_object('type', 'object', 'required', jsonb_build_array('website_id'), 'properties', jsonb_build_object('website_id', jsonb_build_object('type', 'integer'), 'statuses', jsonb_build_object('type', 'array', 'items', jsonb_build_object('type', 'string'))))),
-    jsonb_build_object('name', 'search_findings', 'scope', 'read', 'description', 'Semantic search over finding titles and descriptions. Returns most relevant open findings with similarity scores. Use this to find related issues or gather context.',
+    jsonb_build_object('name', 'search_findings', 'scope', 'read', 'description', 'Semantic search over finding titles and details. Returns most relevant open findings with similarity scores. Use this to find related issues or gather context.',
       'inputSchema', jsonb_build_object('type', 'object', 'required', jsonb_build_array('website_id', 'query'), 'properties', jsonb_build_object('website_id', jsonb_build_object('type', 'integer'), 'query', jsonb_build_object('type', 'string', 'description', 'Search terms or description of what you''re looking for'), 'limit', jsonb_build_object('type', 'integer', 'default', 10), 'threshold', jsonb_build_object('type', 'number', 'default', 0.6, 'description', 'Similarity threshold 0-1; lower = broader')))),
     jsonb_build_object('name', 'search_evidence', 'scope', 'read', 'description', 'Semantic search over captured evidence. Returns relevant evidence chunks with links to findings. Use this to verify claims or find supporting data.',
       'inputSchema', jsonb_build_object('type', 'object', 'required', jsonb_build_array('website_id', 'query'), 'properties', jsonb_build_object('website_id', jsonb_build_object('type', 'integer'), 'query', jsonb_build_object('type', 'string', 'description', 'Search terms or description of evidence you need'), 'limit', jsonb_build_object('type', 'integer', 'default', 10), 'threshold', jsonb_build_object('type', 'number', 'default', 0.6)))),
@@ -183,7 +184,7 @@ begin
     jsonb_agg(jsonb_build_object(
       'finding_id', result.finding_id,
       'title', result.title,
-      'category', result.category,
+      'rule_id', result.rule_id,
       'severity', result.severity,
       'chunk_text', result.chunk_text,
       'similarity', result.similarity

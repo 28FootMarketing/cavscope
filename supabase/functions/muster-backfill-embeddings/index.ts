@@ -64,7 +64,7 @@ async function backfillFindings(batchSize: number) {
   // Find findings without embeddings
   const { data: findings, error: findError } = await db
     .from("findings")
-    .select("id, title, category, description, website_id, organization_id", {
+    .select("id, title, detail, website_id, organization_id", {
       count: "exact",
     })
     .leftJoin(
@@ -85,11 +85,10 @@ async function backfillFindings(batchSize: number) {
 
   for (const finding of findings) {
     try {
-      // Chunk: title + category + description
+      // Chunk: title + detail
       const chunkText = [
         finding.title,
-        finding.category,
-        finding.description,
+        finding.detail,
       ]
         .filter((x) => x)
         .join("\n");
@@ -146,14 +145,14 @@ async function backfillFindings(batchSize: number) {
 async function backfillEvidence(batchSize: number) {
   // Find evidence without embeddings
   const { data: evidences, error: findError } = await db
-    .from("evidences")
+    .from("scan_evidence")
     .select(
-      "id, finding_id, website_id, organization_id, excerpt, response_headers",
+      "id, website_id, organization_id, excerpt, headers",
       { count: "exact" }
     )
     .leftJoin(
       "evidence_embeddings",
-      "evidences.id",
+      "scan_evidence.id",
       "evidence_embeddings.evidence_id"
     )
     .is("evidence_embeddings.evidence_id", null)
@@ -169,8 +168,9 @@ async function backfillEvidence(batchSize: number) {
 
   for (const evidence of evidences) {
     try {
-      // Chunk: headers + excerpt
-      const chunkText = [evidence.response_headers, evidence.excerpt]
+      // Chunk: headers (from jsonb) + excerpt
+      const headers = evidence.headers ? JSON.stringify(evidence.headers) : "";
+      const chunkText = [headers, evidence.excerpt]
         .filter((x) => x)
         .join("\n")
         .slice(0, 2000); // Limit chunk size
@@ -210,11 +210,11 @@ async function backfillEvidence(batchSize: number) {
 
   // Count remaining
   const { count: remaining } = await db
-    .from("evidences")
+    .from("scan_evidence")
     .select("id", { count: "exact", head: true })
     .leftJoin(
       "evidence_embeddings",
-      "evidences.id",
+      "scan_evidence.id",
       "evidence_embeddings.evidence_id"
     )
     .is("evidence_embeddings.evidence_id", null);
