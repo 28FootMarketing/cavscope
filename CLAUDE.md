@@ -22,15 +22,19 @@ understand. This is a standing requirement; do not wait to be asked again per pa
 ## Other notes
 
 - `index.html` = public landing page (`muster.28footsystems.com`). Its two workspace CTAs link to
-  `signin.html` (`app.muster.28footsystems.com/signin`), not straight into `app.html` — a real, dedicated
-  sign-in page (email + magic link, or email + password), not a modal. It shares the Supabase session
-  origin with `app.html` (same host, `app.muster.28footsystems.com`) so a password sign-in there persists
-  correctly when it redirects to the workspace root; a magic-link email always lands the user directly on
-  the workspace root regardless of origin. Signup is intentionally absent here (self-serve is paused, see
-  below) — it links to the same sales contact instead, plus a "continue with demo data" link to the
-  workspace root for anyone not signing in. `app.html` = the real workspace
-  (`app.muster.28footsystems.com`) and still has its own in-app sign-in modal (`Live.openAuth()`) for
-  users who land there directly; don't remove it when touching `signin.html`. `sitrep.html` = a signed-in, tenant-scoped SITREP viewer
+  `app.muster.28footsystems.com/` (root) — `signin.html`, a real, dedicated sign-in page (email + magic
+  link, or email + password), not a modal, and not straight into the workspace SPA. The workspace SPA
+  (`app.html`) itself lives at `app.muster.28footsystems.com/app`, not at that host's root — an
+  already-authenticated redirect (from `signin.html`, a magic-link email, or `onboarding.html`'s
+  "Go to your workspace" links) must land on `/app`, never on `/` (root just shows the sign-in page
+  again, session or not). `signin.html` shares its Supabase session origin with `app.html` (same host)
+  so a password sign-in there persists correctly when it redirects to `/app`; a magic-link email lands
+  the user directly on `/app` regardless of what origin sent it. Signup is intentionally absent from
+  `signin.html` (self-serve is paused, see below) — it links to the same sales contact instead, plus a
+  "continue with demo data" link straight to `/app` for anyone not signing in. `/signin` also still
+  resolves to `signin.html` (kept as an alias, in `middleware.js`) alongside the root. `app.html` still
+  has its own in-app sign-in modal (`Live.openAuth()`) for anyone who lands on `/app` directly without a
+  session; don't remove it when touching `signin.html`. `sitrep.html` = a signed-in, tenant-scoped SITREP viewer
   (`sitrep.muster.28footsystems.com`) — reuses the same Supabase Auth session and `public.muster_*` RPCs
   as `app.html`; RLS decides what each signed-in user can see, same as everywhere else. It is real data,
   not a demo. `sitrep-sample.html` (`sitrep.muster.28footsystems.com/sample`) is the **one remaining**

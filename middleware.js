@@ -16,10 +16,15 @@ export default function middleware(request) {
   if (path.startsWith('/assets/')) return next();
 
   if (host === 'app.muster.28footsystems.com') {
-    if (path === '/signin' || path.startsWith('/signin/')) {
-      return rewrite(new URL('/signin.html', request.url));
+    // Root is the real client-facing sign-in gate; the workspace SPA itself
+    // lives at /app so an already-authenticated redirect (from signin.html,
+    // a magic link, or onboarding.html) has somewhere to land that isn't
+    // the sign-in page again. /signin is kept as an alias to avoid breaking
+    // the link already shipped to it.
+    if (path === '/app' || path.startsWith('/app/')) {
+      return rewrite(new URL('/app.html', request.url));
     }
-    return rewrite(new URL('/app.html', request.url));
+    return rewrite(new URL('/signin.html', request.url));
   }
   if (host === 'onboarding.muster.28footsystems.com') {
     return rewrite(new URL('/onboarding.html', request.url));
