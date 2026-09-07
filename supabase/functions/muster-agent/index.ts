@@ -56,6 +56,233 @@ async function tools() {
   return (data as Array<Record<string, unknown>>).map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema, annotations: { scope: t.scope, readOnlyHint: t.scope === "read" } }));
 }
 
+async function generateOpenAPISchema(req: Request) {
+  const url = new URL(req.url);
+  const baseUrl = `${url.protocol}//${url.host}${url.pathname.replace(/\/openapi\.json$/, "")}`;
+  const toolList = await tools();
+
+  // Build POST /muster-agent request body schema (tool call)
+  const toolCallProperties: Record<string, unknown> = {
+    tool: {
+      type: "string",
+      enum: toolList.map((t) => t.name),
+      description: "The tool name to call",
+    },
+    args: {
+      type: "object",
+      description: "Tool arguments (schema depends on tool)",
+    },
+  };
+
+  const schema: Record<string, unknown> = {
+    openapi: "3.1.0",
+    info: {
+      title: "MUSTER Agent API",
+      version: "1.0.0",
+      description:
+        "AI agent gateway for MUSTER website assurance. Provides MCP (JSON-RPC 2.0) and REST interfaces to query findings, generate narratives, and access workspace data.",
+      contact: {
+        name: "28 Foot Systems",
+        url: "https://muster.28footsystems.com",
+      },
+    },
+    servers: [
+      {
+        url: baseUrl,
+        description: "MUSTER agent endpoint",
+      },
+    ],
+    paths: {
+      "/": {
+        get: {
+          summary: "Get tool catalog",
+          description:
+            "Returns list of available tools with their schemas. Public endpoint, no auth required.",
+          tags: ["Discovery"],
+          responses: {
+            "200": {
+              description: "Tool catalog",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      version: { type: "string" },
+                      protocolVersion: { type: "string" },
+                      transport: { type: "string" },
+                      auth: {
+                        type: "object",
+                        properties: {
+                          header: { type: "string" },
+                          issue: { type: "string" },
+                        },
+                      },
+                      tools: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            description: { type: "string" },
+                            inputSchema: { type: "object" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          summary: "Call tool or MCP request",
+          description:
+            "Dual-mode endpoint: accepts REST tool calls or MCP JSON-RPC 2.0 requests. Detect mode by presence of jsonrpc field.",
+          tags: ["Tools", "MCP"],
+          security: [{ apiKey: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  oneOf: [
+                    {
+                      type: "object",
+                      title: "REST Tool Call",
+                      properties: toolCallProperties,
+                      required: ["tool"],
+                      description: "Direct tool invocation",
+                    },
+                    {
+                      type: "object",
+                      title: "MCP JSON-RPC 2.0",
+                      properties: {
+                        jsonrpc: { const: "2.0" },
+                        id: { type: ["string", "number", "null"] },
+                        method: {
+                          type: "string",
+                          enum: ["initialize", "ping", "tools/list", "tools/call"],
+                        },
+                        params: { type: "object" },
+                      },
+                      required: ["jsonrpc", "method"],
+                      description: "MCP protocol request",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Success (REST or MCP response)",
+              content: {
+                "application/json": {
+                  schema: {
+                    oneOf: [
+                      {
+                        type: "object",
+                        properties: {
+                          ok: { type: "boolean" },
+                          tool: { type: "string" },
+                          agent: { type: "string" },
+                          result: { type: "object" },
+                        },
+                        description: "REST tool call response",
+                      },
+                      {
+                        type: "object",
+                        properties: {
+                          jsonrpc: { const: "2.0" },
+                          id: { type: ["string", "number", "null"] },
+                          result: { type: "object" },
+                        },
+                        description: "MCP JSON-RPC 2.0 response",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Bad request",
+            },
+            "401": {
+              description: "Unauthorized (missing or invalid API key)",
+            },
+            "404": {
+              description: "Tool not found (REST) or method not found (MCP)",
+            },
+            "500": {
+              description: "Server error",
+            },
+          },
+        },
+      },
+      "/openapi.json": {
+        get: {
+          summary: "Get OpenAPI schema",
+          description: "Returns this OpenAPI 3.1 schema for agent discovery.",
+          tags: ["Discovery"],
+          responses: {
+            "200": {
+              description: "OpenAPI schema",
+              content: {
+                "application/json": {
+                  schema: { type: "object" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      securitySchemes: {
+        apiKey: {
+          type: "apiKey",
+          in: "header",
+          name: "x-muster-api-key",
+          description:
+            "API key issued by public.muster_create_api_key. Prefix: mk_. Also accepted as Authorization Bearer token.",
+        },
+      },
+    },
+    tags: [
+      {
+        name: "Discovery",
+        description: "Public endpoints for discovering API capabilities",
+      },
+      {
+        name: "Tools",
+        description: "Call tools via REST interface",
+      },
+      {
+        name: "MCP",
+        description: "MCP (Model Context Protocol) JSON-RPC 2.0 interface",
+      },
+    ],
+    "x-muster": {
+      toolCount: toolList.length,
+      tools: toolList.map((t) => ({
+        name: t.name,
+        description: t.description,
+        scope: (t.annotations as Record<string, unknown>)?.scope,
+        schema: t.inputSchema,
+      })),
+      capabilities: {
+        agentLoop: true,
+        streaming: false,
+        maxSteps: 5,
+      },
+    },
+  };
+
+  return json(schema);
+}
+
 async function callToolRaw(ctx: unknown, name: string, args: Record<string, unknown>) {
   const { data, error } = await db.rpc("muster_engine_agent_call", { p_ctx: ctx, p_tool: name, p_args: args ?? {} });
   if (error) throw new Error(error.message);
@@ -251,6 +478,12 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
 
   if (req.method === "GET") {
+    // Public OpenAPI schema
+    if (url.pathname.endsWith("/openapi.json")) {
+      try {
+        return await generateOpenAPISchema(req);
+      } catch (e) { return json({ error: String(e) }, 500); }
+    }
     // Public catalog so an agent builder can inspect the tools before minting a key.
     try {
       return json({ name: "muster", version: "1.0.0", protocolVersion: PROTOCOL_VERSION, transport: "streamable-http",
@@ -276,9 +509,11 @@ Deno.serve(async (req: Request) => {
     const params = (body.params ?? {}) as Record<string, unknown>;
     try {
       if (method === "initialize") {
+        const baseUrl = `${url.protocol}//${url.host}${url.pathname.replace(/\/?$/, "")}`;
         return json({ jsonrpc: "2.0", id, result: { protocolVersion: PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "muster", version: "1.0.0" },
-          instructions: `You are connected to MUSTER website assurance as agent "${(ctx as { agent_name: string }).agent_name}". Every finding and SITREP claim carries evidence ids; cite them (E<id>, F<id>) when reporting to humans. Statuses reflect scanner evidence, not legal certification.` } });
+          instructions: `You are connected to MUSTER website assurance as agent "${(ctx as { agent_name: string }).agent_name}". Every finding and SITREP claim carries evidence ids; cite them (E<id>, F<id>) when reporting to humans. Statuses reflect scanner evidence, not legal certification.`,
+          discovery: { openapi: `${baseUrl}/openapi.json`, catalog: baseUrl } } });
       }
       if (method === "notifications/initialized" || method.startsWith("notifications/")) return new Response(null, { status: 202 });
       if (method === "ping") return json({ jsonrpc: "2.0", id, result: {} });
