@@ -68,15 +68,135 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
   // context comes back clean, same as every other tool's authorization path.
   if (name === "ai_narrative") {
     const context = await callToolRaw(ctx, name, args) as Record<string, unknown>;
-    return await generateAiNarrative(context);
+    return await generateAiNarrative(ctx, context);
   }
   return await callToolRaw(ctx, name, args);
 }
 
-async function generateAiNarrative(context: Record<string, unknown>) {
+async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: string, maxSteps = 5): Promise<{ messages: Array<{ role: string; content: unknown }>; finalText: string }> {
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new Error("ai narrative is not configured: missing OPENROUTER_API_KEY");
+  if (!apiKey) throw new Error("agent loop requires OPENROUTER_API_KEY");
 
+  // Fetch tool definitions in Claude format
+  const toolList = await tools();
+  const claudeTools = toolList.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.inputSchema,
+  }));
+
+  const messages: Array<{ role: string; content: unknown }> = [
+    { role: "user", content: userPrompt },
+  ];
+
+  for (let step = 0; step < maxSteps; step++) {
+    let res: Response;
+    try {
+      res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "authorization": `Bearer ${apiKey}`,
+          "http-referer": "https://muster.28footsystems.com",
+          "x-title": "MUSTER AI agent loop",
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          max_tokens: 2000,
+          temperature: 0.3,
+          reasoning: { enabled: false },
+          tools: claudeTools,
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch (e) {
+      throw new Error(`agent loop call failed to reach OpenRouter: ${(e as Error).message ?? e}`);
+    }
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`agent loop call failed (${res.status}): ${detail.slice(0, 300)}`);
+    }
+
+    const payload = await res.json();
+    const choice = payload?.choices?.[0];
+    if (!choice) throw new Error("agent loop returned no choice");
+
+    const assistantMessage = choice.message;
+    if (!assistantMessage) throw new Error("agent loop returned no message");
+
+    // Add assistant response to messages
+    messages.push({
+      role: "assistant",
+      content: assistantMessage.content ?? [],
+    });
+
+    // Check stop reason
+    if (choice.stop_reason === "end_turn") {
+      // Extract final text content from the response
+      const finalText = (Array.isArray(assistantMessage.content) ? assistantMessage.content : [])
+        .filter((c: { type?: string }) => c?.type === "text")
+        .map((c: { text?: string }) => c.text || "")
+        .join("");
+      return { messages, finalText };
+    }
+
+    // If tool_use, execute tools and add results
+    if (choice.stop_reason === "tool_use" && Array.isArray(assistantMessage.content)) {
+      const toolResults: Array<{ type: string; tool_use_id: string; content: string }> = [];
+      let hasToolCalls = false;
+
+      for (const block of assistantMessage.content) {
+        if (block.type === "tool_use") {
+          hasToolCalls = true;
+          try {
+            const toolResult = await callTool(ctx, block.name, block.input);
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: JSON.stringify(toolResult),
+            });
+          } catch (e) {
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: `Error: ${(e as Error).message}`,
+            });
+          }
+        }
+      }
+
+      if (hasToolCalls) {
+        messages.push({
+          role: "user",
+          content: toolResults,
+        });
+      } else {
+        // No tool calls in the content, stop looping
+        const finalText = (Array.isArray(assistantMessage.content) ? assistantMessage.content : [])
+          .filter((c: { type?: string }) => c?.type === "text")
+          .map((c: { text?: string }) => c.text || "")
+          .join("");
+        return { messages, finalText };
+      }
+    } else if (choice.stop_reason !== "tool_use") {
+      // Stop reason is neither tool_use nor end_turn, return what we have
+      const finalText = (Array.isArray(assistantMessage.content) ? assistantMessage.content : [])
+        .filter((c: { type?: string }) => c?.type === "text")
+        .map((c: { text?: string }) => c.text || "")
+        .join("");
+      return { messages, finalText };
+    }
+  }
+
+  // Max steps exceeded
+  throw new Error(`agent loop exceeded maximum steps (${maxSteps})`);
+}
+
+async function generateAiNarrative(ctx: unknown, context: Record<string, unknown>) {
   const userPrompt = [
     `Website: ${context.website_name} (${context.website_url})`,
     `Organization: ${context.organization_name}`,
@@ -87,55 +207,16 @@ async function generateAiNarrative(context: Record<string, unknown>) {
     JSON.stringify(context.findings ?? []),
   ].join("\n");
 
-  let res: Response;
-  try {
-    res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "authorization": `Bearer ${apiKey}`,
-        "http-referer": "https://muster.28footsystems.com",
-        "x-title": "MUSTER AI narrative",
-      },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        max_tokens: 1200,
-        temperature: 0.3,
-        // Short structured-output task; extended thinking would only burn the
-        // max_tokens budget and can leave message.content empty on adaptive
-        // reasoning models. Claude has no mandatory-reasoning restriction.
-        reasoning: { enabled: false },
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: AI_NARRATIVE_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
-  } catch (e) {
-    throw new Error(`ai narrative model call failed to reach OpenRouter: ${(e as Error).message ?? e}`);
-  }
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`ai narrative model call failed (${res.status}): ${detail.slice(0, 300)}`);
-  }
-
-  const payload = await res.json();
-  const raw = payload?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string") throw new Error("ai narrative model returned no content");
+  const { finalText } = await runAgentLoop(ctx, AI_NARRATIVE_SYSTEM_PROMPT, userPrompt, 5);
 
   let parsed: unknown;
-  try { parsed = JSON.parse(raw); } catch { throw new Error("ai narrative model did not return valid JSON"); }
+  try { parsed = JSON.parse(finalText); } catch { throw new Error("ai narrative model did not return valid JSON"); }
   const result = parsed as { headline?: unknown; narrative?: unknown; citations?: unknown; confidence?: unknown };
   if (typeof result.headline !== "string" || typeof result.narrative !== "string" || !Array.isArray(result.citations)) {
     throw new Error("ai narrative model returned an unexpected shape");
   }
 
   // Cross-check every citation against the ids the model was actually given.
-  // A token that isn't in the input is a hallucinated reference, not a
-  // citation -- it is surfaced separately and drags confidence to low so the
-  // caller never mistakes it for something it can verify.
   const allowed = new Set<string>();
   for (const f of (context.findings as Array<Record<string, unknown>> | undefined) ?? []) {
     if (f.finding_id !== undefined) allowed.add(`F${f.finding_id}`);
