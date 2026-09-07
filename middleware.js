@@ -57,13 +57,20 @@ export default function middleware(request) {
     return next();
   }
 
-  // ---- app.muster.28footsystems.com ----------------------------------------
-  if (host === 'app.muster.28footsystems.com') {
-    // Root is the real client-facing sign-in gate; the workspace SPA itself
-    // lives at /app so an already-authenticated redirect (from signin.html,
-    // a magic link, or onboarding.html) has somewhere to land that isn't
-    // the sign-in page again. /signin is kept as an alias to avoid breaking
-    // the link already shipped to it.
+  // ---- the app hosts: app.muster.partners, app.muster.28footsystems.com -----
+  //
+  // Both serve the SAME two pages, and that is deliberate rather than
+  // duplication. signin.html and app.html must be reachable on one shared
+  // origin, because a Supabase session created by a password sign-in is stored
+  // per-origin -- split them across hosts and sign-in appears to succeed, then
+  // the workspace loads signed-out. So a host serves both or neither.
+  //
+  // Root is the real client-facing sign-in gate; the workspace SPA itself lives
+  // at /app so an already-authenticated redirect (from signin.html, a magic
+  // link, or onboarding.html) has somewhere to land that isn't the sign-in page
+  // again. /signin is kept as an alias to avoid breaking the link already
+  // shipped to it.
+  if (host === 'app.muster.partners' || host === 'app.muster.28footsystems.com') {
     if (isUnder(path, '/app')) {
       return rewrite(new URL('/app.html', request.url));
     }
