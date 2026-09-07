@@ -51,6 +51,14 @@ function pgStatus(msg: string): number {
   return 500;
 }
 
+// Behind Supabase's edge proxy req.url arrives as http://, so url.protocol and
+// url.origin advertise http:// in the OpenAPI servers[] block, the MCP discovery
+// URLs and the catalog endpoint -- all of which agents read and then call.
+// Trust x-forwarded-proto, default to https.
+function publicOrigin(req: Request, url: URL): string {
+  return `${req.headers.get("x-forwarded-proto") ?? "https"}://${url.host}`;
+}
+
 async function resolveKey(req: Request) {
   const key = req.headers.get("x-muster-api-key") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!key || !key.startsWith("mk_")) return { ctx: null, error: "missing x-muster-api-key header" };
@@ -69,7 +77,7 @@ async function tools() {
 
 async function generateOpenAPISchema(req: Request) {
   const url = new URL(req.url);
-  const baseUrl = `${url.protocol}//${url.host}${url.pathname.replace(/\/openapi\.json$/, "")}`;
+  const baseUrl = `${publicOrigin(req, url)}${url.pathname.replace(/\/openapi\.json$/, "")}`;
   const toolList = await tools();
 
   // Build POST /muster-agent request body schema (tool call)
@@ -594,7 +602,7 @@ Deno.serve(async (req: Request) => {
     try {
       return json({ name: "muster", version: "1.0.0", protocolVersion: PROTOCOL_VERSION, transport: "streamable-http",
         auth: { header: "x-muster-api-key", issue: "public.muster_create_api_key (Pro plan or super admin)" },
-        endpoint: url.origin + url.pathname, tools: await tools() });
+        endpoint: publicOrigin(req, url) + url.pathname, tools: await tools() });
     } catch (e) { return json({ error: String(e) }, 500); }
   }
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -615,7 +623,7 @@ Deno.serve(async (req: Request) => {
     const params = (body.params ?? {}) as Record<string, unknown>;
     try {
       if (method === "initialize") {
-        const baseUrl = `${url.protocol}//${url.host}${url.pathname.replace(/\/?$/, "")}`;
+        const baseUrl = `${publicOrigin(req, url)}${url.pathname.replace(/\/?$/, "")}`;
         return json({ jsonrpc: "2.0", id, result: { protocolVersion: PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "muster", version: "1.0.0" },
           instructions: `You are connected to MUSTER website assurance as agent "${(ctx as { agent_name: string }).agent_name}". Every finding and SITREP claim carries evidence ids; cite them (E<id>, F<id>) when reporting to humans. Statuses reflect scanner evidence, not legal certification.`,
