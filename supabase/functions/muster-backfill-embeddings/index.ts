@@ -22,9 +22,18 @@ function json(body: unknown, status = 200) {
 // total_remaining hits 0 stops rather than spinning against a dead key.
 class FatalEmbedError extends Error {}
 
+// Edge function secrets are project-wide, and this Supabase project is shared across
+// every 28FS brand, so OPENROUTER_API_KEY is one value CORA, AIVA, ROS, BRD, GFFH and
+// s28 all draw against. Prefer MUSTER's own key, fall back to the shared one.
+function openRouterKey(): string | undefined {
+  return Deno.env.get("MUSTER_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
+}
+
 async function embedText(text: string): Promise<number[]> {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new FatalEmbedError("OPENROUTER_API_KEY not set");
+  const apiKey = openRouterKey();
+  if (!apiKey) {
+    throw new FatalEmbedError("neither MUSTER_OPENROUTER_API_KEY nor OPENROUTER_API_KEY is set");
+  }
 
   const res = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
