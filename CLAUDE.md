@@ -26,14 +26,21 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   `sitrep-sample.html`. The older `*.muster.28footsystems.com` subdomains still resolve and are
   deliberately kept alive — magic-link emails and onboarding invites already delivered point at
   `app.muster.28footsystems.com/app`, and retiring those hosts would strand every link in the wild.
-  Retire them only once nothing outstanding references them. The workspace and sign-in pages have
-  **not** moved to `muster.partners`: `signin.html` must share a Supabase session origin with
-  `app.html`, so splitting them across hosts breaks password sign-in persistence. Move both or
-  neither.
+  Retire them only once nothing outstanding references them.
+- **Sign-in and the workspace live on `app.muster.partners`** — `/` is `signin.html`, `/app` is
+  `app.html`, `/signin` is an alias. They are on their own host, not on `muster.partners`, and they
+  are always served **together**: a Supabase session from a password sign-in is stored per-origin, so
+  splitting `signin.html` and `app.html` across hosts makes sign-in appear to succeed and then the
+  workspace loads signed-out. A host serves both or neither. `app.muster.28footsystems.com` still
+  serves the same pair for links already in the wild.
+- `signin.html` derives its redirect target as `window.location.origin + '/app'` rather than
+  hardcoding a host, so it is same-origin on whichever app host served it. It must stay **absolute**:
+  it is passed to `signInWithOtp` as `emailRedirectTo`, which Supabase requires to be a full URL —
+  and that URL has to be on the Supabase project's allowed-redirect list or magic links fail.
 - `index.html` = public landing page (`muster.partners`, and `muster.28footsystems.com`). Its two workspace CTAs link to
-  `app.muster.28footsystems.com/` (root) — `signin.html`, a real, dedicated sign-in page (email + magic
+  `app.muster.partners/` (root) — `signin.html`, a real, dedicated sign-in page (email + magic
   link, or email + password), not a modal, and not straight into the workspace SPA. The workspace SPA
-  (`app.html`) itself lives at `app.muster.28footsystems.com/app`, not at that host's root — an
+  (`app.html`) itself lives at `app.muster.partners/app`, not at that host's root — an
   already-authenticated redirect (from `signin.html`, a magic-link email, or `onboarding.html`'s
   "Go to your workspace" links) must land on `/app`, never on `/` (root just shows the sign-in page
   again, session or not). `signin.html` shares its Supabase session origin with `app.html` (same host)

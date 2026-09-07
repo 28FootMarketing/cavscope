@@ -151,7 +151,7 @@
         </form>
         <div class="signin-footer">
           <p>New to MUSTER? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
-          <p><a href="https://app.muster.28footsystems.com/app" data-tooltip="Opens the workspace with sample data, no sign-in required.">Just exploring? Continue with demo data →</a></p>
+          <p><a href="/app" data-tooltip="Opens the workspace with sample data, no sign-in required.">Just exploring? Continue with demo data →</a></p>
         </div>
       </div>
     </div>
@@ -167,7 +167,16 @@
 <script>
   const SB_URL = 'https://mgtmqucaldkaxvxglguw.supabase.co';
   const SB_KEY = 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww';
-  const WORKSPACE_URL = 'https://app.muster.28footsystems.com/app';
+  // Same-origin by construction. The workspace SPA is always /app on whatever
+  // host served this page, so this resolves correctly on both
+  // app.muster.partners and app.muster.28footsystems.com without an edit.
+  // It must stay ABSOLUTE: line ~195 passes it to signInWithOtp as
+  // emailRedirectTo, and Supabase requires a full URL there.
+  // Critically, deriving it from the current origin is what keeps the
+  // Supabase session valid across the redirect -- a hardcoded other-host URL
+  // would send an authenticated user to an origin that cannot see the session
+  // they just created, and the workspace would load signed-out.
+  const WORKSPACE_URL = window.location.origin + '/app';
   let sb = null;
 
   function showState(id) {
