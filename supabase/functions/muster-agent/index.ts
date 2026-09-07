@@ -14,13 +14,24 @@ import { AI_NARRATIVE_SYSTEM_PROMPT } from "./prompt.ts";
 // for ai_narrative below -- its context (findings, evidence ids, the org's ai_narrative flag check)
 // comes from that same RPC. Only the model call itself happens here, since Postgres can't make it.
 //
-// ai_narrative requires the OPENROUTER_API_KEY secret (supabase secrets set OPENROUTER_API_KEY=...).
+// ai_narrative and the search_* tools require an OpenRouter key. Set MUSTER's own:
+//   supabase secrets set MUSTER_OPENROUTER_API_KEY=...   (the key named "muster-agent")
+// Falls back to the project-wide OPENROUTER_API_KEY when that is unset.
 // Model defaults to OPENROUTER_MODEL if set, else anthropic/claude-sonnet-5 (confirmed live on
 // OpenRouter's catalog) -- override via that env var to point at a different Claude version.
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const PROTOCOL_VERSION = "2025-06-18";
 const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-sonnet-5";
+
+// MUSTER's own OpenRouter credential. Edge function secrets are project-wide, and
+// this Supabase project is shared across every 28FS brand, so OPENROUTER_API_KEY is
+// one value that CORA, AIVA, ROS, BRD, GFFH and s28 all draw against -- a spend cap
+// hit by any one of them takes MUSTER down too (it did, 2026-09-06). Prefer a
+// MUSTER-scoped key, fall back to the shared one so nothing breaks before it is set.
+function openRouterKey(): string | undefined {
+  return Deno.env.get("MUSTER_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -290,8 +301,8 @@ async function callToolRaw(ctx: unknown, name: string, args: Record<string, unkn
 }
 
 async function embedText(text: string): Promise<number[]> {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new Error("search requires OPENROUTER_API_KEY for embeddings");
+  const apiKey = openRouterKey();
+  if (!apiKey) throw new Error("search requires MUSTER_OPENROUTER_API_KEY (or OPENROUTER_API_KEY) for embeddings");
 
   const res = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
@@ -391,8 +402,8 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
 }
 
 async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: string, maxSteps = 5): Promise<{ messages: Array<{ role: string; content: unknown }>; finalText: string }> {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new Error("agent loop requires OPENROUTER_API_KEY");
+  const apiKey = openRouterKey();
+  if (!apiKey) throw new Error("agent loop requires MUSTER_OPENROUTER_API_KEY (or OPENROUTER_API_KEY)");
 
   // Fetch tool definitions in Claude format
   const toolList = await tools();

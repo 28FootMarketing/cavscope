@@ -16,9 +16,24 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Raised for conditions that will fail identically on every remaining record --
+// a missing key, a rejected key, an exhausted credit limit. These abort the run
+// instead of burning one request per record, so a caller looping until
+// total_remaining hits 0 stops rather than spinning against a dead key.
+class FatalEmbedError extends Error {}
+
+// Edge function secrets are project-wide, and this Supabase project is shared across
+// every 28FS brand, so OPENROUTER_API_KEY is one value CORA, AIVA, ROS, BRD, GFFH and
+// s28 all draw against. Prefer MUSTER's own key, fall back to the shared one.
+function openRouterKey(): string | undefined {
+  return Deno.env.get("MUSTER_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
+}
+
 async function embedText(text: string): Promise<number[]> {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
+  const apiKey = openRouterKey();
+  if (!apiKey) {
+    throw new FatalEmbedError("neither MUSTER_OPENROUTER_API_KEY nor OPENROUTER_API_KEY is set");
+  }
 
   const res = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
@@ -38,7 +53,11 @@ async function embedText(text: string): Promise<number[]> {
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`embedding failed (${res.status}): ${detail.slice(0, 300)}`);
+    const message = `embedding failed (${res.status}): ${detail.slice(0, 300)}`;
+    // 401 bad key, 402 out of credit, 403 spend limit exceeded, 429 rate limited.
+    // None of these get better by trying the next record.
+    if ([401, 402, 403, 429].includes(res.status)) throw new FatalEmbedError(message);
+    throw new Error(message);
   }
 
   const payload = await res.json();
@@ -96,6 +115,7 @@ async function backfillFindings(batchSize: number) {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (e) {
+      if (e instanceof FatalEmbedError) throw e;
       console.error(`failed to embed finding ${finding.id}:`, e);
     }
   }
@@ -167,6 +187,7 @@ async function backfillEvidence(batchSize: number) {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (e) {
+      if (e instanceof FatalEmbedError) throw e;
       console.error(`failed to embed evidence ${evidence.id}:`, e);
     }
   }
@@ -234,6 +255,19 @@ Deno.serve(async (req: Request) => {
     });
   } catch (e) {
     console.error("backfill error:", e);
+    if (e instanceof FatalEmbedError) {
+      return json(
+        {
+          ok: false,
+          fatal: true,
+          error: (e as Error).message,
+          next: "Backfill aborted. The embedding provider rejected the credential " +
+            "(bad key, exhausted credit, or spend limit). Nothing was embedded on " +
+            "this call and retrying will fail identically until the key is fixed.",
+        },
+        502
+      );
+    }
     return json(
       { ok: false, error: (e as Error).message },
       500
