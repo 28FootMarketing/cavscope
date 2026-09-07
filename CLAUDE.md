@@ -45,8 +45,8 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   Supabase Auth invite -> this page). It is not a demo and has no local/client-side state machine: every
   gate lives in Postgres (`muster.onboarding_steps`, `public.muster_onboarding_state()`,
   `public.muster_onboarding_complete_step()`) — the page just renders whichever step the backend says is
-  current and posts back to it. See `supabase/migrations/20260908055000_muster_guided_onboarding.sql`
-  (as originally applied) and `20260908060000_muster_onboarding_fixes.sql` (a security-grant hardening
+  current and posts back to it. See `supabase/migrations/20260906063133_muster_guided_onboarding.sql`
+  (as originally applied) and `20260906064403_muster_onboarding_fixes.sql` (a security-grant hardening
   pass plus two validation fixes found on review — read the latter's header comment before touching this
   system again). `onboard_client()` itself is not yet wired to anything live: the `muster-onboard` Stripe
   webhook that's meant to call it hasn't been built, so this page is only reachable today via a manually
@@ -54,7 +54,7 @@ understand. This is a standing requirement; do not wait to be asked again per pa
 - A super admin can also run a real scan against any URL from `app.html`'s admin console ("Run a URL
   scan") and get back real findings from the live engine — see `muster_admin_run_url` /
   `muster_admin_website_overview` / `muster_admin_url_runs` in
-  `supabase/migrations/20260908050000_muster_admin_url_runner.sql`. Ad-hoc URLs run this way are parked
+  `supabase/migrations/20260906062134_muster_admin_url_runner.sql`. Ad-hoc URLs run this way are parked
   in a dedicated internal sandbox org (`organizations.is_admin_sandbox`), never in a real tenant's risk
   register. This is separate from the guided onboarding flow above and from `sitrep-sample.html` — three
   different tools for three different jobs, not competing demos.
@@ -62,5 +62,10 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   `vercel.json`'s declarative `rewrites`/`has` cannot branch on the Host header — only real code can — so
   don't reintroduce host-conditional `vercel.json` rewrites for new subdomains; add another `if (host === ...)`
   branch to `middleware.js` instead.
+- Migration files are named after the version `apply_migration` actually assigned, not after
+  when you wrote them — the tool assigns the version from its own clock and ignores the filename.
+  After applying, read the version back and name the file that. See
+  `supabase/migrations/README.md`; getting this wrong left 16 forward references and four applied
+  migrations with no file, three of which were the cron schedules.
 - Backend: Supabase project `mgtmqucaldkaxvxglguw`, schema `muster`. Real scan engine, SITREP generation,
   RLS, and RPCs are already live — see `docs/BACKEND.md`.
