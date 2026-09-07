@@ -289,14 +289,104 @@ async function callToolRaw(ctx: unknown, name: string, args: Record<string, unkn
   return data;
 }
 
+async function embedText(text: string): Promise<number[]> {
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!apiKey) throw new Error("search requires OPENROUTER_API_KEY for embeddings");
+
+  const res = await fetch("https://openrouter.ai/api/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "authorization": `Bearer ${apiKey}`,
+      "http-referer": "https://muster.28footsystems.com",
+      "x-title": "MUSTER search embedding",
+    },
+    body: JSON.stringify({
+      model: "text-embedding-3-small",
+      input: text,
+      encoding_format: "float",
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`embedding failed (${res.status}): ${detail.slice(0, 300)}`);
+  }
+
+  const payload = await res.json();
+  const embedding = payload?.data?.[0]?.embedding;
+  if (!Array.isArray(embedding) || embedding.length === 0) {
+    throw new Error("embedding returned no vector");
+  }
+  return embedding;
+}
+
+async function callSearchFindings(ctx: unknown, args: Record<string, unknown>): Promise<unknown> {
+  const website_id = args.website_id as number;
+  const query = args.query as string;
+  const limit = (args.limit as number) || 10;
+  const threshold = (args.threshold as number) || 0.6;
+
+  if (!website_id || !query) {
+    throw new Error("search_findings requires website_id and query");
+  }
+
+  // Embed the query
+  const embedding = await embedText(query);
+
+  // Search via SQL (convert embedding array to pgvector format)
+  const { data, error } = await db.rpc("muster_engine_search_findings", {
+    p_ctx: ctx,
+    p_website_id: website_id,
+    p_embedding: embedding,
+    p_limit: limit,
+    p_threshold: threshold,
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function callSearchEvidence(ctx: unknown, args: Record<string, unknown>): Promise<unknown> {
+  const website_id = args.website_id as number;
+  const query = args.query as string;
+  const limit = (args.limit as number) || 10;
+  const threshold = (args.threshold as number) || 0.6;
+
+  if (!website_id || !query) {
+    throw new Error("search_evidence requires website_id and query");
+  }
+
+  // Embed the query
+  const embedding = await embedText(query);
+
+  // Search via SQL
+  const { data, error } = await db.rpc("muster_engine_search_evidence", {
+    p_ctx: ctx,
+    p_website_id: website_id,
+    p_embedding: embedding,
+    p_limit: limit,
+    p_threshold: threshold,
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 async function callTool(ctx: unknown, name: string, args: Record<string, unknown>) {
-  // ai_narrative's SQL branch does the auth/org/flag check and returns model
-  // context (not a final answer) -- the model call only happens once that
-  // context comes back clean, same as every other tool's authorization path.
+  // Tools that require special handling beyond callToolRaw
   if (name === "ai_narrative") {
     const context = await callToolRaw(ctx, name, args) as Record<string, unknown>;
     return await generateAiNarrative(ctx, context);
   }
+  if (name === "search_findings") {
+    return await callSearchFindings(ctx, args);
+  }
+  if (name === "search_evidence") {
+    return await callSearchEvidence(ctx, args);
+  }
+  // All other tools: authorize via SQL and execute
   return await callToolRaw(ctx, name, args);
 }
 
