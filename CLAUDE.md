@@ -85,5 +85,16 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   After applying, read the version back and name the file that. See
   `supabase/migrations/README.md`; getting this wrong left 16 forward references and four applied
   migrations with no file, three of which were the cron schedules.
+- **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
+  Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
+  by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is
+  configured as Supabase's SMTP relay. Their templates live in Supabase project config, sourced
+  from `supabase/auth-email-templates/` — edit the files there first, then paste into the
+  dashboard. A Resend *template* can never render them. Application email (currently only the
+  `risk_opened` alert) is the other path: `muster-alert-dispatch` calls Resend's REST API
+  directly. Auth config does not migrate between Supabase projects; it has to be set on each.
+  `/reset` on the app hosts is the password-recovery landing and is served by `signin.html`
+  through middleware's catch-all — it has no page of its own, and it must be on the Supabase
+  project's allowed redirect list or GoTrue silently substitutes Site URL.
 - Backend: Supabase project `mgtmqucaldkaxvxglguw`, schema `muster`. Real scan engine, SITREP generation,
   RLS, and RPCs are already live — see `docs/BACKEND.md`.
