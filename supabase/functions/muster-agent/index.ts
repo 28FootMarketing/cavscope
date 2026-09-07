@@ -99,8 +99,12 @@ async function generateAiNarrative(context: Record<string, unknown>) {
       },
       body: JSON.stringify({
         model: OPENROUTER_MODEL,
-        max_tokens: 700,
+        max_tokens: 1200,
         temperature: 0.3,
+        // Short structured-output task; extended thinking would only burn the
+        // max_tokens budget and can leave message.content empty on adaptive
+        // reasoning models. Claude has no mandatory-reasoning restriction.
+        reasoning: { enabled: false },
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: AI_NARRATIVE_SYSTEM_PROMPT },
@@ -128,13 +132,34 @@ async function generateAiNarrative(context: Record<string, unknown>) {
     throw new Error("ai narrative model returned an unexpected shape");
   }
 
+  // Cross-check every citation against the ids the model was actually given.
+  // A token that isn't in the input is a hallucinated reference, not a
+  // citation -- it is surfaced separately and drags confidence to low so the
+  // caller never mistakes it for something it can verify.
+  const allowed = new Set<string>();
+  for (const f of (context.findings as Array<Record<string, unknown>> | undefined) ?? []) {
+    if (f.finding_id !== undefined) allowed.add(`F${f.finding_id}`);
+    for (const e of (f.evidence_ids as unknown[] | undefined) ?? []) allowed.add(`E${e}`);
+  }
+  const seen = new Set<string>();
+  const citations: string[] = [];
+  const unverified: string[] = [];
+  for (const c of result.citations) {
+    const token = String(c).trim().toUpperCase();
+    if (!/^[FE]\d+$/.test(token) || seen.has(token)) continue;
+    seen.add(token);
+    (allowed.has(token) ? citations : unverified).push(token);
+  }
+  const confidence = unverified.length ? "low" : (typeof result.confidence === "string" ? result.confidence : "unknown");
+
   return {
     website_id: context.website_id,
     audience: context.audience,
     headline: result.headline,
     narrative: result.narrative,
-    citations: result.citations,
-    confidence: typeof result.confidence === "string" ? result.confidence : "unknown",
+    citations,
+    unverified_citations: unverified,
+    confidence,
     model: OPENROUTER_MODEL,
     generated_at: new Date().toISOString(),
   };
