@@ -2,18 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Backfill embeddings for findings and evidence to enable retrieval search.
-// Safe to run repeatedly: checks for existing embeddings and skips.
-// Returns progress report: how many embedded, how many remaining.
-//
-// Usage:
-//   curl -X POST https://<project>.supabase.co/functions/v1/muster-backfill-embeddings \
-//     -H "authorization: Bearer $ANON_KEY" \
-//     -H "content-type: application/json" \
-//     -d '{"batch_size": 10, "type": "findings"}'
-//
-// Parameters:
-//   batch_size: Number of items to embed per request (default 5, max 50)
-//   type: "findings", "evidence", or "all" (default "all")
+// Uses public RPC functions to access muster schema tables via PostgREST.
 
 const db = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -61,22 +50,13 @@ async function embedText(text: string): Promise<number[]> {
 }
 
 async function backfillFindings(batchSize: number) {
-  // Find findings without embeddings
-  const { data: findings, error: findError } = await db
-    .from("findings")
-    .select("id, title, detail, website_id, organization_id", {
-      count: "exact",
-    })
-    .leftJoin(
-      "finding_embeddings",
-      "findings.id",
-      "finding_embeddings.finding_id"
-    )
-    .is("finding_embeddings.finding_id", null)
-    .limit(batchSize);
+  // Get findings without embeddings via RPC wrapper function
+  const { data: findings, error: findError } = await db.rpc(
+    "get_findings_without_embeddings",
+    { p_limit: batchSize }
+  );
 
   if (findError) throw new Error(`query failed: ${findError.message}`);
-
   if (!findings || findings.length === 0) {
     return { embedded: 0, remaining: 0, type: "findings" };
   }
@@ -85,28 +65,25 @@ async function backfillFindings(batchSize: number) {
 
   for (const finding of findings) {
     try {
-      // Chunk: title + detail
-      const chunkText = [
-        finding.title,
-        finding.detail,
-      ]
+      const chunkText = [finding.title, finding.detail]
         .filter((x) => x)
         .join("\n");
 
       const embedding = await embedText(chunkText);
 
-      // Insert embedding
-      const { error: insertError } = await db
-        .from("finding_embeddings")
-        .insert({
-          id: finding.id,
-          finding_id: finding.id,
-          organization_id: finding.organization_id,
-          website_id: finding.website_id,
-          chunk_text: chunkText,
-          chunk_index: 0,
-          embedding: embedding,
-        });
+      // Insert embedding via RPC wrapper function
+      const { error: insertError } = await db.rpc(
+        "insert_finding_embedding",
+        {
+          p_id: finding.id,
+          p_finding_id: finding.id,
+          p_organization_id: finding.organization_id,
+          p_website_id: finding.website_id,
+          p_chunk_text: chunkText,
+          p_chunk_index: 0,
+          p_embedding: embedding,
+        }
+      );
 
       if (insertError && !insertError.message.includes("duplicate")) {
         console.error(
@@ -117,7 +94,6 @@ async function backfillFindings(batchSize: number) {
         embedded++;
       }
 
-      // Small delay to avoid rate limits
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (e) {
       console.error(`failed to embed finding ${finding.id}:`, e);
@@ -125,41 +101,29 @@ async function backfillFindings(batchSize: number) {
   }
 
   // Count remaining
-  const { count: remaining } = await db
-    .from("findings")
-    .select("id", { count: "exact", head: true })
-    .leftJoin(
-      "finding_embeddings",
-      "findings.id",
-      "finding_embeddings.finding_id"
-    )
-    .is("finding_embeddings.finding_id", null);
+  const { data: countResult, error: countError } = await db.rpc(
+    "count_findings_without_embeddings"
+  );
+
+  if (countError) {
+    console.error("count remaining error:", countError);
+  }
 
   return {
     embedded,
-    remaining: remaining || 0,
+    remaining: (countResult as number) || 0,
     type: "findings",
   };
 }
 
 async function backfillEvidence(batchSize: number) {
-  // Find evidence without embeddings
-  const { data: evidences, error: findError } = await db
-    .from("scan_evidence")
-    .select(
-      "id, website_id, organization_id, excerpt, headers",
-      { count: "exact" }
-    )
-    .leftJoin(
-      "evidence_embeddings",
-      "scan_evidence.id",
-      "evidence_embeddings.evidence_id"
-    )
-    .is("evidence_embeddings.evidence_id", null)
-    .limit(batchSize);
+  // Get evidence without embeddings via RPC wrapper function
+  const { data: evidences, error: findError } = await db.rpc(
+    "get_evidence_without_embeddings",
+    { p_limit: batchSize }
+  );
 
   if (findError) throw new Error(`query failed: ${findError.message}`);
-
   if (!evidences || evidences.length === 0) {
     return { embedded: 0, remaining: 0, type: "evidence" };
   }
@@ -168,29 +132,29 @@ async function backfillEvidence(batchSize: number) {
 
   for (const evidence of evidences) {
     try {
-      // Chunk: headers (from jsonb) + excerpt
       const headers = evidence.headers ? JSON.stringify(evidence.headers) : "";
       const chunkText = [headers, evidence.excerpt]
         .filter((x) => x)
         .join("\n")
-        .slice(0, 2000); // Limit chunk size
+        .slice(0, 2000);
 
       if (!chunkText.trim()) continue;
 
       const embedding = await embedText(chunkText);
 
-      // Insert embedding
-      const { error: insertError } = await db
-        .from("evidence_embeddings")
-        .insert({
-          id: evidence.id,
-          evidence_id: evidence.id,
-          organization_id: evidence.organization_id,
-          website_id: evidence.website_id,
-          chunk_text: chunkText,
-          chunk_index: 0,
-          embedding: embedding,
-        });
+      // Insert embedding via RPC wrapper function
+      const { error: insertError } = await db.rpc(
+        "insert_evidence_embedding",
+        {
+          p_id: evidence.id,
+          p_evidence_id: evidence.id,
+          p_organization_id: evidence.organization_id,
+          p_website_id: evidence.website_id,
+          p_chunk_text: chunkText,
+          p_chunk_index: 0,
+          p_embedding: embedding,
+        }
+      );
 
       if (insertError && !insertError.message.includes("duplicate")) {
         console.error(
@@ -201,7 +165,6 @@ async function backfillEvidence(batchSize: number) {
         embedded++;
       }
 
-      // Small delay to avoid rate limits
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (e) {
       console.error(`failed to embed evidence ${evidence.id}:`, e);
@@ -209,19 +172,17 @@ async function backfillEvidence(batchSize: number) {
   }
 
   // Count remaining
-  const { count: remaining } = await db
-    .from("scan_evidence")
-    .select("id", { count: "exact", head: true })
-    .leftJoin(
-      "evidence_embeddings",
-      "scan_evidence.id",
-      "evidence_embeddings.evidence_id"
-    )
-    .is("evidence_embeddings.evidence_id", null);
+  const { data: countResult, error: countError } = await db.rpc(
+    "count_evidence_without_embeddings"
+  );
+
+  if (countError) {
+    console.error("count remaining error:", countError);
+  }
 
   return {
     embedded,
-    remaining: remaining || 0,
+    remaining: (countResult as number) || 0,
     type: "evidence",
   };
 }
