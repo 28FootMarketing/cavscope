@@ -14,7 +14,7 @@ Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 | Grounded citations | Done | Every SITREP claim carries `finding_ids` and `evidence_ids`; markdown renders `[F<id>][E<id>]` |
 | Reconciliation | Done for HTTP rules | Findings not observed by a completed scan auto-resolve; reappearance reopens |
 | Dedupe fingerprint | Done | `sha256(website|rule|normalized_url|location)`, unique per website |
-| pgvector / RAG / memory | Deferred by design | Retrieval is SQL; semantic search is phase 3 once corpus exists |
+| pgvector / RAG / memory | Done | `finding_embeddings`, `evidence_embeddings` (1536-dim, IVFFLAT), `muster.embedding_queue`, `muster-backfill-embeddings` + cron job 145, `search_findings` / `search_evidence` agent tools -- see "Retrieval" below |
 | Self-serve onboarding | Done | `public.muster_onboard(jsonb)` creates org, membership, appetite, brand, website, first scan |
 | Jurisdiction advisor | Done | 199 countries, 101 jurisdictions, 46 law rows mapped to scan rules |
 | White-label + personalization | Done | `brand_profiles` (org default, per-website override), `user_preferences` |
@@ -39,9 +39,13 @@ supabase/
   functions/
     muster-scan/index.ts    HTTP-native scanner (31 rules), verify_jwt on, shared secret header
     muster-agent/index.ts   MCP (JSON-RPC 2.0, streamable HTTP) + REST gateway, API-key auth
+    muster-backfill-embeddings/index.ts  drains muster.embedding_queue, shared secret header
 ```
 
-All five migrations are applied to the shared project and both functions are deployed (2026-09-04).
+The five phase-1 migrations above are the original set; many more have shipped since (retrieval, admin URL
+runner, guided onboarding, cron observability). `supabase/migrations/` is the record -- this list is not
+maintained per-migration. Treat the live project as the source of truth and reconcile with
+`mcp__Supabase__list_migrations` rather than trusting this block.
 
 ## Access model
 
@@ -95,7 +99,9 @@ Errors use SQLSTATE `42501` (forbidden, PostgREST 403), `22023` (bad input), `P0
 
 Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `latest_sitrep`, `get_sitrep`, `compliance_posture`, `jurisdiction_advisory`, `ai_narrative` (read); `request_scan` (scan); `update_finding_status`, `promote_finding_to_risk` (write).
 
-`ai_narrative` is the one tool that isn't a straight SQL read: `public.muster_engine_agent_call` does the auth/org check and (if `muster.has_flag(org, 'ai_narrative')` passes) returns model context -- org/website name, posture score/band, and up to 15 open findings with their evidence ids -- and `muster-agent/index.ts` sends that to OpenRouter (`MUSTER_OPENROUTER_API_KEY` edge function secret, falling back to the project-wide `OPENROUTER_API_KEY`, model `OPENROUTER_MODEL` env override, defaults to `anthropic/claude-sonnet-5`, confirmed live against OpenRouter's own catalog) with a versioned system prompt (`muster-agent/prompt.ts`) instructing it to cite only finding/evidence ids it was given, requesting `response_format: json_object` with reasoning explicitly disabled (a short structured task; adaptive thinking would only eat the token budget), validating the parsed shape (`headline`, `narrative`, `citations[]`, `confidence`), and cross-checking every citation against the finding/evidence ids the model was actually given -- any token not in the input is moved to `unverified_citations` and forces `confidence: low`, so a hallucinated reference can never pass as a verifiable one. `audience` is validated in SQL against its enum (`board`/`plain`/`technical`), not just advertised in the schema, so nothing free-form reaches the prompt. This is ephemeral -- the result is not persisted to `muster.sitreps` (see Phase 2). `ai_narrative` (`muster.feature_flags`) still has `kill_switch = true`, so every org gets a 403 until an operator turns it on and the `MUSTER_OPENROUTER_API_KEY` secret is actually set.
+`ai_narrative` is the one tool that isn't a straight SQL read: `public.muster_engine_agent_call` does the auth/org check and (if `muster.has_flag(org, 'ai_narrative')` passes) returns model context -- org/website name, posture score/band, and up to 15 open findings with their evidence ids -- and `muster-agent/index.ts` sends that to OpenRouter (`MUSTER_OPENROUTER_API_KEY` edge function secret, falling back to the project-wide `OPENROUTER_API_KEY`, model `OPENROUTER_MODEL` env override, defaults to `anthropic/claude-sonnet-5`, confirmed live against OpenRouter's own catalog) with a versioned system prompt (`muster-agent/prompt.ts`) instructing it to cite only finding/evidence ids it was given, with reasoning explicitly disabled (a short structured task; adaptive thinking would only eat the token budget) and the tool catalog attached in OpenAI function shape, validating the parsed shape (`headline`, `narrative`, `citations[]`, `confidence`), and cross-checking every citation against the finding/evidence ids the model was actually given -- any token not in the input is moved to `unverified_citations` and forces `confidence: low`, so a hallucinated reference can never pass as a verifiable one. `audience` is validated in SQL against its enum (`board`/`plain`/`technical`), not just advertised in the schema, so nothing free-form reaches the prompt. This is ephemeral -- the result is not persisted to `muster.sitreps` (see Phase 2). `ai_narrative` (`muster.feature_flags`) is **live**: `kill_switch = false`, `default_enabled = true`, `plan_minimum = pro` (verified against the table 2026-09-07, not from this document). `MUSTER_OPENROUTER_API_KEY` is set. Confirmed end to end on a real org: 7 citations, zero `unverified_citations`.
+
+OpenRouter's `/chat/completions` is OpenAI-shaped, not Anthropic-shaped. Tools go as `{type:"function", function:{name, description, parameters}}`; the reply carries `choices[0].message.tool_calls` and `finish_reason`, and `message.content` is a string (null on a pure tool turn). Tool results go back as their own `role:"tool"` messages keyed by `tool_call_id`. Reading `stop_reason` and treating `content` as Anthropic typed blocks produced an empty `finalText` on every call, which then failed `JSON.parse` -- fixed 2026-09-07, do not reintroduce Anthropic message shapes here.
 
 Claude Desktop / Claude Code config:
 
@@ -115,7 +121,59 @@ Posture score: 100 minus (25 per critical, 10 per high, 4 per medium, 1 per low)
 
 ## Feature flags
 
-Resolution order: kill switch, user override, org override, plan gate, default. Flags declared but not built (`browser_wcag_engine`, `pdf_export`, `public_status_badge`) have the kill switch on. `ai_narrative` is now built (see the `muster-agent` section above) but still kill-switched off by default -- built and gated are different things.
+Resolution order: kill switch, user override, org override, plan gate, default. Flags declared but not built (`browser_wcag_engine`, `pdf_export`, `public_status_badge`) have the kill switch on. `ai_narrative` is built and live (see the `muster-agent` section above): kill switch off, default enabled, Pro and above.
+
+## Retrieval (semantic search)
+
+`search_findings` and `search_evidence` are pgvector lookups, not SQL text matches. `muster.finding_embeddings`
+and `muster.evidence_embeddings` hold 1536-dim `text-embedding-3-small` vectors (IVFFLAT, L2 `<->`). The gateway
+embeds the caller's query in `muster-agent/index.ts` and passes the vector to `muster_engine_search_findings` /
+`muster_engine_search_evidence`, which apply org scoping in SQL. Similarity is `1 - L2^2/4` on **both** paths --
+evidence used a mismatched `1 - L2` against the same 0.6 default threshold, which silently returned nothing.
+
+Evidence lives in `muster.scan_evidence` (not `muster.evidence`, which is a near-empty legacy table); the
+embedding triggers are on `findings` and `scan_evidence`.
+
+### Keeping the index fresh
+
+`muster.embedding_queue` carries `UNIQUE (entity_type, entity_id)`. Four triggers feed it -- INSERT and UPDATE on
+each of `findings` and `scan_evidence` -- and the UPDATE triggers are gated on the columns that actually feed the
+embedding text (`title`/`detail`, `excerpt`/`headers`), so a `last_seen_at` touch does not re-bill an embedding.
+
+Two rules that are easy to get wrong and were both wrong until 2026-09-07:
+
+- The enqueue `on conflict` must **reopen** the row (`processed_at = null, created_at = now()`), never
+  `do nothing`. With `do nothing`, an entity that had been processed once could never be queued again for the
+  rest of its life -- the queue was structurally incapable of representing a re-embed, and 4 of 13 findings were
+  answering from vectors older than their own text.
+- `insert_finding_embedding` / `insert_evidence_embedding` must upsert on `(entity_id, chunk_index)` and drain
+  the queue row in the same statement. `on conflict do nothing` there made a forced re-embed a silent no-op that
+  still spent an OpenRouter call.
+
+`get_findings_without_embeddings` / `get_evidence_without_embeddings` select **queued OR missing**, oldest queue
+entry first -- selecting on "no embedding row exists" alone makes a stale entity invisible to the worker.
+
+`muster-backfill-embeddings` (cron `muster-embedding-backfill-15min`, job 145) drains the queue. It is dispatched
+through `public.cron_safe_post`, so a failed HTTP call lands in `public.edge_invocations` instead of being
+reported as a successful cron run. It authenticates with `x-muster-secret` against `public.muster_engine_secret()`
+-- before that check existed the endpoint was anonymous and spent real OpenRouter credit per record. A 401, 402,
+403 or 429 from the provider raises `FatalEmbedError` and aborts the run rather than burning one request per
+remaining record against a dead key.
+
+### Contract tests
+
+`muster.test_retrieval_contract()` (invoker rights, no grants) is the regression gate -- 12 tests covering the
+similarity formula on both paths, `search_path` well-formedness, grant lockdown, org scoping, evidence dedupe and
+linkage, index completeness, and staleness. Run it after anything that touches retrieval:
+
+```sql
+select * from muster.test_retrieval_contract();
+```
+
+`search_path` on these functions must be written as `set search_path = public, muster` (two identifiers). Writing
+`SET search_path TO 'public, muster'` stores one quoted identifier, `pg_catalog` gets prepended, `muster` is never
+on the path, and every `<->` fails with `operator does not exist: public.vector <-> public.vector`. Eight functions
+shipped that way and both search wrappers were dead end to end.
 
 ## Rollback
 
