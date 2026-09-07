@@ -1,18 +1,18 @@
 {
   "format": "bigsteele-ai-audit/1",
   "brand": "Big Steele AI Audit",
-  "generated_at": "2026-09-07T00:22:44.420Z",
+  "generated_at": "2026-09-07T09:01:57.701Z",
   "repo": "muster",
   "app": "muster",
-  "files_considered": 60,
+  "files_considered": 82,
   "skipped": [],
   "score": {
-    "total": 33,
-    "grade": "F",
+    "total": 62,
+    "grade": "D",
     "level": {
-      "n": 1,
-      "name": "Automated",
-      "meaning": "Programs can call it and work runs without a person, but no model is in the loop."
+      "n": 2,
+      "name": "AI-assisted",
+      "meaning": "Models answer or draft inside the product; a person does the doing."
     },
     "profile": {
       "key": "product",
@@ -24,26 +24,26 @@
       {
         "key": "surfaces",
         "title": "Automated surfaces",
+        "earned": 16,
+        "max": 25,
+        "weight": 25,
+        "weighted": 16
+      },
+      {
+        "key": "ai",
+        "title": "AI systems",
         "earned": 14,
         "max": 25,
         "weight": 25,
         "weighted": 14
       },
       {
-        "key": "ai",
-        "title": "AI systems",
-        "earned": 0,
-        "max": 25,
-        "weight": 25,
-        "weighted": 0
-      },
-      {
         "key": "agents",
         "title": "Agents",
-        "earned": 5,
+        "earned": 18,
         "max": 25,
         "weight": 25,
-        "weighted": 5
+        "weighted": 18
       },
       {
         "key": "autonomy",
@@ -90,10 +90,10 @@
         "key": "schedules",
         "label": "Work that runs on a schedule",
         "max": 4,
-        "earned": 2,
+        "earned": 4,
         "next": "Add scheduled jobs for the work a person currently remembers to do.",
         "applicable": true,
-        "gain": 2
+        "gain": 0
       },
       {
         "group": "surfaces",
@@ -110,20 +110,20 @@
         "key": "provider",
         "label": "A model provider integrated",
         "max": 8,
-        "earned": 0,
+        "earned": 6,
         "next": "Call a model from the server side; a second provider or a router earns the last two.",
         "applicable": true,
-        "gain": 8
+        "gain": 2
       },
       {
         "group": "ai",
         "key": "prompts",
         "label": "Prompts written down as code",
         "max": 4,
-        "earned": 0,
+        "earned": 2,
         "next": "Keep system prompts in files under version control, one per job.",
         "applicable": true,
-        "gain": 4
+        "gain": 2
       },
       {
         "group": "ai",
@@ -140,10 +140,10 @@
         "key": "retrieval",
         "label": "Retrieval over your own data",
         "max": 4,
-        "earned": 0,
+        "earned": 4,
         "next": "Embed your data and search it (pgvector or a vector store) so the model answers from your records.",
         "applicable": true,
-        "gain": 4
+        "gain": 0
       },
       {
         "group": "ai",
@@ -160,10 +160,10 @@
         "key": "server",
         "label": "AI runs on the server, not only in the browser",
         "max": 2,
-        "earned": 0,
+        "earned": 2,
         "next": "Move model calls behind a server function so keys stay server-side and agents can call them too.",
         "applicable": true,
-        "gain": 2
+        "gain": 0
       },
       {
         "group": "agents",
@@ -180,20 +180,20 @@
         "key": "loop",
         "label": "A loop that lets the model act until done",
         "max": 5,
-        "earned": 0,
+        "earned": 5,
         "next": "Let the model call tools in a loop (maxSteps, tool_use handling, an agent runner) instead of one answer.",
         "applicable": true,
-        "gain": 5
+        "gain": 0
       },
       {
         "group": "agents",
         "key": "mcp_server",
         "label": "An MCP server exposing the software",
         "max": 5,
-        "earned": 0,
-        "next": "Ship an MCP server so any agent (Claude, Cursor, ChatGPT) can operate your software directly.",
+        "earned": 5,
+        "next": "Ship an MCP server so any agent (Claude, Cursor, ChatGPT) can operate your software directly, and make it discoverable: a server card or mcp.json, named in README or AGENTS.md.",
         "applicable": true,
-        "gain": 5
+        "gain": 0
       },
       {
         "group": "agents",
@@ -210,10 +210,10 @@
         "key": "memory",
         "label": "Memory kept between runs",
         "max": 3,
-        "earned": 0,
+        "earned": 3,
         "next": "Store threads, runs and agent memory in tables so work survives a restart and a second run knows the first.",
         "applicable": true,
-        "gain": 3
+        "gain": 0
       },
       {
         "group": "autonomy",
@@ -303,12 +303,13 @@
           "files": [
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-alert-dispatch/index.ts",
+            "supabase/functions/muster-backfill-embeddings/index.ts",
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
             "supabase/functions/muster-stripe-webhook/index.ts",
             "supabase/functions/muster-watchdog/index.ts"
           ],
-          "count": 6
+          "count": 7
         },
         {
           "what": "Inbound webhooks (handlers or signature checks)",
@@ -321,21 +322,23 @@
         {
           "what": "Schedules (cron jobs, scheduled functions, workflows)",
           "files": [
-            "supabase/migrations/20260904120400_muster_cron.sql"
+            "supabase/migrations/20260904120400_muster_cron.sql",
+            "supabase/migrations/20260907211000_muster_auto_embed_new_findings.sql",
+            "supabase/migrations/20260908120000_edge_invocation_observability.sql"
           ],
-          "count": 1
+          "count": 4
         }
       ],
       "facts": {
-        "api_handlers": 6,
-        "supabase_functions": 6,
+        "api_handlers": 7,
+        "supabase_functions": 7,
         "contract_schemas": 0,
         "capability_inventory": 0,
         "described": "none",
         "openapi": false,
         "graphql": false,
         "webhooks": 3,
-        "schedules": 1,
+        "schedules": 4,
         "queues": 0,
         "pages": 0
       }
@@ -343,17 +346,55 @@
     {
       "key": "ai",
       "title": "AI systems",
-      "evidence": [],
+      "evidence": [
+        {
+          "what": "OpenRouter",
+          "files": [
+            "supabase/functions/muster-agent/index.ts",
+            "supabase/functions/muster-backfill-embeddings/index.ts"
+          ],
+          "count": 2
+        },
+        {
+          "what": "Models named in code: claude-sonnet-5, text-embedding-3-small",
+          "files": [
+            "supabase/functions/muster-agent/index.ts",
+            "supabase/functions/muster-backfill-embeddings/index.ts"
+          ],
+          "count": 2
+        },
+        {
+          "what": "Prompts (system prompts, prompt files)",
+          "files": [
+            "supabase/functions/muster-agent/index.ts"
+          ],
+          "count": 3
+        },
+        {
+          "what": "Retrieval: embeddings and vector search",
+          "files": [
+            "supabase/migrations/20260907210000_muster_agent_retrieval.sql",
+            "supabase/functions/muster-agent/index.ts",
+            "supabase/functions/muster-backfill-embeddings/index.ts"
+          ],
+          "count": 3
+        }
+      ],
       "facts": {
-        "providers": [],
-        "ai_files": 0,
-        "models": [],
-        "prompts": 0,
+        "providers": [
+          "OpenRouter"
+        ],
+        "ai_files": 2,
+        "models": [
+          "claude-sonnet-5",
+          "text-embedding-3-small"
+        ],
+        "prompts": 1,
         "structured_output": 0,
-        "retrieval": 0,
+        "retrieval": 3,
         "voice": [],
         "vision": 0,
-        "ai_server_files": 0
+        "ai_server_files": 2
       }
     },
     {
@@ -361,22 +402,47 @@
       "title": "Agents",
       "evidence": [
         {
-          "what": "Tool definitions",
+          "what": "Tool definitions (MCP)",
           "files": [
             "supabase/functions/muster-agent/index.ts"
+          ],
+          "count": 1
+        },
+        {
+          "what": "Agent loops (a model calling tools until done)",
+          "files": [
+            "supabase/functions/muster-agent/index.ts"
+          ],
+          "count": 3
+        },
+        {
+          "what": "MCP server (the software's abilities offered to any agent), 1 written by hand (JSON-RPC initialize, tools/list, tools/call)",
+          "files": [
+            "supabase/functions/muster-agent/index.ts",
+            ".well-known/mcp/server-card.json"
+          ],
+          "count": 2
+        },
+        {
+          "what": "Memory and state kept between runs (threads, conversations, agent memory)",
+          "files": [
+            "supabase/migrations/20260904120100_muster_onboarding_brand_flags_agents.sql"
           ],
           "count": 1
         }
       ],
       "facts": {
         "tools": 1,
-        "tool_names": [],
-        "loops": 0,
+        "tool_names": [
+          "MCP"
+        ],
+        "loops": 1,
         "agent_frameworks": [],
-        "mcp_server": 0,
+        "mcp_discoverable": 1,
+        "mcp_server": 2,
         "mcp_client": 0,
         "orchestration": 0,
-        "memory": 0
+        "memory": 1
       }
     },
     {
@@ -384,7 +450,7 @@
       "title": "Autonomy and operability",
       "evidence": [
         {
-          "what": "Reach: 6 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
+          "what": "Reach: 7 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
           "files": [],
           "count": 3
         },
@@ -396,22 +462,26 @@
           "count": 1
         },
         {
-          "what": "Guardrails (rate limits 0, authenticated machine surfaces 5, moderation / redaction / cost caps 0)",
+          "what": "Guardrails (rate limits 0, authenticated machine surfaces 6, moderation / redaction / cost caps 1)",
           "files": [
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-alert-dispatch/index.ts",
+            "supabase/functions/muster-backfill-embeddings/index.ts",
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
-            "supabase/functions/muster-watchdog/index.ts"
+            "supabase/functions/muster-watchdog/index.ts",
+            "supabase/functions/muster-agent/index.ts"
           ],
-          "count": 5
+          "count": 7
         },
         {
           "what": "Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card)",
           "files": [
+            ".well-known/mcp/server-card.json",
+            "AGENTS.md",
             "CLAUDE.md"
           ],
-          "count": 1
+          "count": 3
         }
       ],
       "facts": {
@@ -422,9 +492,9 @@
         "observability": 0,
         "reliability": 1,
         "evals": 0,
-        "guardrails": 5,
+        "guardrails": 7,
         "human_gate": 0,
-        "agent_docs": 1
+        "agent_docs": 3
       }
     }
   ]
