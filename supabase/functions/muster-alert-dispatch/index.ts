@@ -28,7 +28,20 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 const RESEND_API_BASE = "https://api.resend.com";
-const ALERT_FROM_ADDRESS = "MUSTER Alerts <alerts@mail.28footsystems.com>";
+
+// MUSTER sends from its own domain now that muster.partners is the product's
+// home. mail.muster.partners is verified in Resend with sending enabled
+// (confirmed 2026-09-07). The previous mail.28footsystems.com is also still
+// verified, so nothing breaks in either direction -- but alerts about a MUSTER
+// tenant should not arrive from the parent company's domain.
+//
+// Overridable by env so this same code is correct on both Supabase projects
+// during the move to hjowfnzpomzxazmzywxw, and so a domain change later is a
+// secret edit rather than a redeploy. Resend rejects a from-address on an
+// unverified domain outright, so a typo here fails loudly at send time and the
+// row is recorded as failed with the API's message -- it does not vanish.
+const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
+  ?? "MUSTER Alerts <alerts@mail.muster.partners>";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
