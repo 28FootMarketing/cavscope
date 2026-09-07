@@ -93,7 +93,9 @@ Errors use SQLSTATE `42501` (forbidden, PostgREST 403), `22023` (bad input), `P0
 - MCP: POST JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`, `ping`) with header `x-muster-api-key`.
 - REST: `POST {"tool":"latest_sitrep","args":{"website_id":3}}`.
 
-Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `latest_sitrep`, `get_sitrep`, `compliance_posture`, `jurisdiction_advisory` (read); `request_scan` (scan); `update_finding_status`, `promote_finding_to_risk` (write).
+Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `latest_sitrep`, `get_sitrep`, `compliance_posture`, `jurisdiction_advisory`, `ai_narrative` (read); `request_scan` (scan); `update_finding_status`, `promote_finding_to_risk` (write).
+
+`ai_narrative` is the one tool that isn't a straight SQL read: `public.muster_engine_agent_call` does the auth/org check and (if `muster.has_flag(org, 'ai_narrative')` passes) returns model context -- org/website name, posture score/band, and up to 15 open findings with their evidence ids -- and `muster-agent/index.ts` sends that to OpenRouter (`OPENROUTER_API_KEY` edge function secret, model `OPENROUTER_MODEL` env override, defaults to `anthropic/claude-sonnet-4.5` -- confirm the exact OpenRouter slug for the Claude version wanted) with a versioned system prompt (`muster-agent/prompt.ts`) instructing it to cite only finding/evidence ids it was given, requesting `response_format: json_object`, and validating the parsed shape (`headline`, `narrative`, `citations[]`, `confidence`) before returning it. This is ephemeral -- the result is not persisted to `muster.sitreps` and citations aren't cross-checked against the source ids yet, both still open (see Phase 2). `ai_narrative` (`muster.feature_flags`) still has `kill_switch = true`, so every org gets a 403 until an operator turns it on and the `OPENROUTER_API_KEY` secret is actually set.
 
 Claude Desktop / Claude Code config:
 
@@ -113,7 +115,7 @@ Posture score: 100 minus (25 per critical, 10 per high, 4 per medium, 1 per low)
 
 ## Feature flags
 
-Resolution order: kill switch, user override, org override, plan gate, default. Flags declared but not built (`browser_wcag_engine`, `ai_narrative`, `pdf_export`, `public_status_badge`) have the kill switch on.
+Resolution order: kill switch, user override, org override, plan gate, default. Flags declared but not built (`browser_wcag_engine`, `pdf_export`, `public_status_badge`) have the kill switch on. `ai_narrative` is now built (see the `muster-agent` section above) but still kill-switched off by default -- built and gated are different things.
 
 ## Rollback
 
@@ -153,7 +155,7 @@ Resolved 2026-09-08 (`.planning/autonomy/BLOCKERS-AND-DECISIONS.md` B-1): **MUST
 ## Phase 2 and later (not started)
 
 - Browser engine (Playwright + axe-core) behind `browser_wcag_engine`; same evidence and finding contract.
-- AI narrative SITREP behind `ai_narrative`: model writes prose constrained to the cited claims; citations are validated before save.
+- Persist `ai_narrative` output into `muster.sitreps.sections` (today it's an ephemeral `muster-agent` tool call, not saved) and cross-validate every returned citation against the finding/evidence ids it was actually given, rather than only checking the JSON shape.
 - Telegram alerts to CORA (chat 1238597047) on new critical findings.
 - pgvector over `scan_evidence.excerpt` and `sitreps.content_md` for cross-scan semantic retrieval.
 - Multi-page crawl (`website_scan_settings.max_pages`).
