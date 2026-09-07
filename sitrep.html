@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MUSTER SITREP Viewer — sign in to view your organization's cited situation reports on screen." />
+  <title>MUSTER — SITREP Viewer</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-border: #1f3358;
+      --surface-hover: #192b50;
+
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --amber: #fbbf24;
+      --rose: #f43f5e;
+      --emerald: #10b981;
+
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-gradient);
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+
+    .topbar {
+      border-bottom: 1px solid var(--surface-border);
+      background: rgba(6, 10, 22, 0.72);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-inner { max-width: 980px; margin: 0 auto; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-serif); font-size: 18px; font-weight: 700; }
+    .brand small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500; }
+    .brand-mark { height: 22px; width: auto; align-self: center; filter: drop-shadow(0 0 6px var(--teal-glow)); }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    select, button, input {
+      font-family: var(--font-sans);
+    }
+    .picker {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12.5px;
+      max-width: 220px;
+    }
+    .btn-ghost, .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 6px; padding: 7px 13px; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid var(--surface-border);
+      background: var(--surface-card); color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-primary { background: var(--teal); color: #04211c; border-color: var(--teal); }
+    .btn-primary:hover { box-shadow: 0 0 0 3px var(--teal-glow); }
+    .btn-primary:disabled, .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ---------- Auth gate ---------- */
+    .auth-gate { max-width: 380px; margin: 90px auto; text-align: center; }
+    .auth-gate h1 { font-family: var(--font-serif); font-size: 24px; margin-bottom: 10px; }
+    .auth-gate p { color: var(--text-muted); font-size: 14px; margin-bottom: 26px; }
+    .auth-form { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+    .auth-form label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+    .auth-form input {
+      background: var(--surface-card); border: 1px solid var(--surface-border); border-radius: 6px;
+      padding: 10px 12px; color: var(--text); font-size: 13.5px; outline: none;
+    }
+    .auth-form input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }
+    .auth-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+    .auth-msg { font-size: 12px; color: var(--amber); min-height: 16px; margin-top: 4px; }
+
+    /* ---------- Report shell ---------- */
+    .report-head { padding: 34px 0 26px; }
+    .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+    .report-head h1 { font-family: var(--font-serif); font-size: clamp(1.6rem, 3.4vw, 2.2rem); margin: 0 0 8px; }
+    .report-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+
+    .score-row { display: flex; align-items: center; gap: 22px; margin: 22px 0 6px; flex-wrap: wrap; }
+    .gauge { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+    .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .gauge-value { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-value .num { font-family: var(--font-mono); font-size: 24px; font-weight: 700; line-height: 1; }
+    .gauge-value .of100 { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+    .band-label { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+    .band-desc { color: var(--text-muted); font-size: 13px; margin-top: 4px; max-width: 46ch; }
+
+    section.block { padding: 28px 0; border-top: 1px solid var(--surface-border); }
+    section.block h2 { font-family: var(--font-serif); font-size: 18px; margin: 0 0 16px; }
+
+    .claim-list { display: flex; flex-direction: column; gap: 10px; }
+    .claim { font-size: 14.5px; color: var(--text); padding-left: 18px; position: relative; }
+    .claim::before { content: '—'; position: absolute; left: 0; color: var(--text-dim); }
+    .cite { font-family: var(--font-mono); font-size: 10.5px; color: var(--teal); margin-left: 4px; white-space: nowrap; cursor: help; }
+
+    .plain-list { display: flex; flex-direction: column; gap: 14px; }
+    .plain-item { font-size: 14px; color: var(--text-muted); }
+    .plain-item b { color: var(--text); }
+
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.data-table th {
+      text-align: left; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-dim); padding: 8px 10px; border-bottom: 1px solid var(--surface-border);
+    }
+    table.data-table td { padding: 10px; border-bottom: 1px solid var(--surface-border); vertical-align: top; }
+    table.data-table tr:last-child td { border-bottom: none; }
+    .sev-chip {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 4px; display: inline-block;
+    }
+    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
+    .sev-medium { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+    .sev-low, .sev-info { background: rgba(54, 226, 201, 0.15); color: var(--teal); }
+    .mono-cell { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+
+    .overflow-x { overflow-x: auto; }
+
+    .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+    .empty-state h2 { font-family: var(--font-serif); color: var(--text); margin-bottom: 8px; }
+
+    footer.disclaimer {
+      border-top: 1px solid var(--surface-border); padding: 24px 0 0; margin-top: 20px;
+      font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); line-height: 1.7;
+    }
+
+    /* ---------- Tooltips ---------- */
+    .app-tooltip {
+      position: fixed; z-index: 300; max-width: 280px; padding: 8px 11px; border-radius: 8px;
+      background: #0d1a33; border: 1px solid #2e4a78; color: #e6eefb;
+      font-family: var(--font-sans); font-size: 12px; font-weight: 500; line-height: 1.45;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); pointer-events: none; opacity: 0;
+      transform: translateY(3px); transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
+    [data-tooltip] { cursor: help; }
+    a[data-tooltip], button[data-tooltip], select[data-tooltip] { cursor: pointer; }
+    [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+    @media print {
+      .topbar, .btn-ghost, .btn-primary, .no-print { display: none !important; }
+      body { background: #fff; color: #000; }
+      .wrap { max-width: 100%; padding: 0 24px; }
+      section.block { break-inside: avoid; }
+    }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar" id="topbar" hidden>
+    <div class="topbar-inner">
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SITREP VIEWER</small></div>
+      <div class="topbar-right">
+        <select class="picker" id="websitePicker" onchange="onWebsiteChange(this.value)" data-tooltip="Switch which of your organization's websites this report covers." hidden></select>
+        <select class="picker" id="historyPicker" onchange="onHistoryChange(this.value)" data-tooltip="View a previous SITREP for this website, to compare posture over time." hidden></select>
+        <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this report.">▣ Print / PDF</button>
+        <button class="btn-ghost" id="btnSignOut" onclick="signOut()" data-tooltip="Sign out of this SITREP viewer.">⏻ Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="auth-gate" id="authGate">
+      <h1>SITREP Viewer</h1>
+      <p>Sign in with your MUSTER account to view your organization's situation reports on screen.</p>
+      <form class="auth-form" id="authForm" onsubmit="return submitAuth(event)">
+        <label for="authEmail" data-tooltip="The email address your MUSTER account uses.">Email</label>
+        <input type="email" id="authEmail" placeholder="you@company.com" required>
+        <label for="authPassword" data-tooltip="Optional — leave blank to receive a one-time magic sign-in link instead.">Password (optional)</label>
+        <input type="password" id="authPassword" placeholder="Leave blank for a magic link">
+        <div class="auth-actions">
+          <button type="submit" class="btn-primary" data-tooltip="Sign in with a password, or send a magic link if the password field is empty.">Sign In →</button>
+        </div>
+        <div class="auth-msg" id="authMsg"></div>
+      </form>
+    </div>
+
+    <div id="reportRoot" hidden></div>
+
+  </div>
+
+<script>
+  const SB_URL = 'https://mgtmqucaldkaxvxglguw.supabase.co';
+  const SB_KEY = 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww';
+  let sb = null;
+  let workspace = null;
+  let currentWebsiteId = null;
+
+  function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      document.getElementById('authMsg').textContent = 'Could not load the sign-in service. Refresh and try again.';
+      return;
+    }
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) enter(); else showAuthGate();
+    });
+  }
+
+  async function rpc(fn, args) {
+    const { data, error } = await sb.rpc(fn, args || {});
+    if (error) throw new Error(error.message || String(error));
+    return data;
+  }
+
+  function showAuthGate() {
+    document.getElementById('authGate').hidden = false;
+    document.getElementById('reportRoot').hidden = true;
+    document.getElementById('topbar').hidden = true;
+  }
+
+  async function submitAuth(e) {
+    e.preventDefault();
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const msg = document.getElementById('authMsg');
+    msg.style.color = 'var(--amber)';
+    try {
+      if (!password) {
+        const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+        if (error) throw error;
+        msg.textContent = 'Magic link sent. Open it on this device to finish signing in.';
+        return false;
+      }
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (err) {
+      msg.textContent = err.message || String(err);
+    }
+    return false;
+  }
+
+  async function signOut() {
+    try { await sb.auth.signOut(); } catch (e) { console.error(e); }
+  }
+
+  async function enter() {
+    document.getElementById('authGate').hidden = true;
+    document.getElementById('topbar').hidden = false;
+    try {
+      workspace = await rpc('muster_my_workspace');
+    } catch (e) {
+      renderError(`Could not load your workspace: ${e.message}`);
+      return;
+    }
+    const websites = (workspace.organizations || []).flatMap(o => (o.websites || []).map(w => ({ ...w, orgName: o.name })));
+    const picker = document.getElementById('websitePicker');
+    if (!websites.length) {
+      renderEmpty('No websites yet', 'Add a website inside the MUSTER workspace to start generating SITREPs.');
+      return;
+    }
+    picker.hidden = false;
+    picker.innerHTML = websites.map(w => `<option value="${w.id}">${escapeHtml(w.orgName)} — ${escapeHtml(w.name)}</option>`).join('');
+
+    const params = new URLSearchParams(window.location.search);
+    const requestedSitrep = params.get('sitrep_id');
+    const requestedWebsite = params.get('website_id');
+
+    if (requestedSitrep) {
+      try {
+        const sitrep = await rpc('muster_sitrep', { p_sitrep_id: Number(requestedSitrep) });
+        currentWebsiteId = sitrep.website_id;
+        picker.value = String(currentWebsiteId);
+        await loadHistory(currentWebsiteId, sitrep.id);
+        renderSitrep(sitrep);
+        return;
+      } catch (e) { /* fall through to default website */ }
+    }
+
+    const startWebsite = websites.find(w => String(w.id) === requestedWebsite) || websites[0];
+    picker.value = String(startWebsite.id);
+    await onWebsiteChange(startWebsite.id);
+  }
+
+  async function onWebsiteChange(websiteId) {
+    currentWebsiteId = Number(websiteId);
+    try {
+      const sitrep = await rpc('muster_latest_sitrep', { p_website_id: currentWebsiteId });
+      await loadHistory(currentWebsiteId, sitrep ? sitrep.id : null);
+      if (!sitrep) {
+        renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the MUSTER workspace.');
+        return;
+      }
+      renderSitrep(sitrep);
+    } catch (e) {
+      renderError(`Could not load this SITREP: ${e.message}`);
+    }
+  }
+
+  async function loadHistory(websiteId, selectedId) {
+    const picker = document.getElementById('historyPicker');
+    try {
+      const history = await rpc('muster_sitrep_history', { p_website_id: websiteId, p_limit: 20 });
+      if (!history.length) { picker.hidden = true; picker.innerHTML = ''; return; }
+      picker.innerHTML = history.map(h => `<option value="${h.id}">${new Date(h.generated_at).toLocaleDateString()} — ${h.posture_score}/100 (${h.posture_band})${h.status === 'final' ? ' · current' : ''}</option>`).join('');
+      if (selectedId != null) picker.value = String(selectedId);
+      picker.hidden = false;
+    } catch (e) { picker.hidden = true; }
+  }
+
+  async function onHistoryChange(sitrepId) {
+    try {
+      const sitrep = await rpc('muster_sitrep', { p_sitrep_id: Number(sitrepId) });
+      renderSitrep(sitrep);
+    } catch (e) {
+      renderError(`Could not load this SITREP: ${e.message}`);
+    }
+  }
+
+  function bandColor(band) {
+    if (band === 'green') return 'var(--emerald)';
+    if (band === 'amber') return 'var(--amber)';
+    return 'var(--rose)';
+  }
+
+  function renderEmpty(title, body) {
+    document.getElementById('reportRoot').hidden = false;
+    document.getElementById('reportRoot').innerHTML = `<div class="empty-state"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(body)}</p></div>`;
+  }
+  function renderError(msg) { renderEmpty('Something went wrong', msg); }
+
+  function renderSitrep(sitrep) {
+    const root = document.getElementById('reportRoot');
+    root.hidden = false;
+    const s = sitrep.sections || {};
+    const board = s.board_report || {};
+    const claims = board.claims || [];
+    const plain = (s.plain_english || {}).items || [];
+    const findings = s.top_findings || [];
+    const evidence = s.evidence_index || [];
+    const score = sitrep.posture_score;
+    const band = sitrep.posture_band;
+    const color = bandColor(band);
+
+    const scoreOffset = 289 - (289 * (score || 0) / 100);
+
+    root.innerHTML = `
+      <div class="report-head">
+        <p class="eyebrow">SITREP · ${escapeHtml((sitrep.generator || 'deterministic').toUpperCase())}</p>
+        <h1>${escapeHtml(sitrep.headline || 'Situation Report')}</h1>
+        <div class="report-meta" data-tooltip="When this SITREP was generated, from which scan.">Generated ${sitrep.generated_at ? new Date(sitrep.generated_at).toLocaleString() : '—'} · Scan #${escapeHtml(String(sitrep.scan_id || '—'))}</div>
+
+        <div class="score-row">
+          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer.">
+            <svg viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="42" fill="none" stroke="#1f3358" stroke-width="8"></circle>
+              <circle cx="48" cy="48" r="42" fill="none" stroke="${color}" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="${264 - (264 * (score || 0) / 100)}"></circle>
+            </svg>
+            <div class="gauge-value"><span class="num" style="color:${color}">${escapeHtml(String(score ?? '—'))}</span><span class="of100">/ 100</span></div>
+          </div>
+          <div>
+            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now.">● ${escapeHtml(String(band || 'unknown').toUpperCase())} POSTURE</div>
+            <div class="band-desc">${(board.open || 0)} open findings — ${board.critical || 0} critical, ${board.high || 0} high, ${board.medium || 0} medium, ${board.low || 0} low, ${(board.info || 0)} informational.</div>
+          </div>
+        </div>
+      </div>
+
+      <section class="block">
+        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below.">Board Report</h2>
+        <div class="claim-list">
+          ${claims.map(c => `<div class="claim">${escapeHtml(c.text)}${citeBadge(c)}</div>`).join('') || '<p style="color:var(--text-dim);">No claims recorded for this scan.</p>'}
+        </div>
+      </section>
+
+      ${plain.length ? `
+      <section class="block">
+        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h2>
+        <div class="plain-list">
+          ${plain.map(p => `<div class="plain-item">${escapeHtml(p.text)}</div>`).join('')}
+        </div>
+      </section>` : ''}
+
+      ${findings.length ? `
+      <section class="block">
+        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity.">Top Findings</h2>
+        <div class="overflow-x">
+          <table class="data-table">
+            <thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Remediation</th></tr></thead>
+            <tbody>
+              ${findings.map(f => `<tr>
+                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding.">${escapeHtml(f.rule_id || '')}</td>
+                <td>${escapeHtml(f.title || '')}<div style="color:var(--text-dim); font-size:11.5px; margin-top:3px;">${escapeHtml(f.detail || '')}</div></td>
+                <td><span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></td>
+                <td style="color:var(--text-muted);">${escapeHtml(f.remediation || '')}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>` : ''}
+
+      ${evidence.length ? `
+      <section class="block">
+        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites.">Evidence Index</h2>
+        <div class="overflow-x">
+          <table class="data-table">
+            <thead><tr><th>Kind</th><th>URL</th><th>HTTP</th><th>Captured</th><th>SHA-256</th></tr></thead>
+            <tbody>
+              ${evidence.map(e => `<tr>
+                <td class="mono-cell">${escapeHtml(e.kind || '')}</td>
+                <td style="word-break:break-all;">${escapeHtml(e.url || '')}</td>
+                <td class="mono-cell">${escapeHtml(String(e.http_status ?? ''))}</td>
+                <td class="mono-cell">${e.captured_at ? new Date(e.captured_at).toLocaleString() : ''}</td>
+                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture.">${escapeHtml((e.sha256 || '').slice(0, 12))}…</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>` : ''}
+
+      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
+        MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
+        ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation.">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
+      </footer>
+    `;
+  }
+
+  function citeBadge(claim) {
+    const fs = (claim.finding_ids || []).map(id => `F${id}`);
+    const es = (claim.evidence_ids || []).map(id => `E${id}`);
+    const all = [...fs, ...es];
+    if (!all.length) return '';
+    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to — nothing here is asserted without a source.">[${all.join('][')}]</span>`;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // Tooltip engine: event delegation on [data-tooltip], works for dynamically rendered content too.
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => { const t = findTarget(e.target); if (t) show(t); });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) { hide(); suppressed = true; } });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => { initTooltips(); init(); });
+</script>
+</body>
+</html>

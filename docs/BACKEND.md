@@ -20,6 +20,10 @@ Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 | White-label + personalization | Done | `brand_profiles` (org default, per-website override), `user_preferences` |
 | Super admin + feature flags | Done | `users.role = super_admin`, `feature_flags`, `feature_flag_overrides`, `muster_admin_*` RPCs |
 | Agent / AI-employee ready | Done | `agents`, `api_keys`, `muster-agent` edge function (MCP + REST) |
+| Risk auto-triage | Done | `muster.autotriage()`, cron `muster-autotriage-15min`; promotes open critical/high/medium findings to `risks` + `remediation_actions` with severity-scaled due dates, auto-mitigates on rescan |
+| Critical-finding tenant alerts | Done | `muster.notification_outbox`, `muster-alert-dispatch` edge function, cron `muster-alert-dispatch-5min`; emails org `executive`/`risk_owner` members via Resend when `autotriage` opens a critical/high risk. Per-org opt-out: `organizations.critical_alerts_enabled` |
+| GHL sales-assisted checkout (MUSTER Partner/Enterprise) | Done | `muster-ghl-webhook`, requires a human to mark the GHL deal Closed Won -- see "Checkout paths" below |
+| Stripe self-serve checkout (MUSTER base tier) | Done | Live Stripe Payment Links + `muster-stripe-webhook` + `muster.pending_commercial_grants`, applied by the existing self-serve onboarding wizard -- see "Checkout paths" below. `muster.onboard_client` (the earlier, buggy, unreachable attempt at this) stays dead and unused |
 
 ## Layout
 
@@ -89,7 +93,9 @@ Errors use SQLSTATE `42501` (forbidden, PostgREST 403), `22023` (bad input), `P0
 - MCP: POST JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`, `ping`) with header `x-muster-api-key`.
 - REST: `POST {"tool":"latest_sitrep","args":{"website_id":3}}`.
 
-Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `latest_sitrep`, `get_sitrep`, `compliance_posture`, `jurisdiction_advisory` (read); `request_scan` (scan); `update_finding_status`, `promote_finding_to_risk` (write).
+Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `latest_sitrep`, `get_sitrep`, `compliance_posture`, `jurisdiction_advisory`, `ai_narrative` (read); `request_scan` (scan); `update_finding_status`, `promote_finding_to_risk` (write).
+
+`ai_narrative` is the one tool that isn't a straight SQL read: `public.muster_engine_agent_call` does the auth/org check and (if `muster.has_flag(org, 'ai_narrative')` passes) returns model context -- org/website name, posture score/band, and up to 15 open findings with their evidence ids -- and `muster-agent/index.ts` sends that to OpenRouter (`OPENROUTER_API_KEY` edge function secret, model `OPENROUTER_MODEL` env override, defaults to `anthropic/claude-sonnet-5`, confirmed live against OpenRouter's own catalog) with a versioned system prompt (`muster-agent/prompt.ts`) instructing it to cite only finding/evidence ids it was given, requesting `response_format: json_object` with reasoning explicitly disabled (a short structured task; adaptive thinking would only eat the token budget), validating the parsed shape (`headline`, `narrative`, `citations[]`, `confidence`), and cross-checking every citation against the finding/evidence ids the model was actually given -- any token not in the input is moved to `unverified_citations` and forces `confidence: low`, so a hallucinated reference can never pass as a verifiable one. `audience` is validated in SQL against its enum (`board`/`plain`/`technical`), not just advertised in the schema, so nothing free-form reaches the prompt. This is ephemeral -- the result is not persisted to `muster.sitreps` (see Phase 2). `ai_narrative` (`muster.feature_flags`) still has `kill_switch = true`, so every org gets a 403 until an operator turns it on and the `OPENROUTER_API_KEY` secret is actually set.
 
 Claude Desktop / Claude Code config:
 
@@ -109,7 +115,7 @@ Posture score: 100 minus (25 per critical, 10 per high, 4 per medium, 1 per low)
 
 ## Feature flags
 
-Resolution order: kill switch, user override, org override, plan gate, default. Flags declared but not built (`browser_wcag_engine`, `ai_narrative`, `pdf_export`, `public_status_badge`) have the kill switch on.
+Resolution order: kill switch, user override, org override, plan gate, default. Flags declared but not built (`browser_wcag_engine`, `pdf_export`, `public_status_badge`) have the kill switch on. `ai_narrative` is now built (see the `muster-agent` section above) but still kill-switched off by default -- built and gated are different things.
 
 ## Rollback
 
@@ -133,10 +139,23 @@ Client config lives at the top of the `Live` object: project URL and the publish
 
 Supabase Auth settings that must be set in the dashboard (not scriptable through MCP): Site URL and Redirect URLs must include the app origin (for example `https://muster.28footsystems.com`) for magic links and email confirmation to land back in the app.
 
+## Checkout paths
+
+Resolved 2026-09-08 (`.planning/autonomy/BLOCKERS-AND-DECISIONS.md` B-1): **MUSTER base tier is Stripe self-serve; MUSTER Partner/Enterprise stay GHL sales-assisted.** Two genuinely different commercial motions for two genuinely different tiers, not an accidental duplicate.
+
+- **MUSTER base tier -- Stripe self-serve (live).** Two live Payment Links, one per pricing stage (`https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t` seed, `https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u` fruit), each carrying `metadata: {tier, stage}`. `muster-stripe-webhook` verifies the Stripe signature, handles `checkout.session.completed`, invites the Supabase Auth user if new, and records a `muster.pending_commercial_grants` row keyed by email -- **it does not create the organization itself**. The organization is created the normal way, when the buyer actually runs the existing self-serve onboarding wizard in `app.html` (`muster_onboard` -> `muster.do_onboard`); `do_onboard` now checks for a pending grant matching the user's email right after creating the org and applies the real plan/stage instead of leaving it on `trial`. Deliberately reuses the already-verified onboarding path instead of building a second one. Product: `prod_VCwq3MBRwc16WC`. Prices: `price_1UCWx0JijfcmbDDBLEFrn3Et` (seed, $97/mo), `price_1UCWx0JijfcmbDDBKaHbJyGW` (fruit, $197/mo) -- also recorded in `muster.commercial_pricing.stripe_price_id`.
+  - Requires the `STRIPE_WEBHOOK_SECRET` edge function secret (from registering the webhook endpoint in the Stripe dashboard, pointed at `muster-stripe-webhook`, subscribed to `checkout.session.completed` -- not done via MCP, no tool exposes webhook-endpoint creation).
+- **MUSTER Partner/Enterprise -- GHL sales-assisted (live).** Unchanged: a human marks a GHL deal Closed Won, its workflow calls `muster-ghl-webhook`, which calls `public.muster_ghl_provision`.
+- **`muster.onboard_client`:** stays dead and unused (deployed 2026-09-06, no caller, buggy `organization_members.role = 'owner'` insert -- see migration `20260906012143`'s header comment). The Stripe flow above does not use it and never will; do not resurrect it.
+
+## Critical-finding alerts
+
+`muster.autotriage()` (cron `muster-autotriage-15min`, offset `:07/:22/:37/:52` to avoid stampeding `muster-scan-due`) queues one row in `muster.notification_outbox` per newly-opened critical/high risk, addressed to that org's `executive`/`risk_owner` members, unless `organizations.critical_alerts_enabled = false`. `muster-alert-dispatch` (cron every 5 minutes) claims pending rows via `public.muster_engine_claim_alerts` and sends through Resend (`RESEND_API_KEY` edge function secret; from address `alerts@mail.28footsystems.com`). A failed send is requeued to `pending` for up to 5 total attempts (the 5-minute cron interval is the backoff), then dead-lettered to a terminal `failed` status, visible via `muster_admin_overview().alerts`. One alert per risk id, ever (unique index on `notification_outbox(entity_type, entity_id, category)`).
+
 ## Phase 2 and later (not started)
 
 - Browser engine (Playwright + axe-core) behind `browser_wcag_engine`; same evidence and finding contract.
-- AI narrative SITREP behind `ai_narrative`: model writes prose constrained to the cited claims; citations are validated before save.
+- Persist `ai_narrative` output into `muster.sitreps.sections` (today it's an ephemeral `muster-agent` tool call, not saved).
 - Telegram alerts to CORA (chat 1238597047) on new critical findings.
 - pgvector over `scan_evidence.excerpt` and `sitreps.content_md` for cross-scan semantic retrieval.
 - Multi-page crawl (`website_scan_settings.max_pages`).

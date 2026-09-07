@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sign in to your MUSTER workspace." />
+  <title>MUSTER — Sign In</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-border: #1f3358;
+      --surface-hover: #192b50;
+
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --amber: #fbbf24;
+      --rose: #f43f5e;
+      --emerald: #10b981;
+
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-gradient);
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    code { font-family: var(--font-mono); }
+
+    .topbar {
+      border-bottom: 1px solid var(--surface-border);
+      background: rgba(6, 10, 22, 0.72);
+      backdrop-filter: blur(8px);
+    }
+    .topbar-inner { max-width: 960px; margin: 0 auto; padding: 16px 28px; }
+    .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-serif); font-size: 18px; font-weight: 700; }
+    .brand small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500; }
+    .brand-mark { height: 22px; width: auto; align-self: center; filter: drop-shadow(0 0 6px var(--teal-glow)); }
+
+    select, button, input, textarea { font-family: var(--font-sans); }
+    .btn-ghost, .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border-radius: 6px; padding: 11px 16px; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid var(--surface-border);
+      background: var(--surface-card); color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-primary { background: var(--teal); color: #04211c; border-color: var(--teal); }
+    .btn-primary:hover { box-shadow: 0 0 0 3px var(--teal-glow); }
+    .btn-primary:disabled, .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 14px 0 6px; }
+    label:first-of-type { margin-top: 0; }
+    .hint { text-transform: none; font-weight: 500; letter-spacing: normal; color: var(--text-dim); }
+    input[type=email], input[type=password] {
+      width: 100%; background: var(--surface-card); border: 1px solid var(--surface-border); border-radius: 6px;
+      padding: 11px 12px; color: var(--text); font-size: 13.5px; outline: none;
+    }
+    input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }
+
+    .signin-wrap { max-width: 440px; margin: 0 auto; padding: 64px 24px 100px; }
+    .signin-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 14px; padding: 32px 30px; }
+    .signin-card h1 { font-family: var(--font-serif); font-size: 22px; margin: 0 0 8px; }
+    .signin-desc { color: var(--text-muted); font-size: 13.5px; margin: 0 0 22px; }
+    .signin-msg { font-size: 12.5px; color: var(--rose); min-height: 16px; margin: 12px 0 4px; }
+    .signin-msg.ok { color: var(--emerald); }
+    .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn-row .btn-primary, .btn-row .btn-ghost { flex: 1; min-width: 150px; }
+
+    .signin-footer { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--surface-border); font-size: 12px; color: var(--text-dim); text-align: center; }
+    .signin-footer a { color: var(--teal); font-weight: 600; }
+    .signin-footer p { margin: 0 0 8px; }
+    .signin-footer p:last-child { margin-bottom: 0; }
+
+    .center-msg { max-width: 420px; margin: 100px auto; text-align: center; padding: 0 24px; }
+    .center-msg h1 { font-family: var(--font-serif); font-size: 22px; margin-bottom: 10px; }
+    .center-msg p { color: var(--text-muted); font-size: 13.5px; }
+
+    /* ---------- Tooltips ---------- */
+    .app-tooltip {
+      position: fixed; z-index: 300; max-width: 280px; padding: 8px 11px; border-radius: 8px;
+      background: #0d1a33; border: 1px solid #2e4a78; color: #e6eefb;
+      font-family: var(--font-sans); font-size: 12px; font-weight: 500; line-height: 1.45;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); pointer-events: none; opacity: 0;
+      transform: translateY(3px); transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
+    [data-tooltip] { cursor: help; }
+    a[data-tooltip], button[data-tooltip] { cursor: pointer; }
+    [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SIGN IN</small></div>
+    </div>
+  </div>
+
+  <div class="signin-wrap">
+
+    <div id="checkingState" class="center-msg">
+      <p>Checking your session…</p>
+    </div>
+
+    <div id="signinState" hidden>
+      <div class="signin-card">
+        <h1>Sign in to your workspace</h1>
+        <p class="signin-desc">Live workspaces run real scans and produce cited SITREPs against your actual website. Enter your work email below.</p>
+        <form id="signinForm" onsubmit="return submitPassword(event)">
+          <label for="suEmail">Work email</label>
+          <input type="email" id="suEmail" required autocomplete="email" placeholder="you@company.com">
+          <label for="suPassword">Password <span class="hint">(optional — leave blank to use a magic link instead)</span></label>
+          <input type="password" id="suPassword" autocomplete="current-password" placeholder="Leave blank for a magic link">
+          <div class="signin-msg" id="signinMsg" role="status" aria-live="polite"></div>
+          <div class="btn-row">
+            <button type="button" class="btn-ghost" onclick="submitMagicLink()" data-tooltip="Emails a one-time sign-in link to the address above. No password needed.">✉ Send magic link</button>
+            <button type="submit" class="btn-primary" data-tooltip="Sign in with the email and password above.">Sign in →</button>
+          </div>
+        </form>
+        <div class="signin-footer">
+          <p>New to MUSTER? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
+          <p><a href="https://app.muster.28footsystems.com/app" data-tooltip="Opens the workspace with sample data, no sign-in required.">Just exploring? Continue with demo data →</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="sentState" class="center-msg" hidden>
+      <h1>Check your email</h1>
+      <p id="sentMsg">We sent a magic sign-in link to your address. Open it on this device to finish signing in.</p>
+      <p style="margin-top:14px;"><a href="#" onclick="backToForm(); return false;" data-tooltip="Return to the sign-in form.">← Use a different email</a></p>
+    </div>
+
+  </div>
+
+<script>
+  const SB_URL = 'https://mgtmqucaldkaxvxglguw.supabase.co';
+  const SB_KEY = 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww';
+  const WORKSPACE_URL = 'https://app.muster.28footsystems.com/app';
+  let sb = null;
+
+  function showState(id) {
+    ['checkingState', 'signinState', 'sentState'].forEach(s => {
+      document.getElementById(s).hidden = s !== id;
+    });
+  }
+
+  function setMsg(text, ok) {
+    const el = document.getElementById('signinMsg');
+    el.textContent = text || '';
+    el.classList.toggle('ok', !!ok);
+  }
+
+  function backToForm() { showState('signinState'); setMsg(''); }
+
+  async function submitMagicLink() {
+    const email = document.getElementById('suEmail').value.trim();
+    if (!email) { setMsg('Enter your email first.'); return; }
+    setMsg('Sending…', true);
+    try {
+      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: WORKSPACE_URL } });
+      if (error) throw error;
+      document.getElementById('sentMsg').textContent = `We sent a magic sign-in link to ${email}. Open it on this device to finish signing in.`;
+      showState('sentState');
+    } catch (err) { setMsg(err.message || String(err)); }
+  }
+
+  async function submitPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('suEmail').value.trim();
+    const password = document.getElementById('suPassword').value;
+    if (!email) { setMsg('Enter your email first.'); return false; }
+    if (!password) { setMsg('Enter your password, or use "Send magic link" instead.'); return false; }
+    setMsg('Signing in…', true);
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      window.location.href = WORKSPACE_URL;
+    } catch (err) { setMsg(err.message || String(err)); }
+    return false;
+  }
+
+  function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      setMsg('Could not load the sign-in service. Refresh and try again.');
+      showState('signinState');
+      return;
+    }
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) { window.location.href = WORKSPACE_URL; return; }
+      showState('signinState');
+      setTimeout(() => document.getElementById('suEmail')?.focus(), 50);
+    });
+  }
+
+  // Tooltip engine: event delegation on [data-tooltip], works for dynamically rendered content too.
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => { const t = findTarget(e.target); if (t) show(t); });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) { hide(); suppressed = true; } });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => { initTooltips(); init(); });
+</script>
+</body>
+</html>

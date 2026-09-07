@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MUSTER SITREP — comprehensive sample covering every finding category and severity." />
+  <title>MUSTER — Sample SITREP</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-border: #1f3358;
+      --surface-hover: #192b50;
+
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --amber: #fbbf24;
+      --rose: #f43f5e;
+      --emerald: #10b981;
+
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-gradient);
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+
+    .topbar {
+      border-bottom: 1px solid var(--surface-border);
+      background: rgba(6, 10, 22, 0.72);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-inner { max-width: 980px; margin: 0 auto; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-serif); font-size: 18px; font-weight: 700; }
+    .brand small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500; }
+    .brand-mark { height: 22px; width: auto; align-self: center; filter: drop-shadow(0 0 6px rgba(251,191,36,0.4)); }
+    .sample-banner {
+      font-family: var(--font-mono); font-size: 11px; color: var(--amber);
+      border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.08);
+      padding: 5px 11px; border-radius: 5px; letter-spacing: 0.02em;
+    }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 6px; padding: 7px 13px; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid var(--surface-border);
+      background: var(--surface-card); color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+
+    .report-head { padding: 34px 0 26px; }
+    .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+    .report-head h1 { font-family: var(--font-serif); font-size: clamp(1.6rem, 3.4vw, 2.2rem); margin: 0 0 8px; }
+    .report-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+
+    .score-row { display: flex; align-items: center; gap: 22px; margin: 22px 0 6px; flex-wrap: wrap; }
+    .gauge { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+    .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .gauge-value { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-value .num { font-family: var(--font-mono); font-size: 24px; font-weight: 700; line-height: 1; }
+    .gauge-value .of100 { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); }
+    .band-label { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+    .band-desc { color: var(--text-muted); font-size: 13px; margin-top: 4px; max-width: 46ch; }
+
+    .severity-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+    .sev-tile {
+      font-family: var(--font-mono); font-size: 11px; border-radius: 6px; padding: 8px 12px;
+      border: 1px solid var(--surface-border); background: var(--surface-card); min-width: 88px;
+    }
+    .sev-tile .n { font-size: 18px; font-weight: 700; display: block; }
+    .sev-tile.critical .n, .sev-tile.high .n { color: var(--rose); }
+    .sev-tile.medium .n { color: var(--amber); }
+    .sev-tile.low .n, .sev-tile.info .n { color: var(--teal); }
+
+    section.block { padding: 28px 0; border-top: 1px solid var(--surface-border); }
+    section.block h2 { font-family: var(--font-serif); font-size: 18px; margin: 0 0 4px; }
+    section.block .section-sub { color: var(--text-dim); font-size: 12px; margin: 0 0 16px; }
+
+    .claim-list { display: flex; flex-direction: column; gap: 10px; }
+    .claim { font-size: 14.5px; color: var(--text); padding-left: 18px; position: relative; }
+    .claim::before { content: '—'; position: absolute; left: 0; color: var(--text-dim); }
+    .cite { font-family: var(--font-mono); font-size: 10.5px; color: var(--teal); margin-left: 4px; white-space: nowrap; cursor: help; }
+
+    .plain-list { display: flex; flex-direction: column; gap: 12px; }
+    .plain-item { font-size: 13.5px; color: var(--text-muted); }
+    .plain-item b { color: var(--text); }
+
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.data-table th {
+      text-align: left; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-dim); padding: 8px 10px; border-bottom: 1px solid var(--surface-border);
+      position: sticky; top: 0; background: var(--bg);
+    }
+    table.data-table td { padding: 10px; border-bottom: 1px solid var(--surface-border); vertical-align: top; }
+    table.data-table tr:last-child td { border-bottom: none; }
+    .sev-chip {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 4px; display: inline-block; white-space: nowrap;
+    }
+    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
+    .sev-medium { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+    .sev-low, .sev-info { background: rgba(54, 226, 201, 0.15); color: var(--teal); }
+    .cat-chip {
+      font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+    .mono-cell { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+    .fw-refs { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); margin-top: 4px; }
+
+    .overflow-x { overflow-x: auto; }
+
+    footer.disclaimer {
+      border-top: 1px solid var(--surface-border); padding: 24px 0 0; margin-top: 20px;
+      font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); line-height: 1.7;
+    }
+
+    .app-tooltip {
+      position: fixed; z-index: 300; max-width: 300px; padding: 8px 11px; border-radius: 8px;
+      background: #0d1a33; border: 1px solid #2e4a78; color: #e6eefb;
+      font-family: var(--font-sans); font-size: 12px; font-weight: 500; line-height: 1.45;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); pointer-events: none; opacity: 0;
+      transform: translateY(3px); transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
+    [data-tooltip] { cursor: help; }
+
+    @media print {
+      .topbar, .btn-ghost, .no-print { display: none !important; }
+      body { background: #fff; color: #000; }
+      .wrap { max-width: 100%; padding: 0 24px; }
+      section.block { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SAMPLE SITREP</small></div>
+      <div class="sample-banner" data-tooltip="Every finding, evidence row, and score on this page is fictional, built to show the full range of what a SITREP covers. It is not a real assessment of any organization.">⚠ ILLUSTRATIVE SAMPLE — NOT A REAL ASSESSMENT</div>
+      <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this sample.">▣ Print / PDF</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div id="reportRoot"></div>
+  </div>
+
+<script>
+  // Comprehensive fictional SITREP — one finding per scan rule (31 total),
+  // spanning every category (accessibility, availability, governance,
+  // privacy, security, third_party) and every severity (critical through
+  // info), so the document demonstrates the full shape of a real SITREP.
+  const sampleSitrep = {
+    headline: "Meridian Advisory Group: posture 31/100 (red), 31 open findings, 2 critical",
+    generator: "deterministic-v1",
+    posture_score: 31,
+    posture_band: "red",
+    generated_at: "2026-09-06T09:14:22.000Z",
+    scan_id: 8842,
+    org_name: "Meridian Advisory Group",
+    website_name: "Meridian Advisory Group — Client Portal & Marketing Site",
+    website_url: "https://meridianadvisory.com",
+    sections: {
+      board_report: {
+        open: 31, critical: 2, high: 2, medium: 13, low: 10, info: 4,
+        claims: [
+          { id: "C1", text: "Overall website assurance posture is 31 of 100 (red). Two critical findings require action before anything else.", finding_ids: [8801, 8813], evidence_ids: [] },
+          { id: "C2", text: "The client login portal at portal.meridianadvisory.com/login did not respond within the probe timeout.", finding_ids: [8801], evidence_ids: [9321] },
+          { id: "C3", text: "The bare domain meridianadvisory.com (no www) serves its final page over plain HTTP with no upgrade to HTTPS.", finding_ids: [8813], evidence_ids: [9304] },
+          { id: "C4", text: "The http:// version of the site does not redirect to https://, and the careers.meridianadvisory.com microsite mixes HTTP resources into an HTTPS page.", finding_ids: [8814, 8823], evidence_ids: [9305, 9316] },
+          { id: "C5", text: "6 accessibility findings were identified against WCAG 2.2 AA, all at medium severity except one.", finding_ids: [8803,8804,8805,8806,8808,8809,8802], evidence_ids: [9306,9307,9308,9309] },
+          { id: "C6", text: "No privacy policy link is published, and the newsletter signup form submits to a non-HTTPS third-party endpoint.", finding_ids: [8815, 8817], evidence_ids: [9313, 9315] },
+          { id: "C7", text: "13 security header and cookie findings were identified, including missing CSP, missing clickjacking protection, and a session cookie without protective flags.", finding_ids: [8819,8820,8821,8822,8824,8825,8826,8827,8828], evidence_ids: [9303, 9317] },
+          { id: "C8", text: "6 external scripts from 4 hosts were inventoried on the marketing site.", finding_ids: [8831], evidence_ids: [9314] },
+          { id: "C9", text: "Crawl governance is incomplete: no robots.txt, no sitemap, and AI crawler access has not been deliberately decided.", finding_ids: [8810, 8811, 8812], evidence_ids: [9310, 9311] },
+          { id: "C10", text: "This scan added 31 findings, reopened 0, and resolved 0 compared with the previous state.", finding_ids: [], evidence_ids: [] }
+        ]
+      },
+      plain_english: {
+        items: [
+          { id: "P1", text: "Clients trying to log in cannot reach the portal at all right now. Fix: restore DNS, hosting, and the TLS certificate for portal.meridianadvisory.com immediately, ahead of everything else on this list.", finding_id: 8801 },
+          { id: "P2", text: "The main site's status API is slow to respond, which usually means visitors wait longer than they should. Fix: add caching or a CDN in front of it.", finding_id: 8802 },
+          { id: "P3", text: "The homepage doesn't declare its language, which confuses screen readers and translation tools. Fix: add lang=\"en\" to the html tag.", finding_id: 8803 },
+          { id: "P4", text: "The About page has no title, so it shows up blank in browser tabs and search results. Fix: give it a descriptive title.", finding_id: 8804 },
+          { id: "P5", text: "The homepage's hero image has no alt text, so a screen reader user gets no description of it. Fix: add meaningful alt text.", finding_id: 8805 },
+          { id: "P6", text: "Visitors on mobile cannot pinch-zoom anywhere on the site, which is a real barrier for low-vision users. Fix: remove the zoom restriction from the viewport tag.", finding_id: 8806 },
+          { id: "P7", text: "The Services page has no main heading, making it harder to navigate by screen reader. Fix: add one clear h1.", finding_id: 8807 },
+          { id: "P8", text: "The Contact form's fields aren't labeled for assistive technology, so a screen reader user can't tell what to type where. Fix: pair each field with a proper label.", finding_id: 8808 },
+          { id: "P9", text: "The footer's social media icons have no visible text or label, so a screen reader just says \"link\" with no context. Fix: add aria-label to each icon link.", finding_id: 8809 },
+          { id: "P10", text: "There's no robots.txt file, so search engines and AI crawlers have no explicit instructions for this site. Fix: publish one.", finding_id: 8810 },
+          { id: "P11", text: "There's no XML sitemap, which can slow down how thoroughly search engines index the site. Fix: generate one and reference it from robots.txt.", finding_id: 8811 },
+          { id: "P12", text: "The Insights blog's articles have no meta description, so search results show a generic snippet instead of a real summary. Fix: write one per article.", finding_id: 8812 },
+          { id: "P13", text: "Nobody has decided whether AI assistants like ChatGPT or Claude should be able to read this site. Fix: make that decision deliberately and record it in robots.txt.", finding_id: 8829 },
+          { id: "P14", text: "Paginated blog listings have no canonical link, which can cause search engines to treat near-duplicate pages as separate content. Fix: add canonical tags.", finding_id: 8830 },
+          { id: "P15", text: "There's no visible privacy policy link anywhere on the site, which most privacy laws require. Fix: add one to the footer of every page.", finding_id: 8815 },
+          { id: "P16", text: "An analytics tracker fires before a visitor interacts with the cookie consent banner. Fix: gate it behind actual consent.", finding_id: 8816 },
+          { id: "P17", text: "The newsletter signup form posts data to a third-party endpoint over plain HTTP, not HTTPS. Fix: switch that integration to an HTTPS endpoint and disclose it in the privacy policy.", finding_id: 8817 },
+          { id: "P18", text: "The plain http:// version of the site never redirects visitors to the secure https:// version. Fix: add a permanent redirect at the server or CDN.", finding_id: 8814 },
+          { id: "P19", text: "The www subdomain doesn't send the security header that tells browsers to always use HTTPS for it. Fix: add Strict-Transport-Security.", finding_id: 8819 },
+          { id: "P20", text: "The client portal subdomain does send that header, but its validity window is only about a week — far short of the recommended 6 months or more. Fix: raise the max-age.", finding_id: 8820 },
+          { id: "P21", text: "The site has no Content-Security-Policy, one of the strongest defenses against malicious script injection. Fix: publish one, starting in report-only mode.", finding_id: 8821 },
+          { id: "P22", text: "Nothing stops another site from loading this one inside an invisible frame (\"clickjacking\"). Fix: add frame-ancestors or X-Frame-Options.", finding_id: 8822 },
+          { id: "P23", text: "The bare domain's response doesn't tell browsers to treat file types strictly, a small but free hardening step that's missing. Fix: add X-Content-Type-Options: nosniff.", finding_id: 8824 },
+          { id: "P24", text: "The site doesn't control what referrer information leaks to other sites when a visitor clicks outbound links. Fix: add a Referrer-Policy header.", finding_id: 8825 },
+          { id: "P25", text: "Browser features like camera and microphone access aren't explicitly disabled, even though this site doesn't use them. Fix: add a Permissions-Policy header.", finding_id: 8826 },
+          { id: "P26", text: "The server response reveals the exact web server software and version in use, which helps an attacker target known vulnerabilities. Fix: remove or genericize that header.", finding_id: 8827 },
+          { id: "P27", text: "The careers.meridianadvisory.com microsite loads some resources over plain HTTP even though the page itself is HTTPS, which browsers flag as mixed content. Fix: change those references to HTTPS.", finding_id: 8823 },
+          { id: "P28", text: "The session cookie on the client portal is missing the flags that keep it from being stolen over an insecure connection or read by injected scripts. Fix: set Secure, HttpOnly, and SameSite.", finding_id: 8828 },
+          { id: "P29", text: "There's no published way for a security researcher to responsibly report a vulnerability they find. Fix: publish /.well-known/security.txt.", finding_id: 8818 },
+          { id: "P30", text: "The site's final page loads over plain HTTP with no certificate at all on the bare domain. Fix: install a TLS certificate and serve HTTPS only, everywhere.", finding_id: 8813 },
+          { id: "P31", text: "6 external scripts from 4 different hosts run on this site. None are inherently a problem, but each is worth a deliberate review. Fix: confirm each is still needed and add Subresource Integrity where supported.", finding_id: 8831 }
+        ]
+      },
+      top_findings: [
+        { rank: 1, rule_id: "AVAIL-001", category: "availability", severity: "critical", confidence: "high", finding_id: 8801, title: "Client portal unreachable", detail: "portal.meridianadvisory.com/login did not respond within the 10s probe timeout.", location: "portal.meridianadvisory.com/login", page_url: "https://portal.meridianadvisory.com/login", status: "open", remediation: "Confirm DNS, hosting, and TLS certificate. Check origin and CDN status pages. Restore service before any other remediation.", evidence_ids: [9321], framework_refs: { SOC_2: "A1.2", NIST_CSF: "DE.CM-1" } },
+        { rank: 2, rule_id: "SEC-013", category: "security", severity: "critical", confidence: "high", finding_id: 8813, title: "Final page served over HTTP", detail: "meridianadvisory.com (bare domain) resolves to a plain HTTP response with no certificate.", location: "meridianadvisory.com", page_url: "http://meridianadvisory.com", status: "open", remediation: "Install a TLS certificate and serve the site only over HTTPS.", evidence_ids: [9304], framework_refs: { PCI_DSS: "4.2.1", NIST_CSF: "PR.DS-2" } },
+        { rank: 3, rule_id: "SEC-001", category: "security", severity: "high", confidence: "high", finding_id: 8814, title: "HTTP does not redirect to HTTPS", detail: "http://meridianadvisory.com returns content directly instead of a 301/308 redirect.", location: "meridianadvisory.com", page_url: "http://meridianadvisory.com", status: "open", remediation: "Configure a permanent (301/308) redirect from http:// to https:// at the CDN or web server.", evidence_ids: [9305], framework_refs: { PCI_DSS: "4.2.1", NIST_CSF: "PR.DS-2" } },
+        { rank: 4, rule_id: "SEC-010", category: "security", severity: "high", confidence: "medium", finding_id: 8823, title: "Mixed content on an HTTPS page", detail: "careers.meridianadvisory.com loads 2 image resources over http:// despite being served over https://.", location: "careers.meridianadvisory.com", page_url: "https://careers.meridianadvisory.com", status: "open", remediation: "Change every http:// resource reference to https:// or a protocol-relative path.", evidence_ids: [9316], framework_refs: { NIST_CSF: "PR.DS-2" } },
+        { rank: 5, rule_id: "PRIV-001", category: "privacy", severity: "medium", confidence: "medium", finding_id: 8815, title: "No privacy policy link found", detail: "Scanned 14 links across the homepage and footer; none contained \"privacy\" in text or href.", location: "homepage footer", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add a visible footer link to a current privacy policy on every page.", evidence_ids: [9313], framework_refs: { GDPR: "Art. 13", CUSTOM: "CCPA 1798.130, CalOPPA" } },
+        { rank: 6, rule_id: "PRIV-003", category: "privacy", severity: "medium", confidence: "medium", finding_id: 8817, title: "Form submits to an insecure or external endpoint", detail: "The newsletter signup form action posts to http://forms.thirdpartyesp.example, not https.", location: "/newsletter", page_url: "https://meridianadvisory.com/newsletter", status: "open", remediation: "Post forms over HTTPS and document any third-party form processor in the privacy policy.", evidence_ids: [9315], framework_refs: { GDPR: "Art. 32", NIST_CSF: "PR.DS-2" } },
+        { rank: 7, rule_id: "SEC-004", category: "security", severity: "medium", confidence: "high", finding_id: 8821, title: "Missing Content-Security-Policy", detail: "No Content-Security-Policy header present on the homepage response.", location: "homepage response headers", page_url: "https://meridianadvisory.com", status: "open", remediation: "Publish a CSP. Start in report-only mode, then enforce script-src and object-src restrictions.", evidence_ids: [9303], framework_refs: { SOC_2: "CC6.6", NIST_CSF: "PR.PT-3" } },
+        { rank: 8, rule_id: "SEC-005", category: "security", severity: "medium", confidence: "high", finding_id: 8822, title: "Clickjacking protection missing", detail: "Neither X-Frame-Options nor a CSP frame-ancestors directive is present.", location: "homepage response headers", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add Content-Security-Policy: frame-ancestors 'self' or X-Frame-Options: SAMEORIGIN.", evidence_ids: [9303], framework_refs: { NIST_CSF: "PR.PT-3" } },
+        { rank: 9, rule_id: "SEC-002", category: "security", severity: "medium", confidence: "high", finding_id: 8819, title: "Missing Strict-Transport-Security header", detail: "www.meridianadvisory.com does not send a Strict-Transport-Security header.", location: "www.meridianadvisory.com", page_url: "https://www.meridianadvisory.com", status: "open", remediation: "Add Strict-Transport-Security: max-age=31536000; includeSubDomains after confirming every subdomain serves HTTPS.", evidence_ids: [9320], framework_refs: { NIST_CSF: "PR.DS-2" } },
+        { rank: 10, rule_id: "SEC-011", category: "security", severity: "medium", confidence: "high", finding_id: 8828, title: "Cookie set without protective flags", detail: "The portal session cookie is missing Secure, HttpOnly, and SameSite attributes.", location: "portal.meridianadvisory.com", page_url: "https://portal.meridianadvisory.com", status: "open", remediation: "Set Secure; HttpOnly; SameSite=Lax (or Strict) on session and auth cookies.", evidence_ids: [9317], framework_refs: { SOC_2: "CC6.1", NIST_CSF: "PR.DS-1" } },
+        { rank: 11, rule_id: "AVAIL-002", category: "availability", severity: "medium", confidence: "medium", finding_id: 8802, title: "Slow first response", detail: "api.meridianadvisory.com/status took 4,212 ms to respond to the first byte.", location: "api.meridianadvisory.com", page_url: "https://api.meridianadvisory.com/status", status: "open", remediation: "Enable caching or a CDN, reduce server-side work on the homepage, and check hosting capacity.", evidence_ids: [9322], framework_refs: { NIST_CSF: "PR.DS-4" } },
+        { rank: 12, rule_id: "A11Y-001", category: "accessibility", severity: "medium", confidence: "high", finding_id: 8803, title: "Page language not declared", detail: "The homepage's html element has no lang attribute.", location: "homepage <html>", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add lang=\"en\" (or the correct language code) to the html element.", evidence_ids: [9306], framework_refs: { WCAG: "3.1.1" } },
+        { rank: 13, rule_id: "A11Y-002", category: "accessibility", severity: "medium", confidence: "high", finding_id: 8804, title: "Page title missing or empty", detail: "/about has an empty <title> element.", location: "/about", page_url: "https://meridianadvisory.com/about", status: "open", remediation: "Add a descriptive title element that names the page and the site.", evidence_ids: [9307], framework_refs: { WCAG: "2.4.2" } },
+        { rank: 14, rule_id: "A11Y-003", category: "accessibility", severity: "medium", confidence: "medium", finding_id: 8805, title: "Images missing alternative text", detail: "The homepage hero image has no alt attribute.", location: "homepage hero", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add alt text describing each meaningful image. Use alt=\"\" for purely decorative images.", evidence_ids: [9306], framework_refs: { WCAG: "1.1.1" } },
+        { rank: 15, rule_id: "A11Y-004", category: "accessibility", severity: "medium", confidence: "high", finding_id: 8806, title: "Pinch zoom disabled", detail: "The viewport meta tag sets user-scalable=no sitewide.", location: "sitewide <head>", page_url: "https://meridianadvisory.com", status: "open", remediation: "Remove user-scalable=no and any maximum-scale below 2 from the viewport meta tag.", evidence_ids: [9306], framework_refs: { WCAG: "1.4.4" } },
+        { rank: 16, rule_id: "A11Y-006", category: "accessibility", severity: "medium", confidence: "medium", finding_id: 8808, title: "Form fields without an accessible label", detail: "3 of 4 fields on the Contact form have no associated label or aria-label.", location: "/contact", page_url: "https://meridianadvisory.com/contact", status: "open", remediation: "Pair each field with a label element (for/id) or add aria-label.", evidence_ids: [9308], framework_refs: { WCAG: "1.3.1", CUSTOM: "WCAG 4.1.2" } },
+        { rank: 17, rule_id: "A11Y-007", category: "accessibility", severity: "medium", confidence: "medium", finding_id: 8809, title: "Links with no discernible text", detail: "4 footer social-media icon links have no text content or aria-label.", location: "footer", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add visible text or aria-label to each link so its purpose is announced.", evidence_ids: [9309], framework_refs: { WCAG: "2.4.4", CUSTOM: "WCAG 4.1.2" } },
+        { rank: 18, rule_id: "A11Y-005", category: "accessibility", severity: "low", confidence: "high", finding_id: 8807, title: "No top-level heading", detail: "/services has no h1 element.", location: "/services", page_url: "https://meridianadvisory.com/services", status: "open", remediation: "Add a single h1 that describes the page.", evidence_ids: [9306], framework_refs: { WCAG: "2.4.6" } },
+        { rank: 19, rule_id: "GOV-001", category: "governance", severity: "low", confidence: "high", finding_id: 8810, title: "robots.txt missing", detail: "/robots.txt returned HTTP 404.", location: "/robots.txt", page_url: "https://meridianadvisory.com/robots.txt", status: "open", remediation: "Publish a robots.txt that allows desired crawlers and points to the sitemap.", evidence_ids: [9310], framework_refs: { CUSTOM: "Crawl governance" } },
+        { rank: 20, rule_id: "GOV-002", category: "governance", severity: "low", confidence: "high", finding_id: 8811, title: "XML sitemap not found", detail: "/sitemap.xml returned HTTP 404 and no sitemap was referenced in robots.txt.", location: "/sitemap.xml", page_url: "https://meridianadvisory.com/sitemap.xml", status: "open", remediation: "Generate an XML sitemap and reference it from robots.txt.", evidence_ids: [9311], framework_refs: { CUSTOM: "Crawl governance" } },
+        { rank: 21, rule_id: "SEC-003", category: "security", severity: "low", confidence: "high", finding_id: 8820, title: "Weak HSTS max-age", detail: "portal.meridianadvisory.com sends Strict-Transport-Security with max-age=604800 (7 days).", location: "portal.meridianadvisory.com", page_url: "https://portal.meridianadvisory.com", status: "open", remediation: "Raise max-age to at least 15552000 seconds (180 days), ideally 31536000.", evidence_ids: [9319], framework_refs: { NIST_CSF: "PR.DS-2" } },
+        { rank: 22, rule_id: "SEC-006", category: "security", severity: "low", confidence: "high", finding_id: 8824, title: "Missing X-Content-Type-Options", detail: "No X-Content-Type-Options header on the bare-domain response.", location: "meridianadvisory.com", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add X-Content-Type-Options: nosniff.", evidence_ids: [9303], framework_refs: { NIST_CSF: "PR.PT-3" } },
+        { rank: 23, rule_id: "SEC-007", category: "security", severity: "low", confidence: "high", finding_id: 8825, title: "Missing Referrer-Policy", detail: "No Referrer-Policy header present.", location: "homepage response headers", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add Referrer-Policy: strict-origin-when-cross-origin.", evidence_ids: [9303], framework_refs: { NIST_CSF: "PR.DS-5" } },
+        { rank: 24, rule_id: "SEC-008", category: "security", severity: "low", confidence: "high", finding_id: 8826, title: "Missing Permissions-Policy", detail: "No Permissions-Policy header present.", location: "homepage response headers", page_url: "https://meridianadvisory.com", status: "open", remediation: "Add Permissions-Policy disabling camera, microphone, geolocation, and payment unless used.", evidence_ids: [9303], framework_refs: { NIST_CSF: "PR.PT-3" } },
+        { rank: 25, rule_id: "SEC-009", category: "security", severity: "low", confidence: "high", finding_id: 8827, title: "Server software version disclosed", detail: "Server: nginx/1.18.0 is disclosed in the response headers.", location: "homepage response headers", page_url: "https://meridianadvisory.com", status: "open", remediation: "Remove or genericize Server and X-Powered-By headers at the web server or CDN.", evidence_ids: [9303], framework_refs: { NIST_CSF: "PR.IP-1" } },
+        { rank: 26, rule_id: "SEC-012", category: "security", severity: "low", confidence: "high", finding_id: 8818, title: "No security.txt disclosure policy", detail: "/.well-known/security.txt returned HTTP 404.", location: "/.well-known/security.txt", page_url: "https://meridianadvisory.com/.well-known/security.txt", status: "open", remediation: "Publish /.well-known/security.txt with Contact and Expires fields per RFC 9116.", evidence_ids: [9318], framework_refs: { NIST_CSF: "RS.CO-1", ISO_27001: "A.5.5" } },
+        { rank: 27, rule_id: "PRIV-002", category: "privacy", severity: "low", confidence: "medium", finding_id: 8816, title: "Third-party trackers loaded before consent could be verified", detail: "An analytics script begins firing before any interaction with the visible consent banner.", location: "homepage", page_url: "https://meridianadvisory.com", status: "open", remediation: "Confirm a consent mechanism gates these scripts where required, and list them in the privacy policy.", evidence_ids: [9314], framework_refs: { GDPR: "Art. 6, Art. 7", CUSTOM: "ePrivacy, CCPA opt-out" } },
+        { rank: 28, rule_id: "GOV-003", category: "governance", severity: "info", confidence: "high", finding_id: 8812, title: "Meta description missing", detail: "3 articles under /insights have no meta description.", location: "/insights", page_url: "https://meridianadvisory.com/insights", status: "open", remediation: "Add a meta description of 120 to 160 characters that states what the site does.", evidence_ids: [9312], framework_refs: { CUSTOM: "AIO readiness" } },
+        { rank: 29, rule_id: "GOV-004", category: "governance", severity: "info", confidence: "high", finding_id: 8829, title: "AI crawler directives", detail: "robots.txt does not exist, so no deliberate decision has been recorded for GPTBot, ClaudeBot, PerplexityBot, or Google-Extended.", location: "/robots.txt", page_url: "https://meridianadvisory.com/robots.txt", status: "open", remediation: "Decide deliberately which AI crawlers to allow and record the decision in robots.txt.", evidence_ids: [9310], framework_refs: { CUSTOM: "AIO readiness" } },
+        { rank: 30, rule_id: "GOV-005", category: "governance", severity: "info", confidence: "high", finding_id: 8830, title: "Canonical link missing", detail: "Paginated /insights?page=2 and /insights?page=3 have no canonical tag pointing to the preferred URL.", location: "/insights?page=2", page_url: "https://meridianadvisory.com/insights?page=2", status: "open", remediation: "Add a canonical link element pointing to the preferred URL of the page.", evidence_ids: [9312], framework_refs: { CUSTOM: "AIO readiness" } },
+        { rank: 31, rule_id: "TP-001", category: "third_party", severity: "info", confidence: "high", finding_id: 8831, title: "External script inventory", detail: "6 external script(s) from 4 host(s): googletagmanager.com, hotjar.com, intercom.io, cdn.jsdelivr.net.", location: "<script src>", page_url: "https://meridianadvisory.com", status: "open", remediation: "Review each host, remove unused scripts, and add Subresource Integrity where supported.", evidence_ids: [9314], framework_refs: { SOC_2: "CC9.2", NIST_CSF: "ID.SC-2" } }
+      ],
+      evidence_index: [
+        { evidence_id: 9301, url: "https://meridianadvisory.com", kind: "redirect_chain", http_status: 200, sha256: "4e2a04215bbbfacdacb2846459c5fe1f5bfcb1694", captured_at: "2026-09-06T09:12:03.000Z" },
+        { evidence_id: 9302, url: "https://meridianadvisory.com", kind: "http_response", http_status: 200, sha256: "1639befe8960876adb4280d32b3470dd8c8cf5d41", captured_at: "2026-09-06T09:12:03.000Z" },
+        { evidence_id: 9303, url: "https://meridianadvisory.com", kind: "header_set", http_status: 200, sha256: "371733a1a3027c17ede5e7a9bc07e83c9a77c130d", captured_at: "2026-09-06T09:12:03.000Z" },
+        { evidence_id: 9304, url: "http://meridianadvisory.com", kind: "http_probe", http_status: 200, sha256: "178a08bcc6565bb5653a674245d1d956d8dd1ae0f", captured_at: "2026-09-06T09:12:04.000Z" },
+        { evidence_id: 9305, url: "http://meridianadvisory.com", kind: "http_probe", http_status: 200, sha256: "ec6af75ad935401f374b22b0677584dc13c48501d", captured_at: "2026-09-06T09:12:04.000Z" },
+        { evidence_id: 9306, url: "https://meridianadvisory.com", kind: "html_excerpt", http_status: 200, sha256: "d5617f8f67df0141bffa2385ff55fb2f8be8d090c", captured_at: "2026-09-06T09:12:05.000Z" },
+        { evidence_id: 9307, url: "https://meridianadvisory.com/about", kind: "html_excerpt", http_status: 200, sha256: "a780cc285ac3996a00dd10fa08125792371fb90a1", captured_at: "2026-09-06T09:12:06.000Z" },
+        { evidence_id: 9308, url: "https://meridianadvisory.com/contact", kind: "html_excerpt", http_status: 200, sha256: "1639befe8960876adb4280d32b3470dd8c8cf5d99", captured_at: "2026-09-06T09:12:07.000Z" },
+        { evidence_id: 9309, url: "https://meridianadvisory.com", kind: "html_excerpt", http_status: 200, sha256: "2fa1c9e8b7d6543210fedcba9876543210abcdef1", captured_at: "2026-09-06T09:12:07.000Z" },
+        { evidence_id: 9310, url: "https://meridianadvisory.com/robots.txt", kind: "robots_txt", http_status: 404, sha256: "d5617f8f67df0141bffa2385ff55fb2f8be8d0900", captured_at: "2026-09-06T09:12:08.000Z" },
+        { evidence_id: 9311, url: "https://meridianadvisory.com/sitemap.xml", kind: "sitemap", http_status: 404, sha256: "a780cc285ac3996a00dd10fa08125792371fb90a2", captured_at: "2026-09-06T09:12:08.000Z" },
+        { evidence_id: 9312, url: "https://meridianadvisory.com/insights", kind: "html_excerpt", http_status: 200, sha256: "9b8a7c6d5e4f30201928374655463728190abcd3", captured_at: "2026-09-06T09:12:09.000Z" },
+        { evidence_id: 9313, url: "https://meridianadvisory.com", kind: "html_excerpt", http_status: 200, sha256: "c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e", captured_at: "2026-09-06T09:12:09.000Z" },
+        { evidence_id: 9314, url: "https://meridianadvisory.com", kind: "script_scan", http_status: 200, sha256: "77e6d5c4b3a29180716253748596071829384756", captured_at: "2026-09-06T09:12:10.000Z" },
+        { evidence_id: 9315, url: "https://meridianadvisory.com/newsletter", kind: "form_scan", http_status: 200, sha256: "88f7e6d5c4b3a291807162534475960718293847", captured_at: "2026-09-06T09:12:10.000Z" },
+        { evidence_id: 9316, url: "https://careers.meridianadvisory.com", kind: "header_set", http_status: 200, sha256: "99a8b7c6d5e4f30291827364554637281900abcd", captured_at: "2026-09-06T09:12:11.000Z" },
+        { evidence_id: 9317, url: "https://portal.meridianadvisory.com", kind: "cookie_header", http_status: 200, sha256: "aa1b2c3d4e5f60718293a4b5c6d7e8f90123456ab", captured_at: "2026-09-06T09:12:12.000Z" },
+        { evidence_id: 9318, url: "https://meridianadvisory.com/.well-known/security.txt", kind: "security_txt", http_status: 404, sha256: "1639befe8960876adb4280d32b3470dd8c8cf5d55", captured_at: "2026-09-06T09:12:12.000Z" },
+        { evidence_id: 9319, url: "https://portal.meridianadvisory.com", kind: "header_set", http_status: 200, sha256: "bb2c3d4e5f60718293a4b5c6d7e8f90123456abcd", captured_at: "2026-09-06T09:12:13.000Z" },
+        { evidence_id: 9320, url: "https://www.meridianadvisory.com", kind: "header_set", http_status: 200, sha256: "cc3d4e5f60718293a4b5c6d7e8f90123456abcdef", captured_at: "2026-09-06T09:12:13.000Z" },
+        { evidence_id: 9321, url: "https://portal.meridianadvisory.com/login", kind: "http_probe", http_status: 0, sha256: "dd4e5f60718293a4b5c6d7e8f90123456abcdef12", captured_at: "2026-09-06T09:12:14.000Z" },
+        { evidence_id: 9322, url: "https://api.meridianadvisory.com/status", kind: "http_probe", http_status: 200, sha256: "ee5f60718293a4b5c6d7e8f90123456abcdef1234", captured_at: "2026-09-06T09:12:15.000Z" }
+      ]
+    }
+  };
+
+  function bandColor(band) {
+    if (band === 'green') return 'var(--emerald)';
+    if (band === 'amber') return 'var(--amber)';
+    return 'var(--rose)';
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function citeBadge(claim) {
+    const fs = (claim.finding_ids || []).map(id => `F${id}`);
+    const es = (claim.evidence_ids || []).map(id => `E${id}`);
+    const all = [...fs, ...es];
+    if (!all.length) return '';
+    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to.">[${all.join('][')}]</span>`;
+  }
+
+  function render(sitrep) {
+    const root = document.getElementById('reportRoot');
+    const board = sitrep.sections.board_report;
+    const claims = board.claims || [];
+    const plain = sitrep.sections.plain_english.items || [];
+    const findings = sitrep.sections.top_findings || [];
+    const evidence = sitrep.sections.evidence_index || [];
+    const score = sitrep.posture_score;
+    const band = sitrep.posture_band;
+    const color = bandColor(band);
+
+    root.innerHTML = `
+      <div class="report-head">
+        <p class="eyebrow">SITREP · ${escapeHtml(sitrep.generator.toUpperCase())} · SCAN #${sitrep.scan_id}</p>
+        <h1>${escapeHtml(sitrep.headline)}</h1>
+        <div class="report-meta">Organization: ${escapeHtml(sitrep.org_name)} · Target: ${escapeHtml(sitrep.website_url)} · Generated ${new Date(sitrep.generated_at).toLocaleString()}</div>
+
+        <div class="score-row">
+          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer.">
+            <svg viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="42" fill="none" stroke="#1f3358" stroke-width="8"></circle>
+              <circle cx="48" cy="48" r="42" fill="none" stroke="${color}" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="${264 - (264 * score / 100)}"></circle>
+            </svg>
+            <div class="gauge-value"><span class="num" style="color:${color}">${score}</span><span class="of100">/ 100</span></div>
+          </div>
+          <div>
+            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now.">● ${band.toUpperCase()} POSTURE</div>
+            <div class="band-desc">${board.open} open findings across every category MUSTER checks — accessibility, availability, governance, privacy, security, and third-party.</div>
+          </div>
+        </div>
+
+        <div class="severity-strip">
+          <div class="sev-tile critical" data-tooltip="Findings that need action immediately — active breach or outage risk."><span class="n">${board.critical}</span>Critical</div>
+          <div class="sev-tile high" data-tooltip="Serious findings that should be fixed this week."><span class="n">${board.high}</span>High</div>
+          <div class="sev-tile medium" data-tooltip="Real gaps worth fixing on a normal remediation timeline."><span class="n">${board.medium}</span>Medium</div>
+          <div class="sev-tile low" data-tooltip="Worth fixing, not urgent."><span class="n">${board.low}</span>Low</div>
+          <div class="sev-tile info" data-tooltip="Informational — a planning item, not a risk by itself."><span class="n">${board.info}</span>Info</div>
+        </div>
+      </div>
+
+      <section class="block">
+        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below.">Board Report</h2>
+        <p class="section-sub">10 claims, every one traceable to a finding [F] or evidence [E] id</p>
+        <div class="claim-list">
+          ${claims.map(c => `<div class="claim">${escapeHtml(c.text)}${citeBadge(c)}</div>`).join('')}
+        </div>
+      </section>
+
+      <section class="block">
+        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h2>
+        <p class="section-sub">${plain.length} items — one per finding</p>
+        <div class="plain-list">
+          ${plain.map(p => `<div class="plain-item">${escapeHtml(p.text)}</div>`).join('')}
+        </div>
+      </section>
+
+      <section class="block">
+        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity, spanning all six finding categories.">Top Findings</h2>
+        <p class="section-sub">${findings.length} findings — accessibility, availability, governance, privacy, security, third-party</p>
+        <div class="overflow-x">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Rule</th><th>Category</th><th>Finding</th><th>Severity</th><th>Remediation</th></tr></thead>
+            <tbody>
+              ${findings.map(f => `<tr>
+                <td class="mono-cell">${f.rank}</td>
+                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding.">${escapeHtml(f.rule_id)}</td>
+                <td class="cat-chip">${escapeHtml(f.category.replace('_',' '))}</td>
+                <td>${escapeHtml(f.title)}<div style="color:var(--text-dim); font-size:11.5px; margin-top:3px;">${escapeHtml(f.detail)}</div><div style="color:var(--text-dim); font-size:11px; margin-top:2px;">${escapeHtml(f.location)}</div>${Object.keys(f.framework_refs||{}).length ? `<div class="fw-refs">${Object.entries(f.framework_refs).map(([k,v])=>`${k}: ${v}`).join(' · ')}</div>` : ''}</td>
+                <td><span class="sev-chip sev-${f.severity}">${f.severity}</span></td>
+                <td style="color:var(--text-muted);">${escapeHtml(f.remediation)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites.">Evidence Index</h2>
+        <p class="section-sub">${evidence.length} captured evidence rows</p>
+        <div class="overflow-x">
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Kind</th><th>URL</th><th>HTTP</th><th>Captured</th><th>SHA-256</th></tr></thead>
+            <tbody>
+              ${evidence.map(e => `<tr>
+                <td class="mono-cell">E${e.evidence_id}</td>
+                <td class="mono-cell">${escapeHtml(e.kind)}</td>
+                <td style="word-break:break-all;">${escapeHtml(e.url)}</td>
+                <td class="mono-cell">${e.http_status}</td>
+                <td class="mono-cell">${new Date(e.captured_at).toLocaleString()}</td>
+                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture.">${escapeHtml(e.sha256.slice(0,12))}…</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
+        MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
+        <br>This document is a fictional composite sample built to demonstrate every finding category and severity level MUSTER can surface. It does not describe a real organization.
+      </footer>
+    `;
+  }
+
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    let current = null, suppressed = false;
+    function findTarget(node) { return node && node.closest ? node.closest('[data-tooltip]') : null; }
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target; tip.textContent = text; tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+    function position(target) {
+      const r = target.getBoundingClientRect(); const t = tip.getBoundingClientRect(); const gap = 8;
+      let top = r.top - t.height - gap; if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`; tip.style.left = `${Math.round(left)}px`;
+    }
+    function hide() { if (current) current.removeAttribute('aria-describedby'); current = null; tip.classList.remove('show'); }
+    document.addEventListener('mouseover', (e) => { const t = findTarget(e.target); if (t && t !== current) show(t); else if (!t && current) hide(); });
+    document.addEventListener('mouseout', (e) => { const t = findTarget(e.target); if (t && !t.contains(e.relatedTarget)) hide(); });
+    document.addEventListener('focusin', (e) => { const t = findTarget(e.target); if (t) show(t); });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) { hide(); suppressed = true; } });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => { initTooltips(); render(sampleSitrep); });
+</script>
+</body>
+</html>

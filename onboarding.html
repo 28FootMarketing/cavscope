@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MUSTER guided onboarding — a server-enforced, seven-step setup for your workspace." />
+  <title>MUSTER — Guided Onboarding</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-border: #1f3358;
+      --surface-hover: #192b50;
+
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --amber: #fbbf24;
+      --rose: #f43f5e;
+      --emerald: #10b981;
+
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-gradient);
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    code { font-family: var(--font-mono); }
+
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 28px 100px; }
+
+    .topbar {
+      border-bottom: 1px solid var(--surface-border);
+      background: rgba(6, 10, 22, 0.72);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .topbar-inner { max-width: 900px; margin: 0 auto; padding: 16px 28px; }
+    .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-serif); font-size: 18px; font-weight: 700; }
+    .brand small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.1em; font-weight: 500; }
+    .brand-mark { height: 22px; width: auto; align-self: center; filter: drop-shadow(0 0 6px var(--teal-glow)); }
+
+    select, button, input, textarea { font-family: var(--font-sans); }
+    .btn-ghost, .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 6px; padding: 9px 16px; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid var(--surface-border);
+      background: var(--surface-card); color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+    .btn-primary { background: var(--teal); color: #04211c; border-color: var(--teal); }
+    .btn-primary:hover { box-shadow: 0 0 0 3px var(--teal-glow); }
+    .btn-primary:disabled, .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 14px 0 6px; }
+    label:first-of-type { margin-top: 0; }
+    .hint { text-transform: none; font-weight: 500; letter-spacing: normal; color: var(--text-dim); }
+    input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {
+      width: 100%; background: var(--surface-card); border: 1px solid var(--surface-border); border-radius: 6px;
+      padding: 10px 12px; color: var(--text); font-size: 13.5px; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }
+    textarea { resize: vertical; min-height: 90px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .center-msg { max-width: 420px; margin: 100px auto; text-align: center; }
+    .center-msg h1 { font-family: var(--font-serif); font-size: 24px; margin-bottom: 10px; }
+    .center-msg p { color: var(--text-muted); font-size: 14px; margin-bottom: 22px; }
+
+    .onboarding-grid { display: grid; grid-template-columns: 220px 1fr; gap: 28px; padding: 36px 0; align-items: start; }
+    @media (max-width: 720px) { .onboarding-grid { grid-template-columns: 1fr; } }
+
+    .stepper { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 88px; }
+    .stepper-item { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-left: 2px solid transparent; padding-left: 12px; }
+    .stepper-dot {
+      width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex-shrink: 0;
+      background: var(--surface-card); border: 1px solid var(--surface-border); color: var(--text-dim);
+    }
+    .stepper-label { font-size: 12.5px; color: var(--text-dim); }
+    .stepper-current { border-left-color: var(--teal); }
+    .stepper-current .stepper-dot { background: var(--teal); border-color: var(--teal); color: #04211c; }
+    .stepper-current .stepper-label { color: var(--text); font-weight: 700; }
+    .stepper-done .stepper-dot { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); }
+    .stepper-done .stepper-label { color: var(--text-muted); }
+
+    .step-panel { min-width: 0; }
+    .step-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 12px; padding: 28px 30px; }
+    .step-card h2 { font-family: var(--font-serif); font-size: 20px; margin: 0 0 8px; }
+    .step-desc { color: var(--text-muted); font-size: 14px; margin: 0 0 18px; }
+    .step-msg { font-size: 12.5px; color: var(--rose); min-height: 16px; margin: 10px 0 4px; }
+    .step-msg.ok { color: var(--emerald); }
+
+    .code-block {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: #04070f; border: 1px solid var(--surface-border); border-radius: 8px; padding: 12px 14px;
+      margin-bottom: 16px; overflow-x: auto;
+    }
+    .code-block code { font-size: 12px; color: var(--teal); white-space: nowrap; }
+
+    .repeat-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .repeat-row input { margin: 0; }
+
+    .sev-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .sev-chip {
+      font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 4px; display: inline-block;
+    }
+    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
+    .sev-medium { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+    .sev-low, .sev-info { background: rgba(54, 226, 201, 0.15); color: var(--teal); }
+
+    .claim-list { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px; }
+    .claim { font-size: 13.5px; color: var(--text); padding-left: 16px; position: relative; }
+    .claim::before { content: '—'; position: absolute; left: 0; color: var(--text-dim); }
+
+    .scan-pulse {
+      width: 14px; height: 14px; border-radius: 50%; background: var(--teal);
+      box-shadow: 0 0 0 0 var(--teal-glow); animation: pulse 1.6s ease-out infinite; margin: 6px 0 4px;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(54, 226, 201, 0.5); }
+      70% { box-shadow: 0 0 0 14px rgba(54, 226, 201, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(54, 226, 201, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) { .scan-pulse { animation: none; } }
+
+    .ack-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin: 4px 0 6px; text-transform: none; font-weight: 500; }
+    .ack-row input { width: auto; }
+
+    .done-card { text-align: center; }
+
+    /* ---------- Tooltips ---------- */
+    .app-tooltip {
+      position: fixed; z-index: 300; max-width: 280px; padding: 8px 11px; border-radius: 8px;
+      background: #0d1a33; border: 1px solid #2e4a78; color: #e6eefb;
+      font-family: var(--font-sans); font-size: 12px; font-weight: 500; line-height: 1.45;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55); pointer-events: none; opacity: 0;
+      transform: translateY(3px); transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
+    [data-tooltip] { cursor: help; }
+    a[data-tooltip], button[data-tooltip], select[data-tooltip] { cursor: pointer; }
+    [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ GUIDED ONBOARDING</small></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div id="loadingState" class="center-msg">
+      <p>Loading your onboarding…</p>
+    </div>
+
+    <div id="noSessionState" class="center-msg" hidden>
+      <h1>Onboarding link required</h1>
+      <p>Open the invite link from your email to begin. If you've lost it, contact whoever set up your MUSTER workspace.</p>
+    </div>
+
+    <div id="noOnboardingState" class="center-msg" hidden>
+      <h1>Nothing to onboard</h1>
+      <p>Your onboarding is already complete, or there's no guided setup in progress for this account.</p>
+      <a class="btn-primary" href="https://app.muster.28footsystems.com/app" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+    </div>
+
+    <div id="fatalState" class="center-msg" hidden>
+      <h1>Something went wrong</h1>
+      <p id="fatalMsg"></p>
+    </div>
+
+    <div id="onboardingRoot" hidden>
+      <div class="onboarding-grid">
+        <aside class="stepper" id="stepper" data-tooltip="Your progress. Each step unlocks only once the one before it is verified server-side — this isn't a checklist you can skip ahead on."></aside>
+        <div class="step-panel" id="stepPanel"></div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  const SB_URL = 'https://mgtmqucaldkaxvxglguw.supabase.co';
+  const SB_KEY = 'sb_publishable_rOuTmA0sBw6aW-WtM6TozQ_61iCiAww';
+  let sb = null;
+  let state = null;
+  let scanPollTimer = null;
+  let scanPollStarted = null;
+
+  function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      showFatal('Could not load the sign-in service. Refresh and try again.');
+      return;
+    }
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) loadState(); else showState('noSessionState');
+    });
+  }
+
+  async function rpc(fn, args) {
+    const { data, error } = await sb.rpc(fn, args || {});
+    if (error) throw new Error(error.message || String(error));
+    return data;
+  }
+
+  function showState(id) {
+    ['loadingState', 'noSessionState', 'noOnboardingState', 'fatalState', 'onboardingRoot'].forEach(s => {
+      document.getElementById(s).hidden = s !== id;
+    });
+  }
+  function showFatal(msg) {
+    document.getElementById('fatalMsg').textContent = msg;
+    showState('fatalState');
+  }
+  function showStepError(elId, msg, ok) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.toggle('ok', !!ok);
+  }
+
+  async function loadState() {
+    showState('loadingState');
+    clearScanPoll();
+    try {
+      state = await rpc('muster_onboarding_state');
+    } catch (e) {
+      showFatal(`Could not load onboarding: ${e.message}`);
+      return;
+    }
+    if (state.error === 'no_onboarding_in_progress') { showState('noOnboardingState'); return; }
+    showState('onboardingRoot');
+    render();
+  }
+
+  async function completeStep(key, payload) {
+    state = await rpc('muster_onboarding_complete_step', { p_step_key: key, p_payload: payload || {} });
+    render();
+  }
+
+  function currentStep() {
+    return (state.steps || []).find(s => !s.completed_at) || null;
+  }
+
+  function render() {
+    renderStepper();
+    const step = currentStep();
+    const panel = document.getElementById('stepPanel');
+    if (!step) { panel.innerHTML = renderDone(); return; }
+    switch (step.key) {
+      case 'account': panel.innerHTML = renderAccountStep(); break;
+      case 'organization': panel.innerHTML = renderOrgStep(); break;
+      case 'website': panel.innerHTML = renderWebsiteStep(); break;
+      case 'risk_appetite': panel.innerHTML = renderAppetiteStep(); break;
+      case 'team': panel.innerHTML = renderTeamStep(); break;
+      case 'first_scan': panel.innerHTML = renderScanStep(); attemptFirstScan(); break;
+      case 'sitrep': panel.innerHTML = renderSitrepLoading(); loadSitrepStep(); break;
+      default: panel.innerHTML = `<div class="step-card"><p class="step-desc">Unknown step "${escapeHtml(step.key)}". Refresh to try again.</p></div>`;
+    }
+  }
+
+  function renderStepper() {
+    const cur = currentStep();
+    document.getElementById('stepper').innerHTML = (state.steps || []).map(s => {
+      const done = !!s.completed_at;
+      const isCurrent = cur && cur.key === s.key;
+      const status = done ? 'done' : (isCurrent ? 'current' : 'locked');
+      const tip = done ? 'Completed.' : (isCurrent ? 'You are here.' : 'Locked until the earlier steps are complete.');
+      return `<div class="stepper-item stepper-${status}" data-tooltip="${escapeHtml(tip)}">
+        <span class="stepper-dot">${done ? '✓' : s.step_no}</span>
+        <span class="stepper-label">${escapeHtml(s.title)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- Step 1: account ----------
+  function renderAccountStep() {
+    return `
+      <div class="step-card">
+        <h2>Step 1 of 7 — Secure your account</h2>
+        <p class="step-desc">You're signed in via your invite link. Set a real password before continuing.</p>
+        <form onsubmit="return submitAccount(event)">
+          <label for="pw1">New password</label>
+          <input type="password" id="pw1" minlength="8" required autocomplete="new-password" data-tooltip="At least 8 characters.">
+          <label for="pw2">Confirm password</label>
+          <input type="password" id="pw2" minlength="8" required autocomplete="new-password">
+          <div class="step-msg" id="accountMsg"></div>
+          <button type="submit" class="btn-primary">Set password & continue →</button>
+        </form>
+      </div>`;
+  }
+  async function submitAccount(e) {
+    e.preventDefault();
+    const pw1 = document.getElementById('pw1').value;
+    const pw2 = document.getElementById('pw2').value;
+    if (pw1 !== pw2) { showStepError('accountMsg', 'Passwords do not match.'); return false; }
+    try {
+      const { error } = await sb.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+      await completeStep('account', { password_set: true });
+    } catch (err) { showStepError('accountMsg', err.message || String(err)); }
+    return false;
+  }
+
+  // ---------- Step 2: organization ----------
+  function timezoneField(selected) {
+    let zones = [];
+    try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = []; }
+    let guess = '';
+    try { guess = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { /* noop */ }
+    const val = selected || guess;
+    if (!zones.length) {
+      return `<input type="text" id="fTimezone" value="${escapeHtml(val)}" required data-tooltip="IANA timezone, e.g. America/New_York.">`;
+    }
+    if (val && !zones.includes(val)) zones = [val, ...zones];
+    return `<select id="fTimezone" required data-tooltip="Used to time-stamp your SITREPs and schedule scans.">
+      ${zones.map(z => `<option value="${escapeHtml(z)}" ${z === val ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
+    </select>`;
+  }
+  function renderOrgStep() {
+    const o = state.organization || {};
+    return `
+      <div class="step-card">
+        <h2>Step 2 of 7 — Confirm your organization</h2>
+        <p class="step-desc">This is what shows on your SITREPs and in your workspace.</p>
+        <form onsubmit="return submitOrg(event)">
+          <label for="fName">Organization name</label>
+          <input type="text" id="fName" value="${escapeHtml(o.name || '')}" required minlength="2">
+          <label for="fIndustry">Industry</label>
+          <input type="text" id="fIndustry" value="${escapeHtml(o.industry || '')}" required minlength="2" placeholder="e.g. Fintech SaaS">
+          <label for="fCountry">Country code <span class="hint">(2 letters, e.g. US)</span></label>
+          <input type="text" id="fCountry" value="${escapeHtml(o.country_code || '')}" required maxlength="2" minlength="2"
+            style="text-transform:uppercase;" oninput="this.value = this.value.toUpperCase()">
+          <label for="fTimezone">Timezone</label>
+          ${timezoneField(o.timezone)}
+          <div class="step-msg" id="orgMsg"></div>
+          <button type="submit" class="btn-primary">Save & continue →</button>
+        </form>
+      </div>`;
+  }
+  async function submitOrg(e) {
+    e.preventDefault();
+    try {
+      await completeStep('organization', {
+        name: document.getElementById('fName').value.trim(),
+        industry: document.getElementById('fIndustry').value.trim(),
+        country_code: document.getElementById('fCountry').value.trim().toUpperCase(),
+        timezone: document.getElementById('fTimezone').value.trim(),
+      });
+    } catch (err) { showStepError('orgMsg', err.message || String(err)); }
+    return false;
+  }
+
+  // ---------- Step 3: website verification ----------
+  function renderWebsiteStep() {
+    const w = state.website || {};
+    const tag = `<meta name="muster-verification" content="${w.verification_token || ''}">`;
+    return `
+      <div class="step-card">
+        <h2>Step 3 of 7 — Verify you own the website</h2>
+        <p class="step-desc">Paste this exact tag into the <code>&lt;head&gt;</code> of <strong>${escapeHtml(w.url || '')}</strong>, then click Verify. Scanning stays off until this passes.</p>
+        <div class="code-block" data-tooltip="Copy this tag exactly, including the quotes, into your site's <head>.">
+          <code id="verifyTag">${escapeHtml(tag)}</code>
+          <button type="button" class="btn-ghost" onclick="copyVerifyTag()" data-tooltip="Copies the tag above to your clipboard.">⧉ Copy</button>
+        </div>
+        <div class="step-msg" id="websiteMsg"></div>
+        <button type="button" class="btn-primary" id="verifyBtn" onclick="verifyWebsite()" data-tooltip="Fetches your site right now and checks for the tag above.">Verify ownership →</button>
+      </div>`;
+  }
+  function copyVerifyTag() {
+    const text = document.getElementById('verifyTag').textContent;
+    navigator.clipboard?.writeText(text).then(
+      () => showStepError('websiteMsg', 'Copied to clipboard.', true),
+      () => showStepError('websiteMsg', 'Could not copy — select and copy the tag manually.')
+    );
+  }
+  async function verifyWebsite() {
+    const btn = document.getElementById('verifyBtn');
+    btn.disabled = true;
+    showStepError('websiteMsg', 'Checking your site…', true);
+    try {
+      const { data, error } = await sb.functions.invoke('muster-verify-site');
+      if (error) throw error;
+      if (!data.ok) {
+        const reasons = {
+          tag_not_found: 'The tag was not found on your homepage yet. Make sure it is saved and live, then try again.',
+          fetch_failed: `Could not fetch your site: ${data.detail || 'unknown error'}.`,
+          no_onboarding_website: 'No website found for your onboarding. Refresh the page.',
+          mark_failed: 'Verification succeeded but saving it failed. Try again.',
+        };
+        showStepError('websiteMsg', reasons[data.reason] || `Verification failed: ${data.reason || 'unknown reason'}.`);
+        btn.disabled = false;
+        return;
+      }
+      await completeStep('website', {});
+    } catch (err) {
+      showStepError('websiteMsg', err.message || String(err));
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- Step 4: risk appetite ----------
+  function renderAppetiteStep() {
+    const ra = state.risk_appetite || {};
+    return `
+      <div class="step-card">
+        <h2>Step 4 of 7 — Set your risk appetite</h2>
+        <p class="step-desc">This defines what MUSTER treats as acceptable exposure for your organization.</p>
+        <form onsubmit="return submitAppetite(event)">
+          <label for="raStatement">Risk appetite statement <span class="hint" id="raCount">(min 40 characters)</span></label>
+          <textarea id="raStatement" rows="4" required
+            oninput="document.getElementById('raCount').textContent = '(' + this.value.length + '/40 min)'"
+            data-tooltip="What risk your organization will and will not accept, in your own words.">${escapeHtml(ra.statement && ra.statement !== 'Default risk appetite pending client review.' ? ra.statement : '')}</textarea>
+          <div class="two-col">
+            <div>
+              <label for="raCritical">Critical threshold</label>
+              <input type="number" id="raCritical" min="0" value="${ra.critical_threshold ?? 0}" required data-tooltip="Number of open critical findings that trigger immediate escalation.">
+            </div>
+            <div>
+              <label for="raHigh">High threshold</label>
+              <input type="number" id="raHigh" min="0" value="${ra.high_threshold ?? 2}" required data-tooltip="Must be at least the critical threshold.">
+            </div>
+          </div>
+          <label for="raCadence">Review cadence</label>
+          <select id="raCadence" required data-tooltip="How often this statement gets formally re-reviewed.">
+            ${[['monthly', 'Monthly'], ['quarterly', 'Quarterly'], ['semi_annual', 'Semi-Annual'], ['annual', 'Annual']]
+              .map(([v, l]) => `<option value="${v}" ${(ra.review_cadence || 'quarterly') === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+          <div class="step-msg" id="appetiteMsg"></div>
+          <button type="submit" class="btn-primary">Save & continue →</button>
+        </form>
+      </div>`;
+  }
+  async function submitAppetite(e) {
+    e.preventDefault();
+    const statement = document.getElementById('raStatement').value.trim();
+    const critical = parseInt(document.getElementById('raCritical').value, 10);
+    const high = parseInt(document.getElementById('raHigh').value, 10);
+    if (statement.length < 40) { showStepError('appetiteMsg', 'Statement must be at least 40 characters.'); return false; }
+    if (high < critical) { showStepError('appetiteMsg', 'High threshold must be at least the critical threshold.'); return false; }
+    try {
+      await completeStep('risk_appetite', {
+        statement, critical_threshold: critical, high_threshold: high,
+        review_cadence: document.getElementById('raCadence').value,
+      });
+    } catch (err) { showStepError('appetiteMsg', err.message || String(err)); }
+    return false;
+  }
+
+  // ---------- Step 5: team ----------
+  function renderTeamStep() {
+    return `
+      <div class="step-card">
+        <h2>Step 5 of 7 — Risk owner & SITREP recipients</h2>
+        <p class="step-desc">You (the account owner) are the risk owner. Add at least one email to receive SITREPs.</p>
+        <form onsubmit="return submitTeam(event)">
+          <label>SITREP recipients <span class="hint">(at least one)</span></label>
+          <div id="recipientRows" class="repeat-rows">
+            <div class="repeat-row"><input type="email" class="recipient-input" placeholder="you@company.com" required></div>
+          </div>
+          <button type="button" class="btn-ghost" onclick="addRow('recipientRows','recipient-input')" data-tooltip="Add another email to the recipient list.">+ Add recipient</button>
+
+          <label style="margin-top:18px;">Invite teammates <span class="hint">(optional)</span></label>
+          <div id="inviteRows" class="repeat-rows">
+            <div class="repeat-row"><input type="email" class="invite-input" placeholder="teammate@company.com"></div>
+          </div>
+          <button type="button" class="btn-ghost" onclick="addRow('inviteRows','invite-input')" data-tooltip="Sends a workspace invite once your onboarding is complete.">+ Add teammate</button>
+
+          <div class="step-msg" id="teamMsg"></div>
+          <button type="submit" class="btn-primary" style="margin-top:18px;">Save & continue →</button>
+        </form>
+      </div>`;
+  }
+  function addRow(containerId, cls) {
+    const row = document.createElement('div');
+    row.className = 'repeat-row';
+    row.innerHTML = `<input type="email" class="${cls}" placeholder="name@company.com">`;
+    document.getElementById(containerId).appendChild(row);
+  }
+  async function submitTeam(e) {
+    e.preventDefault();
+    const recipients = [...document.querySelectorAll('.recipient-input')].map(i => i.value.trim()).filter(Boolean);
+    const invites = [...document.querySelectorAll('.invite-input')].map(i => i.value.trim()).filter(Boolean);
+    if (!recipients.length) { showStepError('teamMsg', 'At least one SITREP recipient email is required.'); return false; }
+    try { await completeStep('team', { sitrep_recipients: recipients, invites }); }
+    catch (err) { showStepError('teamMsg', err.message || String(err)); }
+    return false;
+  }
+
+  // ---------- Step 6: first scan ----------
+  function renderScanStep() {
+    return `
+      <div class="step-card">
+        <h2>Step 6 of 7 — Run your first scan</h2>
+        <p class="step-desc" id="scanStatus">Queuing your first scan…</p>
+        <div class="scan-pulse" data-tooltip="MUSTER is fetching and checking your site right now. This usually takes under two minutes."></div>
+      </div>`;
+  }
+  function clearScanPoll() {
+    if (scanPollTimer) { clearInterval(scanPollTimer); scanPollTimer = null; }
+    scanPollStarted = null;
+  }
+  function updateScanStatus() {
+    const el = document.getElementById('scanStatus');
+    if (!el) return;
+    const secs = Math.max(0, Math.round((Date.now() - scanPollStarted) / 1000));
+    el.textContent = `Scanning your site… ${secs}s elapsed. This usually finishes in under two minutes.`;
+  }
+  async function attemptFirstScan() {
+    clearScanPoll();
+    try {
+      await completeStep('first_scan', {});
+      return;
+    } catch (e) {
+      if (!/first scan queued/i.test(e.message || '')) { showStepError('scanStatus', e.message || String(e)); return; }
+      scanPollStarted = Date.now();
+      updateScanStatus();
+      scanPollTimer = setInterval(async () => {
+        try {
+          await rpc('muster_onboarding_complete_step', { p_step_key: 'first_scan', p_payload: {} }).then(next => { state = next; clearScanPoll(); render(); });
+        } catch (e2) {
+          if (/first scan queued/i.test(e2.message || '')) updateScanStatus();
+          else { clearScanPoll(); showStepError('scanStatus', e2.message || String(e2)); }
+        }
+      }, 6000);
+    }
+  }
+
+  // ---------- Step 7: SITREP ----------
+  function renderSitrepLoading() {
+    return `<div class="step-card"><h2>Step 7 of 7 — Read your first SITREP</h2><p class="step-desc">Loading your report…</p></div>`;
+  }
+  async function loadSitrepStep() {
+    let sitrep = null;
+    try { sitrep = await rpc('muster_latest_sitrep', { p_website_id: state.website.id }); } catch (e) { /* render scan summary only */ }
+    const scan = state.latest_scan || {};
+    const summary = scan.summary || {};
+    const bySev = summary.open_by_severity || {};
+    const board = sitrep && sitrep.sections && sitrep.sections.board_report;
+    document.getElementById('stepPanel').innerHTML = `
+      <div class="step-card">
+        <h2>Step 7 of 7 — Read your first SITREP</h2>
+        ${sitrep ? `
+          <p class="step-desc">${escapeHtml(sitrep.headline || 'Situation Report')}</p>
+          <div class="sev-chip-row">
+            ${['critical', 'high', 'medium', 'low', 'info'].filter(s => bySev[s]).map(s => `<span class="sev-chip sev-${s}">${bySev[s]} ${s}</span>`).join('') || '<span class="sev-chip sev-low">0 open findings</span>'}
+          </div>
+          ${board && board.claims && board.claims.length ? `<div class="claim-list">${board.claims.slice(0, 5).map(c => `<div class="claim">${escapeHtml(c.text)}</div>`).join('')}</div>` : ''}
+          <p class="step-desc" style="margin-top:4px;" data-tooltip="One number from 0-100 summarizing exposure across all open findings. Higher is safer.">Posture score: <strong style="color:var(--text);">${sitrep.posture_score ?? '—'}/100</strong> (${escapeHtml(sitrep.posture_band || 'unknown')})</p>
+        ` : `<p class="step-desc">Scan complete — ${summary.new ?? 0} new finding(s), ${summary.resolved ?? 0} resolved. Your full report is generating; it will be in your workspace shortly.</p>`}
+        <label class="ack-row"><input type="checkbox" id="ackBox"> I've read this SITREP</label>
+        <div class="step-msg" id="sitrepMsg"></div>
+        <button type="button" class="btn-primary" onclick="submitSitrepAck()">Finish onboarding →</button>
+      </div>`;
+  }
+  async function submitSitrepAck() {
+    if (!document.getElementById('ackBox').checked) { showStepError('sitrepMsg', 'Check the box to confirm you read the report.'); return; }
+    try { await completeStep('sitrep', { acknowledged: true }); }
+    catch (err) { showStepError('sitrepMsg', err.message || String(err)); }
+  }
+
+  function renderDone() {
+    return `
+      <div class="step-card done-card">
+        <h2>You're all set</h2>
+        <p class="step-desc">Onboarding is complete. Your workspace is live and scanning on the cadence you set.</p>
+        <a class="btn-primary" href="https://app.muster.28footsystems.com/app" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+      </div>`;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // Tooltip engine: event delegation on [data-tooltip], works for dynamically rendered content too.
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => { const t = findTarget(e.target); if (t) show(t); });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) { hide(); suppressed = true; } });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => { initTooltips(); init(); });
+</script>
+</body>
+</html>

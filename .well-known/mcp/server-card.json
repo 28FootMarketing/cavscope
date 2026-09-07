@@ -1,0 +1,101 @@
+{
+  "name": "MUSTER Agent",
+  "version": "1.0.0",
+  "description": "AI agent gateway for MUSTER website assurance. Access findings, generate narratives, and run autonomous workflows.",
+  "serverInfo": {
+    "name": "muster",
+    "version": "1.0.0",
+    "protocol": "json-rpc",
+    "protocolVersion": "2025-06-18"
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    },
+    "agentLoop": true,
+    "maxSteps": 5
+  },
+  "endpoints": {
+    "mcp": {
+      "url": "https://<project>.supabase.co/functions/v1/muster-agent",
+      "transport": "streamable-http",
+      "auth": {
+        "scheme": "apiKey",
+        "location": "header",
+        "name": "x-muster-api-key",
+        "prefix": "mk_"
+      },
+      "description": "MCP JSON-RPC 2.0 endpoint"
+    },
+    "rest": {
+      "url": "https://<project>.supabase.co/functions/v1/muster-agent",
+      "transport": "http",
+      "auth": {
+        "scheme": "apiKey",
+        "location": "header",
+        "name": "x-muster-api-key",
+        "prefix": "mk_"
+      },
+      "description": "REST tool call interface"
+    },
+    "openapi": {
+      "url": "https://<project>.supabase.co/functions/v1/muster-agent/openapi.json",
+      "format": "openapi3.1",
+      "description": "OpenAPI 3.1 schema for agent discovery"
+    },
+    "catalog": {
+      "url": "https://<project>.supabase.co/functions/v1/muster-agent",
+      "format": "json",
+      "description": "Public tool catalog with JSON Schema"
+    }
+  },
+  "auth": {
+    "method": "apiKey",
+    "location": "header",
+    "name": "x-muster-api-key",
+    "description": "API key issued by public.muster_create_api_key. Prefix: mk_. Also accepted as Authorization Bearer token.",
+    "getKey": "public.muster_create_api_key (Pro plan owner or super admin)"
+  },
+  "tools": {
+    "dynamic": true,
+    "description": "Tools available per workspace authorization. Use tools/list to discover.",
+    "common": [
+      {
+        "name": "list_findings",
+        "description": "Query findings by website, status, category"
+      },
+      {
+        "name": "get_finding",
+        "description": "Retrieve finding detail with evidence"
+      },
+      {
+        "name": "list_websites",
+        "description": "Search scanned websites"
+      },
+      {
+        "name": "ai_narrative",
+        "description": "Generate finding narrative via agentic loop"
+      }
+    ]
+  },
+  "features": {
+    "agentLoop": {
+      "enabled": true,
+      "maxSteps": 5,
+      "description": "Claude can call tools iteratively within ai_narrative"
+    },
+    "authorization": {
+      "description": "All tool calls authorized via Postgres RLS by organization"
+    },
+    "streaming": false
+  },
+  "documentation": {
+    "readme": "https://github.com/28FootMarketing/muster/blob/main/AGENTS.md",
+    "openapi": "https://<project>.supabase.co/functions/v1/muster-agent/openapi.json",
+    "source": "https://github.com/28FootMarketing/muster/blob/main/supabase/functions/muster-agent/index.ts"
+  },
+  "organization": {
+    "name": "28 Foot Systems",
+    "url": "https://muster.28footsystems.com"
+  }
+}
