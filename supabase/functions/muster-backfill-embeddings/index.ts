@@ -213,6 +213,17 @@ Deno.serve(async (req: Request) => {
     return json({ error: "method not allowed" }, 405);
   }
 
+  // Shared-secret auth, the same pattern muster-watchdog uses. verify_jwt is
+  // false on this function, so without this check the endpoint is fully
+  // anonymous -- and it spends real OpenRouter credit per record embedded.
+  // Callers send x-muster-secret; the value lives in vault as muster_cron_secret
+  // and is read through public.muster_engine_secret().
+  const { data: secret } = await db.rpc("muster_engine_secret");
+  const provided = req.headers.get("x-muster-secret") ?? "";
+  if (!secret || provided !== secret) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
+
   try {
     const body = (await req.json().catch(() => ({}))) as Record<
       string,
