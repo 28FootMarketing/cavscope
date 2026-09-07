@@ -31,21 +31,28 @@ Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 supabase/
   config.toml
   migrations/
-    20260904120000_muster_phase1_scan_engine.sql        rules, scans, evidence, findings, sitreps, engine, SITREP generator
-    20260904120100_muster_onboarding_brand_flags_agents.sql  plans, countries, jurisdictions, laws, brand, prefs, flags, agents, keys, vault secret
-    20260904120200_muster_tenancy_rls.sql               membership helpers, grants, RLS on every muster table
-    20260904120300_muster_public_rpc.sql                public.muster_* surface (43 functions)
-    20260904120400_muster_cron.sql                      muster-scan-due every 15 minutes
+    20260904034922_muster_phase1_scan_engine.sql        rules, scans, evidence, findings, sitreps, engine, SITREP generator
+    20260904035255_muster_onboarding_brand_flags_agents.sql  plans, countries, jurisdictions, laws, brand, prefs, flags, agents, keys, vault secret
+    20260904035402_muster_tenancy_rls.sql               membership helpers, grants, RLS on every muster table
+    20260904035802_muster_public_rpc.sql                public.muster_* surface (43 functions)
+    20260904035815_muster_cron.sql                      muster-scan-due every 15 minutes
+    README.md                                           filename <-> applied version contract. Read before adding one.
   functions/
     muster-scan/index.ts    HTTP-native scanner (31 rules), verify_jwt on, shared secret header
     muster-agent/index.ts   MCP (JSON-RPC 2.0, streamable HTTP) + REST gateway, API-key auth
     muster-backfill-embeddings/index.ts  drains muster.embedding_queue, shared secret header
 ```
 
-The five phase-1 migrations above are the original set; many more have shipped since (retrieval, admin URL
-runner, guided onboarding, cron observability). `supabase/migrations/` is the record -- this list is not
-maintained per-migration. Treat the live project as the source of truth and reconcile with
+The five phase-1 migrations above are the original set; many more have shipped since (retrieval, admin
+URL runner, guided onboarding, cron observability). `supabase/migrations/` is the record -- this list is
+not maintained per-migration. Treat the live project as the source of truth and reconcile with
 `mcp__Supabase__list_migrations` rather than trusting this block.
+
+Every migration file is named after the version `apply_migration` assigned it, which that tool takes from
+its own clock and not from the filename. `supabase/migrations/README.md` is the contract: which files
+consolidate several applied versions, which applied versions had no file until they were recovered from
+`supabase_migrations.schema_migrations`, and the two pre-repo `sentinel` renames that are deliberately
+not shipped.
 
 ## Access model
 
