@@ -21,7 +21,16 @@ understand. This is a standing requirement; do not wait to be asked again per pa
 
 ## Other notes
 
-- `index.html` = public landing page (`muster.28footsystems.com`). Its two workspace CTAs link to
+- **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
+  page, `/onboarding` is `onboarding.html`, `/sitrep` is `sitrep.html`, `/sitrep/sample` is
+  `sitrep-sample.html`. The older `*.muster.28footsystems.com` subdomains still resolve and are
+  deliberately kept alive — magic-link emails and onboarding invites already delivered point at
+  `app.muster.28footsystems.com/app`, and retiring those hosts would strand every link in the wild.
+  Retire them only once nothing outstanding references them. The workspace and sign-in pages have
+  **not** moved to `muster.partners`: `signin.html` must share a Supabase session origin with
+  `app.html`, so splitting them across hosts breaks password sign-in persistence. Move both or
+  neither.
+- `index.html` = public landing page (`muster.partners`, and `muster.28footsystems.com`). Its two workspace CTAs link to
   `app.muster.28footsystems.com/` (root) — `signin.html`, a real, dedicated sign-in page (email + magic
   link, or email + password), not a modal, and not straight into the workspace SPA. The workspace SPA
   (`app.html`) itself lives at `app.muster.28footsystems.com/app`, not at that host's root — an
@@ -35,12 +44,12 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   resolves to `signin.html` (kept as an alias, in `middleware.js`) alongside the root. `app.html` still
   has its own in-app sign-in modal (`Live.openAuth()`) for anyone who lands on `/app` directly without a
   session; don't remove it when touching `signin.html`. `sitrep.html` = a signed-in, tenant-scoped SITREP viewer
-  (`sitrep.muster.28footsystems.com`) — reuses the same Supabase Auth session and `public.muster_*` RPCs
+  (`muster.partners/sitrep`, or `sitrep.muster.28footsystems.com`) — reuses the same Supabase Auth session and `public.muster_*` RPCs
   as `app.html`; RLS decides what each signed-in user can see, same as everywhere else. It is real data,
-  not a demo. `sitrep-sample.html` (`sitrep.muster.28footsystems.com/sample`) is the **one remaining**
+  not a demo. `sitrep-sample.html` (`muster.partners/sitrep/sample`, or `sitrep.muster.28footsystems.com/sample`) is the **one remaining**
   static, no-auth, fictional SITREP covering every finding category and severity — a reference/sales
   asset, not real data.
-- `onboarding.html` (`onboarding.muster.28footsystems.com`) is the **real**, server-enforced guided
+- `onboarding.html` (`muster.partners/onboarding`, or `onboarding.muster.28footsystems.com`) is the **real**, server-enforced guided
   onboarding wizard for a paid client provisioned via `muster.onboard_client()` (Stripe checkout ->
   Supabase Auth invite -> this page). It is not a demo and has no local/client-side state machine: every
   gate lives in Postgres (`muster.onboarding_steps`, `public.muster_onboarding_state()`,
@@ -58,10 +67,12 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   in a dedicated internal sandbox org (`organizations.is_admin_sandbox`), never in a real tenant's risk
   register. This is separate from the guided onboarding flow above and from `sitrep-sample.html` — three
   different tools for three different jobs, not competing demos.
-- Subdomain routing is handled by `middleware.js` (Vercel Routing Middleware, using `@vercel/functions`).
+- Host and path routing is handled by `middleware.js` (Vercel Routing Middleware, using `@vercel/functions`).
   `vercel.json`'s declarative `rewrites`/`has` cannot branch on the Host header — only real code can — so
-  don't reintroduce host-conditional `vercel.json` rewrites for new subdomains; add another `if (host === ...)`
-  branch to `middleware.js` instead.
+  don't reintroduce host-conditional `vercel.json` rewrites for new hosts; add another `if (host === ...)`
+  branch to `middleware.js` instead. Path matching goes through `isUnder(path, base)` so `/sitrep/sample`
+  matches the `/sitrep` family while `/sitrepfoo` does not, and `normalize()` strips trailing slashes.
+  There is no `vercel.json` in this repo; don't add one for routing.
 - Migration files are named after the version `apply_migration` actually assigned, not after
   when you wrote them — the tool assigns the version from its own clock and ignores the filename.
   After applying, read the version back and name the file that. See
