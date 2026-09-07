@@ -15,12 +15,12 @@ import { AI_NARRATIVE_SYSTEM_PROMPT } from "./prompt.ts";
 // comes from that same RPC. Only the model call itself happens here, since Postgres can't make it.
 //
 // ai_narrative requires the OPENROUTER_API_KEY secret (supabase secrets set OPENROUTER_API_KEY=...).
-// Model defaults to OPENROUTER_MODEL if set, else anthropic/claude-sonnet-4.5 -- confirm the exact
-// OpenRouter slug for the Claude version you want and override via that env var if it differs.
+// Model defaults to OPENROUTER_MODEL if set, else anthropic/claude-sonnet-5 (confirmed live on
+// OpenRouter's catalog) -- override via that env var to point at a different Claude version.
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const PROTOCOL_VERSION = "2025-06-18";
-const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-sonnet-4.5";
+const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-sonnet-5";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
