@@ -62,7 +62,7 @@ create or replace function muster.q_search_findings(p_website_id bigint, p_query
 returns table(finding_id bigint, title text, rule_id text, severity text, chunk_text text, similarity float)
 language sql
 stable
-set search_path = ''
+set search_path = 'public, muster'
 as $$
   select
     f.id,
@@ -70,12 +70,12 @@ as $$
     f.rule_id,
     f.severity,
     fe.chunk_text,
-    (1 - (fe.embedding <-> p_query_embedding))::float as similarity
+    (1 - pow(fe.embedding <-> p_query_embedding, 2) / 4)::float as similarity
   from muster.finding_embeddings fe
   join muster.findings f on f.id = fe.finding_id
   where fe.website_id = p_website_id
     and f.status in ('open', 'reopened')
-    and (1 - (fe.embedding <-> p_query_embedding))::float >= p_threshold
+    and (1 - pow(fe.embedding <-> p_query_embedding, 2) / 4)::float >= p_threshold
   order by similarity desc
   limit p_limit;
 $$;
@@ -85,7 +85,7 @@ create or replace function muster.q_search_evidence(p_website_id bigint, p_query
 returns table(evidence_id bigint, finding_id bigint, chunk_text text, similarity float)
 language sql
 stable
-set search_path = ''
+set search_path = 'public, muster'
 as $$
   select
     se.id,
@@ -158,7 +158,7 @@ create or replace function public.muster_engine_search_findings(
 returns jsonb
 language plpgsql
 security definer
-set search_path = ''
+set search_path = 'public, muster'
 as $$
 declare
   v_key_org bigint := nullif(p_ctx->>'organization_id', '')::bigint;
@@ -204,7 +204,7 @@ create or replace function public.muster_engine_search_evidence(
 returns jsonb
 language plpgsql
 security definer
-set search_path = ''
+set search_path = 'public, muster'
 as $$
 declare
   v_key_org bigint := nullif(p_ctx->>'organization_id', '')::bigint;
