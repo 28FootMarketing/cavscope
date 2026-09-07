@@ -59,6 +59,19 @@ function publicOrigin(req: Request, url: URL): string {
   return `${req.headers.get("x-forwarded-proto") ?? "https"}://${url.host}`;
 }
 
+// The edge runtime also strips the /functions/v1 prefix before the request
+// reaches the function, so url.pathname is "/muster-agent" -- everything built
+// from it (OpenAPI servers[0].url, the MCP discovery urls, the catalog's
+// endpoint) advertised a URL that 404s when an agent actually calls it.
+// Verified live 2026-09-07: the catalog returned
+// https://<project>.supabase.co/muster-agent. Put the prefix back when the
+// runtime has taken it off.
+function publicPath(url: URL): string {
+  return url.pathname.startsWith("/functions/v1/")
+    ? url.pathname
+    : `/functions/v1/${url.pathname.replace(/^\/+/, "")}`;
+}
+
 async function resolveKey(req: Request) {
   const key = req.headers.get("x-muster-api-key") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!key || !key.startsWith("mk_")) return { ctx: null, error: "missing x-muster-api-key header" };
@@ -77,7 +90,7 @@ async function tools() {
 
 async function generateOpenAPISchema(req: Request) {
   const url = new URL(req.url);
-  const baseUrl = `${publicOrigin(req, url)}${url.pathname.replace(/\/openapi\.json$/, "")}`;
+  const baseUrl = `${publicOrigin(req, url)}${publicPath(url).replace(/\/openapi\.json$/, "")}`;
   const toolList = await tools();
 
   // Build POST /muster-agent request body schema (tool call)
@@ -602,7 +615,7 @@ Deno.serve(async (req: Request) => {
     try {
       return json({ name: "muster", version: "1.0.0", protocolVersion: PROTOCOL_VERSION, transport: "streamable-http",
         auth: { header: "x-muster-api-key", issue: "public.muster_create_api_key (Pro plan or super admin)" },
-        endpoint: publicOrigin(req, url) + url.pathname, tools: await tools() });
+        endpoint: publicOrigin(req, url) + publicPath(url), tools: await tools() });
     } catch (e) { return json({ error: String(e) }, 500); }
   }
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -623,7 +636,7 @@ Deno.serve(async (req: Request) => {
     const params = (body.params ?? {}) as Record<string, unknown>;
     try {
       if (method === "initialize") {
-        const baseUrl = `${publicOrigin(req, url)}${url.pathname.replace(/\/?$/, "")}`;
+        const baseUrl = `${publicOrigin(req, url)}${publicPath(url).replace(/\/?$/, "")}`;
         return json({ jsonrpc: "2.0", id, result: { protocolVersion: PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "muster", version: "1.0.0" },
           instructions: `You are connected to MUSTER website assurance as agent "${(ctx as { agent_name: string }).agent_name}". Every finding and SITREP claim carries evidence ids; cite them (E<id>, F<id>) when reporting to humans. Statuses reflect scanner evidence, not legal certification.`,
