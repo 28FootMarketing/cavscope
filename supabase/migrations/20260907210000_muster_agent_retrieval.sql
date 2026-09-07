@@ -62,7 +62,6 @@ create or replace function muster.q_search_findings(p_website_id bigint, p_query
 returns table(finding_id bigint, title text, rule_id text, severity text, chunk_text text, similarity float)
 language sql
 stable
-set search_path = 'public, muster'
 as $$
   select
     f.id,
@@ -85,7 +84,6 @@ create or replace function muster.q_search_evidence(p_website_id bigint, p_query
 returns table(evidence_id bigint, finding_id bigint, chunk_text text, similarity float)
 language sql
 stable
-set search_path = 'public, muster'
 as $$
   select
     se.id,
