@@ -401,19 +401,26 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
   return await callToolRaw(ctx, name, args);
 }
 
-async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: string, maxSteps = 5): Promise<{ messages: Array<{ role: string; content: unknown }>; finalText: string }> {
+async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: string, maxSteps = 5): Promise<{ messages: Array<Record<string, unknown>>; finalText: string }> {
   const apiKey = openRouterKey();
   if (!apiKey) throw new Error("agent loop requires MUSTER_OPENROUTER_API_KEY (or OPENROUTER_API_KEY)");
 
-  // Fetch tool definitions in Claude format
+  // OpenRouter's /chat/completions is OpenAI-shaped. Tools go as
+  // {type:"function", function:{name, description, parameters}}, NOT Anthropic's
+  // {name, description, input_schema}.
   const toolList = await tools();
-  const claudeTools = toolList.map((t) => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.inputSchema,
+  const openaiTools = toolList.map((t) => ({
+    type: "function",
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.inputSchema,
+    },
   }));
 
-  const messages: Array<{ role: string; content: unknown }> = [
+  // Widened past {role, content}: assistant turns carry tool_calls and tool
+  // turns carry tool_call_id.
+  const messages: Array<Record<string, unknown>> = [
     { role: "user", content: userPrompt },
   ];
 
@@ -433,7 +440,7 @@ async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: stri
           max_tokens: 2000,
           temperature: 0.3,
           reasoning: { enabled: false },
-          tools: claudeTools,
+          tools: openaiTools,
           messages: [
             { role: "system", content: systemPrompt },
             ...messages,
@@ -456,67 +463,48 @@ async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: stri
     const assistantMessage = choice.message;
     if (!assistantMessage) throw new Error("agent loop returned no message");
 
-    // Add assistant response to messages
+    // OpenAI shape, not Anthropic's: message.content is a string (null when the
+    // model only called tools), tool calls live in message.tool_calls, and the
+    // reason is finish_reason ("stop" | "tool_calls" | "length"). Reading
+    // stop_reason and treating content as an array of typed blocks silently
+    // produced an empty finalText on every call, which then failed JSON.parse.
+    const toolCalls: Array<{ id?: string; function?: { name?: string; arguments?: string } }> =
+      Array.isArray(assistantMessage.tool_calls) ? assistantMessage.tool_calls : [];
+    const contentText = typeof assistantMessage.content === "string" ? assistantMessage.content : "";
+
     messages.push({
       role: "assistant",
-      content: assistantMessage.content ?? [],
+      content: assistantMessage.content ?? null,
+      ...(toolCalls.length > 0 ? { tool_calls: assistantMessage.tool_calls } : {}),
     });
 
-    // Check stop reason
-    if (choice.stop_reason === "end_turn") {
-      // Extract final text content from the response
-      const finalText = (Array.isArray(assistantMessage.content) ? assistantMessage.content : [])
-        .filter((c: { type?: string }) => c?.type === "text")
-        .map((c: { text?: string }) => c.text || "")
-        .join("");
-      return { messages, finalText };
+    if (toolCalls.length === 0) {
+      // No tools requested, so this turn is the answer regardless of how the
+      // provider labelled finish_reason. Truncation is the one case where the
+      // text is not trustworthy and must not be parsed as a whole answer.
+      if (choice.finish_reason === "length") {
+        throw new Error("agent loop response was truncated (finish_reason: length)");
+      }
+      return { messages, finalText: contentText };
     }
 
-    // If tool_use, execute tools and add results
-    if (choice.stop_reason === "tool_use" && Array.isArray(assistantMessage.content)) {
-      const toolResults: Array<{ type: string; tool_use_id: string; content: string }> = [];
-      let hasToolCalls = false;
-
-      for (const block of assistantMessage.content) {
-        if (block.type === "tool_use") {
-          hasToolCalls = true;
-          try {
-            const toolResult = await callTool(ctx, block.name, block.input);
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: block.id,
-              content: JSON.stringify(toolResult),
-            });
-          } catch (e) {
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: block.id,
-              content: `Error: ${(e as Error).message}`,
-            });
-          }
-        }
+    // Tool results are their own role:"tool" messages keyed by tool_call_id,
+    // not tool_result blocks inside a user message.
+    for (const call of toolCalls) {
+      const name = call?.function?.name ?? "";
+      let args: Record<string, unknown> = {};
+      try {
+        args = call?.function?.arguments ? JSON.parse(call.function.arguments) : {};
+      } catch {
+        args = {};
       }
-
-      if (hasToolCalls) {
-        messages.push({
-          role: "user",
-          content: toolResults,
-        });
-      } else {
-        // No tool calls in the content, stop looping
-        const finalText = (Array.isArray(assistantMessage.content) ? assistantMessage.content : [])
-          .filter((c: { type?: string }) => c?.type === "text")
-          .map((c: { text?: string }) => c.text || "")
-          .join("");
-        return { messages, finalText };
+      let resultText: string;
+      try {
+        resultText = JSON.stringify(await callTool(ctx, name, args));
+      } catch (e) {
+        resultText = `Error: ${(e as Error).message}`;
       }
-    } else if (choice.stop_reason !== "tool_use") {
-      // Stop reason is neither tool_use nor end_turn, return what we have
-      const finalText = (Array.isArray(assistantMessage.content) ? assistantMessage.content : [])
-        .filter((c: { type?: string }) => c?.type === "text")
-        .map((c: { text?: string }) => c.text || "")
-        .join("");
-      return { messages, finalText };
+      messages.push({ role: "tool", tool_call_id: call.id, content: resultText });
     }
   }
 
@@ -537,8 +525,25 @@ async function generateAiNarrative(ctx: unknown, context: Record<string, unknown
 
   const { finalText } = await runAgentLoop(ctx, AI_NARRATIVE_SYSTEM_PROMPT, userPrompt, 5);
 
+  // The system prompt forbids markdown fences, but models add them often enough
+  // that stripping is cheaper than a failed SITREP. The error carries a snippet
+  // of what actually came back, so the next failure is diagnosable rather than
+  // opaque -- the previous message said only "did not return valid JSON", which
+  // is what an empty string looks like too.
+  const jsonText = finalText.trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
   let parsed: unknown;
-  try { parsed = JSON.parse(finalText); } catch { throw new Error("ai narrative model did not return valid JSON"); }
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new Error(
+      jsonText.length === 0
+        ? "ai narrative model returned empty content"
+        : `ai narrative model did not return valid JSON (got: ${jsonText.slice(0, 160)})`
+    );
+  }
   const result = parsed as { headline?: unknown; narrative?: unknown; citations?: unknown; confidence?: unknown };
   if (typeof result.headline !== "string" || typeof result.narrative !== "string" || !Array.isArray(result.citations)) {
     throw new Error("ai narrative model returned an unexpected shape");
