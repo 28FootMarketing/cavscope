@@ -1,0 +1,13 @@
+{
+  "_comment": "Which documents are retrievable, and by whom. 'public' is reachable by any agent key with read scope, including a client's. 'internal' requires a platform-scoped admin key. Default when a file is absent from this list is 'internal' -- a new doc is not published to tenants by forgetting to classify it. A doc listed with visibility 'none' is not embedded at all.",
+  "docs": {
+    "docs/SCAN-RULES.md": "public",
+    "docs/BACKEND.md": "internal",
+    "docs/CUTOVER.md": "internal",
+    "docs/EMAIL.md": "internal",
+    "docs/EMAIL-INVENTORY.md": "internal",
+    "docs/IMPERSONATION.md": "internal",
+    "docs/MAGIC-LINK.md": "internal",
+    "docs/RETRIEVAL.md": "internal"
+  }
+}

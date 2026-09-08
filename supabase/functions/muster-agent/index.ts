@@ -412,6 +412,30 @@ async function callSearchEvidence(ctx: unknown, args: Record<string, unknown>): 
   return data;
 }
 
+async function callSearchDocs(ctx: unknown, args: Record<string, unknown>): Promise<unknown> {
+  const query = args.query as string;
+  const limit = (args.limit as number) || 8;
+  const threshold = (args.threshold as number) || 0.5;
+
+  if (!query) throw new Error("search_docs requires query");
+
+  const embedding = await embedText(query);
+
+  // No website_id: MUSTER's documentation is not tenant data and is not scoped to a
+  // site. Which documents come back IS scoped -- the shim decides from p_ctx whether
+  // this key may see internal documentation, so a tenant key gets the rule catalog
+  // and nothing about the infrastructure.
+  const { data, error } = await db.rpc("muster_engine_search_docs", {
+    p_ctx: ctx,
+    p_embedding: embedding,
+    p_limit: limit,
+    p_threshold: threshold,
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 async function callTool(ctx: unknown, name: string, args: Record<string, unknown>) {
   // Tools that require special handling beyond callToolRaw
   if (name === "ai_narrative") {
@@ -423,6 +447,9 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
   }
   if (name === "search_evidence") {
     return await callSearchEvidence(ctx, args);
+  }
+  if (name === "search_docs") {
+    return await callSearchDocs(ctx, args);
   }
   // All other tools: authorize via SQL and execute
   return await callToolRaw(ctx, name, args);
