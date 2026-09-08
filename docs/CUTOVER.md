@@ -159,12 +159,18 @@ Repoint the `checkout.session.completed` endpoint at the new project's
 shows once at registration. The function verifies HMAC-SHA256 against the raw body, so a
 mismatched secret fails closed with a 401 rather than provisioning wrongly.
 
-## 6. `public.apply_approved_kb_updates()` — a decision, not a task
+## 6. `public.apply_approved_kb_updates()` — DONE 2026-09-08
 
-That function lives on the **old** project and writes into `muster.jurisdiction_laws`.
-It is CORA/JARVIS code, not MUSTER's. After cutover it writes to a schema nothing reads.
-Either repoint it at the new project or retire the path, but it should not be left
-silently updating a dead copy.
+Handled by `20260908032215_muster_decommission_law_update_branch_of_kb_executor.sql` on
+the old project. Only the `muster_law_update` branch changed: it now refuses per-row with
+`ok:false` and a reason naming the new project, instead of writing to the decommissioned
+table and reporting success. JARVIS's `kb_update` path and the `kb-update-executor-10min`
+cron job are untouched. Proven behaviourally against a synthetic approval, in a
+transaction that was then rolled back. Full detail in
+`supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+
+What remains is a product question, not a task: whether JARVIS should be able to propose
+MUSTER law updates at all now the products are separate. Zero have ever been filed.
 
 ## Rollback
 

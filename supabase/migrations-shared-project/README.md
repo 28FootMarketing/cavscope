@@ -1,9 +1,18 @@
 # `supabase/migrations-shared-project/` — MUSTER's slice of `mgtmqucaldkaxvxglguw`
 
-**History, not the CLI's target.** These 48 files are the MUSTER migrations applied to
+**History, not the CLI's target.** These 49 files are the MUSTER migrations applied to
 the old shared 28FS project. `supabase/config.toml` now points at
 `hjowfnzpomzxazmzywxw`, whose migrations live in `supabase/migrations/`. Nothing here is
-replayed by `supabase db push` any more, and nothing here should be added to.
+replayed by `supabase db push` any more.
+
+**Do not add MUSTER development here.** The one admitted exception is *decommissioning*
+work -- changes whose only purpose is to make the old project stop pretending to be
+MUSTER. There is exactly one so far,
+`20260908032215_muster_decommission_law_update_branch_of_kb_executor.sql`, and it is
+recorded here rather than applied invisibly, because a change made to a live project and
+left out of the repo is precisely the drift the audit in
+`supabase/migrations/MUSTER-PROJECT-LEDGER.md` had to reconstruct. If you find yourself
+adding a second file here, check first that it is decommissioning and not development.
 
 Treat it as a **readable history, not a replayable one**: 30 of these 48 files differ in
 content from the statement actually applied under their version (header commentary in
