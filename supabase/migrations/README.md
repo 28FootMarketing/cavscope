@@ -5,12 +5,12 @@
 this directory agree. They must stay in agreement: the moment they disagree,
 `supabase db push` applies one project's history to a different project.
 
-These 35 files are the complete build history of MUSTER's own project, exported from
+These 36 files are the complete build history of MUSTER's own project, exported from
 that project's `supabase_migrations.schema_migrations` ledger. **Every file's content
 is byte-identical to the statement Postgres recorded as actually applied** — they are
 not a reconstruction from memory or from the catalog.
 
-Exactly: 22 of the 35 files md5-match the stored statement outright; the other 13 match
+Exactly: 23 of the 36 files md5-match the stored statement outright; the other 13 match
 once a single trailing newline is appended, because those files end with a newline and
 the submitted statement did not. A trailing newline after the final `;` changes nothing
 semantically, but the distinction is recorded here rather than rounded off, because an
@@ -59,6 +59,7 @@ is both.
 | `030`–`031` | the temporary auth.users import endpoint, its use, and its removal |
 | `032` | grants reconciled to source after an advisor diff caught three divergences |
 | `033`–`034` | the temporary vault-secret import endpoint, its use, and its removal |
+| `035` | cold-start guard on the cron health check, after it opened a false critical at cutover |
 
 ## Three files worth reading before you touch this project again
 
