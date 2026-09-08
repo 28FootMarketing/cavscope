@@ -1,7 +1,9 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **31 rules, all active**, all
-`check_type = http_native`.
+Every defect code the engine can raise, by audit area. **37 rules, all active**, all
+`check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
+than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
+the network, and every reach is still an HTTPS request.
 
 Source of truth is `muster.scan_rules` on `hjowfnzpomzxazmzywxw`, not this file. Regenerate with:
 
@@ -16,6 +18,9 @@ plus the evidence ids (`E<id>`) the engine captured for it.
 ---
 
 ## Security — 13 rules
+
+Six more rules (`EMAIL-001`..`EMAIL-006`) also carry `category = security`; they are listed under
+[Email authentication](#email-authentication--6-rules) below, so the `security` category totals 19.
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
@@ -32,6 +37,34 @@ plus the evidence ids (`E<id>`) the engine captured for it.
 | `SEC-011` | medium | Cookie set without protective flags | SOC 2 CC6.1, NIST PR.DS-1 |
 | `SEC-012` | low | No security.txt disclosure policy | NIST RS.CO-1, ISO 27001 A.5.5 |
 | `SEC-013` | **critical** | Final page served over HTTP | PCI DSS 4.2.1, NIST PR.DS-2 |
+
+## Email authentication — 6 rules
+
+Category `security`. These are the only rules that read DNS rather than HTTP: the engine resolves
+TXT and MX over DNS-over-HTTPS (Google primary, Cloudflare fallback) and judges the answers. A
+resolver failure reports **nothing** — absence of an answer is never treated as absence of a record,
+because that would manufacture a high-severity finding out of an outage.
+
+The domain judged is the target host with a leading `www.` stripped. DMARC is looked up walking up
+from the host toward the organizational domain, stopping before a public suffix, because a subdomain
+inherits its parent's policy.
+
+| Code | Sev | Title | Maps to |
+|---|---|---|---|
+| `EMAIL-001` | high | No SPF record | RFC 7208, NIST PR.DS-2 |
+| `EMAIL-002` | high | SPF does not restrict senders (`+all` or `?all`) | RFC 7208, NIST PR.DS-2 |
+| `EMAIL-003` | medium | Multiple SPF records | RFC 7208 §4.5, NIST PR.DS-2 |
+| `EMAIL-004` | high | No DMARC record | RFC 7489, NIST PR.DS-2 |
+| `EMAIL-005` | medium | DMARC is not enforcing (`p=none`, or no `p=`) | RFC 7489, NIST PR.DS-2 |
+| `EMAIL-006` | low | DMARC has no reporting address (no `rua=`) | RFC 7489, NIST DE.CM-1 |
+
+`~all` (softfail) is **not** flagged — it is the common, recommended setting, and reporting it would
+be crying wolf on a majority of correctly configured domains.
+
+**DKIM is deliberately not checked.** A DKIM record lives at `<selector>._domainkey.<domain>` and
+the selector is chosen by whatever sends the mail. Selectors cannot be enumerated from outside, so
+"no DKIM" would be a guess, and probing common selectors would report false defects against
+correctly configured domains.
 
 ## Availability — 2 rules
 
@@ -104,9 +137,9 @@ keyboard traps and live ARIA state are **not** assessed today.
 | Severity | Count | Codes |
 |---|---|---|
 | critical | 2 | `AVAIL-001`, `SEC-013` |
-| high | 2 | `SEC-001`, `SEC-010` |
-| medium | 10 | `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011`, `AVAIL-002`, `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `PRIV-001`, `PRIV-003` |
-| low | 9 | `SEC-003`, `SEC-006`–`009`, `SEC-012`, `A11Y-005`, `GOV-001`, `GOV-002`, `PRIV-002` |
+| high | 5 | `EMAIL-001`, `EMAIL-002`, `EMAIL-004`, `SEC-001`, `SEC-010` |
+| medium | 15 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `AVAIL-002`, `EMAIL-003`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011` |
+| low | 11 | `A11Y-005`, `EMAIL-006`, `GOV-001`, `GOV-002`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012` |
 | info | 4 | `GOV-003`, `GOV-004`, `GOV-005`, `TP-001` |
 
 Only `critical` and `high` open an alert (`muster.notification_outbox` accepts `risk_opened` at
@@ -121,6 +154,6 @@ Worth being able to say out loud, because a prospect will ask:
   no computed styles.
 - **No authenticated crawl.** Only what an anonymous visitor sees.
 - **One page by default.** `website_scan_settings.max_pages` defaults to 1.
-- **No email-authentication rules.** Nothing checks SPF, DKIM or DMARC, which is the most common
-  way a business gets impersonated. There is no `EMAIL-*` family.
+- **No DKIM, BIMI or MTA-STS check.** SPF and DMARC are covered by the `EMAIL-*` family above;
+  DKIM cannot be checked without knowing the selector, and BIMI and MTA-STS are not assessed.
 - **No TLS certificate inspection.** Expiry, chain and cipher suite are not assessed.

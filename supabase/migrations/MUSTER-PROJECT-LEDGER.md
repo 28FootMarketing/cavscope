@@ -1013,3 +1013,56 @@ against it, and it cannot run today. Worth adding the scope to the private integ
 Order matters when reading these two diagnostics: `location` checks `GHL_LOCATION_ID` first and
 returns 500 before touching GHL at all, so a 500 there says nothing about `GHL_API_KEY`. Use
 `custom_fields` to judge the key.
+
+---
+
+## EMAIL-* scan rules: the engine diverges again (2026-09-08)
+
+`muster-scan` is now **v10 on `hjowfnzpomzxazmzywxw` only**. The old shared project stays on v8.
+That breaks the "byte-identical on both projects" invariant recorded above, deliberately, for the
+same reason `muster-alert-dispatch` broke it earlier: the rule catalog rows the new engine emits
+(`muster_040`) exist only on the new project, and deploying the engine to the old one would have it
+write `rule_id`s that project's `muster.scan_rules` has never heard of. Nothing runs the old
+project's scanner anyway — its cron is inactive and all five frontend pages point at the new
+project.
+
+| Function | `mgtmqucaldkaxvxglguw` | `hjowfnzpomzxazmzywxw` |
+|---|---|---|
+| `muster-scan` | v8, engine `http-native-1.0.1` | **v10, engine `http-native-1.1.0`** |
+
+### `muster_041` exists because the first real scan failed
+
+`muster_040` shipped six catalog rows and the engine to fill them, and scan 18 died at ingest:
+
+```
+ingest failed: new row for relation "scan_evidence" violates check constraint
+"scan_evidence_kind_check"
+```
+
+`scan_evidence.kind` was a closed CHECK list written when every check was an HTTP fetch, and the
+DNS evidence rows (`dns_txt`, `dns_mx`) were not in it. Ingest is one transaction, so this failed
+the *entire* scan, not just the email rules — for a window, `muster_040`'s catalog was live while
+the engine that populates it could not write at all. `muster_041` adds the two kinds, with an
+assertion that no pre-existing kind was dropped in the rewrite.
+
+The lesson is the same one this file already records twice: a migration that only asserts about its
+own new rows proves nothing about whether the system still runs. Scan 18 is on the record because
+running it is what found this; a migration that "applied successfully" would not have.
+
+### Verified end to end
+
+Scan 19 against `https://berecruitabledaily.com` (admin sandbox org), engine `http-native-1.1.0`,
+348 ms, three real findings from real DNS:
+
+| Code | Sev | From |
+|---|---|---|
+| `EMAIL-001` | high | apex TXT: no `v=spf1` record |
+| `EMAIL-005` | medium | `_dmarc.berecruitabledaily.com` = `v=DMARC1; p=none;` |
+| `EMAIL-006` | low | same record, no `rua=` |
+
+### What this does not do
+
+Promotion to the risk register is explicit (`muster.do_promote_finding`), not automatic, and
+`risk_opened` alerts fire off a promoted risk. So the three new `high` codes do **not** start
+sending mail on their own. They will the moment someone promotes one — worth knowing before the
+first client scan, because "no SPF" is high severity and very common.
