@@ -41,17 +41,21 @@ fixed for the other project, so it does not get to happen quietly twice.
 | 20260908003x | muster_027_embedding_backfill_rpcs |
 | 20260908004x | muster_028_cron_jobs_inactive_until_cutover |
 
-## Why the files are not here yet
+## The files now exist
 
-Generated from the **live catalog** of `mgtmqucaldkaxvxglguw`, not replayed from this
-directory, because 24 of 39 files here differ from what was actually applied and the
-drift is concentrated in function bodies. The SQL is in
-`supabase_migrations.schema_migrations.statements` on the target; the files get written
-from there in one pass before cutover, so it is transcribed once rather than twice.
+**`supabase/migrations-muster-project/`** — all 29, exported from that project's own
+`supabase_migrations.schema_migrations` ledger, 292,225 bytes, **every file's md5
+matching the statement Postgres recorded as applied**. Not a reconstruction from the
+catalog or from memory.
 
-**Cutover is not complete until they land here.** Once `mgtmqucaldkaxvxglguw` is
-decommissioned its catalog stops being a source of truth and this ledger is all that is
-left.
+They are in their own directory, not merged into this one, because `supabase db push`
+applies whatever it finds in `supabase/migrations/` to whichever project the CLI is
+linked to. One directory holding two projects' histories is a loaded gun. At
+decommission, archive this directory and rename that one to `migrations/`.
+
+They were generated from the **live catalog** of `mgtmqucaldkaxvxglguw` rather than
+replayed from this directory, because 24 of 39 files here differ from what was actually
+applied and the drift is concentrated in function bodies.
 
 ## Verified state (2026-09-07)
 
@@ -183,7 +187,8 @@ write privilege on the latter.
   (`docs/EMAIL.md`). None of it migrates between projects.
 - **Stripe webhook repoint.**
 - **The `apply_approved_kb_updates()` cross-boundary decision** described above.
-- **The migration files themselves.** This directory is still the old project's ledger.
+- ~~The migration files themselves.~~ **Done** — `supabase/migrations-muster-project/`,
+  29 files, checksum-verified against the applied ledger.
 
 ## Two stale hostnames, deliberately left alone
 
