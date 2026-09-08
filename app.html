@@ -908,6 +908,7 @@
     .grid-admin-overrides { grid-template-columns: 1fr 1fr 0.6fr 1.6fr; }
     .grid-admin-jurisdictions { grid-template-columns: 1.4fr 0.8fr 1fr; }
     .grid-admin-users { grid-template-columns: 1.6fr 1.8fr 1fr 1fr; }
+    .grid-admin-imp { grid-template-columns: 1.3fr 1.3fr 1.8fr 1fr 0.7fr 0.8fr; }
     .grid-live-findings { grid-template-columns: 1fr 280px; }
     .grid-live-jurisdictions { grid-template-columns: 1.3fr 2.2fr 1fr; }
     .grid-live-members { grid-template-columns: 1.3fr 1.6fr 1fr; }
@@ -5739,9 +5740,11 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
 
       // ---------- super admin console ----------
       async loadAdmin() {
-        [this.admin, this.adminUrlRuns] = await Promise.all([
+        [this.admin, this.adminUrlRuns, this.imp, this.impLog] = await Promise.all([
           this.rpc('muster_admin_overview'),
           this.rpc('muster_admin_url_runs'),
+          this.rpc('muster_admin_impersonate_status'),
+          this.rpc('muster_admin_impersonation_log', { p_limit: 25 }),
         ]);
         const a = this.admin;
         const demoBlocks = document.getElementById('superadminDemoBlocks');
@@ -5751,6 +5754,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         const tenants = a.tenants || [], incidents = a.incidents || [], flags = a.flags || [];
         const overrides = a.overrides || [], agents = a.platform_agents || [];
         const jurisdictions = a.jurisdiction_review_queue || [], users = a.users || [];
+        const imp = this.imp || { active: false };
         const criticalTenants = tenants.filter(t => t.open_critical > 0).length;
         const inFlight = (eng.queued ?? 0) + (eng.running ?? 0);
         const failed24 = eng.failed_24h ?? 0, complete24 = eng.complete_24h ?? 0;
@@ -5901,6 +5905,72 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               </div>` : `<div class="panel-body" style="color:var(--emerald); font-size:12.5px;">None overdue.</div>`}
           </div>
 
+          <div class="panel" style="margin-bottom:24px; ${imp.active ? 'border-color:var(--amber);' : ''}">
+            <div class="panel-head">
+              <div>
+                <h3>Support Impersonation</h3>
+                <p>See what one user sees, read-only, for a bounded time and a stated reason. You stay signed in as yourself throughout; no session is ever created for them, and nothing here can change their data.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              ${imp.active ? `
+                <div style="border:1px solid var(--amber); border-radius:var(--radius-md); background:rgba(251,191,36,0.08); padding:14px 16px; margin-bottom:16px;"
+                     data-tooltip="An impersonation session is open. It ends by itself when the timer runs out, and the tenant can see it in their own activity feed.">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <div>
+                      <div style="color:var(--amber); font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;">Viewing as</div>
+                      <div style="color:#fff; font-size:14px; font-weight:600; margin-top:3px;">${escapeHtml(imp.target_email || ('user #' + imp.target_user_id))}</div>
+                      <div style="color:var(--text-dim); font-size:12px; margin-top:4px;">Reason: ${escapeHtml(imp.reason || '')}</div>
+                    </div>
+                    <div style="text-align:right;">
+                      <div id="impCountdown" style="color:var(--amber); font-size:20px; font-weight:700; font-variant-numeric:tabular-nums;"
+                           data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero; nothing has to sweep it.">--:--</div>
+                      <button class="btn-ghost" style="margin-top:8px; border-color:var(--amber); color:var(--amber);" onclick="Live.endImpersonation()"
+                              data-tooltip="Ends the session now. Access stops immediately, because authorisation is re-checked on every call rather than carried in a token.">End session</button>
+                    </div>
+                  </div>
+                </div>
+                <div id="impView" data-tooltip="What this user sees: their organizations, their sites, and their open finding counts. Reading this is itself recorded against the session."></div>
+              ` : `
+                <form onsubmit="Live.startImpersonation(event); return false;" style="display:grid; grid-template-columns:1.2fr 2fr 0.8fr auto; gap:10px; align-items:end;">
+                  <div>
+                    <label style="display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;">User</label>
+                    <select id="impTarget" class="filter-select" style="width:100%; padding:9px 10px; font-size:12.5px;" required
+                            data-tooltip="Super admins are deliberately absent from this list. Impersonating a peer admin is refused by the database, not just hidden here.">
+                      ${users.filter(u => u.role !== 'super_admin').map(u => `<option value="${u.id}">${escapeHtml(u.email)}</option>`).join('') || '<option value="" disabled>No eligible users</option>'}
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;">Reason</label>
+                    <input type="text" id="impReason" minlength="10" required placeholder="e.g. ticket 412, customer cannot see their SITREP"
+                           style="width:100%; padding:9px 12px; font-size:12.5px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                           data-tooltip="Required, at least 10 characters, and shown to the tenant verbatim in their own activity feed. Write it for them to read.">
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;">Duration</label>
+                    <select id="impMinutes" class="filter-select" style="width:100%; padding:9px 10px; font-size:12.5px;"
+                            data-tooltip="How long before the session expires on its own. Sixty minutes is the hard ceiling the database enforces.">
+                      <option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">60 min</option>
+                    </select>
+                  </div>
+                  <button class="btn-primary" type="submit" data-tooltip="Opens a read-only session and writes a notice into the tenant's own activity feed, carrying your reason.">Start</button>
+                </form>
+              `}
+            </div>
+            ${(this.impLog || []).length ? `
+              <div class="table-header grid-admin-imp" data-tooltip="Every impersonation session ever opened, newest first. This log is append-only and cannot be edited from the application."><span>Admin</span><span>Target</span><span>Reason</span><span>Started</span><span>Actions</span><span>Outcome</span></div>
+              <div class="list">
+                ${(this.impLog || []).map(r => `<div class="table-row grid-admin-imp">
+                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(r.admin_email || '')}</div>
+                  <div style="color:#fff; font-size:12px;">${escapeHtml(r.target_email || '')}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(r.reason || '')}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${String(r.started_at || '').slice(0, 16).replace('T', ' ')}</div>
+                  <div style="color:var(--text-dim); font-size:12px;">${r.events ?? 0}</div>
+                  <div style="font-size:12px;" class="${r.active ? 'alert' : 'ok'}">${r.active ? 'active' : escapeHtml(r.ended_reason || 'ended')}</div>
+                </div>`).join('')}
+              </div>` : `<div class="panel-body" style="color:var(--text-dim); font-size:12.5px;">No impersonation sessions have been opened.</div>`}
+          </div>
+
           <div class="panel" style="margin-bottom:24px;">
             <div class="panel-head"><div><h3>Users (${users.length})</h3><p>Every registered user and their platform role.</p></div></div>
             <div class="table-header grid-admin-users"><span>Name</span><span>Email</span><span>Role</span><span>Last Signed In</span></div>
@@ -5914,6 +5984,94 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             </div>
           </div>
         `;
+
+        this.startImpersonationTicker();
+        if (imp.active) this.loadImpersonatedView().catch(() => {});
+      },
+      // ---------- support impersonation ----------
+      //
+      // The guardrails are in SQL (see muster_038 and docs/IMPERSONATION.md);
+      // nothing here is load-bearing for security. This is presentation over
+      // functions that refuse anyway: a non-super-admin who reconstructs these
+      // calls by hand gets 42501 from the database.
+      async startImpersonation(e) {
+        e.preventDefault();
+        const target = document.getElementById('impTarget');
+        const reason = document.getElementById('impReason');
+        const minutes = document.getElementById('impMinutes');
+        if (!target || !target.value) { showToast('Pick a user first.'); return; }
+        try {
+          const r = await this.rpc('muster_admin_impersonate_start', {
+            p_target_user_id: Number(target.value),
+            p_reason: reason.value,
+            p_minutes: Number(minutes.value),
+          });
+          showToast(`Viewing as ${r.target_email || ('user #' + r.target_user_id)}. Read only.`);
+          await this.loadAdmin();
+        } catch (err) { this.fail(err); }
+      },
+      async endImpersonation() {
+        try {
+          await this.rpc('muster_admin_impersonate_end');
+          showToast('Impersonation session ended.');
+          await this.loadAdmin();
+        } catch (err) { this.fail(err); }
+      },
+      // Ticks the banner down and reloads the console the moment the session
+      // lapses, so the UI can never show an "active" session the database has
+      // already stopped honouring.
+      startImpersonationTicker() {
+        if (this._impTimer) { clearInterval(this._impTimer); this._impTimer = null; }
+        const imp = this.imp || {};
+        if (!imp.active) return;
+        const el = document.getElementById('impCountdown');
+        if (!el) return;
+        let left = Number(imp.seconds_remaining ?? 0);
+        const paint = () => {
+          if (left <= 0) {
+            clearInterval(this._impTimer);
+            this._impTimer = null;
+            el.textContent = 'expired';
+            this.loadAdmin().catch(() => {});
+            return;
+          }
+          const m = Math.floor(left / 60), sec = left % 60;
+          el.textContent = `${m}:${String(sec).padStart(2, '0')}`;
+          left -= 1;
+        };
+        paint();
+        this._impTimer = setInterval(paint, 1000);
+      },
+      // The target's own view. Fetched separately from loadAdmin because every
+      // call is recorded against the session, so it should happen when an admin
+      // actually looks -- not on every console refresh.
+      async loadImpersonatedView() {
+        const host = document.getElementById('impView');
+        if (!host) return;
+        try {
+          const v = await this.rpc('muster_admin_impersonated_view');
+          const orgs = v.organizations || [];
+          host.innerHTML = orgs.length ? orgs.map(o => `
+            <div style="border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:10px;">
+              <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(o.name || '')}
+                <span style="color:var(--text-dim); font-weight:400; font-size:11.5px;"> &middot; their role: ${escapeHtml(o.role || '')}</span>
+              </div>
+              ${(o.websites || []).length ? `<div style="margin-top:8px;">${(o.websites || []).map(w => `
+                <div style="display:flex; justify-content:space-between; gap:12px; padding:5px 0; font-size:12px;">
+                  <span style="color:var(--text-dim);">${escapeHtml(w.url || '')}</span>
+                  <span>
+                    <span style="color:var(--text-dim);">score ${w.posture_score ?? '--'}</span>
+                    <span style="margin-left:12px;" class="${(w.open_critical_high ?? 0) > 0 ? 'alert' : 'ok'}">${w.open_critical_high ?? 0} critical/high</span>
+                    <span style="margin-left:12px; color:var(--text-dim);">${w.open_findings ?? 0} open</span>
+                  </span>
+                </div>`).join('')}</div>`
+                : `<div style="color:var(--text-dim); font-size:12px; margin-top:6px;">No sites in this organization.</div>`}
+            </div>`).join('')
+            : `<div style="color:var(--text-dim); font-size:12.5px;">This user belongs to no organization, so there is nothing for them to see.</div>`;
+        } catch (err) {
+          // The usual cause is a session that lapsed between render and click.
+          host.innerHTML = `<div style="color:var(--rose); font-size:12.5px;">${escapeHtml(err.message || String(err))}</div>`;
+        }
       },
       async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setPricingStage(stage) { try { await this.rpc('muster_admin_set_pricing_stage', { p_stage: stage }); showToast(`Public pricing stage set to ${stage}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
