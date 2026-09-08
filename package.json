@@ -7,10 +7,10 @@
     "@vercel/functions": "^3.9.5"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test tests/email/resend-webhook.test.ts tests/ui/impersonation-panel.test.ts evals/ai-narrative/offline.test.ts",
+    "test": "node --experimental-strip-types --test tests/email/resend-webhook.test.ts tests/ui/impersonation-panel.test.ts tests/ui/fix-prompt.test.ts evals/ai-narrative/offline.test.ts",
     "test:email": "node --experimental-strip-types --test tests/email/resend-webhook.test.ts",
     "eval:narrative": "node --experimental-strip-types --test evals/ai-narrative/offline.test.ts",
     "eval:narrative:live": "node --experimental-strip-types evals/ai-narrative/live.ts",
-    "test:ui": "node --experimental-strip-types --test tests/ui/impersonation-panel.test.ts"
+    "test:ui": "node --experimental-strip-types --test tests/ui/impersonation-panel.test.ts tests/ui/fix-prompt.test.ts"
   }
 }
