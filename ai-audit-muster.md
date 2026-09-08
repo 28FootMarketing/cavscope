@@ -1,12 +1,12 @@
 # Big Steele AI Audit: muster
 
-**Score 62 / 100, grade D, level 2 AI-assisted.** Models answer or draft inside the product; a person does the doing.
+**Score 64 / 100, grade D, level 2 AI-assisted.** Models answer or draft inside the product; a person does the doing.
 
 Gate: PASS (score 25 or more and level 1 Automated or above).
 
 Profile: **Product** (the default; declare another with --profile or ai-audit.config.json). Software people use directly; AI and automation serve the customer in the product.
 
-Generated 2026-09-07 by @bigsteele/ai-audit on 82 files. Every finding cites files; no source or values were read out. Env files were never opened.
+Generated 2026-09-08 by @bigsteele/ai-audit on 149 files. Every finding cites files; no source or values were read out. Env files were never opened.
 
 ## Scorecard
 
@@ -15,8 +15,8 @@ Generated 2026-09-07 by @bigsteele/ai-audit on 82 files. Every finding cites fil
 | Automated surfaces | 16 / 25 | 25% | 16 |
 | AI systems | 14 / 25 | 25% | 14 |
 | Agents | 18 / 25 | 25% | 18 |
-| Autonomy and operability | 14 / 25 | 25% | 14 |
-| **Total** | | | **62 / 100 (D)** |
+| Autonomy and operability | 16 / 25 | 25% | 16 |
+| **Total** | | | **64 / 100 (D)** |
 
 ## Levels
 
@@ -30,9 +30,9 @@ Generated 2026-09-07 by @bigsteele/ai-audit on 82 files. Every finding cites fil
 
 ## Automated surfaces (16 / 25)
 
-- API handlers (route files, serverless functions, framework routes) (7) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-scan/index.ts`, +2 more
+- API handlers (route files, serverless functions, framework routes) (8) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-scan/index.ts`, +3 more
 - Inbound webhooks (handlers or signature checks) (7) — `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-stripe-webhook/index.ts`
-- Schedules (cron jobs, scheduled functions, workflows) (4) — `supabase/migrations/20260904120400_muster_cron.sql`, `supabase/migrations/20260907211000_muster_auto_embed_new_findings.sql`, `supabase/migrations/20260908120000_edge_invocation_observability.sql`
+- Schedules (cron jobs, scheduled functions, workflows) (14) — `supabase/migrations/20260908012026_muster_028_cron_jobs_inactive_until_cutover.sql`, `supabase/migrations-shared-project/20260904035815_muster_cron.sql`, `supabase/migrations-shared-project/20260906032838_muster_alert_dispatch_cron.sql`, `supabase/migrations-shared-project/20260906032839_muster_autotriage_cron.sql`, `supabase/migrations-shared-project/20260906044502_muster_watchdog_cron.sql`, +4 more
 
 | Criterion | Earned |
 |---|---|
@@ -47,7 +47,7 @@ Generated 2026-09-07 by @bigsteele/ai-audit on 82 files. Every finding cites fil
 - OpenRouter (2) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`
 - Models named in code: claude-sonnet-5, text-embedding-3-small (2) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`
 - Prompts (system prompts, prompt files) (3) — `supabase/functions/muster-agent/index.ts`
-- Retrieval: embeddings and vector search (3) — `supabase/migrations/20260907210000_muster_agent_retrieval.sql`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`
+- Retrieval: embeddings and vector search (7) — `supabase/migrations/20260907204744_muster_000_extensions.sql`, `supabase/migrations/20260907204804_muster_001_vector_into_public_to_match_source.sql`, `supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql`, `supabase/migrations/20260907222630_muster_009_indexes.sql`, `supabase/migrations-shared-project/20260907022111_muster_agent_retrieval.sql`, +2 more
 
 | Criterion | Earned |
 |---|---|
@@ -61,9 +61,9 @@ Generated 2026-09-07 by @bigsteele/ai-audit on 82 files. Every finding cites fil
 ## Agents (18 / 25)
 
 - Tool definitions (MCP) (1) — `supabase/functions/muster-agent/index.ts`
-- Agent loops (a model calling tools until done) (3) — `supabase/functions/muster-agent/index.ts`
+- Agent loops (a model calling tools until done) (8) — `supabase/functions/muster-agent/index.ts`
 - MCP server (the software's abilities offered to any agent), 1 written by hand (JSON-RPC initialize, tools/list, tools/call) (2) — `supabase/functions/muster-agent/index.ts`, `.well-known/mcp/server-card.json`
-- Memory and state kept between runs (threads, conversations, agent memory) (1) — `supabase/migrations/20260904120100_muster_onboarding_brand_flags_agents.sql`
+- Memory and state kept between runs (threads, conversations, agent memory) (2) — `supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql`, `supabase/migrations-shared-project/20260904035255_muster_onboarding_brand_flags_agents.sql`
 
 | Criterion | Earned |
 |---|---|
@@ -73,17 +73,18 @@ Generated 2026-09-07 by @bigsteele/ai-audit on 82 files. Every finding cites fil
 | Orchestration or MCP client use | 0 / 3 |
 | Memory kept between runs | 3 / 3 |
 
-## Autonomy and operability (14 / 25)
+## Autonomy and operability (16 / 25)
 
-- Reach: 7 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description) (3)
-- Reliability (retries, backoff, idempotency, dead letters) (1) — `supabase/functions/muster-alert-dispatch/index.ts`
-- Guardrails (rate limits 0, authenticated machine surfaces 6, moderation / redaction / cost caps 1) (7) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-scan/index.ts`, +2 more
+- Reach: 8 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description) (3)
+- Machine surfaces that write (create, update, delete), not only read (4) — `supabase/functions/_external/publish-due/index.ts`
+- Reliability (retries, backoff, idempotency, dead letters) (2) — `supabase/functions/_external/publish-due/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`
+- Guardrails (rate limits 0, authenticated machine surfaces 8, moderation / redaction / cost caps 1) (9) — `supabase/functions/_external/publish-due/index.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, +3 more
 - Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card) (3) — `.well-known/mcp/server-card.json`, `AGENTS.md`, `CLAUDE.md`
 
 | Criterion | Earned |
 |---|---|
 | Reach: machine surfaces against human pages | 8 / 8 |
-| Machine surfaces that change things | 0 / 4 |
+| Machine surfaces that change things | 2 / 4 |
 | Observability of what ran | 0 / 3 |
 | Retries, backoff, idempotency | 3 / 3 |
 | Evals or tests of AI behaviour | 0 / 3 |
@@ -97,7 +98,6 @@ Points are on the 100 scale under this profile's weights, largest first.
 - **+4 A machine-readable API description.** Publish an OpenAPI file or a GraphQL schema so an agent can read what exists without a person; the handlers you already have then count in full toward Reach. A capability inventory or typed contract schemas earn half.
 - **+4 Structured output the software acts on.** Ask the model for a schema (JSON schema, zod, structured output) so its answer can drive code, not only a chat.
 - **+4 Tools a model may call.** Define tools (functions with schemas) for the model; eight or more distinct tools earns the full nine.
-- **+4 Machine surfaces that change things.** Let handlers and tools write, not only read: create the record, send the thing, close the loop.
 - **+3 Queues or event pipelines.** Put long or retried work on a queue or an event pipeline instead of a request.
 - **+3 Voice or vision.** Add a voice or image path where your customers already speak or send pictures.
 - **+3 Orchestration or MCP client use.** Chain steps in a workflow engine or graph, or consume other systems' MCP tools.
@@ -106,6 +106,7 @@ Points are on the 100 scale under this profile's weights, largest first.
 - **+2 API handlers a program can call.** Expose the app's operations as API handlers; 20 or more earns the full ten.
 - **+2 A model provider integrated.** Call a model from the server side; a second provider or a router earns the last two.
 - **+2 Prompts written down as code.** Keep system prompts in files under version control, one per job.
+- **+2 Machine surfaces that change things.** Let handlers and tools write, not only read: create the record, send the thing, close the loop.
 - **+1 Guardrails and a human gate.** Rate limits and authenticated surfaces earn one; a human approval gate for the risky actions earns the other.
 
 ## What to do with this

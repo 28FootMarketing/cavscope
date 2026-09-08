@@ -1,13 +1,13 @@
 {
   "format": "bigsteele-ai-audit/1",
   "brand": "Big Steele AI Audit",
-  "generated_at": "2026-09-07T09:01:57.701Z",
+  "generated_at": "2026-09-08T04:29:00.553Z",
   "repo": "muster",
   "app": "muster",
-  "files_considered": 82,
+  "files_considered": 149,
   "skipped": [],
   "score": {
-    "total": 62,
+    "total": 64,
     "grade": "D",
     "level": {
       "n": 2,
@@ -48,10 +48,10 @@
       {
         "key": "autonomy",
         "title": "Autonomy and operability",
-        "earned": 14,
+        "earned": 16,
         "max": 25,
         "weight": 25,
-        "weighted": 14
+        "weighted": 16
       }
     ],
     "criteria": [
@@ -230,10 +230,10 @@
         "key": "mutating",
         "label": "Machine surfaces that change things",
         "max": 4,
-        "earned": 0,
+        "earned": 2,
         "next": "Let handlers and tools write, not only read: create the record, send the thing, close the loop.",
         "applicable": true,
-        "gain": 4
+        "gain": 2
       },
       {
         "group": "autonomy",
@@ -307,9 +307,10 @@
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
             "supabase/functions/muster-stripe-webhook/index.ts",
+            "supabase/functions/muster-verify-site/index.ts",
             "supabase/functions/muster-watchdog/index.ts"
           ],
-          "count": 7
+          "count": 8
         },
         {
           "what": "Inbound webhooks (handlers or signature checks)",
@@ -322,23 +323,29 @@
         {
           "what": "Schedules (cron jobs, scheduled functions, workflows)",
           "files": [
-            "supabase/migrations/20260904120400_muster_cron.sql",
-            "supabase/migrations/20260907211000_muster_auto_embed_new_findings.sql",
-            "supabase/migrations/20260908120000_edge_invocation_observability.sql"
+            "supabase/migrations/20260908012026_muster_028_cron_jobs_inactive_until_cutover.sql",
+            "supabase/migrations-shared-project/20260904035815_muster_cron.sql",
+            "supabase/migrations-shared-project/20260906032838_muster_alert_dispatch_cron.sql",
+            "supabase/migrations-shared-project/20260906032839_muster_autotriage_cron.sql",
+            "supabase/migrations-shared-project/20260906044502_muster_watchdog_cron.sql",
+            "supabase/migrations-shared-project/20260907021537_muster_auto_embed_new_findings.sql",
+            "supabase/migrations-shared-project/20260907055540_edge_invocation_observability.sql",
+            "supabase/migrations-shared-project/20260907191357_muster_schedule_embedding_backfill.sql",
+            "supabase/migrations-shared-project/20260907195249_edge_health_alerting.sql"
           ],
-          "count": 4
+          "count": 14
         }
       ],
       "facts": {
-        "api_handlers": 7,
-        "supabase_functions": 7,
+        "api_handlers": 8,
+        "supabase_functions": 8,
         "contract_schemas": 0,
         "capability_inventory": 0,
         "described": "none",
         "openapi": false,
         "graphql": false,
         "webhooks": 3,
-        "schedules": 4,
+        "schedules": 14,
         "queues": 0,
         "pages": 0
       }
@@ -373,11 +380,15 @@
         {
           "what": "Retrieval: embeddings and vector search",
           "files": [
-            "supabase/migrations/20260907210000_muster_agent_retrieval.sql",
+            "supabase/migrations/20260907204744_muster_000_extensions.sql",
+            "supabase/migrations/20260907204804_muster_001_vector_into_public_to_match_source.sql",
+            "supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql",
+            "supabase/migrations/20260907222630_muster_009_indexes.sql",
+            "supabase/migrations-shared-project/20260907022111_muster_agent_retrieval.sql",
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts"
           ],
-          "count": 3
+          "count": 7
         }
       ],
       "facts": {
@@ -391,7 +402,7 @@
         ],
         "prompts": 1,
         "structured_output": 0,
-        "retrieval": 3,
+        "retrieval": 7,
         "voice": [],
         "vision": 0,
         "ai_server_files": 2
@@ -413,7 +424,7 @@
           "files": [
             "supabase/functions/muster-agent/index.ts"
           ],
-          "count": 3
+          "count": 8
         },
         {
           "what": "MCP server (the software's abilities offered to any agent), 1 written by hand (JSON-RPC initialize, tools/list, tools/call)",
@@ -426,9 +437,10 @@
         {
           "what": "Memory and state kept between runs (threads, conversations, agent memory)",
           "files": [
-            "supabase/migrations/20260904120100_muster_onboarding_brand_flags_agents.sql"
+            "supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql",
+            "supabase/migrations-shared-project/20260904035255_muster_onboarding_brand_flags_agents.sql"
           ],
-          "count": 1
+          "count": 2
         }
       ],
       "facts": {
@@ -442,7 +454,7 @@
         "mcp_server": 2,
         "mcp_client": 0,
         "orchestration": 0,
-        "memory": 1
+        "memory": 2
       }
     },
     {
@@ -450,29 +462,38 @@
       "title": "Autonomy and operability",
       "evidence": [
         {
-          "what": "Reach: 7 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
+          "what": "Reach: 8 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
           "files": [],
           "count": 3
         },
         {
-          "what": "Reliability (retries, backoff, idempotency, dead letters)",
+          "what": "Machine surfaces that write (create, update, delete), not only read",
           "files": [
-            "supabase/functions/muster-alert-dispatch/index.ts"
+            "supabase/functions/_external/publish-due/index.ts"
           ],
-          "count": 1
+          "count": 4
         },
         {
-          "what": "Guardrails (rate limits 0, authenticated machine surfaces 6, moderation / redaction / cost caps 1)",
+          "what": "Reliability (retries, backoff, idempotency, dead letters)",
           "files": [
+            "supabase/functions/_external/publish-due/index.ts",
+            "supabase/functions/muster-alert-dispatch/index.ts"
+          ],
+          "count": 2
+        },
+        {
+          "what": "Guardrails (rate limits 0, authenticated machine surfaces 8, moderation / redaction / cost caps 1)",
+          "files": [
+            "supabase/functions/_external/publish-due/index.ts",
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-alert-dispatch/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts",
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
-            "supabase/functions/muster-watchdog/index.ts",
-            "supabase/functions/muster-agent/index.ts"
+            "supabase/functions/muster-verify-site/index.ts",
+            "supabase/functions/muster-watchdog/index.ts"
           ],
-          "count": 7
+          "count": 9
         },
         {
           "what": "Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card)",
@@ -488,11 +509,11 @@
         "reach": 1,
         "reach_if_described": 1,
         "machine_surfaces": 3,
-        "mutating": 0,
+        "mutating": 1,
         "observability": 0,
-        "reliability": 1,
+        "reliability": 2,
         "evals": 0,
-        "guardrails": 7,
+        "guardrails": 9,
         "human_gate": 0,
         "agent_docs": 3
       }
