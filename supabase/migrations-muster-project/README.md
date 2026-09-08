@@ -1,6 +1,6 @@
 # `hjowfnzpomzxazmzywxw` — MUSTER's dedicated Supabase project
 
-These 29 files are the complete build history of MUSTER's own project, exported from
+These 30 files are the complete build history of MUSTER's own project, exported from
 that project's `supabase_migrations.schema_migrations` ledger. **Every file's md5
 matches the statement Postgres recorded as actually applied** — they are not a
 reconstruction from memory or from the catalog.

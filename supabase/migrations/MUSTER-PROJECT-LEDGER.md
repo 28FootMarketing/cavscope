@@ -40,11 +40,12 @@ fixed for the other project, so it does not get to happen quietly twice.
 | 20260908002x | muster_026_drop_bulk_import_endpoint |
 | 20260908003x | muster_027_embedding_backfill_rpcs |
 | 20260908004x | muster_028_cron_jobs_inactive_until_cutover |
+| 20260908014043 | muster_029_autotriage_alert_url_to_muster_partners |
 
 ## The files now exist
 
 **`supabase/migrations-muster-project/`** — all 29, exported from that project's own
-`supabase_migrations.schema_migrations` ledger, 292,225 bytes, **every file's md5
+`supabase_migrations.schema_migrations` ledger, **every file's md5
 matching the statement Postgres recorded as applied**. Not a reconstruction from the
 catalog or from memory.
 
@@ -190,14 +191,50 @@ write privilege on the latter.
 - ~~The migration files themselves.~~ **Done** — `supabase/migrations-muster-project/`,
   29 files, checksum-verified against the applied ledger.
 
-## Two stale hostnames, deliberately left alone
+## Two stale hostnames -- both fixed on both projects (2026-09-08)
 
-Both were copied forward byte-identically to keep the parity checksums meaningful, and
-both should be fixed on BOTH projects in one change so they cannot drift apart again:
+Both were copied forward byte-identically during the migration to keep the parity
+checksums meaningful, then fixed on BOTH projects in one pass so they could not drift
+apart.
 
-- `muster.autotriage()` puts `https://app.muster.28footsystems.com/` in the alert body.
-- `muster-scan`'s User-Agent advertises `+https://muster.28footsystems.com/scanner` to
-  every site it scans.
+### `muster.autotriage()` alert body
 
-The product's home is `muster.partners` now. The old hosts still resolve, so neither is
-broken -- just wrong.
+`View full detail: https://app.muster.28footsystems.com/` ->
+`View full detail: https://app.muster.partners/app`.
+
+The HTML half of the same email already pointed at `MUSTER_APP_URL` (default
+`https://app.muster.partners/app`) from `muster-alert-dispatch`, so a recipient reading
+the HTML part and one on a text-only client were being sent to two different places.
+
+Applied by reading the body back out of `pg_get_functiondef()` and rewriting it with
+`replace()` -- not by restating a 5 KB plpgsql body. Retyping is what caused
+`muster_016` and `muster_017`; it is not the tool used to fix things.
+
+| Project | Version | Name | File md5 |
+|---|---|---|---|
+| `mgtmqucaldkaxvxglguw` | 20260908014037 | muster_autotriage_alert_url_to_muster_partners | `c81fab6147fd76265f0c524ea6c698f1` |
+| `hjowfnzpomzxazmzywxw` | 20260908014043 | muster_029_autotriage_alert_url_to_muster_partners | `13fb79d90f2922ecf156bd2fb0a582b1` |
+
+Both files match the statement text Postgres recorded as applied. `muster.autotriage()`
+is now `md5 2889bd9bd71ad0bc34239a0ef8c5fc34` on both projects.
+
+**This URL is a literal in two places** -- `muster.autotriage()` and `MUSTER_APP_URL`'s
+default in `muster-alert-dispatch/index.ts`. Change them together.
+
+### `muster-scan` User-Agent
+
+`+https://muster.28footsystems.com/scanner` -> `+https://muster.partners`.
+
+The old URL 404s twice over: no `/scanner` page was ever built, and
+`muster.28footsystems.com` is not a host `middleware.js` routes at all. A
+self-identifying crawler UA whose URL does not resolve defeats its own purpose.
+
+| Project | Version | ezbr_sha256 |
+|---|---|---|
+| `mgtmqucaldkaxvxglguw` | muster-scan v7 | `d40f4c84f70e9ca5de26541c99dcd3d73bcb436748b62b6b75a18bfd21259e8a` |
+| `hjowfnzpomzxazmzywxw` | muster-scan v2 | `d40f4c84f70e9ca5de26541c99dcd3d73bcb436748b62b6b75a18bfd21259e8a` |
+
+Identical bundle hash on both, and identical to
+`supabase/functions/muster-scan/index.ts` in this repo. `verify_jwt` stayed `true` on
+both; the source project's live cron kept pointing at the same slug, so nothing was
+re-pointed.
