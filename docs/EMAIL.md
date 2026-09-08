@@ -8,6 +8,7 @@ the way this breaks silently.
 |---|---|---|
 | Emails | magic link, invite, signup confirmation, email change, password reset, reauthentication | critical/high risk opened (`risk_opened`) |
 | Sent by | Supabase Auth (GoTrue) | `muster-alert-dispatch` edge function |
+| Delivery tracked by | nothing — GoTrue mail is fire-and-forget | `muster-resend-webhook` → `muster.email_events` |
 | Reaches Resend via | **custom SMTP** (`smtp.resend.com`) | **Resend REST API** (`POST /emails`) |
 | Templates live in | Supabase project config — sourced from [`supabase/auth-email-templates/`](../supabase/auth-email-templates/) | the edge function (`alertHtml()`) |
 | Links controlled by | Supabase **Site URL** + **redirect allowlist** | `MUSTER_APP_URL` env |
@@ -123,6 +124,45 @@ Edge Function secrets (Supabase dashboard → Edge Functions → Secrets):
 `mail.muster.partners`, so a reply to the sending address goes nowhere. Point it at a monitored
 inbox and replies start working; leave it unset and the email does not invite one.
 
+### Delivery tracking and suppression
+
+`muster-alert-dispatch` records the id Resend returns from `POST /emails`.
+`muster-resend-webhook` receives what Resend later reports about that id. Between them they make a
+distinction the outbox could not previously express:
+
+| Column | Means |
+|---|---|
+| `status` | the outbox's own work state: `pending` → `sending` → `sent` / `failed` / `skipped` |
+| `delivery_status` | what the provider reported: `accepted` → `delivered`, or `bounced` / `complained` / `failed` |
+
+**A 2xx from the send API only ever produces `accepted`.** Resend accepts, queues, and may still
+bounce minutes later. Only an inbound webhook can set `delivered`, and it is the only thing allowed
+to. Do not report a MUSTER alert as delivered on the strength of a send response.
+
+Provider events land in `muster.email_events`, keyed by the Svix message id, so a redelivery inserts
+nothing. Statuses are rank-guarded: a late `email.sent` cannot overwrite a `delivered`, and a bounce
+outranks everything.
+
+A permanent bounce or a spam complaint writes the address to `muster.email_suppressions`.
+`muster_engine_claim_alerts` then drops it from every future recipient list, and a row whose
+recipients are *all* suppressed terminates as `skipped` with the reason recorded rather than being
+sent into a wall. Transient bounces (full mailbox, greylisting) are recorded but never suppress.
+
+Lifting a suppression is a delete from that table. Stored `recipient_emails` are never rewritten, so
+delivery resumes with no backfill.
+
+**Resend webhooks are account-wide, not per-domain.** This Resend account also carries BRD, GFFH and
+the 28FS domains, so most deliveries reaching the endpoint are about somebody else's mail. The
+handler answers them 200 and writes nothing: `muster_engine_record_email_event` matches on
+`provider_message_id` against MUSTER's own outbox and returns `matched: false` for everything else.
+No other brand's delivery data enters `muster.*`.
+
+Additional Edge Function secret:
+
+| Secret | Required | Notes |
+|---|---|---|
+| `RESEND_WEBHOOK_SECRET` | **yes, for tracking** | the `whsec_...` Resend shows when the endpoint is created. Without it the function answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. |
+
 `risk_opened` is currently the **only** category the outbox accepts — the table's check
 constraint permits nothing else. A SITREP-ready notification, a scan-complete digest, or a
 welcome email are not "configuration"; each needs a migration to widen that constraint plus
@@ -155,7 +195,7 @@ they came for. Recovery is checked first, deliberately.
   page; not built, because it trades a rare failure for a new one on every sign-in. Worth doing
   once a client on locked-down Exchange reports it.
 - **Redirect not allowlisted** → silent fallback to Site URL, described above.
-- **Two Supabase projects.** Auth config does not migrate. Until `hjowfnzpomzxazmzywxw` has SMTP,
-  templates, Site URL, and the allowlist set, it cannot send a single auth email — and the
-  frontend still points at `mgtmqucaldkaxvxglguw`, so that is the project that has to be correct
-  today.
+- **Two Supabase projects.** Auth config does not migrate. All five frontend pages now point at
+  `hjowfnzpomzxazmzywxw`, so **that** is the project whose SMTP, templates, Site URL and allowlist
+  have to be correct — the old project no longer serves any auth email a user will see. Its cron is
+  inactive on every `muster-*` job, so it dispatches nothing either.

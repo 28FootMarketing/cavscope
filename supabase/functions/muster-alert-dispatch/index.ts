@@ -25,6 +25,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // set" error recorded on the row -- rows queue harmlessly, nothing is lost,
 // nothing silently disappears. See BLOCKERS-AND-DECISIONS.md B-2.
 //
+// Delivery tracking lives in muster-resend-webhook: this function records the
+// id Resend returns, that one records what Resend later reports happened to it.
+// A 2xx here is "accepted for sending" and nothing more.
+//
 // This is the APPLICATION email path. Auth email (magic link, password reset,
 // invite) does NOT come through here -- Supabase Auth sends those itself, and
 // only reaches Resend because Resend is configured as its SMTP relay. See
@@ -229,7 +233,30 @@ Deno.serve(async (req: Request) => {
         }),
       });
       if (res.ok) {
-        await db.rpc("muster_engine_resolve_alert", { p_id: row.id, p_status: "sent" });
+        // Resend answers { id: "<uuid>" }. That id is the ONLY join key an
+        // inbound webhook gives us, so a send whose id is not recorded can
+        // never be tracked past "accepted". Parse failures are not fatal --
+        // the mail is already accepted and losing the row would be worse than
+        // losing the tracking.
+        let providerMessageId: string | null = null;
+        try {
+          const payload = await res.json();
+          const id = (payload as { id?: unknown })?.id;
+          if (typeof id === "string" && id.length > 0) providerMessageId = id;
+        } catch {
+          providerMessageId = null;
+        }
+        if (!providerMessageId) {
+          console.error(`outbox ${row.id}: Resend accepted the send but returned no id; delivery cannot be tracked`);
+        }
+        // p_status "sent" means accepted for sending, not delivered. Only
+        // muster-resend-webhook can raise delivery_status to "delivered".
+        await db.rpc("muster_engine_resolve_alert", {
+          p_id: row.id,
+          p_status: "sent",
+          p_error: null,
+          p_provider_message_id: providerMessageId,
+        });
         sent++;
       } else {
         const errBody = await res.text().catch(() => res.statusText);
