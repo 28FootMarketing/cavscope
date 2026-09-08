@@ -115,7 +115,7 @@ async function generateOpenAPISchema(req: Request) {
         "AI agent gateway for MUSTER website assurance. Provides MCP (JSON-RPC 2.0) and REST interfaces to query findings, generate narratives, and access workspace data.",
       contact: {
         name: "28 Foot Systems",
-        url: "https://muster.28footsystems.com",
+        url: "https://muster.partners",
       },
     },
     servers: [
@@ -330,7 +330,7 @@ async function embedText(text: string): Promise<number[]> {
     headers: {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
-      "http-referer": "https://muster.28footsystems.com",
+      "http-referer": "https://muster.partners",
       "x-title": "MUSTER search embedding",
     },
     body: JSON.stringify({
@@ -453,7 +453,7 @@ async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: stri
         headers: {
           "content-type": "application/json",
           "authorization": `Bearer ${apiKey}`,
-          "http-referer": "https://muster.28footsystems.com",
+          "http-referer": "https://muster.partners",
           "x-title": "MUSTER AI agent loop",
         },
         body: JSON.stringify({

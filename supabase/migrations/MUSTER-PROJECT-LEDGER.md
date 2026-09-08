@@ -40,11 +40,12 @@ fixed for the other project, so it does not get to happen quietly twice.
 | 20260908002x | muster_026_drop_bulk_import_endpoint |
 | 20260908003x | muster_027_embedding_backfill_rpcs |
 | 20260908004x | muster_028_cron_jobs_inactive_until_cutover |
+| 20260908014043 | muster_029_autotriage_alert_url_to_muster_partners |
 
 ## The files now exist
 
 **`supabase/migrations-muster-project/`** — all 29, exported from that project's own
-`supabase_migrations.schema_migrations` ledger, 292,225 bytes, **every file's md5
+`supabase_migrations.schema_migrations` ledger, **every file's md5
 matching the statement Postgres recorded as applied**. Not a reconstruction from the
 catalog or from memory.
 
@@ -190,14 +191,89 @@ write privilege on the latter.
 - ~~The migration files themselves.~~ **Done** — `supabase/migrations-muster-project/`,
   29 files, checksum-verified against the applied ledger.
 
-## Two stale hostnames, deliberately left alone
+## Two stale hostnames -- both fixed on both projects (2026-09-08)
 
-Both were copied forward byte-identically to keep the parity checksums meaningful, and
-both should be fixed on BOTH projects in one change so they cannot drift apart again:
+Both were copied forward byte-identically during the migration to keep the parity
+checksums meaningful, then fixed on BOTH projects in one pass so they could not drift
+apart.
 
-- `muster.autotriage()` puts `https://app.muster.28footsystems.com/` in the alert body.
-- `muster-scan`'s User-Agent advertises `+https://muster.28footsystems.com/scanner` to
-  every site it scans.
+### `muster.autotriage()` alert body
 
-The product's home is `muster.partners` now. The old hosts still resolve, so neither is
-broken -- just wrong.
+`View full detail: https://app.muster.28footsystems.com/` ->
+`View full detail: https://app.muster.partners/app`.
+
+The HTML half of the same email already pointed at `MUSTER_APP_URL` (default
+`https://app.muster.partners/app`) from `muster-alert-dispatch`, so a recipient reading
+the HTML part and one on a text-only client were being sent to two different places.
+
+Applied by reading the body back out of `pg_get_functiondef()` and rewriting it with
+`replace()` -- not by restating a 5 KB plpgsql body. Retyping is what caused
+`muster_016` and `muster_017`; it is not the tool used to fix things.
+
+| Project | Version | Name | File md5 |
+|---|---|---|---|
+| `mgtmqucaldkaxvxglguw` | 20260908014037 | muster_autotriage_alert_url_to_muster_partners | `c81fab6147fd76265f0c524ea6c698f1` |
+| `hjowfnzpomzxazmzywxw` | 20260908014043 | muster_029_autotriage_alert_url_to_muster_partners | `13fb79d90f2922ecf156bd2fb0a582b1` |
+
+Both files match the statement text Postgres recorded as applied. `muster.autotriage()`
+is now `md5 2889bd9bd71ad0bc34239a0ef8c5fc34` on both projects.
+
+**This URL is a literal in two places** -- `muster.autotriage()` and `MUSTER_APP_URL`'s
+default in `muster-alert-dispatch/index.ts`. Change them together.
+
+### `muster-scan` User-Agent
+
+`+https://muster.28footsystems.com/scanner` -> `+https://muster.partners`.
+
+The old URL 404s twice over: no `/scanner` page was ever built, and
+`muster.28footsystems.com` is not a host `middleware.js` routes at all. A
+self-identifying crawler UA whose URL does not resolve defeats its own purpose.
+
+The same host was stale in three more places found by sweeping the whole
+`supabase/functions/` tree rather than only the two the earlier pass had recorded:
+
+| File | Was | Now |
+|---|---|---|
+| `muster-scan/index.ts` | scanner UA `+https://muster.28footsystems.com/scanner` | `+https://muster.partners` |
+| `muster-verify-site/index.ts` | verify UA `(+https://muster.28footsystems.com)` | `(+https://muster.partners)` |
+| `muster-agent/index.ts` | OpenAPI `info.contact.url`, plus `http-referer` on both OpenRouter calls | `https://muster.partners` |
+| `muster-backfill-embeddings/index.ts` | `http-referer` on the OpenRouter embeddings call | `https://muster.partners` |
+
+All four redeployed to BOTH projects from the repo, byte-identical bundles:
+
+| Function | `mgtmqucaldkaxvxglguw` | `hjowfnzpomzxazmzywxw` | ezbr_sha256 |
+|---|---|---|---|
+| muster-scan | v8 | v3 | `210560cec2fdb88461eda824cbe501185630db139cfed3fa577b09d0bb6945e0` |
+| muster-agent | v13 | v2 | `8fbaa372a9f549065b0ea747cb9b3de19352d18c125652ac86ce48658902dbc6` |
+| muster-backfill-embeddings | v12 | v2 | `04f9e983198feb24d1fc909c3d26383bdb5e48d40c33110a765a5c76de16aec6` |
+| muster-verify-site | v5 | v2 | `efdff4aff7be9d75f62a92ce898546e7f13b676003c97ecc1afb484e2f56966f` |
+
+`verify_jwt` was preserved per function (`true` on scan and verify-site, `false` on
+agent and backfill). `muster-agent` ships two files -- `index.ts` and `prompt.ts` --
+and both go in every deploy; deploying `index.ts` alone breaks its import.
+
+The one remaining `28footsystems` reference in `supabase/functions/` is the comment in
+`muster-alert-dispatch/index.ts` recording that `mail.28footsystems.com` is still a
+verified Resend domain. That is accurate history, not a stale pointer.
+
+### The three functions whose bundle hashes still differ between projects
+
+`muster-watchdog`, `muster-stripe-webhook` and `muster-ghl-webhook` report different
+`ezbr_sha256` on the two projects. **This is a bundling artifact, not a content
+difference.** Those three were last deployed to `mgtmqucaldkaxvxglguw` by a different
+tool than the MCP `deploy_edge_function` used for every deploy on the new project --
+visible in the source rows, whose `entrypoint_path` carries a `_1` build index against
+a `version` of 4, and whose `created_at` equals `updated_at`.
+
+Demonstrated, not assumed: `muster-watchdog`'s live source was read back off
+`mgtmqucaldkaxvxglguw` and redeployed verbatim to `hjowfnzpomzxazmzywxw`, which
+produced `107274210ee24d3297eea5f8b5a5e2b3fb4a0a7debe66d483d1bb1b12ba48b67` -- the hash
+that project already had. Identical source, two different bundle hashes across the two
+tools. Every function redeployed through the MCP tool on both projects matches exactly,
+which is the pattern that identifies the tool as the variable.
+
+`muster-stripe-webhook` and `muster-ghl-webhook` have not been through that same
+demonstration. Neither contains a host or project-ref literal, so neither is a
+stale-hostname case; they were left alone rather than redeployed on a guess. Any
+redeploy of them on `mgtmqucaldkaxvxglguw` through this tool should normalize both
+hashes to the new project's, and that is the cheap way to close it out.
