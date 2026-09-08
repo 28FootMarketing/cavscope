@@ -10,7 +10,7 @@ import { dmarcCandidates, evaluateEmailAuth, mailDomain } from "./email-auth.ts"
 //   { "scan_id": 123 }            run one queued scan
 //   { "mode": "due", "limit": 3 } claim due websites and stale queued scans, run each
 
-const ENGINE_VERSION = "http-native-1.1.0";
+const ENGINE_VERSION = "http-native-1.1.1";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;

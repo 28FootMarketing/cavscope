@@ -1,6 +1,6 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **37 rules, all active**, all
+Every defect code the engine can raise, by audit area. **38 rules, all active**, all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -19,8 +19,8 @@ plus the evidence ids (`E<id>`) the engine captured for it.
 
 ## Security — 13 rules
 
-Six more rules (`EMAIL-001`..`EMAIL-006`) also carry `category = security`; they are listed under
-[Email authentication](#email-authentication--6-rules) below, so the `security` category totals 19.
+Seven more rules (`EMAIL-001`..`EMAIL-007`) also carry `category = security`; they are listed under
+[Email authentication](#email-authentication--7-rules) below, so the `security` category totals 20.
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Six more rules (`EMAIL-001`..`EMAIL-006`) also carry `category = security`; they
 | `SEC-012` | low | No security.txt disclosure policy | NIST RS.CO-1, ISO 27001 A.5.5 |
 | `SEC-013` | **critical** | Final page served over HTTP | PCI DSS 4.2.1, NIST PR.DS-2 |
 
-## Email authentication — 6 rules
+## Email authentication — 7 rules
 
 Category `security`. These are the only rules that read DNS rather than HTTP: the engine resolves
 TXT and MX over DNS-over-HTTPS (Google primary, Cloudflare fallback) and judges the answers. A
@@ -53,10 +53,22 @@ inherits its parent's policy.
 |---|---|---|---|
 | `EMAIL-001` | high | No SPF record | RFC 7208, NIST PR.DS-2 |
 | `EMAIL-002` | high | SPF does not restrict senders (`+all` or `?all`) | RFC 7208, NIST PR.DS-2 |
-| `EMAIL-003` | medium | Multiple SPF records | RFC 7208 §4.5, NIST PR.DS-2 |
+| `EMAIL-003` | high | Multiple SPF records | RFC 7208 §4.5, NIST PR.DS-2 |
 | `EMAIL-004` | high | No DMARC record | RFC 7489, NIST PR.DS-2 |
 | `EMAIL-005` | medium | DMARC is not enforcing (`p=none`, or no `p=`) | RFC 7489, NIST PR.DS-2 |
 | `EMAIL-006` | low | DMARC has no reporting address (no `rua=`) | RFC 7489, NIST DE.CM-1 |
+| `EMAIL-007` | high | Multiple DMARC records | RFC 7489 §6.6.3, NIST PR.DS-2 |
+
+`EMAIL-003` and `EMAIL-007` are high, not medium, and that is deliberate. Both RFCs say a name with
+more than one record is a permanent error, so receivers apply none of them. The exposure is
+identical to publishing nothing at all, which is `EMAIL-001` and `EMAIL-004`, both high. Severity
+tracks what an attacker can do, not how close the operator came to getting it right.
+
+Both are also checked **before** any policy is read from the records. Reading the first record
+returned would mean judging a domain on whichever one the resolver happened to hand back first, and
+if that one looked strict the scan would report a domain as protected while every receiver ignores
+its policy. Telling a client they are covered when they are not is the one failure this family
+cannot afford.
 
 `~all` (softfail) is **not** flagged — it is the common, recommended setting, and reporting it would
 be crying wolf on a majority of correctly configured domains.
@@ -137,8 +149,8 @@ keyboard traps and live ARIA state are **not** assessed today.
 | Severity | Count | Codes |
 |---|---|---|
 | critical | 2 | `AVAIL-001`, `SEC-013` |
-| high | 5 | `EMAIL-001`, `EMAIL-002`, `EMAIL-004`, `SEC-001`, `SEC-010` |
-| medium | 15 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `AVAIL-002`, `EMAIL-003`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011` |
+| high | 7 | `EMAIL-001`–`004`, `EMAIL-007`, `SEC-001`, `SEC-010` |
+| medium | 14 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `AVAIL-002`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011` |
 | low | 11 | `A11Y-005`, `EMAIL-006`, `GOV-001`, `GOV-002`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012` |
 | info | 4 | `GOV-003`, `GOV-004`, `GOV-005`, `TP-001` |
 
