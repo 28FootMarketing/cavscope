@@ -1,12 +1,12 @@
 # Big Steele AI Audit: muster
 
-**Score 25 / 100, grade F, level 1 Automated.** Programs can call it and work runs without a person, but no model is in the loop.
+**Score 31 / 100, grade F, level 1 Automated.** Programs can call it and work runs without a person, but no model is in the loop.
 
 Gate: PASS (score 25 or more and level 1 Automated or above).
 
 Profile: **Product** (the default; declare another with --profile or ai-audit.config.json). Software people use directly; AI and automation serve the customer in the product.
 
-Generated 2026-09-06 by @bigsteele/ai-audit on 25 files. Every finding cites files; no source or values were read out. Env files were never opened.
+Generated 2026-09-08 by @bigsteele/ai-audit on 27 files. Every finding cites files; no source or values were read out. Env files were never opened.
 
 ## Scorecard
 
@@ -14,9 +14,9 @@ Generated 2026-09-06 by @bigsteele/ai-audit on 25 files. Every finding cites fil
 |---|---|---|---|
 | Automated surfaces | 9 / 25 | 25% | 9 |
 | AI systems | 0 / 25 | 25% | 0 |
-| Agents | 5 / 25 | 25% | 5 |
+| Agents | 11 / 25 | 25% | 11 |
 | Autonomy and operability | 11 / 25 | 25% | 11 |
-| **Total** | | | **25 / 100 (F)** |
+| **Total** | | | **31 / 100 (F)** |
 
 ## Levels
 
@@ -56,17 +56,20 @@ _Nothing found._
 | Voice or vision | 0 / 3 |
 | AI runs on the server, not only in the browser | 0 / 2 |
 
-## Agents (5 / 25)
+## Agents (11 / 25)
 
 - Tool definitions (1) — `supabase/functions/muster-agent/index.ts`
+- MCP server (the software's abilities offered to any agent), 1 written by hand (JSON-RPC initialize, tools/list, tools/call) (1) — `supabase/functions/muster-agent/index.ts`
+- MCP server is not discoverable: no SDK declaration, no server card or mcp.json, no mention in README, AGENTS.md or llms.txt. Agents find software the way this scanner does; a surface they cannot find is one they cannot use (1) — `supabase/functions/muster-agent/index.ts`
+- Memory and state kept between runs (threads, conversations, agent memory) (1) — `supabase/migrations/20260904120100_muster_onboarding_brand_flags_agents.sql`
 
 | Criterion | Earned |
 |---|---|
 | Tools a model may call | 5 / 9 |
 | A loop that lets the model act until done | 0 / 5 |
-| An MCP server exposing the software | 0 / 5 |
+| An MCP server exposing the software | 3 / 5 |
 | Orchestration or MCP client use | 0 / 3 |
-| Memory kept between runs | 0 / 3 |
+| Memory kept between runs | 3 / 3 |
 
 ## Autonomy and operability (11 / 25)
 
@@ -91,7 +94,6 @@ Points are on the 100 scale under this profile's weights, largest first.
 - **+8 A model provider integrated.** Call a model from the server side; a second provider or a router earns the last two.
 - **+5 API handlers a program can call.** Expose the app's operations as API handlers; 20 or more earns the full ten.
 - **+5 A loop that lets the model act until done.** Let the model call tools in a loop (maxSteps, tool_use handling, an agent runner) instead of one answer.
-- **+5 An MCP server exposing the software.** Ship an MCP server so any agent (Claude, Cursor, ChatGPT) can operate your software directly.
 - **+4 A machine-readable API description.** Publish an OpenAPI file or a GraphQL schema so an agent can read what exists without a person; the handlers you already have then count in full toward Reach. A capability inventory or typed contract schemas earn half.
 - **+4 Prompts written down as code.** Keep system prompts in files under version control, one per job.
 - **+4 Structured output the software acts on.** Ask the model for a schema (JSON schema, zod, structured output) so its answer can drive code, not only a chat.
@@ -101,13 +103,13 @@ Points are on the 100 scale under this profile's weights, largest first.
 - **+3 Queues or event pipelines.** Put long or retried work on a queue or an event pipeline instead of a request.
 - **+3 Voice or vision.** Add a voice or image path where your customers already speak or send pictures.
 - **+3 Orchestration or MCP client use.** Chain steps in a workflow engine or graph, or consume other systems' MCP tools.
-- **+3 Memory kept between runs.** Store threads, runs and agent memory in tables so work survives a restart and a second run knows the first.
 - **+3 Observability of what ran.** Trace and log every run (Sentry, Langfuse, OpenTelemetry, structured logs) so a failure is visible without a customer.
 - **+3 Retries, backoff, idempotency.** Retry with backoff and make writes idempotent so an agent can safely try again.
 - **+3 Evals or tests of AI behaviour.** Write evals for the prompts and tools; a change to a prompt should fail a test before it fails a customer.
 - **+2 Inbound webhooks from other systems.** Receive events from the systems you depend on (payments, calendars, CRMs) with a signature check.
 - **+2 Work that runs on a schedule.** Add scheduled jobs for the work a person currently remembers to do.
 - **+2 AI runs on the server, not only in the browser.** Move model calls behind a server function so keys stay server-side and agents can call them too.
+- **+2 An MCP server exposing the software.** Make the MCP server discoverable: declare the SDK, or publish a server card (.well-known/mcp/server-card.json) or mcp.json, and name the server in README or AGENTS.md. Claude, Cursor and ChatGPT find software the way this scanner does.
 - **+1 Guardrails and a human gate.** Rate limits and authenticated surfaces earn one; a human approval gate for the risky actions earns the other.
 
 ---

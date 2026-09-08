@@ -1,13 +1,13 @@
 {
   "format": "bigsteele-ai-audit/1",
   "brand": "Big Steele AI Audit",
-  "generated_at": "2026-09-06T04:22:45.893Z",
+  "generated_at": "2026-09-08T02:27:14.427Z",
   "repo": "muster",
   "app": "muster",
-  "files_considered": 25,
+  "files_considered": 27,
   "skipped": [],
   "score": {
-    "total": 25,
+    "total": 31,
     "grade": "F",
     "level": {
       "n": 1,
@@ -40,10 +40,10 @@
       {
         "key": "agents",
         "title": "Agents",
-        "earned": 5,
+        "earned": 11,
         "max": 25,
         "weight": 25,
-        "weighted": 5
+        "weighted": 11
       },
       {
         "key": "autonomy",
@@ -190,10 +190,10 @@
         "key": "mcp_server",
         "label": "An MCP server exposing the software",
         "max": 5,
-        "earned": 0,
-        "next": "Ship an MCP server so any agent (Claude, Cursor, ChatGPT) can operate your software directly.",
+        "earned": 3,
+        "next": "Make the MCP server discoverable: declare the SDK, or publish a server card (.well-known/mcp/server-card.json) or mcp.json, and name the server in README or AGENTS.md. Claude, Cursor and ChatGPT find software the way this scanner does.",
         "applicable": true,
-        "gain": 5
+        "gain": 2
       },
       {
         "group": "agents",
@@ -210,10 +210,10 @@
         "key": "memory",
         "label": "Memory kept between runs",
         "max": 3,
-        "earned": 0,
+        "earned": 3,
         "next": "Store threads, runs and agent memory in tables so work survives a restart and a second run knows the first.",
         "applicable": true,
-        "gain": 3
+        "gain": 0
       },
       {
         "group": "autonomy",
@@ -362,6 +362,27 @@
             "supabase/functions/muster-agent/index.ts"
           ],
           "count": 1
+        },
+        {
+          "what": "MCP server (the software's abilities offered to any agent), 1 written by hand (JSON-RPC initialize, tools/list, tools/call)",
+          "files": [
+            "supabase/functions/muster-agent/index.ts"
+          ],
+          "count": 1
+        },
+        {
+          "what": "MCP server is not discoverable: no SDK declaration, no server card or mcp.json, no mention in README, AGENTS.md or llms.txt. Agents find software the way this scanner does; a surface they cannot find is one they cannot use",
+          "files": [
+            "supabase/functions/muster-agent/index.ts"
+          ],
+          "count": 1
+        },
+        {
+          "what": "Memory and state kept between runs (threads, conversations, agent memory)",
+          "files": [
+            "supabase/migrations/20260904120100_muster_onboarding_brand_flags_agents.sql"
+          ],
+          "count": 1
         }
       ],
       "facts": {
@@ -369,10 +390,11 @@
         "tool_names": [],
         "loops": 0,
         "agent_frameworks": [],
-        "mcp_server": 0,
+        "mcp_discoverable": 0,
+        "mcp_server": 1,
         "mcp_client": 0,
         "orchestration": 0,
-        "memory": 0
+        "memory": 1
       }
     },
     {
