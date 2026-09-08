@@ -435,3 +435,67 @@ none of them is a repo change:
 
 Order matters: 1-3 before the merge, 4-5 at the moment of cutover, 6 whenever the
 CORA/JARVIS side is repointed.
+
+## Auth users migrated (2026-09-08)
+
+The three `auth.users` rows and their three `auth.identities` rows are on
+`hjowfnzpomzxazmzywxw`, **byte-identical to the source**:
+
+| | md5 on both projects |
+|---|---|
+| `auth.users` (the 3) | `a2876dbd50c2001eb4e017fc63975aed` |
+| `auth.identities` (the 3) | `1ea187cec0977a5313e6f0a923f5c406` |
+
+All three bind to `muster.users` (`select count(*) from muster.users mu join auth.users
+au on au.id = mu.auth_user_id` = 3). UUIDs and bcrypt password hashes are preserved, so
+**existing passwords work** and nothing needs a reset — which matters, because password
+reset is itself blocked until GoTrue is configured.
+
+Method: `auth.users` and `auth.identities` have identical column signatures on both
+projects (`a04c75f9f3416057da8ff98da626a3fe` / `3bee18377cd825d2690fe1aaed80efdc`), so a
+verbatim row copy is safe. The rows moved server-to-server over `pg_net` through a
+token-gated endpoint (`muster_030`, dropped by `muster_031`) rather than as literals in a
+statement, because they carry password hashes and that material should not pass through a
+transcript, a log, or a migration file. Same reasoning as `muster_023`.
+
+Two things worth knowing for next time:
+
+- `auth.users.confirmed_at` and `auth.identities.email` are `GENERATED ALWAYS`, so
+  `insert ... select *` fails. The import reads the column list from `information_schema`
+  at call time instead of hardcoding ~35 names.
+- `pg_net`'s background worker was stalled and the request sat in
+  `net.http_request_queue` unprocessed. `select net.worker_restart();` cleared it. Check
+  the queue, not just `net._http_response`, when a pg_net call appears to vanish.
+
+## Grant drift found by diffing advisors, not by reading (2026-09-08)
+
+Comparing `get_advisors` output between the two projects surfaced three divergences that
+every previous parity check had missed, all making the new project **more permissive**:
+
+| Object | Old | New (before fix) |
+|---|---|---|
+| `public.rls_auto_enable()` | postgres, authenticated, service_role | **PUBLIC**, postgres, **anon**, authenticated, service_role |
+| `public.cron_error_log` | RLS on + `service_only` policy | RLS on, **no policy** |
+| `public.cron_post_log` ACL | postgres, service_role | postgres, **anon**, **authenticated**, service_role |
+
+Fixed by `muster_032`, which asserts the resulting ACLs equal the source's exactly rather
+than trusting its own statements. Advisors went 68 → 66 lints, and every remaining lint
+has an equivalent on the old project.
+
+**This is the third instance of one root cause.** `muster_021`: Postgres grants EXECUTE
+to PUBLIC on every new function, so a fresh project starts more permissive than its
+source. `muster_027`: the shim migrations selected on `proname like 'muster%'` and six
+RPCs did not carry the prefix. `rls_auto_enable` is both at once — SECURITY DEFINER, from
+`muster_002_platform_cron_helpers`, and not named `muster*`, so `muster_021`'s lockdown
+never looked at it.
+
+The general lesson, now twice-earned: **a parity check scoped by name only verifies the
+set it defined.** The advisor diff worked precisely because it is scoped by behaviour
+instead.
+
+## Remaining work
+
+See `docs/CUTOVER.md`. Steps 1 (GoTrue config) and 2 (edge function secrets) are
+dashboard-only — no tool in the build environment can read or write Supabase Auth config
+or function secrets on either project, so those two are unverifiable from here as well as
+unsettable. Everything after them is gated on them.
