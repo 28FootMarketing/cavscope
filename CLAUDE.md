@@ -19,6 +19,32 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   no external library.
 - Verify with `node --check` after editing (extract the inline `<script>` block first) before committing.
 
+## Right-click is suppressed on every page, and it is not a security control
+
+Every page calls `initContextMenuGuard()` alongside `initTooltips()`. It suppresses the browser
+context menu on a mouse right-click. It was added 2026-09-08 at the owner's explicit request, after
+the tradeoff was put to them in full, and a new page must include it the same way tooltips are
+included.
+
+**It does not protect page source, and it must never be described to a client, in a SITREP, or in a
+control register as if it does.** `Ctrl+U`, `F12`, the browser's own View Page Source item, `curl`,
+Save Page As, and simply disabling JavaScript all still read every byte. The protection that is real
+is architectural and already in place: auth, RLS, the scan engine, posture scoring, control
+derivation and SITREP generation run in Postgres and edge functions, and what ships to a browser is
+a renderer.
+
+Two carve-outs are deliberate and are pinned by `tests/ui/context-menu-guard.test.ts`. Do not remove
+either to make the block "more complete" — each exists because MUSTER sells accessibility auditing
+(`A11Y-001`..`A11Y-007`) and would otherwise be shipping the defect it scans for:
+
+- **Keyboard-invoked menus pass through.** Menu key and Shift+F10 arrive as a `contextmenu` event
+  with `button === 0`; a mouse right-click arrives with `button === 2`. Only `2` is suppressed, so
+  screen reader and keyboard-only users keep the menu. Touch long-press also reports `0`, so mobile
+  copy and paste keeps working — a long-press is not a right-click.
+- **Text-entry surfaces keep their native menu.** `input`, `textarea` and `contenteditable` are
+  excluded, because right-click there is how people paste and reach spellcheck suggestions, and a
+  form field exposes no source.
+
 ## Other notes
 
 - **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
