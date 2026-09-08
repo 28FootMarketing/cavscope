@@ -1,0 +1,55 @@
+{
+  "name": "01-mixed-board",
+  "description": "The common case: several open findings across severities, board audience. Exercises the citation contract under normal load.",
+  "context": {
+    "website_id": 9001,
+    "audience": "board",
+    "organization_name": "Harbor Point Dental",
+    "website_name": "Harbor Point Dental",
+    "website_url": "https://harborpointdental.example",
+    "posture_score": 58,
+    "posture_band": "needs attention",
+    "findings": [
+      {
+        "finding_id": 4101,
+        "severity": "critical",
+        "title": "HTTP does not redirect to HTTPS",
+        "plain_english": "Visitors who type the address without https can be intercepted. Force the secure version.",
+        "remediation": "Configure a permanent (301/308) redirect from http:// to https:// at the CDN or web server.",
+        "evidence_ids": [88201, 88202]
+      },
+      {
+        "finding_id": 4102,
+        "severity": "high",
+        "title": "No privacy policy link found",
+        "plain_english": "Visitors cannot find how their data is used. Most privacy laws require this link.",
+        "remediation": "Add a visible footer link to a current privacy policy on every page.",
+        "evidence_ids": [88203]
+      },
+      {
+        "finding_id": 4103,
+        "severity": "high",
+        "title": "Third-party trackers loaded before consent could be verified",
+        "plain_english": "The site uses tracking tools. Depending on where visitors live, consent may be required first.",
+        "remediation": "Confirm a consent mechanism gates these scripts where required, and list them in the privacy policy.",
+        "evidence_ids": [88204, 88205]
+      },
+      {
+        "finding_id": 4104,
+        "severity": "medium",
+        "title": "Missing Content-Security-Policy",
+        "plain_english": "There is no policy limiting which scripts can run on the page. This is the main defense against injected code.",
+        "remediation": "Publish a CSP. Start in report-only mode, then enforce script-src and object-src restrictions.",
+        "evidence_ids": [88206]
+      },
+      {
+        "finding_id": 4105,
+        "severity": "low",
+        "title": "Missing Referrer-Policy",
+        "plain_english": "Full page addresses may leak to other sites when visitors click outbound links.",
+        "remediation": "Add Referrer-Policy: strict-origin-when-cross-origin.",
+        "evidence_ids": [88207]
+      }
+    ]
+  }
+}

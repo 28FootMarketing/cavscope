@@ -788,3 +788,98 @@ Whether JARVIS should be able to propose MUSTER law updates at all, now that MUS
 separate product on a separate project. Zero such approvals have ever been filed, so
 there is no demonstrated need. If the answer is yes, it needs an explicit cross-project
 path on `hjowfnzpomzxazmzywxw` -- not a resurrection of this branch.
+
+## 2026-09-08 -- STRIPE_WEBHOOK_SECRET set on hjowfnzpomzxazmzywxw
+
+Set in the dashboard (Edge Functions -> Secrets); no tool or network route exists from
+here for edge function secrets, so this was the one step that had to be done by hand.
+
+Verified live, without ever handling the secret value, by probing the deployed function
+with an unsigned body over `pg_net`:
+
+```sql
+select net.http_post(
+  url := 'https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-stripe-webhook',
+  headers := jsonb_build_object('Content-Type','application/json'),
+  body := jsonb_build_object('probe', true),
+  timeout_milliseconds := 20000);
+-- then: select status_code, content from net._http_response where id = <returned id>;
+```
+
+The two outcomes are unambiguous, which is what makes this probe worth keeping:
+
+| Response | Meaning |
+|---|---|
+| `500 {"error":"STRIPE_WEBHOOK_SECRET is not set"}` | secret absent (or named wrong) |
+| `401 {"error":"invalid signature"}` | secret present, HMAC failing closed on an unsigned body -- **correct** |
+
+Probes 51, 53, 56 returned 500. Probe 63 (04:26:01Z) returned 401. Secret is in.
+
+Note the probe proves the secret *exists*, not that it *matches* the Stripe endpoint --
+a wrong `whsec_` fails identically at 401. Only a real Stripe-signed delivery separates
+those two, which is the next step.
+
+### Baseline captured before the first live delivery
+
+`muster.pending_commercial_grants` = 0 rows, `max(created_at)` null. Any row appearing
+after a Stripe test send is attributable to that send.
+
+### Still outstanding on this project
+
+- Stripe Payment Link metadata: `tier` + `stage`, one of the four pairs in
+  `muster.commercial_pricing` (`muster`/`seed`, `muster`/`fruit`, `muster_partner`/`seed`,
+  `muster_partner`/`fruit`). `muster_enterprise` is **not** a valid pair -- that tier is
+  sales-assisted through GHL. Mode must be `subscription` and the link must collect email.
+- `GHL_API_KEY` and `GHL_LOCATION_ID` edge secrets.
+- GoTrue email rate limit still at the built-in default (~2/hour) despite custom SMTP.
+- Sitrep redirect allowlist click-test against the 11-entry list.
+
+## 2026-09-08 -- muster-agent redeployed to both projects (ai_narrative hardening)
+
+Prompted by building `evals/ai-narrative`. The eval work surfaced a fail-open in
+`ai_narrative` and required splitting the tool's pure half into
+`muster-agent/narrative.ts`, so both projects were redeployed to keep the
+byte-identity invariant.
+
+### The defect
+
+`verifyNarrativeCitations` checked only the `citations` array the model declared.
+A model that wrote an invented `F8888` into a board-facing sentence and left it
+out of that array returned `confidence: "high"` with an empty
+`unverified_citations`. The tool advertises to agents that "the model never sees
+or invents anything outside" the supplied data; that path did not enforce it.
+
+Verification now scans the narrative prose as well and folds both sources through
+the same allowed-set test. A fabricated id always lands in `unverified_citations`
+and always forces `confidence` to `"low"`.
+
+`ai_narrative` was **not** dormant when this was found: `default_enabled` true,
+`kill_switch` false, `plan_minimum` pro, zero overrides. The fail-open was
+reachable.
+
+### Deploy
+
+| | |
+|---|---|
+| `hjowfnzpomzxazmzywxw` | version 6 |
+| `mgtmqucaldkaxvxglguw` | version 14 |
+| `ezbr_sha256` (both) | `ec23b1c99619777a91e6a9ff6dc13e4b0aa1a6d08243e2847c8c3391514e1e42` |
+
+Identical hashes are the cross-project check: the same three files
+(`index.ts`, `prompt.ts`, `narrative.ts`) reached both. Smoke-tested live on both
+after deploy -- `GET /muster-agent` returns 200 with 14 tools and the correct
+`endpoint`, and on the new project `GET /muster-agent/openapi.json` returns 200
+with `x-muster.toolCount` 14. That is what proves the new `./narrative.ts` import
+resolves in the Deno runtime.
+
+### Note for whoever reads this next
+
+Nothing in the frontend renders `unverified_citations`. The forced `confidence`
+downgrade is currently the only signal that a fabrication reached a reader. If a
+surface starts displaying narratives, show that field.
+
+The `--profile`-style static scanners will keep scoring this repo's tool surface
+low: MUSTER's tool schemas live in `muster.agent_tools`-shaped SQL read through
+`muster_engine_agent_tools()`, and the OpenAPI document is generated per request
+by `generateOpenAPISchema`. Neither is a file to grep. That is a property of the
+architecture, not a gap.

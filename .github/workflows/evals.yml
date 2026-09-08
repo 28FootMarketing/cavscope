@@ -1,0 +1,30 @@
+# The offline ai_narrative eval suite. Free, no network, no model.
+#
+# The live tier (evals/ai-narrative/live.ts) is deliberately not here: it spends
+# OpenRouter credit per run, so it belongs to a human before a prompt or model
+# change, not to every push.
+name: evals
+
+on:
+  push:
+    paths:
+      - 'evals/**'
+      - 'supabase/functions/muster-agent/**'
+      - '.github/workflows/evals.yml'
+  pull_request:
+    paths:
+      - 'evals/**'
+      - 'supabase/functions/muster-agent/**'
+      - '.github/workflows/evals.yml'
+
+jobs:
+  ai-narrative:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Native TypeScript type stripping, so the suite imports the shipped
+          # Deno .ts modules directly with no build step and nothing to drift.
+          node-version: '22'
+      - run: npm run eval:narrative
