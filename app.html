@@ -2825,9 +2825,13 @@
         <div class="modal-actions" style="flex-wrap: wrap;">
           <button type="button" class="btn-ghost" onclick="Live.closeAuth()">Cancel</button>
           <button type="button" class="btn-ghost" onclick="Live.submitAuth(event, 'magic')" data-tooltip="Emails a one-time sign-in link. No password needed.">Magic link</button>
-          <button type="button" class="btn-ghost" onclick="Live.submitAuth(event, 'signup')" data-tooltip="Creates your account, then walks you through onboarding.">Create account</button>
           <button type="submit" class="btn-primary">Sign in</button>
         </div>
+        <p class="modal-desc" style="margin-top:14px; margin-bottom:0;">
+          New to MUSTER? Self-serve signup is paused right now &mdash;
+          <a href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us to get your organization provisioned. Accounts are created for you, not signed up for here.">contact us</a>
+          to get set up. You can keep exploring with demo data in the meantime.
+        </p>
       </form>
     </div>
   </div>
@@ -5171,6 +5175,12 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         setTimeout(() => document.getElementById('liveAuthEmail')?.focus(), 50);
       },
       closeAuth() { document.getElementById('liveAuthBackdrop').classList.remove('open'); },
+      // Modes: 'signin' (password) and 'magic' (one-time link). There is no
+      // 'signup' -- self-serve account creation is paused and accounts are
+      // provisioned through sales, so the modal routes new users to contact us
+      // instead. Do not re-add it without also deciding what GoTrue's
+      // disable_signup should be; a signup button and disable_signup=true make
+      // the button fail with a raw provider error.
       async submitAuth(e, mode) {
         e.preventDefault();
         const email = document.getElementById('liveAuthEmail').value.trim();
@@ -5193,14 +5203,6 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             // rate-limit refusal each disclose whether the address has an
             // account, so every outcome gets the same confirmation.
             msg.textContent = `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
-            return;
-          }
-          if (mode === 'signup') {
-            if (password.length < 8) { msg.textContent = 'Password needs at least 8 characters.'; return; }
-            const { data, error } = await this.sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
-            if (error) throw error;
-            if (data.session) { this.closeAuth(); return; }
-            msg.textContent = 'Account created. Confirm the email we sent, then sign in.';
             return;
           }
           const { error } = await this.sb.auth.signInWithPassword({ email, password });
