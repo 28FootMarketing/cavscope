@@ -1,12 +1,55 @@
-# Supabase project configuration for MUSTER (shared 28FS project mgtmqucaldkaxvxglguw).
-# Only the pieces that matter for deploys from this repo are declared.
+# Supabase project configuration for MUSTER.
+#
+# project_id is the shared 28FS project. MUSTER's own project is
+# hjowfnzpomzxazmzywxw; it is NOT set here because the CLI applies whatever it
+# finds in supabase/migrations/ to whichever project it is linked to, and that
+# directory is the shared project's history. The new project's migrations live
+# in supabase/migrations-muster-project/ and are applied deliberately, never by
+# a `db push` from this file. Repoint project_id only as part of cutover.
 project_id = "mgtmqucaldkaxvxglguw"
+
+# Every function is declared, including the ones whose settings match the
+# default. verify_jwt defaults to TRUE when a function is omitted, and four of
+# these need FALSE -- an omitted entry is not a neutral choice, it is a wrong
+# one that only shows up as 401s in production. Values below are the live
+# settings on both projects, verified 2026-09-08.
 
 [functions.muster-scan]
 verify_jwt = true
 entrypoint = "./functions/muster-scan/index.ts"
 
+[functions.muster-verify-site]
+verify_jwt = true
+entrypoint = "./functions/muster-verify-site/index.ts"
+
+[functions.muster-alert-dispatch]
+verify_jwt = true
+entrypoint = "./functions/muster-alert-dispatch/index.ts"
+
 [functions.muster-agent]
 # Custom auth: x-muster-api-key resolved in SQL. The gateway must accept agents without a Supabase JWT.
 verify_jwt = false
 entrypoint = "./functions/muster-agent/index.ts"
+
+[functions.muster-watchdog]
+# Shared secret: x-muster-secret against vault muster_cron_secret. Called by pg_cron.
+verify_jwt = false
+entrypoint = "./functions/muster-watchdog/index.ts"
+
+[functions.muster-backfill-embeddings]
+# Shared secret: x-muster-secret. Spends OpenRouter credit per record, so the
+# in-function check is the only thing standing between this and an open endpoint.
+verify_jwt = false
+entrypoint = "./functions/muster-backfill-embeddings/index.ts"
+
+[functions.muster-stripe-webhook]
+# Stripe signs its own requests; verified against STRIPE_WEBHOOK_SECRET over the
+# raw body. Stripe cannot present a Supabase JWT.
+verify_jwt = false
+entrypoint = "./functions/muster-stripe-webhook/index.ts"
+
+[functions.muster-ghl-webhook]
+# Shared secret: x-muster-secret against vault muster_ghl_webhook_secret. GHL's
+# outbound webhook action cannot present a Supabase JWT.
+verify_jwt = false
+entrypoint = "./functions/muster-ghl-webhook/index.ts"
