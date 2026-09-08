@@ -1325,3 +1325,93 @@ and `sync.ts` is the supported path from a machine with network. Second, the dep
 `muster-embed-docs` was verified **functionally** — dry run, real run, wrong-secret 401, hash skip —
 not by byte-diffing the deployed source against the repo file. `supabase functions deploy` from the
 repo is what makes those identical.
+
+---
+
+## MUSTER cron removed from the shared project (2026-09-08)
+
+The five `muster-*` jobs on `mgtmqucaldkaxvxglguw` have been **unscheduled**, not merely
+deactivated. They were already `active = false` from the 2026-09-08 cutover; unscheduling removes
+the rows so nobody can flip them back on against a project that is no longer MUSTER's data plane.
+
+Before: 112 cron jobs, 5 MUSTER (all inactive), 107 other-brand.
+After: 107 cron jobs, 0 MUSTER, **107 other-brand, unchanged**.
+
+That last number is the point. This project is shared with BRD, CAW, CORA, RIOS, ROS, IRON, ITIP,
+GOVRNR and the rest, and it carries 334 edge functions and 107 cron jobs that are not MUSTER's. The
+removal ran inside a DO block that asserted the other-brand count before and after and would have
+raised, rolling the whole thing back, on any drift. Anything touching this project has to be
+surgical, and the assertion is how that is enforced rather than hoped for.
+
+The new project is unaffected and verified: all five jobs present as jobids 6-10, all `active = true`,
+same schedules.
+
+### Restoring them, if that is ever needed
+
+Not expected to be, since all four HTTP jobs posted to `mgtmqucaldkaxvxglguw`'s own function URLs
+and that project no longer holds MUSTER's live data. Recorded because a removal without a restore
+path is a decision nobody can reverse.
+
+| jobid | jobname | schedule | what it did |
+|---|---|---|---|
+| 134 | `muster-scan-due` | `*/15 * * * *` | `cron_safe_post` -> `muster-scan`, `{mode: due, limit: 3}`, 150s |
+| 138 | `muster-autotriage-15min` | `7,22,37,52 * * * *` | `select muster.autotriage();` in-database |
+| 139 | `muster-alert-dispatch-5min` | `*/5 * * * *` | `cron_safe_post` -> `muster-alert-dispatch`, `{}`, 30s |
+| 140 | `muster-watchdog-10min` | `*/10 * * * *` | `cron_safe_post` -> `muster-watchdog`, `{}`, 30s |
+| 145 | `muster-embedding-backfill-15min` | `*/15 * * * *` | `cron_safe_post` -> `muster-backfill-embeddings`, `{batch_size: 25, type: all}`, 55s |
+
+All four HTTP jobs read `supabase_anon_key` and `muster_cron_secret` from that project's vault and
+built their headers inline; `20260904035815_muster_cron.sql` and the three cron migrations in
+`supabase/migrations-shared-project/` carry the original definitions verbatim.
+
+## Pre-decommission verification (2026-09-08)
+
+Run before removing anything, because "the migration looks done" is not the same as "no object and
+no obligation is stranded". Every number below was measured, not recalled.
+
+**Object parity.** 173 objects on the old project (45 tables, 58 `muster.*` functions, 70
+`public.muster_*` shims) against 196 on the new one. Exactly one old signature has no counterpart:
+`public.muster_engine_resolve_alert(p_id bigint, p_status text, p_error text)`. It is not missing.
+The new project carries a **four**-argument version that adds `p_provider_message_id text`, from
+`muster_037`'s delivery tracking, and it is provably live: `notification_outbox` row 6 went to
+`sent` / `accepted` in one attempt at 18:37 UTC today. The three-argument form was superseded.
+
+**Entities.** Organizations 3 and 4, users 2, 3 and 4, and websites 3 and 4 exist on both with
+identical names, roles and `created_at`. The new project adds websites 5 and 7. Agents and API keys
+match down to the `key_hash` prefix, and **both API keys are revoked** on both projects, so no live
+agent credential points at either gateway.
+
+**Obligations.** Every table that could represent something owed to a person is empty on the old
+project: `notification_outbox` 0, `pending_invites` 0, `pending_commercial_grants` 0,
+`onboarding_steps` 0. No unsent alert, no unclaimed invite, no paid-but-unprovisioned grant.
+
+**Quiescence.** Last MUSTER write anywhere in that schema: 2026-09-07 20:27:52 UTC. Meanwhile
+`anthony@28footmarketing.com` signed in on the new project at 2026-09-08 03:56 UTC.
+
+**The constraint that governs every later step.** `auth.users` on the old project holds **14
+accounts, only 3 of them MUSTER's**. The other 11 belong to `unclms.com`, `berecruitabledaily.com`,
+`aftertodayai.com` and others, and `learner@unclms.com` signed in on 2026-09-08 at 09:53 UTC. When
+the `muster` schema and the `public.muster_*` shims are eventually dropped there, **auth must not be
+touched at all** — not even the three MUSTER rows, since `anthony@28footmarketing.com` is the owner
+account for the other brands on that project too.
+
+## Stripe self-serve is fully configured (2026-09-08)
+
+Recorded because this file and `docs/CUTOVER.md` both said otherwise, and that stale list is what
+gets read back as truth. Verified against the live account `acct_1PUDj1JijfcmbDDB`:
+
+- **Payment Link metadata is present.** `plink_1UCWx7JijfcmbDDBL3nK76Dl` carries
+  `{tier: muster, stage: seed}`, `plink_1UCWx7JijfcmbDDBpGFjfw9w` carries
+  `{tier: muster, stage: fruit}`. Both livemode, both active.
+- **The webhook endpoint is repointed.** `we_1UCXWFJijfcmbDDBlfgn2lQQ`, named "muster", status
+  enabled, at `hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-stripe-webhook`, subscribed to
+  `checkout.session.completed`.
+- **`STRIPE_WEBHOOK_SECRET` is set.** An unsigned probe returned 401 `invalid signature`; unset
+  returns 500 `STRIPE_WEBHOOK_SECRET is not set`, so the two are distinguishable and this is the
+  former.
+- **`RESEND_API_KEY` is set**, proven the same way rather than asserted: outbox rows 5 and 6 reached
+  `sent` / `accepted` on one attempt each.
+
+Still genuinely outstanding: GoTrue SMTP, the six auth email templates and the rate limit on the new
+project, none of which are readable from any tool here, and `customer.subscription.deleted`, which
+nothing consumes so a cancelled customer keeps their plan.

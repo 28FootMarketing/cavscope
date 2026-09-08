@@ -154,9 +154,22 @@ either to make the block "more complete" — each exists because MUSTER sells ac
 - **Backend: Supabase project `hjowfnzpomzxazmzywxw`, schema `muster`.** MUSTER has its own project
   now; `supabase/config.toml` and all five frontend pages point at it, and `supabase/migrations/` is its
   history. Real scan engine, SITREP generation, RLS, and RPCs are live — see `docs/BACKEND.md`.
-- **The old shared 28FS project `mgtmqucaldkaxvxglguw` is still running MUSTER in production** until the
-  rest of cutover lands. Its edge functions are byte-identical to the new project's, and MUSTER's 48
-  migrations against it are kept as history in `supabase/migrations-shared-project/` — a readable
-  history, not a replayable one. Do not add to that directory. What is still outstanding on the new
-  project (auth users, secrets, GoTrue config, Stripe webhook, cron activation) is tracked in
-  `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+- **The old shared 28FS project `mgtmqucaldkaxvxglguw` no longer runs any part of MUSTER**, as of
+  2026-09-08. Its five `muster-*` cron jobs are unscheduled (not merely inactive), its last MUSTER
+  write was 2026-09-07 20:27 UTC, and both MUSTER API keys are revoked. What is still there: the
+  `muster` schema (45 tables, 58 functions), the 70 `public.muster_*` shims, and 8 deployed edge
+  functions, all dormant. Removing them needs the Supabase CLI — the MCP has no delete for edge
+  functions — and is tracked in `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+  **That project is shared and very much alive for other brands: 334 edge functions, 107 cron jobs,
+  and 14 `auth.users` of which only 3 are MUSTER's.** Anything done there must be surgical and must
+  assert the other-brand counts before and after. `auth.users` must never be touched, not even
+  MUSTER's three rows, because `anthony@28footmarketing.com` is the owner account for the other
+  brands too. MUSTER's 48 migrations against it stay as history in
+  `supabase/migrations-shared-project/` — a readable history, not a replayable one. Do not add to it.
+- **Stripe self-serve is fully configured and verified** (2026-09-08), against
+  `acct_1PUDj1JijfcmbDDB`: both Payment Links carry `tier` and `stage` metadata, the
+  `checkout.session.completed` endpoint points at the new project, and `STRIPE_WEBHOOK_SECRET` and
+  `RESEND_API_KEY` are both set — each proven by observed behaviour, not by reading a checklist.
+  Do not repeat "Stripe is outstanding" from an older note. What IS outstanding: GoTrue SMTP,
+  templates and rate limit on the new project, and `customer.subscription.deleted`, which nothing
+  consumes.
