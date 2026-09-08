@@ -1118,3 +1118,58 @@ Both times this family has been wrong, the bug was the same shape: a state the r
 being silently collapsed into a state they did. Multiple records read as one record. A DNS outage
 read as an absent record (guarded from the start). Any future rule here should be asked what it
 does when the answer is *ambiguous*, not just when it is present or absent.
+
+---
+
+## The self-serve billing path, actually exercised (2026-09-08)
+
+`muster-stripe-webhook` v8 on `hjowfnzpomzxazmzywxw`. CLAUDE.md said the Stripe webhook "hasn't been
+built"; it has been, since PRD-003. That line is now corrected.
+
+### The database half works, and now that is a fact rather than a hope
+
+Nobody had ever run the checkout-to-provisioned-org handoff. A probe did, against the live database,
+inside a DO block that raised at the end so the whole thing rolled back:
+
+```
+record_commercial_grant(email, tier=muster, stage=seed) -> do_onboard(...)
+
+plan=starter (from trial) | commercial_stage=seed | website_limit 1 -> 3
+grant_applied_at set | 1 commercial_plan_applied audit event
+```
+
+Residue check afterwards: 0 probe users, 0 grants, 0 organizations. Aborting is the cleanup, and it
+is why a probe like this can be pointed at production data at all.
+
+### Two real bugs in the webhook, found by writing its first tests
+
+**1. Multiple `v1` signatures.** Stripe sends one `v1` per active secret while a signing secret is
+being rotated. The header was parsed with `Object.fromEntries`, which keeps only the last value for a
+repeated key. If our signature was not last, every paid checkout during the rotation window would
+have been rejected `401` -- and a 401 here is indistinguishable from an attack, so it would have been
+investigated as one.
+
+**2. Granting on an unpaid session.** `checkout.session.completed` fires when the Checkout Session
+finishes, which is not the same as the money arriving. A delayed-notification payment method
+completes the session with `payment_status: "unpaid"` and can still fail afterwards. The old code
+recorded the grant on completion alone, so that customer got a paid plan without paying. Now gated to
+`paid` and `no_payment_required` (trial or full discount), returning 200 so Stripe stops retrying.
+
+21 tests in `tests/billing/stripe-webhook.test.ts`, against the shipped `core.ts`, including a replay
+test that moves `t=` forward on a captured body and asserts it still fails.
+
+### What is left, and it is all Stripe dashboard
+
+Nothing in this repo blocks self-serve revenue any more. Three things outside it do:
+
+| | |
+|---|---|
+| Webhook endpoint | Registered in Stripe against the **new** project's function URL, subscribed to `checkout.session.completed`. If it still points at `mgtmqucaldkaxvxglguw`, these fixes are not in the path. |
+| `STRIPE_WEBHOOK_SECRET` | Set as an edge function secret on the new project. Revealable in the Stripe dashboard at any time, not only at creation. |
+| Payment Link metadata | `tier` and `stage` on each link, matching a `muster.commercial_pricing` row. Live rows: `muster/seed` -> starter, `muster/fruit` -> pro. A link without them is rejected 400. |
+
+### Known gap, not built
+
+Cancellation. Nothing consumes `customer.subscription.deleted`, so a customer who cancels keeps their
+plan until someone changes it by hand. That is a revenue leak in the other direction and it is a
+separate piece of work, named here so it is not discovered by an accountant.
