@@ -59,6 +59,8 @@ test("two SPF records is a permerror, and the permissive check is not also run",
   const f = evaluateEmailAuth({ ...GOOD, spfTxt: ["v=spf1 include:a ~all", "v=spf1 include:b ~all"] });
   assert.deepEqual(ids(f), ["EMAIL-003"]);
   assert.match(f[0].detail, /RFC 7208/);
+  // Same exposure as no SPF at all (EMAIL-001, high), so the same severity.
+  assert.equal(f[0].severity, "high");
 });
 
 test("non-SPF TXT records are ignored", () => {
@@ -98,6 +100,39 @@ test("a DMARC record with no rua is flagged low, and no rua on p=none gives both
     ...GOOD, dmarc: { name: "_dmarc.example.com", txt: ["v=DMARC1; p=none"] },
   });
   assert.deepEqual(ids(both), ["EMAIL-005", "EMAIL-006"]);
+});
+
+test("two DMARC records is a permerror, and no policy is read from either", () => {
+  const f = evaluateEmailAuth({
+    ...GOOD,
+    dmarc: { name: "_dmarc.example.com", txt: ["v=DMARC1; p=none;", "v=DMARC1; p=reject; rua=mailto:d@example.com"] },
+  });
+  assert.deepEqual(ids(f), ["EMAIL-007"]);
+  assert.equal(f[0].severity, "high");
+  assert.match(f[0].detail, /RFC 7489/);
+});
+
+// The reason EMAIL-007 is checked before any policy is read. This is the exact
+// shape a half-finished fix leaves behind: the old p=none still there, a new
+// p=reject added beside it. Receivers apply neither. If the evaluator read
+// dmarcTxt[0] and the resolver happened to return the reject record first, the
+// scan would come back clean and tell the customer they are protected.
+test("a p=reject record beside a leftover p=none is never reported as clean", () => {
+  for (const order of [
+    ["v=DMARC1; p=reject; rua=mailto:d@example.com", "v=DMARC1; p=none;"],
+    ["v=DMARC1; p=none;", "v=DMARC1; p=reject; rua=mailto:d@example.com"],
+  ]) {
+    const f = evaluateEmailAuth({ ...GOOD, dmarc: { name: "_dmarc.example.com", txt: order } });
+    assert.deepEqual(ids(f), ["EMAIL-007"], `resolver order ${JSON.stringify(order)} must not change the verdict`);
+  }
+});
+
+test("non-DMARC TXT records alongside one DMARC record are not counted as duplicates", () => {
+  const f = evaluateEmailAuth({
+    ...GOOD,
+    dmarc: { name: "_dmarc.example.com", txt: ["some-other-verification=xyz", "v=DMARC1; p=reject; rua=mailto:d@example.com"] },
+  });
+  assert.deepEqual(f, []);
 });
 
 // The one that matters most.

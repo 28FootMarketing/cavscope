@@ -157,7 +157,10 @@ export function evaluateEmailAuth(input: EmailAuthInput): EmailAuthFinding[] {
     // RFC 7208 4.5: more than one SPF record is a permerror. The domain has
     // protection on paper and none in practice, which is worse than knowing.
     findings.push({
-      rule_id: "EMAIL-003", severity: "medium",
+      // High, not medium: the exposure is identical to publishing no SPF at
+      // all (EMAIL-001, high). Severity tracks what an attacker can do, not
+      // how close the operator came to getting it right.
+      rule_id: "EMAIL-003", severity: "high",
       title: "Multiple SPF records",
       detail: `${domain} publishes ${spf.length} v=spf1 records. RFC 7208 requires receivers to treat this as a permanent error, so SPF fails open and the records protect nothing. Merge them into one.`,
       location: at, confidence: "high", evidence_keys: ["dns_spf"],
@@ -185,6 +188,23 @@ export function evaluateEmailAuth(input: EmailAuthInput): EmailAuthFinding[] {
       rule_id: "EMAIL-004", severity: "high",
       title: "No DMARC record",
       detail: `No v=DMARC1 TXT record found for ${domain} (checked ${dmarcCandidates(input.host).join(", ")}). DMARC is what tells receivers to reject mail that fails SPF and DKIM; without it, a forged sender is delivered normally.`,
+      location: at, confidence: "high", evidence_keys: ["dns_dmarc"],
+    });
+  } else if (dmarcTxt.length > 1) {
+    // RFC 7489 6.6.3: a name with more than one DMARC record is treated as
+    // having none. Same fail-open shape as multiple SPF records, and the same
+    // severity as publishing no DMARC at all, because that is the effect.
+    //
+    // This must be checked BEFORE reading a policy. Reading dmarcTxt[0] here
+    // would evaluate whichever record the resolver happened to return first --
+    // and if that one said p=reject, the scan would report the domain as
+    // protected while every receiver ignores all of its records. Telling a
+    // client they are covered when they are not is worse than any missed
+    // finding.
+    findings.push({
+      rule_id: "EMAIL-007", severity: "high",
+      title: "Multiple DMARC records",
+      detail: `${input.dmarc!.name} publishes ${dmarcTxt.length} v=DMARC1 records: ${dmarcTxt.map((t) => `"${t}"`).join(" and ")}. RFC 7489 requires receivers to treat a name with more than one record as having no DMARC policy at all, so none of them is applied. This is the usual result of adding a new record instead of editing the old one. Delete all but the intended record.`,
       location: at, confidence: "high", evidence_keys: ["dns_dmarc"],
     });
   } else {

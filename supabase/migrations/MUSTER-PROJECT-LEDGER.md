@@ -1066,3 +1066,55 @@ Promotion to the risk register is explicit (`muster.do_promote_finding`), not au
 `risk_opened` alerts fire off a promoted risk. So the three new `high` codes do **not** start
 sending mail on their own. They will the moment someone promotes one — worth knowing before the
 first client scan, because "no SPF" is high severity and very common.
+
+---
+
+## EMAIL-007, and the scan that would have lied (2026-09-08)
+
+`muster-scan` v11, engine `http-native-1.1.1`, new project only.
+
+muster.partners was given the three records that clear its own EMAIL-* findings. The SPF one landed
+correctly. The DMARC one was **added beside** the existing `p=none` record instead of replacing it:
+
+```
+_dmarc.muster.partners  TXT  "v=DMARC1; p=reject; rua=mailto:dmarc@mail.muster.partners; fo=1;"
+_dmarc.muster.partners  TXT  "v=DMARC1; p=none;"
+```
+
+RFC 7489 6.6.3: a name with more than one DMARC record has no DMARC policy. Neither applies. The
+domain went from weakly protected to unprotected, and looked to the operator like it had just been
+hardened.
+
+`muster_040` had no rule for this. Worse, `evaluateEmailAuth` read `dmarcTxt[0]` and judged the
+domain on it. Resolver ordering is not stable, so the same domain could scan as EMAIL-005 or as
+completely clean, run to run.
+
+The live answer put the **reject** record first. Under v10 this scan would have returned zero email
+findings and told the operator muster.partners was protected. That is the failure mode this whole
+family was built to avoid, reproduced inside the family itself within an hour of shipping it.
+
+`muster_042` adds EMAIL-007 (high) and raises EMAIL-003 (multiple SPF records) from medium to high,
+because it is the identical permerror one protocol over and `muster_040` had it inconsistent with
+EMAIL-001. Both are now evaluated before any policy is read.
+
+### Scan 20, muster.partners, after the fix
+
+| Code | Sev | Note |
+|---|---|---|
+| `EMAIL-007` | high | the two DMARC records above |
+| `SEC-004`, `SEC-005` | medium | no CSP, no clickjacking protection |
+| `GOV-001`, `GOV-002`, `SEC-006`–`008`, `SEC-012` | low | no robots.txt, no sitemap, three headers, no security.txt |
+| `PRIV-001` | medium | no privacy policy link |
+
+`EMAIL-001` cleared: `muster.partners TXT "v=spf1 -all"` is live and correct for a domain that sends
+no mail. `EMAIL-005` and `EMAIL-006` are gone, superseded by EMAIL-007 — they will come back if the
+duplicate is resolved in favour of the wrong record.
+
+The catalog is 38 rules: 2 critical, 7 high, 14 medium, 11 low, 4 info.
+
+### Generalisation worth keeping
+
+Both times this family has been wrong, the bug was the same shape: a state the rules did not model
+being silently collapsed into a state they did. Multiple records read as one record. A DNS outage
+read as an absent record (guarded from the start). Any future rule here should be asked what it
+does when the answer is *ambiguous*, not just when it is present or absent.
