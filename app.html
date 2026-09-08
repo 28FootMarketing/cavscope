@@ -5141,6 +5141,14 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
     // Every data call goes through public.muster_* RPCs; RLS is enforced
     // server-side, so this file never sees another tenant's rows.
     // =====================================================================
+    // An admin URL scan is queued, not run, by the time the RPC returns:
+    // muster.do_request_scan fires the engine through net.http_post, and pg_net
+    // dispatches on a background worker. Observed on this project: ~440ms from
+    // queued_at to started_at, ~900ms to finished_at. 1.5s x 20 gives 30s of
+    // headroom for a slow origin without spinning forever.
+    const POLL_INTERVAL_MS = 1500;
+    const POLL_MAX_TRIES = 20;
+
     const Live = {
       url: 'https://hjowfnzpomzxazmzywxw.supabase.co',
       key: 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL',
@@ -6079,6 +6087,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },
       async updateIncident(id, status) { if (!status) return; try { await this.rpc('muster_admin_update_incident', { p_id: id, p_status: status }); showToast(`Incident #${id} marked ${status}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
+      _urlRunPolls: 0,
+      _urlRunTimer: null,
+      // A queued scan is normally running within ~400ms and done inside a second;
+      // 30s of headroom covers a slow origin without spinning forever.
       async runAdminUrl(e) {
         e.preventDefault();
         const input = document.getElementById('adminUrlInput');
@@ -6089,10 +6101,16 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           showToast(r.created ? `Website added and scan queued (#${r.first_scan?.scan_id ?? ''}).` : `Scan ${r.first_scan?.deduplicated ? 'already in flight' : 'queued'} (#${r.first_scan?.scan_id ?? ''}).`);
           input.value = '';
           await this.loadAdmin();
-          await this.viewAdminUrlRun(r.website_id);
+          // poll=true: the scan has only been QUEUED at this point. do_request_scan
+          // fires the engine through net.http_post, which is asynchronous -- pg_net
+          // hands the request to a background worker and returns immediately. The
+          // engine typically starts ~400ms later and finishes under a second, so
+          // reading the result now shows a pending scan with no findings, which is
+          // what "the audit did not populate" actually was.
+          await this.viewAdminUrlRun(r.website_id, true);
         } catch (err) { this.fail(err); }
       },
-      async viewAdminUrlRun(websiteId) {
+      async viewAdminUrlRun(websiteId, poll = false) {
         const el = document.getElementById('adminUrlRunResult');
         if (!el) return;
         try {
@@ -6115,6 +6133,33 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
                   </div>`).join('')}
                 </div>`}
             </div>`;
+
+          if (this._urlRunTimer) { clearTimeout(this._urlRunTimer); this._urlRunTimer = null; }
+          if (!poll) { this._urlRunPolls = 0; return; }
+
+          // 'error' is included defensively: the column is error_message, and the
+          // status vocabulary is owned by SQL, so an unrecognised status must not
+          // poll forever.
+          const terminal = ['complete', 'failed', 'error'].includes(String(scan.status || ''));
+          if (terminal) {
+            const hadPolled = (this._urlRunPolls || 0) > 0;
+            this._urlRunPolls = 0;
+            // Repaint the console so the runs table picks up the new score and
+            // finding counts, then redraw this panel, which loadAdmin just wiped.
+            if (hadPolled) { await this.loadAdmin(); await this.viewAdminUrlRun(websiteId, false); }
+            return;
+          }
+
+          this._urlRunPolls = (this._urlRunPolls || 0) + 1;
+          if (this._urlRunPolls > POLL_MAX_TRIES) {
+            this._urlRunPolls = 0;
+            el.insertAdjacentHTML('beforeend', `<div class="live-muted" style="margin-top:6px; color:var(--amber);"
+              data-tooltip="The scan was accepted but has not reported back within ${(POLL_MAX_TRIES * POLL_INTERVAL_MS) / 1000} seconds. It may still finish; reopen the console to check. If it never does, muster-watchdog raises a silent-scan incident.">Still running after ${(POLL_MAX_TRIES * POLL_INTERVAL_MS) / 1000}s. Reopen this panel to check again.</div>`);
+            return;
+          }
+          el.insertAdjacentHTML('beforeend', `<div class="live-muted" style="margin-top:6px;"
+            data-tooltip="The engine runs asynchronously, so this panel re-checks until the scan reports a final status.">Scanning… checking again shortly (${this._urlRunPolls}/${POLL_MAX_TRIES}).</div>`);
+          this._urlRunTimer = setTimeout(() => { this.viewAdminUrlRun(websiteId, true).catch(() => {}); }, POLL_INTERVAL_MS);
         } catch (err) { this.fail(err); }
       },
       async openTenant(orgId) {
