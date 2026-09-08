@@ -64,9 +64,22 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   current and posts back to it. See `supabase/migrations-shared-project/20260906063133_muster_guided_onboarding.sql`
   (as originally applied) and `20260906064403_muster_onboarding_fixes.sql` (a security-grant hardening
   pass plus two validation fixes found on review — read the latter's header comment before touching this
-  system again). `onboard_client()` itself is not yet wired to anything live: the `muster-onboard` Stripe
-  webhook that's meant to call it hasn't been built, so this page is only reachable today via a manually
-  issued Supabase Auth invite against an org seeded by `muster.onboarding_seed()`.
+  system again). `onboard_client()` itself is not wired to anything live and is not going to be: it is
+  documented dead and buggy (see migration `20260906012143`'s header), and the self-serve path
+  deliberately does not use it. This page is reachable today via a manually issued Supabase Auth invite
+  against an org seeded by `muster.onboarding_seed()`.
+- **Self-serve billing does not go through `onboard_client()`.** `muster-stripe-webhook` is built,
+  deployed and tested: it verifies the Stripe signature, gates on `payment_status`, invites the auth
+  user, and records a pending grant keyed by email via `muster_engine_record_commercial_grant`. The
+  existing onboarding wizard (`muster_onboard` -> `muster.do_onboard`) claims that grant when the buyer
+  creates their organization, upgrading it off `trial` and marking the grant applied so a second org
+  cannot claim it. That handoff is verified against the live database, not assumed. The pure half of
+  the webhook lives in `core.ts` under `tests/billing/stripe-webhook.test.ts`; the I/O half is in
+  `index.ts`. What remains is Stripe dashboard configuration only: the endpoint registered against the
+  **new** project's function URL, `STRIPE_WEBHOOK_SECRET` set, and `tier` + `stage` metadata on each
+  Payment Link. A link without that metadata is rejected 400 -- check it first if a real checkout fails.
+  Subscription **cancellation is not handled**: nothing consumes `customer.subscription.deleted`, so a
+  cancelled customer keeps their plan until someone changes it by hand.
 - A super admin can also run a real scan against any URL from `app.html`'s admin console ("Run a URL
   scan") and get back real findings from the live engine — see `muster_admin_run_url` /
   `muster_admin_website_overview` / `muster_admin_url_runs` in
