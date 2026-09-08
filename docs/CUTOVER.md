@@ -39,9 +39,18 @@ Follow `docs/EMAIL.md` §1 and §2 exactly — it already carries the values:
   in one sitting.
 - **Site URL:** `https://app.muster.partners/app` — not the host root. Root is
   `signin.html`; a signed-in user landing there just bounces.
-- **Redirect allowlist:** all nine entries from `docs/EMAIL.md` §2. Its failure mode is
-  silent — an un-allowlisted `redirect_to` is not an error, GoTrue substitutes Site URL,
-  and the user lands somewhere with no password form on it.
+- **Redirect allowlist:** all **eleven** entries from `docs/EMAIL.md` §2. It was nine
+  until 2026-09-08, when checking the list against what the code actually requests -- not
+  against the host list from memory -- found two missing:
+  `https://www.muster.partners/**` and `https://sitrep.muster.28footsystems.com/**`.
+  `sitrep.html` derives its redirect from `window.location.href`, and `middleware.js`
+  serves it on both of those hosts. `https://muster.partners/**` does not match `www.`;
+  the wildcard covers the path, not the subdomain.
+
+  The failure mode is silent by design: an un-allowlisted `redirect_to` is not an error,
+  GoTrue substitutes Site URL. A tenant opening a SITREP link would sign in successfully
+  and land on the workspace instead of the SITREP, with no error anywhere. Re-check this
+  list against `middleware.js` whenever a host is added.
 - **Templates:** paste all six from `supabase/auth-email-templates/`. They use GoTrue
   variables (`{{ .ConfirmationURL }}`, `{{ .Token }}`), not Resend template syntax — a
   Resend *template* can never render them.

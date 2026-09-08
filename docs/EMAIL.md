@@ -64,8 +64,33 @@ https://app.muster.28footsystems.com/reset
 https://app.muster.28footsystems.com/**
 https://muster.partners/onboarding
 https://muster.partners/**
+https://www.muster.partners/**
 https://onboarding.muster.28footsystems.com/**
+https://sitrep.muster.28footsystems.com/**
 ```
+
+The last two were added on 2026-09-08 after checking this list against what the code
+actually asks for rather than against the host list from memory. Both were missing, and
+both would have failed silently.
+
+`sitrep.html` calls `signInWithOtp` with `emailRedirectTo: window.location.href` -- the
+page's own URL, whatever host served it. `middleware.js` serves that page on **two** hosts
+that were not on this list:
+
+| Host | Serves | Redirect it requests |
+|---|---|---|
+| `sitrep.muster.28footsystems.com` | `sitrep.html` | `https://sitrep.muster.28footsystems.com/...` |
+| `www.muster.partners` | `sitrep.html` at `/sitrep` | `https://www.muster.partners/sitrep` |
+
+`https://muster.partners/**` does not match `www.muster.partners` -- the wildcard covers
+the path, not the subdomain.
+
+The symptom would not have looked like a bug. A tenant opening a SITREP link, asked to
+sign in, would get the magic link, click it, authenticate successfully, and land on the
+workspace at Site URL instead of the SITREP they were trying to read. No error anywhere.
+Deriving the redirect from `window.location.href` means every host that serves an
+auth-calling page needs an entry; check this list against `middleware.js` whenever a host
+is added.
 
 This list is the "forwarded to the correct area" mechanism, and its failure mode is quiet: when
 `redirect_to` is **not** on the allowlist, GoTrue does not error — it substitutes Site URL. The
