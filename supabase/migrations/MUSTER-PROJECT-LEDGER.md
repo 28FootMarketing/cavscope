@@ -594,3 +594,75 @@ claimed row as `failed` with `"RESEND_API_KEY is not set"` rather than dropping 
 `muster-watchdog` — running every 10 minutes and verified returning 200 — opens an
 `alert_dead_letter` incident when that count is above zero. So the first undeliverable
 alert surfaces in the admin console within ten minutes instead of vanishing.
+
+## The watchdog's first real incident was a false positive (2026-09-08)
+
+Six minutes after the cron swap, `muster-watchdog` opened
+`cron_missed:muster-autotriage-15min` at severity **critical**. The job then ran
+normally at 02:52 and every tick since.
+
+| Time | |
+|---|---|
+| ~02:44 | all five jobs enabled on this project |
+| 02:50:04 | watchdog evaluates; autotriage has no run history here -> `missed` -> critical |
+| 02:52:00 | autotriage runs, succeeded |
+
+Incident 2 is closed as `expected_validation` / `not_applicable`, with the full timeline
+in its `closure_evidence`. Open incidents: 0.
+
+### The actual check, which is not what its own caller says it is
+
+`muster-watchdog/index.ts` describes this as flagging a job "whose last run is older
+than 2x its own schedule interval". The SQL has never done that. It computed:
+
+```sql
+missed = (count of successes in the last 30 minutes) = 0
+```
+
+A flat window, unrelated to each job's schedule. Both the comment and an earlier
+description of this incident in the session were wrong about the mechanism; the code
+above is what actually ran.
+
+### `muster_035` -- the fix
+
+`missed` now additionally requires that the job has run at least once at some point, so
+a job with no history is treated as not-yet-due rather than missed. Proven by comparing
+the old and new expressions side by side, including a synthetic row standing in for a
+just-enabled job:
+
+| Job | successes in 30m | ever run | old `missed` | new `missed` |
+|---|---|---|---|---|
+| *(synthetic: enabled, never run)* | 0 | false | **true** | **false** |
+| the five real jobs | 1-5 | true | false | false |
+
+Only the cold-start row changes. `failure_count` is untouched, so a job that fires and
+fails still alarms -- and the migration asserts that, along with the function's ACL,
+SECURITY DEFINER flag and empty `search_path`, before it will apply.
+
+### Why suppressing "never ran" is not a blind spot
+
+The worry is a job enabled that never fires at all. In pg_cron that case barely exists:
+a job that fires and fails still writes a `job_run_details` row, caught by
+`failure_count`; a job that writes no row at all was never fired, which means it is
+inactive (already filtered) or its schedule was invalid (rejected by `cron.schedule` at
+creation). What remains is the cutover case.
+
+### Latent bug found while fixing this, deliberately not fixed
+
+**The 30-minute window is a constant, not derived from each job's schedule.** Every
+current muster job has a period of 15 minutes or less, so it holds today. Any job
+scheduled less often than every 30 minutes would report `missed` permanently, from its
+first run onward -- a nightly digest or an hourly sweep would alarm forever.
+
+Fixing it properly means parsing cron expressions to derive each job's period, which is
+a materially larger change with its own failure modes. Recorded here rather than
+smuggled into a migration about something else. **Anyone adding a muster cron job with a
+period over 30 minutes must fix this first.**
+
+### Intended divergence from `mgtmqucaldkaxvxglguw`
+
+`muster_035` is applied to this project only. The old project's copy is unchanged, its
+cron is disabled and its watchdog no longer runs, so the drift is inert.
+`supabase/migrations-shared-project/` is history and is not added to. This is the fourth
+intended difference between the two projects, alongside `muster.do_request_scan`,
+`public.muster_create_api_key` and `public.muster_public_pricing`.
