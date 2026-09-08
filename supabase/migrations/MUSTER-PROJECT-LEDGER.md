@@ -546,3 +546,51 @@ queue a row that cannot be delivered until the secret is set — see `docs/CUTOV
 Until this swap, reverting cutover was a `git revert` plus re-enabling the old project's
 cron. From the first scan the new project runs, the two databases diverge and reversing
 means reconciling data, not flipping a switch.
+
+## Vault secrets completed (2026-09-08)
+
+`muster_ghl_webhook_secret` was in the source project's vault and missing from this one.
+`public.muster_ghl_webhook_secret()` reads it by name and `muster-ghl-webhook` compares
+it to the `x-muster-secret` header GHL sends, so with the entry absent the function
+would have 401'd every request — silently, since GHL's webhook action does not surface
+the response.
+
+Copied, not regenerated: the value must match what GHL is already configured to send, so
+GHL needs only a URL change at cutover rather than a URL *and* a secret change. Moved
+server-to-server over `pg_net` (`muster_033`, dropped by `muster_034`), same reasoning as
+`muster_030` — credential material should not appear as a literal in a statement, a
+transcript, or a migration file.
+
+| Entry | Verified |
+|---|---|
+| `muster_cron_secret` | `muster_engine_secret()` resolves it; proven live by the cron smoke test |
+| `supabase_anon_key` | decodes to `ref=hjowfnzpomzxazmzywxw`, `role=anon` |
+| `muster_ghl_webhook_secret` | md5 `23fdaffd2e7cb37300cd96fa15dd6249` on both projects, and the RPC returns that same value |
+
+The RPC check is the one that matters — matching the vault row proves the copy, but
+matching what `muster_ghl_webhook_secret()` *returns* proves the function will actually
+authenticate.
+
+## The four edge function secrets are not settable from here
+
+`RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `GHL_API_KEY`, `GHL_LOCATION_ID` are Deno env
+vars on the function runtime, not database objects. No tool in the build environment
+reads or writes them, on either project — the same wall as GoTrue config. They are
+dashboard work.
+
+`RESEND_API_KEY` should be the existing **`muster-alert-dispatch`** Resend key (created
+2026-09-06, already MUSTER-scoped), not a shared one. The shared-credential failure mode
+is not hypothetical here: a spend cap on the shared `OPENROUTER_API_KEY`, hit by another
+28FS brand, took MUSTER down on 2026-09-06 — the incident is recorded in
+`muster-agent/index.ts`. Edge function secrets are project-scoped and this project is
+MUSTER's alone, which is why `muster-alert-dispatch` reads plain `RESEND_API_KEY` with no
+`MUSTER_*` fallback, unlike the OpenRouter helper.
+
+### The gap is instrumented, not silent
+
+Worth knowing while `RESEND_API_KEY` is unset: `muster-alert-dispatch` resolves each
+claimed row as `failed` with `"RESEND_API_KEY is not set"` rather than dropping it.
+`muster_engine_watchdog_summary` counts failed outbox rows as `dead_letter_alerts`, and
+`muster-watchdog` — running every 10 minutes and verified returning 200 — opens an
+`alert_dead_letter` incident when that count is above zero. So the first undeliverable
+alert surfaces in the admin console within ten minutes instead of vanishing.

@@ -54,11 +54,36 @@ the new project and confirm it arrives and lands on `/app`.
 
 ## 2. Edge function secrets — dashboard, new project
 
-`RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `GHL_API_KEY`, `GHL_LOCATION_ID`, and the
-`muster_ghl_webhook_secret` vault entry. Also `muster_cron_secret` and
-`supabase_anon_key` in vault if not already present — `muster-scan`, `muster-watchdog`
-and `muster-backfill-embeddings` all authenticate against them and every cron call goes
-through them.
+Split by where they live, because the two halves are not equally reachable.
+
+**Vault entries — DONE.** All three are set on the new project and verified:
+
+| Entry | Status |
+|---|---|
+| `muster_cron_secret` | set; `muster_engine_secret()` resolves it |
+| `supabase_anon_key` | set; decodes to `ref=hjowfnzpomzxazmzywxw`, `role=anon` |
+| `muster_ghl_webhook_secret` | copied from source, md5 `23fdaffd2e7cb37300cd96fa15dd6249` on both; `muster_ghl_webhook_secret()` resolves it |
+
+The GHL secret was **copied rather than regenerated** on purpose: the value has to match
+what GHL is already configured to send, so GHL needs only a URL change at cutover, not a
+secret change as well. Moved server-to-server over `pg_net` (`muster_033`, dropped by
+`muster_034`) so it never appeared as a literal.
+
+**Edge function secrets — still unset, and not settable from the build environment.**
+`RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `GHL_API_KEY`, `GHL_LOCATION_ID`. These are
+Deno env vars on the function runtime, not database objects; no tool available here reads
+or writes them. Dashboard → Edge Functions → Secrets.
+
+For `RESEND_API_KEY`, **use the existing `muster-alert-dispatch` Resend key** — it was
+created 2026-09-06 and is already MUSTER-scoped. Do not point MUSTER at a shared key: the
+same shared-credential pattern took MUSTER down once already when a spend cap on the
+shared `OPENROUTER_API_KEY` was hit by another brand (2026-09-06, recorded in
+`muster-agent/index.ts`). Edge function secrets are project-scoped and this project is
+MUSTER's alone, so plain `RESEND_API_KEY` here means MUSTER's key and nothing else's —
+which is why `muster-alert-dispatch` reads it with no `MUSTER_*` fallback.
+
+`mail.muster.partners` is verified in Resend with sending enabled, so the from-address
+works as soon as the key is set.
 
 ## 3. Merge the frontend PR
 
