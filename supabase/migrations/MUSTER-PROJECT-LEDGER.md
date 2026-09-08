@@ -1173,3 +1173,39 @@ Nothing in this repo blocks self-serve revenue any more. Three things outside it
 Cancellation. Nothing consumes `customer.subscription.deleted`, so a customer who cancels keeps their
 plan until someone changes it by hand. That is a revenue leak in the other direction and it is a
 separate piece of work, named here so it is not discovered by an accountant.
+
+---
+
+## GOV-004 was contradicting its own finding (2026-09-08)
+
+Found while rendering the muster.partners SITREP as a PDF. Scan 22's report carried both of these,
+one under the other:
+
+> **AI crawler directives** — Addressed: GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, Claude-Web,
+> anthropic-ai, PerplexityBot, Google-Extended, CCBot. Fully blocked: none.
+>
+> *In plain English:* This is a policy choice: allow AI assistants to read the site, or block them.
+> **Right now it is unaddressed.**
+
+The finding was right and the plain-English paragraph was wrong, and the wrong one is the sentence
+written for executives. `muster_043` rewrites GOV-004's catalog copy to describe what the rule
+reports rather than what it found, and asserts that no `info` rule's reusable copy claims a verdict.
+
+Third instance of the same failure this session: text asserting a state the system has not
+established for that particular case. The other two were the AI narrative's fabricated citations and
+EMAIL-005 being read off whichever DMARC record the resolver returned first. Catalog copy is generic
+by construction, so it must never say what was found — the finding's own detail carries that.
+
+The stored SITREP was regenerated after the fix (id 15 v1 -> id 16 v2), so the artifact on file is
+the corrected one.
+
+## SITREP PDF export
+
+`tools/sitrep-pdf/` renders any `muster.sitreps` row as a client-ready PDF. Two steps on purpose:
+`export.sql` pulls the payload, `render.py` turns it into the document and never touches the database
+or holds a credential. The JSON in between is an auditable intermediate — same input, same document.
+
+It composes nothing. Every number, claim, finding, framework reference and hash comes from the stored
+SITREP, and the F/E citation scheme survives onto the page, so a reader can trace any sentence back
+to the evidence it came from. First output: MUSTER SITREP #16 v2, muster.partners scan #22, 4 pages,
+posture 100/100 green, 11 resolved, 2 informational open.
