@@ -1,6 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { AI_NARRATIVE_SYSTEM_PROMPT } from "./prompt.ts";
+import {
+  buildNarrativeUserPrompt,
+  parseNarrativeResponse,
+  verifyNarrativeCitations,
+  type NarrativeContext,
+} from "./narrative.ts";
 
 // MUSTER agent gateway. Makes every workspace usable by an AI agent or AI employee.
 //
@@ -534,67 +540,19 @@ async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: stri
 }
 
 async function generateAiNarrative(ctx: unknown, context: Record<string, unknown>) {
-  const userPrompt = [
-    `Website: ${context.website_name} (${context.website_url})`,
-    `Organization: ${context.organization_name}`,
-    `Posture: ${context.posture_score}/100 (${context.posture_band})`,
-    `Audience: ${context.audience}`,
-    "",
-    "Open findings (JSON array -- cite each entry's finding_id as F<id> and each id in its evidence_ids as E<id>):",
-    JSON.stringify(context.findings ?? []),
-  ].join("\n");
-
+  const userPrompt = buildNarrativeUserPrompt(context as NarrativeContext);
   const { finalText } = await runAgentLoop(ctx, AI_NARRATIVE_SYSTEM_PROMPT, userPrompt, 5);
 
-  // The system prompt forbids markdown fences, but models add them often enough
-  // that stripping is cheaper than a failed SITREP. The error carries a snippet
-  // of what actually came back, so the next failure is diagnosable rather than
-  // opaque -- the previous message said only "did not return valid JSON", which
-  // is what an empty string looks like too.
-  const jsonText = finalText.trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/, "")
-    .trim();
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch {
-    throw new Error(
-      jsonText.length === 0
-        ? "ai narrative model returned empty content"
-        : `ai narrative model did not return valid JSON (got: ${jsonText.slice(0, 160)})`
-    );
-  }
-  const result = parsed as { headline?: unknown; narrative?: unknown; citations?: unknown; confidence?: unknown };
-  if (typeof result.headline !== "string" || typeof result.narrative !== "string" || !Array.isArray(result.citations)) {
-    throw new Error("ai narrative model returned an unexpected shape");
-  }
-
-  // Cross-check every citation against the ids the model was actually given.
-  const allowed = new Set<string>();
-  for (const f of (context.findings as Array<Record<string, unknown>> | undefined) ?? []) {
-    if (f.finding_id !== undefined) allowed.add(`F${f.finding_id}`);
-    for (const e of (f.evidence_ids as unknown[] | undefined) ?? []) allowed.add(`E${e}`);
-  }
-  const seen = new Set<string>();
-  const citations: string[] = [];
-  const unverified: string[] = [];
-  for (const c of result.citations) {
-    const token = String(c).trim().toUpperCase();
-    if (!/^[FE]\d+$/.test(token) || seen.has(token)) continue;
-    seen.add(token);
-    (allowed.has(token) ? citations : unverified).push(token);
-  }
-  const confidence = unverified.length ? "low" : (typeof result.confidence === "string" ? result.confidence : "unknown");
+  // Parsing and citation verification are in ./narrative.ts so the eval suite
+  // (evals/ai-narrative) exercises this exact code rather than a copy that
+  // drifts. Everything model-facing stays here; everything checkable is there.
+  const parsed = parseNarrativeResponse(finalText);
+  const verified = verifyNarrativeCitations(context as NarrativeContext, parsed);
 
   return {
     website_id: context.website_id,
     audience: context.audience,
-    headline: result.headline,
-    narrative: result.narrative,
-    citations,
-    unverified_citations: unverified,
-    confidence,
+    ...verified,
     model: OPENROUTER_MODEL,
     generated_at: new Date().toISOString(),
   };

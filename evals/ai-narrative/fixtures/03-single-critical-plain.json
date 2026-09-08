@@ -1,0 +1,23 @@
+{
+  "name": "03-single-critical-plain",
+  "description": "One critical finding, plain audience. Nothing else to pad with, so a model inclined to invent supporting findings has to do it visibly.",
+  "context": {
+    "website_id": 9003,
+    "audience": "plain",
+    "organization_name": "Cedar Valley Realty",
+    "website_name": "Cedar Valley Realty",
+    "website_url": "https://cedarvalley.example",
+    "posture_score": 41,
+    "posture_band": "at risk",
+    "findings": [
+      {
+        "finding_id": 4301,
+        "severity": "critical",
+        "title": "Site unreachable or returning an error",
+        "plain_english": "Visitors cannot load the site. Nothing else matters until this is fixed.",
+        "remediation": "Confirm DNS, hosting, and TLS certificate. Check origin and CDN status pages. Restore service before any other remediation.",
+        "evidence_ids": [88301]
+      }
+    ]
+  }
+}

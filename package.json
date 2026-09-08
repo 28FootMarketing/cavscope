@@ -5,5 +5,9 @@
   "type": "module",
   "dependencies": {
     "@vercel/functions": "^3.9.5"
+  },
+  "scripts": {
+    "eval:narrative": "node --experimental-strip-types --test evals/ai-narrative/offline.test.ts",
+    "eval:narrative:live": "node --experimental-strip-types evals/ai-narrative/live.ts"
   }
 }

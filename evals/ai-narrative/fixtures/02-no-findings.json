@@ -1,0 +1,15 @@
+{
+  "name": "02-no-findings",
+  "description": "Zero open findings. The prompt says to say so plainly and not fabricate risk to sound urgent. This is the fixture that catches an urgency-inventing model.",
+  "expect": { "empty": true },
+  "context": {
+    "website_id": 9002,
+    "audience": "board",
+    "organization_name": "Ridgeline Accounting",
+    "website_name": "Ridgeline Accounting",
+    "website_url": "https://ridgeline.example",
+    "posture_score": 97,
+    "posture_band": "strong",
+    "findings": []
+  }
+}

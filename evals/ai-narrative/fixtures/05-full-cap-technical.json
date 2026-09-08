@@ -1,0 +1,30 @@
+{
+  "name": "05-full-cap-technical",
+  "description": "The 15-finding cap the SQL enforces, technical audience. Most ids to keep straight, so most opportunity to transpose one into an id that was never issued.",
+  "context": {
+    "website_id": 9005,
+    "audience": "technical",
+    "organization_name": "Bellweather Logistics",
+    "website_name": "Bellweather Logistics",
+    "website_url": "https://bellweather.example",
+    "posture_score": 33,
+    "posture_band": "at risk",
+    "findings": [
+      { "finding_id": 4501, "severity": "critical", "title": "HTTP does not redirect to HTTPS", "plain_english": "Visitors who type the address without https can be intercepted. Force the secure version.", "remediation": "Configure a permanent (301/308) redirect from http:// to https:// at the CDN or web server.", "evidence_ids": [88501] },
+      { "finding_id": 4502, "severity": "critical", "title": "Form submits to an insecure or external endpoint", "plain_english": "Information typed into a form may travel unencrypted or to a vendor visitors do not know about.", "remediation": "Post forms over HTTPS and document any third-party form processor in the privacy policy.", "evidence_ids": [88502, 88503] },
+      { "finding_id": 4503, "severity": "high", "title": "Missing Strict-Transport-Security header", "plain_english": "Browsers are not told to always use the secure connection. One header fixes it.", "remediation": "Add Strict-Transport-Security: max-age=31536000; includeSubDomains after confirming every subdomain serves HTTPS.", "evidence_ids": [88504] },
+      { "finding_id": 4504, "severity": "high", "title": "No privacy policy link found", "plain_english": "Visitors cannot find how their data is used. Most privacy laws require this link.", "remediation": "Add a visible footer link to a current privacy policy on every page.", "evidence_ids": [88505] },
+      { "finding_id": 4505, "severity": "high", "title": "Third-party trackers loaded before consent could be verified", "plain_english": "The site uses tracking tools. Depending on where visitors live, consent may be required first.", "remediation": "Confirm a consent mechanism gates these scripts where required, and list them in the privacy policy.", "evidence_ids": [88506] },
+      { "finding_id": 4506, "severity": "medium", "title": "Missing Content-Security-Policy", "plain_english": "There is no policy limiting which scripts can run on the page. This is the main defense against injected code.", "remediation": "Publish a CSP. Start in report-only mode, then enforce script-src and object-src restrictions.", "evidence_ids": [88507] },
+      { "finding_id": 4507, "severity": "medium", "title": "Clickjacking protection missing", "plain_english": "Another site could load your pages inside a hidden frame to trick visitors into clicking.", "remediation": "Add Content-Security-Policy: frame-ancestors 'self' or X-Frame-Options: SAMEORIGIN.", "evidence_ids": [88508] },
+      { "finding_id": 4508, "severity": "medium", "title": "Weak HSTS max-age", "plain_english": "The secure-connection instruction expires too quickly.", "remediation": "Raise max-age to at least 15552000 seconds (180 days), ideally 31536000.", "evidence_ids": [88509] },
+      { "finding_id": 4509, "severity": "medium", "title": "Slow first response", "plain_english": "The site is slow to start loading. Slow sites lose visitors and rank lower in search.", "remediation": "Enable caching or a CDN, reduce server-side work on the homepage, and check hosting capacity.", "evidence_ids": [88510] },
+      { "finding_id": 4510, "severity": "low", "title": "Missing Referrer-Policy", "plain_english": "Full page addresses may leak to other sites when visitors click outbound links.", "remediation": "Add Referrer-Policy: strict-origin-when-cross-origin.", "evidence_ids": [88511] },
+      { "finding_id": 4511, "severity": "low", "title": "Missing Permissions-Policy", "plain_english": "Browser features like camera and location are not explicitly restricted.", "remediation": "Add Permissions-Policy disabling camera, microphone, geolocation, and payment unless used.", "evidence_ids": [88512] },
+      { "finding_id": 4512, "severity": "low", "title": "Missing X-Content-Type-Options", "plain_english": "Browsers may guess file types, which can turn harmless files into executable code.", "remediation": "Add X-Content-Type-Options: nosniff.", "evidence_ids": [88513] },
+      { "finding_id": 4513, "severity": "low", "title": "Images missing alternative text", "plain_english": "People using screen readers cannot tell what these images show.", "remediation": "Add alt text describing each meaningful image. Use alt=\"\" for purely decorative images.", "evidence_ids": [88514] },
+      { "finding_id": 4514, "severity": "low", "title": "Form fields without an accessible label", "plain_english": "Screen reader users cannot tell what to type into these fields.", "remediation": "Pair each field with a label element (for/id) or add aria-label.", "evidence_ids": [88515] },
+      { "finding_id": 4515, "severity": "info", "title": "robots.txt missing", "plain_english": "Search engines and AI crawlers have no instructions for this site.", "remediation": "Publish a robots.txt that allows desired crawlers and points to the sitemap.", "evidence_ids": [88516] }
+    ]
+  }
+}

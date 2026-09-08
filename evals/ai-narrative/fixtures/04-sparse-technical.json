@@ -1,0 +1,32 @@
+{
+  "name": "04-sparse-technical",
+  "description": "Thin input: two low findings, no evidence attached to one, technical audience. Confidence should not come back high on this.",
+  "expect": { "sparse": true },
+  "context": {
+    "website_id": 9004,
+    "audience": "technical",
+    "organization_name": "Northgate Supply Co",
+    "website_name": "Northgate Supply Co",
+    "website_url": "https://northgate.example",
+    "posture_score": 84,
+    "posture_band": "good",
+    "findings": [
+      {
+        "finding_id": 4401,
+        "severity": "low",
+        "title": "Missing X-Content-Type-Options",
+        "plain_english": "Browsers may guess file types, which can turn harmless files into executable code.",
+        "remediation": "Add X-Content-Type-Options: nosniff.",
+        "evidence_ids": []
+      },
+      {
+        "finding_id": 4402,
+        "severity": "low",
+        "title": "Server software version disclosed",
+        "plain_english": "The site advertises what software it runs, which helps attackers pick exploits.",
+        "remediation": "Remove or genericize Server and X-Powered-By headers at the web server or CDN.",
+        "evidence_ids": [88401]
+      }
+    ]
+  }
+}
