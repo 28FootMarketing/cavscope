@@ -1,0 +1,386 @@
+{
+  "read_at": "8 September 2026",
+  "project": "hjowfnzpomzxazmzywxw",
+  "rules": [
+    {
+      "rule_id": "SEC-013",
+      "category": "security",
+      "severity": "critical",
+      "scope": "page",
+      "title": "Final page served over HTTP",
+      "plain_english": "The site itself is not encrypted. Anything visitors type can be read in transit.",
+      "remediation": "Install a TLS certificate and serve the site only over HTTPS.",
+      "frameworks": "PCI DSS 4.2.1, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "AVAIL-001",
+      "category": "availability",
+      "severity": "critical",
+      "scope": "page",
+      "title": "Site unreachable or returning an error",
+      "plain_english": "Visitors cannot load the site. Nothing else matters until this is fixed.",
+      "remediation": "Confirm DNS, hosting, and TLS certificate. Check origin and CDN status pages. Restore service before any other remediation.",
+      "frameworks": "SOC 2 A1.2, NIST CSF DE.CM-1"
+    },
+    {
+      "rule_id": "SEC-001",
+      "category": "security",
+      "severity": "high",
+      "scope": "site",
+      "title": "HTTP does not redirect to HTTPS",
+      "plain_english": "Visitors who type the address without https can be intercepted. Force the secure version.",
+      "remediation": "Configure a permanent (301/308) redirect from http:// to https:// at the CDN or web server.",
+      "frameworks": "PCI DSS 4.2.1, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "SEC-010",
+      "category": "security",
+      "severity": "high",
+      "scope": "page",
+      "title": "Mixed content on an HTTPS page",
+      "plain_english": "Some parts of the secure page are loaded insecurely, which browsers block or warn about.",
+      "remediation": "Change every http:// resource reference to https:// or a protocol-relative path.",
+      "frameworks": "NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "EMAIL-001",
+      "category": "security",
+      "severity": "high",
+      "scope": "site",
+      "title": "No SPF record",
+      "plain_english": "Anyone on the internet can send email that appears to come from your domain.",
+      "remediation": "Publish a TXT record at the domain apex starting v=spf1, listing every service that sends mail for you, and ending in ~all or -all.",
+      "frameworks": "RFC 7208, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "EMAIL-002",
+      "category": "security",
+      "severity": "high",
+      "scope": "site",
+      "title": "SPF does not restrict senders",
+      "plain_english": "Your domain looks protected but is not. The record permits anyone to send as you.",
+      "remediation": "End the SPF record in ~all (softfail) or -all (fail). Never +all, which authorises every sender, and not ?all, which declines to say.",
+      "frameworks": "RFC 7208, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "EMAIL-003",
+      "category": "security",
+      "severity": "high",
+      "scope": "site",
+      "title": "Multiple SPF records",
+      "plain_english": "You have two SPF records, so receiving servers ignore both. Your domain is as spoofable as if you published none.",
+      "remediation": "Merge every v=spf1 record into a single TXT record. Combine the include: mechanisms rather than publishing one record per provider.",
+      "frameworks": "RFC 7208 s4.5, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "EMAIL-004",
+      "category": "security",
+      "severity": "high",
+      "scope": "site",
+      "title": "No DMARC record",
+      "plain_english": "Nothing tells receiving servers what to do with forged mail from your domain, so they deliver it.",
+      "remediation": "Publish a TXT record at _dmarc.<domain> starting v=DMARC1. Begin with p=none and a rua= address, read the reports, then move to quarantine and reject.",
+      "frameworks": "RFC 7489, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "EMAIL-007",
+      "category": "security",
+      "severity": "high",
+      "scope": "site",
+      "title": "Multiple DMARC records",
+      "plain_english": "You have two DMARC records, so receiving servers ignore both and treat your domain as having no policy. This is worse than the single weak record you replaced.",
+      "remediation": "Delete every DMARC record at the name except the one you intend to publish. This is usually the result of adding a new record instead of editing the existing one; edit in place next time.",
+      "frameworks": "RFC 7489 s6.6.3, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "SEC-002",
+      "category": "security",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Missing Strict-Transport-Security header",
+      "plain_english": "Browsers are not told to always use the secure connection. One header fixes it.",
+      "remediation": "Add Strict-Transport-Security: max-age=31536000; includeSubDomains after confirming every subdomain serves HTTPS.",
+      "frameworks": "NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "SEC-004",
+      "category": "security",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Missing Content-Security-Policy",
+      "plain_english": "There is no policy limiting which scripts can run on the page. This is the main defense against injected code.",
+      "remediation": "Publish a CSP. Start in report-only mode, then enforce script-src and object-src restrictions.",
+      "frameworks": "SOC 2 CC6.6, NIST CSF PR.PT-3"
+    },
+    {
+      "rule_id": "SEC-005",
+      "category": "security",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Clickjacking protection missing",
+      "plain_english": "Another site could load your pages inside a hidden frame to trick visitors into clicking.",
+      "remediation": "Add Content-Security-Policy: frame-ancestors 'self' or X-Frame-Options: SAMEORIGIN.",
+      "frameworks": "NIST CSF PR.PT-3"
+    },
+    {
+      "rule_id": "SEC-011",
+      "category": "security",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Cookie set without protective flags",
+      "plain_english": "Login cookies could be read or replayed by scripts or other sites.",
+      "remediation": "Set Secure; HttpOnly; SameSite=Lax (or Strict) on session and auth cookies.",
+      "frameworks": "SOC 2 CC6.1, NIST CSF PR.DS-1"
+    },
+    {
+      "rule_id": "EMAIL-005",
+      "category": "security",
+      "severity": "medium",
+      "scope": "site",
+      "title": "DMARC is not enforcing",
+      "plain_english": "Your DMARC record watches impersonation but does not stop it. Forged mail is still delivered.",
+      "remediation": "Once aggregate reports show only legitimate senders failing, move p=none to p=quarantine, then to p=reject.",
+      "frameworks": "RFC 7489, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "AVAIL-002",
+      "category": "availability",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Slow first response",
+      "plain_english": "The site is slow to start loading. Slow sites lose visitors and rank lower in search.",
+      "remediation": "Enable caching or a CDN, reduce server-side work on the homepage, and check hosting capacity.",
+      "frameworks": "NIST CSF PR.DS-4"
+    },
+    {
+      "rule_id": "A11Y-001",
+      "category": "accessibility",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Page language not declared",
+      "plain_english": "Screen readers do not know which language to use, so pronunciation is wrong.",
+      "remediation": "Add lang=\"en\" (or the correct language code) to the html element.",
+      "frameworks": "WCAG 3.1.1"
+    },
+    {
+      "rule_id": "A11Y-002",
+      "category": "accessibility",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Page title missing or empty",
+      "plain_english": "The browser tab and screen readers have no name for this page.",
+      "remediation": "Add a descriptive title element that names the page and the site.",
+      "frameworks": "WCAG 2.4.2"
+    },
+    {
+      "rule_id": "A11Y-003",
+      "category": "accessibility",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Images missing alternative text",
+      "plain_english": "People using screen readers cannot tell what these images show.",
+      "remediation": "Add alt text describing each meaningful image. Use alt=\"\" for purely decorative images.",
+      "frameworks": "WCAG 1.1.1"
+    },
+    {
+      "rule_id": "A11Y-004",
+      "category": "accessibility",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Pinch zoom disabled",
+      "plain_english": "Visitors with low vision cannot zoom the page on their phone.",
+      "remediation": "Remove user-scalable=no and any maximum-scale below 2 from the viewport meta tag.",
+      "frameworks": "WCAG 1.4.4"
+    },
+    {
+      "rule_id": "A11Y-006",
+      "category": "accessibility",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Form fields without an accessible label",
+      "plain_english": "Screen reader users cannot tell what to type into these fields.",
+      "remediation": "Pair each field with a label element (for/id) or add aria-label.",
+      "frameworks": "WCAG 1.3.1, WCAG 4.1.2"
+    },
+    {
+      "rule_id": "A11Y-007",
+      "category": "accessibility",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Links with no discernible text",
+      "plain_english": "Some links are announced as just \"link\" with no idea where they go.",
+      "remediation": "Add visible text or aria-label to each link so its purpose is announced.",
+      "frameworks": "WCAG 2.4.4, WCAG 4.1.2"
+    },
+    {
+      "rule_id": "PRIV-001",
+      "category": "privacy",
+      "severity": "medium",
+      "scope": "page",
+      "title": "No privacy policy link found",
+      "plain_english": "Visitors cannot find how their data is used. Most privacy laws require this link.",
+      "remediation": "Add a visible footer link to a current privacy policy on every page.",
+      "frameworks": "GDPR Art. 13, CCPA 1798.130, CalOPPA"
+    },
+    {
+      "rule_id": "PRIV-003",
+      "category": "privacy",
+      "severity": "medium",
+      "scope": "page",
+      "title": "Form submits to an insecure or external endpoint",
+      "plain_english": "Information typed into a form may travel unencrypted or to a vendor visitors do not know about.",
+      "remediation": "Post forms over HTTPS and document any third-party form processor in the privacy policy.",
+      "frameworks": "GDPR Art. 32, NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "SEC-003",
+      "category": "security",
+      "severity": "low",
+      "scope": "page",
+      "title": "Weak HSTS max-age",
+      "plain_english": "The secure-connection instruction expires too quickly.",
+      "remediation": "Raise max-age to at least 15552000 seconds (180 days), ideally 31536000.",
+      "frameworks": "NIST CSF PR.DS-2"
+    },
+    {
+      "rule_id": "SEC-006",
+      "category": "security",
+      "severity": "low",
+      "scope": "page",
+      "title": "Missing X-Content-Type-Options",
+      "plain_english": "Browsers may guess file types, which can turn harmless files into executable code.",
+      "remediation": "Add X-Content-Type-Options: nosniff.",
+      "frameworks": "NIST CSF PR.PT-3"
+    },
+    {
+      "rule_id": "SEC-007",
+      "category": "security",
+      "severity": "low",
+      "scope": "page",
+      "title": "Missing Referrer-Policy",
+      "plain_english": "Full page addresses may leak to other sites when visitors click outbound links.",
+      "remediation": "Add Referrer-Policy: strict-origin-when-cross-origin.",
+      "frameworks": "NIST CSF PR.DS-5"
+    },
+    {
+      "rule_id": "SEC-008",
+      "category": "security",
+      "severity": "low",
+      "scope": "page",
+      "title": "Missing Permissions-Policy",
+      "plain_english": "Browser features like camera and location are not explicitly restricted.",
+      "remediation": "Add Permissions-Policy disabling camera, microphone, geolocation, and payment unless used.",
+      "frameworks": "NIST CSF PR.PT-3"
+    },
+    {
+      "rule_id": "SEC-009",
+      "category": "security",
+      "severity": "low",
+      "scope": "page",
+      "title": "Server software version disclosed",
+      "plain_english": "The site advertises what software it runs, which helps attackers pick exploits.",
+      "remediation": "Remove or genericize Server and X-Powered-By headers at the web server or CDN.",
+      "frameworks": "NIST CSF PR.IP-1"
+    },
+    {
+      "rule_id": "SEC-012",
+      "category": "security",
+      "severity": "low",
+      "scope": "site",
+      "title": "No security.txt disclosure policy",
+      "plain_english": "Researchers who find a vulnerability have no published way to report it to you.",
+      "remediation": "Publish /.well-known/security.txt with Contact and Expires fields per RFC 9116.",
+      "frameworks": "NIST CSF RS.CO-1, ISO 27001 A.5.5"
+    },
+    {
+      "rule_id": "EMAIL-006",
+      "category": "security",
+      "severity": "low",
+      "scope": "site",
+      "title": "DMARC has no reporting address",
+      "plain_english": "Nobody is receiving the reports that would show who is sending mail as your domain.",
+      "remediation": "Add rua=mailto:<address> to the DMARC record so aggregate reports arrive somewhere a person or a tool reads them.",
+      "frameworks": "RFC 7489, NIST CSF DE.CM-1"
+    },
+    {
+      "rule_id": "A11Y-005",
+      "category": "accessibility",
+      "severity": "low",
+      "scope": "page",
+      "title": "No top-level heading",
+      "plain_english": "The page has no main heading, which makes it harder to navigate by assistive technology.",
+      "remediation": "Add a single h1 that describes the page.",
+      "frameworks": "WCAG 2.4.6"
+    },
+    {
+      "rule_id": "GOV-001",
+      "category": "governance",
+      "severity": "low",
+      "scope": "site",
+      "title": "robots.txt missing",
+      "plain_english": "Search engines and AI crawlers have no instructions for this site.",
+      "remediation": "Publish a robots.txt that allows desired crawlers and points to the sitemap.",
+      "frameworks": "Crawl governance"
+    },
+    {
+      "rule_id": "GOV-002",
+      "category": "governance",
+      "severity": "low",
+      "scope": "site",
+      "title": "XML sitemap not found",
+      "plain_english": "Search engines have no map of the site, so pages may be missed.",
+      "remediation": "Generate an XML sitemap and reference it from robots.txt.",
+      "frameworks": "Crawl governance"
+    },
+    {
+      "rule_id": "PRIV-002",
+      "category": "privacy",
+      "severity": "low",
+      "scope": "page",
+      "title": "Third-party trackers loaded before consent could be verified",
+      "plain_english": "The site uses tracking tools. Depending on where visitors live, consent may be required first.",
+      "remediation": "Confirm a consent mechanism gates these scripts where required, and list them in the privacy policy.",
+      "frameworks": "GDPR Art. 6, Art. 7, ePrivacy, CCPA opt-out"
+    },
+    {
+      "rule_id": "GOV-003",
+      "category": "governance",
+      "severity": "info",
+      "scope": "page",
+      "title": "Meta description missing",
+      "plain_english": "Search and AI summaries have no short description to show for the site.",
+      "remediation": "Add a meta description of 120 to 160 characters that states what the site does.",
+      "frameworks": "AIO readiness"
+    },
+    {
+      "rule_id": "GOV-004",
+      "category": "governance",
+      "severity": "info",
+      "scope": "site",
+      "title": "AI crawler directives",
+      "plain_english": "Whether AI assistants may read this site is a policy choice. This lists which crawlers your robots.txt names and which it blocks, so the decision is visible and deliberate rather than accidental.",
+      "remediation": "Decide which AI crawlers to allow, then record that decision explicitly in robots.txt. Silence is also a decision, but not a recorded one.",
+      "frameworks": "AIO readiness"
+    },
+    {
+      "rule_id": "GOV-005",
+      "category": "governance",
+      "severity": "info",
+      "scope": "page",
+      "title": "Canonical link missing",
+      "plain_english": "Search engines may index duplicate versions of the same page.",
+      "remediation": "Add a canonical link element pointing to the preferred URL of the page.",
+      "frameworks": "AIO readiness"
+    },
+    {
+      "rule_id": "TP-001",
+      "category": "third_party",
+      "severity": "info",
+      "scope": "page",
+      "title": "External script inventory",
+      "plain_english": "These are the outside companies whose code runs on your site. Keep the list short and known.",
+      "remediation": "Review each host, remove unused scripts, and add Subresource Integrity where supported.",
+      "frameworks": "SOC 2 CC9.2, NIST CSF ID.SC-2"
+    }
+  ]
+}
