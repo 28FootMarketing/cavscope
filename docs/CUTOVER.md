@@ -65,11 +65,44 @@ through them.
 Only after 1 and 2. Merging earlier points the deployed frontend at a project that
 cannot send a single auth email.
 
-## 4. Swap the cron jobs — both projects, one window
+## 4. Swap the cron jobs — DONE 2026-09-08
 
-The new project's five jobs were created **inactive** by `muster_028` on purpose. Enable
-them and disable the old project's in the same window, or both projects scan and email
-the same tenants from two different databases.
+**Executed.** All five disabled on `mgtmqucaldkaxvxglguw`, all five enabled on
+`hjowfnzpomzxazmzywxw`, old side first so the two never overlapped.
+
+Checked before flipping anything, because the jobs were copied from a project whose URL
+is baked into their command bodies:
+
+- Four of the five POST to `https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/...`
+  — the new project, not the old. `muster-autotriage-15min` has no URL at all; it runs
+  `select muster.autotriage();` in-database, so it is correct by construction.
+- `vault.supabase_anon_key` on the new project decodes to `ref=hjowfnzpomzxazmzywxw`,
+  `role=anon` — it is that project's own key, not a copy of the old one. Had it been
+  copied, every HTTP job would have 401'd.
+- `vault.muster_cron_secret` is present and is read by the same project's
+  `muster_engine_secret()`, so it is self-consistent whatever its value.
+
+Then the chain was proven end to end on the safest job before enabling any of them —
+`muster-watchdog` is read-only, opens incidents only, never emails:
+
+```
+cron_safe_post -> pg_net -> muster-watchdog -> HTTP 200 {"checks_run":5,"incidents_opened":0}
+```
+
+That single call exercised the vault secrets, `cron_safe_post`, the pg_net worker, the
+edge function's `x-muster-secret` check against `muster_engine_secret()`, and the
+watchdog RPCs. Worth repeating on any future project move; it is much cheaper than
+discovering a 401 from a cron log.
+
+The original instructions are kept below, since they are what to run if this ever has to
+be reversed.
+
+### Reversing
+
+Swap the two statements: disable on `hjowfnzpomzxazmzywxw`, enable on
+`mgtmqucaldkaxvxglguw`. This stops being a clean reversal as soon as the new project has
+written scans, SITREPs or findings the old one does not have — after that, reversing
+means reconciling data.
 
 On `mgtmqucaldkaxvxglguw` (disable first):
 
