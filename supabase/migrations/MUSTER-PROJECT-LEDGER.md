@@ -499,3 +499,50 @@ See `docs/CUTOVER.md`. Steps 1 (GoTrue config) and 2 (edge function secrets) are
 dashboard-only — no tool in the build environment can read or write Supabase Auth config
 or function secrets on either project, so those two are unverifiable from here as well as
 unsettable. Everything after them is gated on them.
+
+## Cron swapped to `hjowfnzpomzxazmzywxw` (2026-09-08)
+
+| Project | State |
+|---|---|
+| `mgtmqucaldkaxvxglguw` | all 5 MUSTER jobs `active=false` |
+| `hjowfnzpomzxazmzywxw` | all 5 MUSTER jobs `active=true` |
+
+Old side disabled first, so the two never ran together. `cron.alter_job(jobid, active :=
+...)` on both, not `update cron.job set active` — the role has EXECUTE on the function
+and no write privilege on the table.
+
+### What was checked first, and why it mattered
+
+The new project's cron jobs were created by `muster_028` from the source project's
+definitions, and those definitions **hardcode a project URL in the command body**. An
+unchecked flip could have had the new project's scheduler driving the old project's edge
+functions.
+
+- Four of five POST to `hjowfnzpomzxazmzywxw...`; the fifth,
+  `muster-autotriage-15min`, is `select muster.autotriage();` — in-database, no URL, correct
+  by construction.
+- `vault.supabase_anon_key` decodes to `ref=hjowfnzpomzxazmzywxw`, `role=anon`. This is
+  the one that would have failed silently as a 401 on every HTTP job had the vault entry
+  been copied from the old project rather than set from this one's.
+
+### Smoke test before enabling
+
+`muster-watchdog` was invoked through the exact path cron uses — `cron_safe_post` with
+both vault secrets — and returned `HTTP 200 {"checks_run":5,"incidents_opened":0}`. One
+call proved the vault secrets, `cron_safe_post`, the pg_net worker on this project, the
+edge function's `x-muster-secret` check against `muster_engine_secret()`, and the
+watchdog RPCs. Watchdog is the right choice for this: read-only, opens incidents only,
+never emails.
+
+### Known gap left open deliberately
+
+`muster-alert-dispatch-5min` is enabled while `RESEND_API_KEY` is still unset on this
+project. `muster.notification_outbox` is empty, so it has nothing to send and the job is
+a no-op until an alert fires. The first critical/high finding on the new project will
+queue a row that cannot be delivered until the secret is set — see `docs/CUTOVER.md` §2.
+
+### Rollback expired here
+
+Until this swap, reverting cutover was a `git revert` plus re-enabling the old project's
+cron. From the first scan the new project runs, the two databases diverge and reversing
+means reconciling data, not flipping a switch.
