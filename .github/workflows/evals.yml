@@ -10,6 +10,7 @@ on:
     paths:
       - 'evals/**'
       - 'tests/**'
+      - 'app.html'
       - 'supabase/functions/muster-agent/**'
       - 'supabase/functions/muster-resend-webhook/**'
       - '.github/workflows/evals.yml'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'evals/**'
       - 'tests/**'
+      - 'app.html'
       - 'supabase/functions/muster-agent/**'
       - 'supabase/functions/muster-resend-webhook/**'
       - '.github/workflows/evals.yml'
