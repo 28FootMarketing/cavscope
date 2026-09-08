@@ -15,6 +15,25 @@ from muster.scan_rules order by category, rule_id;
 A finding is reported as `F<id>` (its row in `muster.findings`), and carries the `rule_id` below
 plus the evidence ids (`E<id>`) the engine captured for it.
 
+## Sitewide or per page
+
+Not in the catalog, because it is a property of the engine rather than of the rule row: it is decided
+by which step of `supabase/functions/muster-scan/index.ts` raises the code.
+
+| Scope | Raised by | Codes |
+|---|---|---|
+| **Site** — one verdict per domain | the `http://host/` probe; the origin files; domain DNS | `SEC-001`, `GOV-001`, `GOV-002`, `GOV-004`, `SEC-012`, `EMAIL-001`–`007` |
+| **Page** — one verdict per page | the fetched response, its headers, its HTML | everything else |
+
+Twelve site-scoped, twenty-six page-scoped.
+
+This matters more than it looks. `website_scan_settings.max_pages` defaults to **1**, so today every
+page-scoped rule reports on the homepage only. Raise it and page-scoped codes begin reporting per
+page while site-scoped ones stay at one finding each. A code classified wrongly will either duplicate
+across a crawl or silently under-report it.
+
+`tools/code-book/` renders this whole catalog, scope column included, as a client-ready PDF.
+
 ---
 
 ## Security — 13 rules
