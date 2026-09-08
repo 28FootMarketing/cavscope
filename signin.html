@@ -103,6 +103,11 @@
     .center-msg h1 { font-family: var(--font-serif); font-size: 22px; margin-bottom: 10px; }
     .center-msg p { color: var(--text-muted); font-size: 13.5px; }
 
+    /* Secondary action under the sign-in buttons (forgot password). */
+    .signin-alt { margin: 14px 0 0; font-size: 12.5px; text-align: center; }
+    .signin-alt a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px; }
+    .signin-alt a:hover { color: var(--teal); }
+
     /* ---------- Tooltips ---------- */
     .app-tooltip {
       position: fixed; z-index: 300; max-width: 280px; padding: 8px 11px; border-radius: 8px;
@@ -149,9 +154,46 @@
             <button type="submit" class="btn-primary" data-tooltip="Sign in with the email and password above.">Sign in →</button>
           </div>
         </form>
+        <p class="signin-alt"><a href="#" onclick="showResetRequest(); return false;" data-tooltip="Emails you a link to choose a new password. Use this if you have a password but cannot remember it.">Forgot your password?</a></p>
         <div class="signin-footer">
           <p>New to MUSTER? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
           <p><a href="/app" data-tooltip="Opens the workspace with sample data, no sign-in required.">Just exploring? Continue with demo data →</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="resetState" hidden>
+      <div class="signin-card">
+        <h1>Reset your password</h1>
+        <p class="signin-desc">Enter the email address on your MUSTER account. We will send you a link that lets you choose a new password. The link is single-use and expires.</p>
+        <form id="resetForm" onsubmit="return submitResetRequest(event)">
+          <label for="rsEmail">Work email</label>
+          <input type="email" id="rsEmail" required autocomplete="email" placeholder="you@company.com" data-tooltip="The address you sign in with. If no account matches it, nothing is sent — and we still show the same confirmation, so this page cannot be used to discover who has an account.">
+          <div class="signin-msg" id="resetMsg" role="status" aria-live="polite"></div>
+          <div class="btn-row">
+            <button type="button" class="btn-ghost" onclick="backToForm()" data-tooltip="Return to the sign-in form without sending anything.">← Back</button>
+            <button type="submit" class="btn-primary" data-tooltip="Emails a password-reset link to the address above.">Send reset link →</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="recoveryState" hidden>
+      <div class="signin-card">
+        <h1>Choose a new password</h1>
+        <p class="signin-desc">You opened a password-reset link, so you are signed in just long enough to set a new password. Pick one now — it replaces the old password everywhere.</p>
+        <form id="recoveryForm" onsubmit="return submitNewPassword(event)">
+          <label for="rcPassword">New password <span class="hint">(at least 8 characters)</span></label>
+          <input type="password" id="rcPassword" required minlength="8" autocomplete="new-password" placeholder="New password" data-tooltip="Minimum 8 characters. Longer is better than more punctuation.">
+          <label for="rcPassword2">Confirm new password</label>
+          <input type="password" id="rcPassword2" required minlength="8" autocomplete="new-password" placeholder="Type it again" data-tooltip="Must match the password above. Guards against a typo locking you out.">
+          <div class="signin-msg" id="recoveryMsg" role="status" aria-live="polite"></div>
+          <div class="btn-row">
+            <button type="submit" class="btn-primary" data-tooltip="Saves the new password and takes you into your workspace.">Set password →</button>
+          </div>
+        </form>
+        <div class="signin-footer">
+          <p><a href="#" onclick="showResetRequest(); return false;" data-tooltip="Sends a fresh reset link. Use this if the one you opened had already expired or been used.">Link expired? Send a new one</a></p>
         </div>
       </div>
     </div>
@@ -177,10 +219,32 @@
   // would send an authenticated user to an origin that cannot see the session
   // they just created, and the workspace would load signed-out.
   const WORKSPACE_URL = window.location.origin + '/app';
+  // Where a password-reset email sends the user back to. Same-origin for the
+  // same session reason as WORKSPACE_URL above: the recovery link puts a real
+  // (short-lived, recovery-scoped) session in the URL fragment, and only this
+  // origin can see it. Middleware serves signin.html for every path on this
+  // host that is not /app, so /reset needs no route of its own -- but it DOES
+  // need to be on the Supabase project's allowed redirect list, or GoTrue
+  // silently substitutes Site URL and the user lands somewhere that has no
+  // "choose a new password" form.
+  const RESET_URL = window.location.origin + '/reset';
   let sb = null;
 
+  // Read the fragment BEFORE the Supabase client is constructed: with
+  // detectSessionInUrl on, it consumes and clears the hash, so anything we
+  // want from it has to be captured at parse time.
+  const HASH = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+  const HASH_ERROR = HASH.get('error_description') || HASH.get('error') || '';
+  const PATH = window.location.pathname.replace(/\/+$/, '') || '/';
+  // Two independent signals, because either one alone has a hole: the hash
+  // carries type=recovery but is gone after a refresh, and the path is stable
+  // but is also what someone sees if they just type /reset with no link.
+  let recoveryMode = HASH.get('type') === 'recovery' || PATH === '/reset';
+
+  const STATES = ['checkingState', 'signinState', 'resetState', 'recoveryState', 'sentState'];
+
   function showState(id) {
-    ['checkingState', 'signinState', 'sentState'].forEach(s => {
+    STATES.forEach(s => {
       document.getElementById(s).hidden = s !== id;
     });
   }
@@ -191,7 +255,70 @@
     el.classList.toggle('ok', !!ok);
   }
 
-  function backToForm() { showState('signinState'); setMsg(''); }
+  function setResetMsg(text, ok) {
+    const el = document.getElementById('resetMsg');
+    el.textContent = text || '';
+    el.classList.toggle('ok', !!ok);
+  }
+
+  function setRecoveryMsg(text, ok) {
+    const el = document.getElementById('recoveryMsg');
+    el.textContent = text || '';
+    el.classList.toggle('ok', !!ok);
+  }
+
+  function backToForm() {
+    recoveryMode = false;
+    showState('signinState');
+    setMsg('');
+  }
+
+  function showResetRequest() {
+    // Carry whatever they already typed over, so they do not retype it.
+    const typed = document.getElementById('suEmail').value.trim();
+    if (typed) document.getElementById('rsEmail').value = typed;
+    setResetMsg('');
+    showState('resetState');
+    setTimeout(() => document.getElementById('rsEmail')?.focus(), 50);
+  }
+
+  async function submitResetRequest(e) {
+    e.preventDefault();
+    const email = document.getElementById('rsEmail').value.trim();
+    if (!email) { setResetMsg('Enter your email first.'); return false; }
+    setResetMsg('Sending…', true);
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: RESET_URL });
+      if (error) throw error;
+      // Supabase does not disclose whether the address exists, and neither do
+      // we: the same confirmation shows either way.
+      document.getElementById('sentMsg').textContent =
+        `If ${email} has a MUSTER account, a password-reset link is on its way. Open it on this device to choose a new password.`;
+      showState('sentState');
+    } catch (err) { setResetMsg(err.message || String(err)); }
+    return false;
+  }
+
+  async function submitNewPassword(e) {
+    e.preventDefault();
+    const pw1 = document.getElementById('rcPassword').value;
+    const pw2 = document.getElementById('rcPassword2').value;
+    if (pw1.length < 8) { setRecoveryMsg('Use at least 8 characters.'); return false; }
+    if (pw1 !== pw2) { setRecoveryMsg('The two passwords do not match.'); return false; }
+    setRecoveryMsg('Saving…', true);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        setRecoveryMsg('This reset link has expired or was already used. Send yourself a new one below.');
+        return false;
+      }
+      const { error } = await sb.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+      recoveryMode = false;
+      window.location.href = WORKSPACE_URL;
+    } catch (err) { setRecoveryMsg(err.message || String(err)); }
+    return false;
+  }
 
   async function submitMagicLink() {
     const email = document.getElementById('suEmail').value.trim();
@@ -227,7 +354,29 @@
       return;
     }
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+
+    // An expired or already-used link comes back as an error in the fragment,
+    // not as a failed request. Without this it would look like a blank page
+    // that just sat there.
+    if (HASH_ERROR) {
+      recoveryMode = false;
+      showState('signinState');
+      setMsg(HASH_ERROR.replace(/\+/g, ' '));
+      return;
+    }
+
+    if (recoveryMode) showState('recoveryState');
+
     sb.auth.onAuthStateChange((event, session) => {
+      // A recovery link DOES create a session, so the plain "signed in ->
+      // go to the workspace" rule below would bounce the user straight past
+      // the one form they came here to fill in. Recovery wins.
+      if (event === 'PASSWORD_RECOVERY') recoveryMode = true;
+      if (recoveryMode) {
+        showState('recoveryState');
+        setTimeout(() => document.getElementById('rcPassword')?.focus(), 50);
+        return;
+      }
       if (session) { window.location.href = WORKSPACE_URL; return; }
       showState('signinState');
       setTimeout(() => document.getElementById('suEmail')?.focus(), 50);

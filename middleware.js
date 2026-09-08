@@ -70,6 +70,15 @@ export default function middleware(request) {
   // link, or onboarding.html) has somewhere to land that isn't the sign-in page
   // again. /signin is kept as an alias to avoid breaking the link already
   // shipped to it.
+  //
+  // /reset is deliberately NOT a branch of its own: it is the redirect target
+  // of a password-reset email, and signin.html is the page that handles it
+  // (it detects type=recovery and shows the new-password form instead of
+  // bouncing to the workspace). It falls into the catch-all below. Don't
+  // "fix" that by pointing /reset somewhere else -- there is no reset.html,
+  // and the recovery session only exists on the URL that Supabase redirected
+  // to. It does have to be on the Supabase project's allowed redirect list;
+  // see docs/EMAIL.md.
   if (host === 'app.muster.partners' || host === 'app.muster.28footsystems.com') {
     if (isUnder(path, '/app')) {
       return rewrite(new URL('/app.html', request.url));
