@@ -1,12 +1,16 @@
 # Supabase project configuration for MUSTER.
 #
-# project_id is the shared 28FS project. MUSTER's own project is
-# hjowfnzpomzxazmzywxw; it is NOT set here because the CLI applies whatever it
-# finds in supabase/migrations/ to whichever project it is linked to, and that
-# directory is the shared project's history. The new project's migrations live
-# in supabase/migrations-muster-project/ and are applied deliberately, never by
-# a `db push` from this file. Repoint project_id only as part of cutover.
-project_id = "mgtmqucaldkaxvxglguw"
+# project_id is MUSTER's own project. supabase/migrations/ holds that project's
+# migrations, so the CLI's target and the migrations directory name the same
+# project -- which is the only safe arrangement, because `supabase db push`
+# applies whatever it finds in supabase/migrations/ to whichever project is
+# linked. If you ever change project_id, move the migrations directory in the
+# same commit.
+#
+# The old shared 28FS project mgtmqucaldkaxvxglguw is no longer this repo's
+# target. MUSTER's 48 migrations against it are kept as history in
+# supabase/migrations-shared-project/ and are not replayed.
+project_id = "hjowfnzpomzxazmzywxw"
 
 # Every function is declared, including the ones whose settings match the
 # default. verify_jwt defaults to TRUE when a function is omitted, and four of

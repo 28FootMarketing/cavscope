@@ -44,7 +44,7 @@ fixed for the other project, so it does not get to happen quietly twice.
 
 ## The files now exist
 
-**`supabase/migrations-muster-project/`** — all 29, exported from that project's own
+**`supabase/migrations/`** — all 29, exported from that project's own
 `supabase_migrations.schema_migrations` ledger, **every file byte-identical to the
 statement Postgres recorded as applied** (17 md5-match outright, 13 match once a single
 trailing newline is appended — see that directory's README). Not a reconstruction from the
@@ -189,7 +189,7 @@ write privilege on the latter.
   (`docs/EMAIL.md`). None of it migrates between projects.
 - **Stripe webhook repoint.**
 - **The `apply_approved_kb_updates()` cross-boundary decision** described above.
-- ~~The migration files themselves.~~ **Done** — `supabase/migrations-muster-project/`,
+- ~~The migration files themselves.~~ **Done** — `supabase/migrations/`,
   29 files, checksum-verified against the applied ledger.
 
 ## Two stale hostnames -- both fixed on both projects (2026-09-08)
@@ -326,13 +326,13 @@ is the shared project's history -- pointing `project_id` at `hjowfnzpomzxazmzywx
 without moving the migrations first would push 48 of the wrong project's migrations into
 the new one.
 
-### `supabase/migrations-muster-project/` vs `hjowfnzpomzxazmzywxw` -- yes, all 30
+### `supabase/migrations/` vs `hjowfnzpomzxazmzywxw` -- yes, all 30
 
 30 files, 30 applied rows, no file without a row, no row without a file, no name
 mismatch, and every file byte-identical to its stored statement (17 exact, 13 differing
 only by a trailing newline).
 
-### `supabase/migrations/` vs `mgtmqucaldkaxvxglguw` -- NO, and by design as much as by accident
+### `supabase/migrations-shared-project/` vs `mgtmqucaldkaxvxglguw` -- NO, and by design as much as by accident
 
 The shared project has **656 applied migrations**; this repo carries 48. That part is
 expected -- the project is shared across every 28FS brand and this repo holds only
@@ -366,9 +366,9 @@ five MUSTER cron jobs are present and active (`muster-alert-dispatch-5min`,
 row at all. Nothing is missing from the running system; what is unreliable is the
 file-to-version correspondence in this one directory.
 
-Practical consequence: **`supabase/migrations/` is a readable history, not a replayable
-one.** Do not rebuild a project from it and assume the result matches
-`mgtmqucaldkaxvxglguw`. `supabase/migrations-muster-project/` *is* replayable, and is
+Practical consequence: **`supabase/migrations-shared-project/` is a readable history, not a
+replayable one.** Do not rebuild a project from it and assume the result matches
+`mgtmqucaldkaxvxglguw`. `supabase/migrations/` *is* replayable, and is
 what actually built `hjowfnzpomzxazmzywxw`.
 
 ### Frontend -- points only at the old project, as expected pre-cutover
@@ -388,3 +388,114 @@ projects. `docs/EMAIL.md` already says these have to be pasted in per project an
 auth config does not migrate between projects; that remains a manual check.
 
 Edge function secrets are in the same position: not readable from here, so not verified.
+
+## Cutover step: frontend and config.toml moved to `hjowfnzpomzxazmzywxw` (2026-09-08)
+
+`index.html`, `signin.html`, `app.html`, `sitrep.html` and `onboarding.html` now carry
+`https://hjowfnzpomzxazmzywxw.supabase.co` and that project's publishable key
+`sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL`. A publishable key is designed to ship
+in client HTML; it is not a secret, and it is not the service role key.
+`sitrep-sample.html` still carries no Supabase reference, which is correct -- it is the
+static, no-auth sample.
+
+`supabase/config.toml`'s `project_id` moved with them, and **the migrations directories
+were swapped in the same commit** because `project_id` and `supabase/migrations/` must
+name the same project:
+
+| Directory | Holds | Role |
+|---|---|---|
+| `supabase/migrations/` | 30 files, `hjowfnzpomzxazmzywxw` | the CLI's target, replayable |
+| `supabase/migrations-shared-project/` | 48 files, `mgtmqucaldkaxvxglguw` | history, not replayable, do not add to |
+
+Leaving them unswapped would have pointed `supabase db push` at the new project while
+handing it the old project's history.
+
+### This is the repo half of cutover. It is not cutover.
+
+Merging this makes the deployed frontend talk to a project that, as of this writing,
+**cannot sign anyone in.** Every item below has to be true before the merge is safe, and
+none of them is a repo change:
+
+1. **The 3 auth users do not exist on `hjowfnzpomzxazmzywxw`.** Recreate them with their
+   existing UUIDs -- `muster.users.auth_user_id` has no FK to `auth.users`, so the rows
+   already imported will bind correctly only if the UUIDs match.
+2. **GoTrue is unconfigured**: no SMTP, no templates, no Site URL, no redirect
+   allowlist. Magic links and password resets will not send, and `signin.html`'s
+   `emailRedirectTo` (`window.location.origin + '/app'`) must be on the allowlist or
+   GoTrue silently substitutes Site URL. `/reset` needs to be on it too.
+3. **Edge function secrets are unset**: `RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`,
+   `GHL_API_KEY`, `GHL_LOCATION_ID`, and the `muster_ghl_webhook_secret` vault entry.
+4. **All five cron jobs are INACTIVE** on the new project, by `muster_028`, deliberately.
+   Nothing scans, triages, dispatches alerts or backfills embeddings until they are
+   enabled -- and they should be enabled only once the old project's are disabled, or
+   both projects will scan and email the same tenants.
+5. **The Stripe webhook still points at the old project.**
+6. **`public.apply_approved_kb_updates()`** on the shared project writes into
+   `muster.jurisdiction_laws`. After cutover it updates a dead schema.
+
+Order matters: 1-3 before the merge, 4-5 at the moment of cutover, 6 whenever the
+CORA/JARVIS side is repointed.
+
+## Auth users migrated (2026-09-08)
+
+The three `auth.users` rows and their three `auth.identities` rows are on
+`hjowfnzpomzxazmzywxw`, **byte-identical to the source**:
+
+| | md5 on both projects |
+|---|---|
+| `auth.users` (the 3) | `a2876dbd50c2001eb4e017fc63975aed` |
+| `auth.identities` (the 3) | `1ea187cec0977a5313e6f0a923f5c406` |
+
+All three bind to `muster.users` (`select count(*) from muster.users mu join auth.users
+au on au.id = mu.auth_user_id` = 3). UUIDs and bcrypt password hashes are preserved, so
+**existing passwords work** and nothing needs a reset — which matters, because password
+reset is itself blocked until GoTrue is configured.
+
+Method: `auth.users` and `auth.identities` have identical column signatures on both
+projects (`a04c75f9f3416057da8ff98da626a3fe` / `3bee18377cd825d2690fe1aaed80efdc`), so a
+verbatim row copy is safe. The rows moved server-to-server over `pg_net` through a
+token-gated endpoint (`muster_030`, dropped by `muster_031`) rather than as literals in a
+statement, because they carry password hashes and that material should not pass through a
+transcript, a log, or a migration file. Same reasoning as `muster_023`.
+
+Two things worth knowing for next time:
+
+- `auth.users.confirmed_at` and `auth.identities.email` are `GENERATED ALWAYS`, so
+  `insert ... select *` fails. The import reads the column list from `information_schema`
+  at call time instead of hardcoding ~35 names.
+- `pg_net`'s background worker was stalled and the request sat in
+  `net.http_request_queue` unprocessed. `select net.worker_restart();` cleared it. Check
+  the queue, not just `net._http_response`, when a pg_net call appears to vanish.
+
+## Grant drift found by diffing advisors, not by reading (2026-09-08)
+
+Comparing `get_advisors` output between the two projects surfaced three divergences that
+every previous parity check had missed, all making the new project **more permissive**:
+
+| Object | Old | New (before fix) |
+|---|---|---|
+| `public.rls_auto_enable()` | postgres, authenticated, service_role | **PUBLIC**, postgres, **anon**, authenticated, service_role |
+| `public.cron_error_log` | RLS on + `service_only` policy | RLS on, **no policy** |
+| `public.cron_post_log` ACL | postgres, service_role | postgres, **anon**, **authenticated**, service_role |
+
+Fixed by `muster_032`, which asserts the resulting ACLs equal the source's exactly rather
+than trusting its own statements. Advisors went 68 → 66 lints, and every remaining lint
+has an equivalent on the old project.
+
+**This is the third instance of one root cause.** `muster_021`: Postgres grants EXECUTE
+to PUBLIC on every new function, so a fresh project starts more permissive than its
+source. `muster_027`: the shim migrations selected on `proname like 'muster%'` and six
+RPCs did not carry the prefix. `rls_auto_enable` is both at once — SECURITY DEFINER, from
+`muster_002_platform_cron_helpers`, and not named `muster*`, so `muster_021`'s lockdown
+never looked at it.
+
+The general lesson, now twice-earned: **a parity check scoped by name only verifies the
+set it defined.** The advisor diff worked precisely because it is scoped by behaviour
+instead.
+
+## Remaining work
+
+See `docs/CUTOVER.md`. Steps 1 (GoTrue config) and 2 (edge function secrets) are
+dashboard-only — no tool in the build environment can read or write Supabase Auth config
+or function secrets on either project, so those two are unverifiable from here as well as
+unsettable. Everything after them is gated on them.

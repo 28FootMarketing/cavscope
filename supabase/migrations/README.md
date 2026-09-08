@@ -1,97 +1,82 @@
-# `supabase/migrations/` — how this directory maps to the live project
+# `supabase/migrations/` — `hjowfnzpomzxazmzywxw`, MUSTER's own Supabase project
 
-Every file here is named `<version>_<name>.sql`, where `<version>` is the
-**exact `version` recorded in `supabase_migrations.schema_migrations`** on
-project `mgtmqucaldkaxvxglguw`. That is the whole rule, and it exists because
-breaking it broke the directory once already.
+**This is the directory `supabase/config.toml` points at.** `project_id` is
+`hjowfnzpomzxazmzywxw`, and these are that project's migrations, so the CLI's target and
+this directory agree. They must stay in agreement: the moment they disagree,
+`supabase db push` applies one project's history to a different project.
 
-## Why the filenames are what they are
+These 33 files are the complete build history of MUSTER's own project, exported from
+that project's `supabase_migrations.schema_migrations` ledger. **Every file's content
+is byte-identical to the statement Postgres recorded as actually applied** — they are
+not a reconstruction from memory or from the catalog.
 
-Migrations here are applied through the Supabase MCP `apply_migration` tool,
-which **assigns the version itself at apply time from the wall clock**. It does
-not read the filename. So a file called `20260908070000_...` could be, and was,
-applied as version `20260906072119`.
+Exactly: 20 of the 33 files md5-match the stored statement outright; the other 13 match
+once a single trailing newline is appended, because those files end with a newline and
+the submitted statement did not. A trailing newline after the final `;` changes nothing
+semantically, but the distinction is recorded here rather than rounded off, because an
+earlier version of this note claimed a plain md5 match for all 30 and that was not
+true.
 
-That divergence is invisible until you try to use the directory for anything:
+## Why the old project's history is in a different directory
 
-- **Ordering.** Filename timestamps drifted up to two days ahead of the versions
-  actually assigned. Sorted by filename, `20260907053101` (which calls
-  `muster.evidence_embeddings`) came *before* `20260907210000`, which creates it.
-  A rebuild from empty failed. There were **16 such forward references** across
-  the directory on 2026-09-07 — the schema in this repo could not be replayed.
-- **Identity.** With filenames and versions disagreeing, there was no mechanical
-  way to tell which applied migrations had a file and which did not. Four did
-  not (below).
+`supabase/migrations-shared-project/` holds the 48 MUSTER migrations that were applied
+to the **old shared** project `mgtmqucaldkaxvxglguw`. It is kept as history and is not
+the CLI's target any more.
 
-Naming files after their applied version fixes both at once: the directory sorts
-in true application order, and a file is present exactly when its version is.
+Merging the two would be actively dangerous: `supabase db push` applies whatever it
+finds in `supabase/migrations/` to whichever project the CLI is linked to, so one
+directory holding two projects' histories is a loaded gun. Keep them apart.
 
-## Files that consolidate more than one applied version
+These directories were swapped when `config.toml`'s `project_id` moved to
+`hjowfnzpomzxazmzywxw`, because `project_id` and this directory have to name the same
+project or the footgun above is armed. An earlier version of this note said to do the
+swap "at decommission" — that assumed `project_id` would move at decommission too. It
+moved first, so the swap came with it.
 
-Several features were applied incrementally while being iterated on, then
-written up as one clean file. Those files take the version of the **first**
-migration they consolidate — the point where their objects came into existence,
-so anything depending on them still sorts later.
+## The naming rule still applies
 
-| File | Also carries |
+Filenames here are `<version>_<name>.sql` where `<version>` is the version
+`apply_migration` assigned from its own clock — read back from the ledger, not guessed
+from when the SQL was written. That is the same rule
+`supabase/migrations-shared-project/README.md` sets out, and it is the rule whose
+violation created 16 forward references and four applied-but-fileless migrations on the
+old project. That directory is a readable history but **not a replayable one**; this one
+is both.
+
+## Reading order, and what each group does
+
+| Files | What |
 |---|---|
-| `20260906005205_add_ai_governance_category.sql` | `20260906032608` `add_ai_governance_category_retro` |
-| `20260906012143_muster_onboarding_pipeline.sql` | `20260906032621` `muster_onboarding_pipeline_retro` |
-| `20260906032658_muster_critical_finding_alerts.sql` | `20260906032749` `muster_alert_resolve_retry_fix` |
-| `20260906044320_muster_incidents_watchdog.sql` | `20260906044433` `muster_watchdog_backing_rpcs` |
-| `20260906062134_muster_admin_url_runner.sql` | `20260906062220` `muster_admin_url_runner_fix_trigger` |
-| `20260906072119_muster_onboard_client_fixes.sql` | `20260906072206`, `20260906072236`, `20260906072300`, `20260906072450` |
-| `20260907022111_muster_agent_retrieval.sql` | `20260907022115`, `022119`, `022126`, `022148`, `022200` |
+| `000`–`002` | extensions, `vector` relocated into `public` to match source, cron helpers |
+| `003`–`011` | the 45 tables, keys, checks, foreign keys, indexes, and two drift passes |
+| `012` | 22 SQL helper functions (the authorization spine) |
+| `013`–`018` | the remaining 36 `muster.*` functions, plus three transcription repairs |
+| `019`–`022` | RLS, 79 policies, 25 triggers, all 70 `public.muster_*` shims, EXECUTE grants |
+| `023`–`026` | the temporary data-import endpoint, its use, and its removal |
+| `027` | the six embedding RPCs the shim migrations' name filter had missed |
+| `028` | the five cron schedules, created inactive |
+| `029` | the autotriage alert URL moved to `app.muster.partners/app` |
+| `030`–`031` | the temporary auth.users import endpoint, its use, and its removal |
+| `032` | grants reconciled to source after an advisor diff caught three divergences |
 
-## Applied migrations that had no file at all
+## Three files worth reading before you touch this project again
 
-Recovered on 2026-09-07 from `supabase_migrations.schema_migrations.statements`:
+- **`muster_021` + `muster_022`** together explain why grants do not come along for
+  free in either direction. Postgres grants EXECUTE to PUBLIC on every new function, so
+  a fresh project starts *more* permissive than its source; and the blanket revoke that
+  fixes that takes `service_role` with it wherever `service_role` only held access
+  through PUBLIC. Both were caught by comparing ACL checksums, not by reading.
+- **`muster_024`** is the one that proves counting is not verifying. The earlier
+  structural check compared object *counts* — 79 checks, 122 indexes — and passed, while
+  `users_role_check` was silently missing `super_admin` and rejected the admin row on
+  import.
+- **`muster_027`** is the same lesson from the other side: the "70/70 shims" checksum
+  was true and useless simultaneously, because it verified the set it had defined
+  (`proname like 'muster%'`) rather than the set the system needs.
 
-- `20260906032838_muster_alert_dispatch_cron.sql`
-- `20260906044502_muster_watchdog_cron.sql`
-- `20260906044516_muster_admin_overview_add_incidents.sql`
+## One dead credential is recorded here on purpose
 
-Their absence was not cosmetic. Without the first two, a rebuild produced the
-alert and incident tables, the RPCs, and the edge functions, and then **never
-scheduled anything to call them**. Without the third, the super admin console
-had no `incidents` key and could not display a single incident.
-
-## A job with no provenance anywhere
-
-`20260906032839_muster_autotriage_cron.sql` is **not** recovered — it is
-reconstructed from `cron.job`. `muster-autotriage-15min` has been running live
-since 2026-09-06, but no row in `schema_migrations` mentions it: it was
-scheduled by hand, outside `apply_migration`, so the ledger never saw it either.
-Its version is a placement one second after the migration that creates
-`muster.autotriage()`, not a real applied version. It is the only file here
-whose version is invented, and it is labelled as such in its own header.
-
-## Deliberately absent
-
-| Version | Name | Why |
-|---|---|---|
-| `20260903095155` | `rename_sentinel_schema_to_muster` | `alter schema sentinel rename to muster` |
-| `20260903095157` | `rename_sentinel_app_role_to_muster_app` | `alter role sentinel_app rename to muster_app` |
-
-Both predate this repo and rename objects that no file here creates.
-`20260904034922_muster_phase1_scan_engine.sql` builds the `muster` schema
-directly, so replaying these on a fresh project would fail on a missing
-`sentinel`. They are recorded here rather than shipped.
-
-## Checks worth re-running
-
-```sql
--- 1. Every file has a matching applied version, and vice versa.
-select version, name from supabase_migrations.schema_migrations
-where version >= '20260904034922' and name ilike '%muster%' order by version;
-
--- 2. Every live muster cron job is reproducible from this directory.
-select jobname, schedule, active from cron.job where jobname ilike '%muster%';
-```
-
-Then `grep -l "'<jobname>'" *.sql` for each job. As of 2026-09-07 all five
-(`muster-scan-due`, `muster-autotriage-15min`, `muster-alert-dispatch-5min`,
-`muster-watchdog-10min`, `muster-embedding-backfill-15min`) resolve to a file.
-
-**When you apply a migration through `apply_migration`, read back the version it
-assigned and name the file that.** Do not name the file first and hope.
+`muster_023` contains the literal token that gated the temporary bulk-import endpoint.
+That endpoint was dropped by `muster_026` and the token grants nothing on any system.
+It is left in place because this directory is a history, and editing history to look
+tidier is how a ledger stops being trustworthy. Do not reuse the value.
