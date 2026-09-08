@@ -967,3 +967,49 @@ was "Resend accepted it", and that was all anyone could ever say.
 - The Resend webhook endpoint itself. Not created from here on purpose: it would have started
   delivering into a function guaranteed to 500 until the secret exists, and repeated 5xx is how an
   endpoint gets auto-disabled.
+
+## 2026-09-08 -- GHL secrets: what is set where, and why the location diagnostic 401s
+
+### Edge function secrets cannot be moved from here
+
+Supabase keeps them in platform config, not in Postgres. `pg_net` cannot reach them, no MCP tool
+reads or writes them, and `api.supabase.com` is blocked by the agent proxy. That applies to the read
+side and the write side both, so a value recovered here still could not be installed. Setting them
+is dashboard work on each project, like GoTrue config and `STRIPE_WEBHOOK_SECRET`.
+
+### State at the time of writing
+
+| Secret | `mgtmqucaldkaxvxglguw` | `hjowfnzpomzxazmzywxw` |
+|---|---|---|
+| `GHL_LOCATION_ID` | set | **not set** |
+| `GHL_API_KEY` | set and working | **not set** |
+
+`GHL_LOCATION_ID`'s value is recoverable without dashboard access, because
+`muster-ghl-webhook`'s `location` diagnostic echoes it back as `location_id_used`. Re-derive it
+rather than storing it here:
+
+```sql
+select net.http_post(
+  url := 'https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-ghl-webhook',
+  headers := jsonb_build_object('Content-Type','application/json',
+    'x-muster-secret', (select decrypted_secret from vault.decrypted_secrets where name='muster_ghl_webhook_secret')),
+  body := jsonb_build_object('diagnostic','location'));
+```
+
+`GHL_API_KEY` is not recoverable by any route: it is never echoed in any response, which is correct.
+
+### The 401 is a missing scope, not a dead key
+
+The `location` diagnostic returns GHL `401 "The token is not authorized for this scope."` That reads
+like a broken credential and is not one. The `custom_fields` diagnostic against the same token
+returns GHL `200` with real data, so the token authenticates and the paths provisioning actually
+uses -- custom fields and opportunities -- work.
+
+The token is missing `locations.readonly`, which only `GET /locations/{id}` needs. Nothing in the
+provisioning path calls it. What is lost is the pre-flight check itself: that diagnostic exists to
+confirm `GHL_LOCATION_ID` points at the intended sub-account *before* a real tenant is provisioned
+against it, and it cannot run today. Worth adding the scope to the private integration in GHL.
+
+Order matters when reading these two diagnostics: `location` checks `GHL_LOCATION_ID` first and
+returns 500 before touching GHL at all, so a 500 there says nothing about `GHL_API_KEY`. Use
+`custom_fields` to judge the key.
