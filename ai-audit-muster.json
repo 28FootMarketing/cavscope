@@ -1,18 +1,18 @@
 {
   "format": "bigsteele-ai-audit/1",
   "brand": "Big Steele AI Audit",
-  "generated_at": "2026-09-08T04:29:00.553Z",
+  "generated_at": "2026-09-08T05:45:07.105Z",
   "repo": "muster",
   "app": "muster",
-  "files_considered": 149,
+  "files_considered": 166,
   "skipped": [],
   "score": {
-    "total": 64,
-    "grade": "D",
+    "total": 70,
+    "grade": "C-",
     "level": {
-      "n": 2,
-      "name": "AI-assisted",
-      "meaning": "Models answer or draft inside the product; a person does the doing."
+      "n": 3,
+      "name": "Agentic",
+      "meaning": "Agents take actions through tools or an MCP server; a person still owns the operation."
     },
     "profile": {
       "key": "product",
@@ -48,10 +48,10 @@
       {
         "key": "autonomy",
         "title": "Autonomy and operability",
-        "earned": 16,
+        "earned": 22,
         "max": 25,
         "weight": 25,
-        "weighted": 16
+        "weighted": 22
       }
     ],
     "criteria": [
@@ -240,10 +240,10 @@
         "key": "observability",
         "label": "Observability of what ran",
         "max": 3,
-        "earned": 0,
+        "earned": 3,
         "next": "Trace and log every run (Sentry, Langfuse, OpenTelemetry, structured logs) so a failure is visible without a customer.",
         "applicable": true,
-        "gain": 3
+        "gain": 0
       },
       {
         "group": "autonomy",
@@ -260,10 +260,10 @@
         "key": "evals",
         "label": "Evals or tests of AI behaviour",
         "max": 3,
-        "earned": 0,
+        "earned": 3,
         "next": "Write evals for the prompts and tools; a change to a prompt should fail a test before it fails a customer.",
         "applicable": true,
-        "gain": 3
+        "gain": 0
       },
       {
         "group": "autonomy",
@@ -305,20 +305,23 @@
             "supabase/functions/muster-alert-dispatch/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts",
             "supabase/functions/muster-ghl-webhook/index.ts",
+            "supabase/functions/muster-resend-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
             "supabase/functions/muster-stripe-webhook/index.ts",
             "supabase/functions/muster-verify-site/index.ts",
             "supabase/functions/muster-watchdog/index.ts"
           ],
-          "count": 8
+          "count": 9
         },
         {
           "what": "Inbound webhooks (handlers or signature checks)",
           "files": [
             "supabase/functions/muster-ghl-webhook/index.ts",
-            "supabase/functions/muster-stripe-webhook/index.ts"
+            "supabase/functions/muster-resend-webhook/index.ts",
+            "supabase/functions/muster-stripe-webhook/index.ts",
+            "supabase/functions/muster-resend-webhook/core.ts"
           ],
-          "count": 7
+          "count": 20
         },
         {
           "what": "Schedules (cron jobs, scheduled functions, workflows)",
@@ -337,14 +340,14 @@
         }
       ],
       "facts": {
-        "api_handlers": 8,
-        "supabase_functions": 8,
+        "api_handlers": 9,
+        "supabase_functions": 9,
         "contract_schemas": 0,
         "capability_inventory": 0,
         "described": "none",
         "openapi": false,
         "graphql": false,
-        "webhooks": 3,
+        "webhooks": 6,
         "schedules": 14,
         "queues": 0,
         "pages": 0
@@ -357,14 +360,16 @@
         {
           "what": "OpenRouter",
           "files": [
+            "evals/ai-narrative/live.ts",
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts"
           ],
-          "count": 2
+          "count": 3
         },
         {
           "what": "Models named in code: claude-sonnet-5, text-embedding-3-small",
           "files": [
+            "evals/ai-narrative/live.ts",
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts"
           ],
@@ -373,9 +378,10 @@
         {
           "what": "Prompts (system prompts, prompt files)",
           "files": [
+            "evals/ai-narrative/live.ts",
             "supabase/functions/muster-agent/index.ts"
           ],
-          "count": 3
+          "count": 4
         },
         {
           "what": "Retrieval: embeddings and vector search",
@@ -395,12 +401,12 @@
         "providers": [
           "OpenRouter"
         ],
-        "ai_files": 2,
+        "ai_files": 3,
         "models": [
           "claude-sonnet-5",
           "text-embedding-3-small"
         ],
-        "prompts": 1,
+        "prompts": 2,
         "structured_output": 0,
         "retrieval": 7,
         "voice": [],
@@ -462,7 +468,7 @@
       "title": "Autonomy and operability",
       "evidence": [
         {
-          "what": "Reach: 8 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
+          "what": "Reach: 9 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
           "files": [],
           "count": 3
         },
@@ -474,15 +480,37 @@
           "count": 4
         },
         {
+          "what": "Observability (structured logs or traces in code)",
+          "files": [
+            "supabase/functions/muster-resend-webhook/index.ts"
+          ],
+          "count": 1
+        },
+        {
           "what": "Reliability (retries, backoff, idempotency, dead letters)",
           "files": [
             "supabase/functions/_external/publish-due/index.ts",
-            "supabase/functions/muster-alert-dispatch/index.ts"
+            "supabase/functions/muster-alert-dispatch/index.ts",
+            "supabase/functions/muster-resend-webhook/index.ts"
           ],
-          "count": 2
+          "count": 3
         },
         {
-          "what": "Guardrails (rate limits 0, authenticated machine surfaces 8, moderation / redaction / cost caps 1)",
+          "what": "Evals and tests of the AI behaviour",
+          "files": [
+            "evals/ai-narrative/fixtures/01-mixed-board.json",
+            "evals/ai-narrative/fixtures/02-no-findings.json",
+            "evals/ai-narrative/fixtures/03-single-critical-plain.json",
+            "evals/ai-narrative/fixtures/04-sparse-technical.json",
+            "evals/ai-narrative/fixtures/05-full-cap-technical.json",
+            "evals/ai-narrative/graders.ts",
+            "evals/ai-narrative/live.ts",
+            "evals/ai-narrative/offline.test.ts"
+          ],
+          "count": 10
+        },
+        {
+          "what": "Guardrails (rate limits 0, authenticated machine surfaces 8, moderation / redaction / cost caps 2)",
           "files": [
             "supabase/functions/_external/publish-due/index.ts",
             "supabase/functions/muster-agent/index.ts",
@@ -493,7 +521,7 @@
             "supabase/functions/muster-verify-site/index.ts",
             "supabase/functions/muster-watchdog/index.ts"
           ],
-          "count": 9
+          "count": 10
         },
         {
           "what": "Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card)",
@@ -510,10 +538,10 @@
         "reach_if_described": 1,
         "machine_surfaces": 3,
         "mutating": 1,
-        "observability": 0,
-        "reliability": 2,
-        "evals": 0,
-        "guardrails": 9,
+        "observability": 1,
+        "reliability": 3,
+        "evals": 10,
+        "guardrails": 10,
         "human_gate": 0,
         "agent_docs": 3
       }
