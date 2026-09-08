@@ -63,3 +63,11 @@ entrypoint = "./functions/muster-stripe-webhook/index.ts"
 # outbound webhook action cannot present a Supabase JWT.
 verify_jwt = false
 entrypoint = "./functions/muster-ghl-webhook/index.ts"
+
+[functions.muster-embed-docs]
+# Shared secret: x-muster-secret, same vault value as the backfill. Spends
+# OpenRouter credit and rewrites what the agent reads back as documentation, so
+# the in-function check is the only thing standing between this and an open
+# endpoint. Called by tools/embed-docs/sync.ts, which holds no inference key.
+verify_jwt = false
+entrypoint = "./functions/muster-embed-docs/index.ts"

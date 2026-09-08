@@ -185,3 +185,95 @@ Embeddings via OpenRouter text-embedding-3-small:
 - Example: 1000 findings = ~0.2M tokens = ~$0.004
 
 Monthly recurring cost depends on new findings/evidence volume.
+
+## Documentation retrieval (`search_docs`)
+
+A third corpus, added 2026-09-08: MUSTER's own `docs/`. Findings say what is wrong with a site and
+evidence says what the scanner saw; neither says what any of it *means*. An agent asked "what does
+`EMAIL-003` actually cost us" had the finding text and nothing else, and the gap between holding a
+finding and being able to explain it is where a model starts composing.
+
+`search_docs` takes no `website_id`. Documentation is not tenant data and is not scoped to a site.
+
+### Chunking
+
+`tools/embed-docs/chunk.ts` splits a markdown file on `##` headings. That is not a size choice: a
+section is already the unit a person would quote, it has a heading that names it, and it has a
+GitHub anchor, so a retrieved chunk can be cited as `docs/SCAN-RULES.md#email-authentication--7-rules`
+and the reader lands on the exact text the agent read. Chunking by token count instead would retrieve
+fragments nobody can go verify, which is the opposite of how the rest of MUSTER cites.
+
+Details that are load-bearing:
+
+- Every chunk's stored text is prefixed with the document title and heading. The embedding is of the
+  text as stored, and a body that reads "Merge them into one." carries no signal about SPF without
+  the heading above it.
+- A `##` inside a fenced code block is sample output, not a heading. So is a split point: a
+  paragraph break is only a break at fence depth zero, or one chunk ends up holding half a command.
+- Content above the first `##` becomes chunk 0 under the document title, so the paragraph that says
+  what a document is for is not silently dropped.
+
+### Visibility
+
+`docs/` is not uniformly publishable, and this is the part to get right before adding a document.
+
+| Visibility | Reachable by | Today |
+|---|---|---|
+| `public` | any agent key with `read` | `docs/SCAN-RULES.md` |
+| `internal` | a **platform-scoped** key (`organization_id` null) that also carries `admin` | everything else |
+
+An org-scoped key with the `admin` scope is an admin of **one organization**. That does not make
+MUSTER's own infrastructure notes theirs to read, and `muster_engine_search_docs` requires both
+conditions, not either. Verified live: a tenant key carrying `read` **and** `admin` searching for
+the exact text of `docs/EMAIL.md` gets back only `SCAN-RULES.md` sections.
+
+Classification lives in `tools/embed-docs/manifest.json`. A file absent from it is **refused**, not
+defaulted — defaulting to public would publish internal notes on a typo, and defaulting to internal
+would quietly hide a doc someone meant to publish. `tests/docs/chunk.test.ts` asserts every `docs/*.md`
+is classified, that the manifest names nothing that is not on disk, and that the seven internal
+documents are still marked internal.
+
+### Syncing
+
+```bash
+MUSTER_FUNCTIONS_URL=https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1 \
+MUSTER_CRON_SECRET=... \
+node --experimental-strip-types tools/embed-docs/sync.ts            # all of docs/
+node --experimental-strip-types tools/embed-docs/sync.ts --dry-run  # what would change, no spend
+node --experimental-strip-types tools/embed-docs/sync.ts docs/SCAN-RULES.md
+```
+
+The tool holds **no inference credential** and never talks to OpenRouter. It reads the repository,
+chunks it, and posts text; `muster-embed-docs` holds the OpenRouter key and does the writing. So the
+sync runs from a laptop or CI with nothing but the shared secret.
+
+It is idempotent by content hash. Each chunk arrives with a sha256 of its text, and a chunk whose
+stored hash **and visibility** both match is skipped without an embedding call — re-running against
+unchanged docs costs nothing. Visibility is part of the comparison on purpose: reclassifying a
+document without touching its text must still rewrite the rows, and the direction that fails quietly
+is the one that leaves internal notes marked public.
+
+Chunks that no longer exist in a file are pruned, and pruned **after** every chunk for that document
+is written. Deleting a heading otherwise leaves its text searchable forever, which is the worst kind
+of stale, because it still reads as current.
+
+The whole corpus is 70 chunks, ~21k tokens, about $0.0004 to embed from scratch.
+
+### Schema
+
+```sql
+select doc_path, doc_title, visibility, heading, anchor, chunk_index,
+       chunk_text, content_sha, token_estimate, updated_at
+from muster.doc_chunks;
+```
+
+RLS is on with **zero policies** — no tenant reads this table directly. The only read path is
+`public.muster_engine_search_docs`, which is revoked from `anon` and `authenticated` and granted to
+`service_role` alone, same posture as the finding and evidence wrappers.
+
+**There is deliberately no IVFFLAT index on `doc_chunks`.** Findings and evidence carry one because
+they grow without bound. `docs/` is a few hundred chunks; an IVFFLAT index with `lists=100` over ~70
+rows puts under one row in each list and probes one list per query, so it would silently return a
+near-empty result set and look exactly like "the docs were never embedded". A sequential scan over a
+few hundred 1536-dim vectors is fast and exact. Add the index when the corpus justifies it, and set
+`lists` from the real row count when you do.

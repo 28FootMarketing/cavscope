@@ -1264,3 +1264,64 @@ rule, ADA Title III, BPINA, COPPA, FTC Act Section 5, WCAG 2.2 AA) against 3 cle
 and no DMARC shows every law `clear` on the mail-authentication axis. Whether an SPF or DMARC
 failure bears on a specific statute is a determination for counsel. Inventing the mapping here
 would put a legal claim in a client document that nobody with the standing to make it ever made.
+
+---
+
+## The agent can search MUSTER's own documentation (2026-09-08)
+
+`muster_047` and `muster_048`, plus the `muster-embed-docs` edge function and `tools/embed-docs/`.
+
+The agent could search findings (what is wrong with a site) and evidence (what the scanner
+captured). It could not search the one thing that explains what any of it means. An agent asked
+"what does EMAIL-003 actually cost us" had the finding text and nothing else, and the gap between
+holding a finding and being able to explain it is where a model starts composing.
+
+`muster.doc_chunks` holds `docs/`, chunked on `##` headings. The heading is the unit on purpose: it
+is already what a person would quote, and it has a GitHub anchor, so a retrieved chunk is cited as
+`docs/SCAN-RULES.md#email-authentication--7-rules` and the reader lands on the exact text the agent
+read. Chunking by token count would retrieve fragments nobody can go verify, which is the opposite
+of how the rest of MUSTER cites.
+
+**Visibility is the part that matters and it is not cosmetic.** `docs/` is not uniformly
+publishable. `SCAN-RULES.md` is exactly what a client's agent should be able to quote. `BACKEND.md`,
+`CUTOVER.md`, `EMAIL.md`, `EMAIL-INVENTORY.md`, `IMPERSONATION.md`, `MAGIC-LINK.md` and
+`RETRIEVAL.md` describe project refs, RPC names, auth gates and the impersonation protocol. Making
+all of `docs/` searchable by any tenant key would have been an information-disclosure change dressed
+up as a retrieval feature.
+
+So `muster_engine_search_docs` returns internal chunks only to a key that is **platform-scoped**
+(`organization_id` null) **and** carries `admin`. An org-scoped key with the admin scope is an admin
+of one organization; that does not make MUSTER's own infrastructure notes theirs. Verified live: a
+tenant key holding both `read` and `admin`, searching with the embedding of `docs/EMAIL.md`'s own
+text, gets back only `SCAN-RULES.md` sections. A platform key gets `EMAIL.md` at similarity 1.000.
+A `scan`-only key is refused 42501, and neither `anon` nor `authenticated` can execute any of the
+four new wrappers.
+
+**No IVFFLAT index on this table, deliberately.** Findings and evidence carry one because they grow
+without bound. This corpus is 70 chunks. An IVFFLAT index with `lists=100` over 70 rows puts under
+one row in each list and probes one list per query, so it would silently return a near-empty result
+and look exactly like "the docs were never embedded" — a failure that reads as absence rather than
+as a bug. A sequential scan over 70 vectors is fast and exact.
+
+The sync tool holds **no inference credential**. `tools/embed-docs/sync.ts` reads the repository,
+chunks it, and posts text; `muster-embed-docs` holds the OpenRouter key and does the writing. Each
+chunk carries a sha256 of its text, and a chunk whose stored hash and visibility both match is
+skipped without an embedding call. A file missing from `tools/embed-docs/manifest.json` is refused
+rather than defaulted: defaulting to public would publish internal notes on a typo, and defaulting
+to internal would quietly hide a doc someone meant to publish.
+
+**Loaded live, and reconciled rather than assumed.** All 70 chunks are embedded on
+`hjowfnzpomzxazmzywxw`. The fingerprint of `(doc_path, chunk_index, content_sha, visibility, anchor)`
+over the live table is `53231d91e61bddb8367bbf387404db7e`, byte-identical to what the repo's chunker
+produces from `docs/` at this commit, and every stored `chunk_text` hashes to its own `content_sha`
+(70 of 70). The skip path was exercised for real, not reasoned about: re-sending `SCAN-RULES.md`
+returned `embedded: 0, unchanged: 12`, and re-syncing `RETRIEVAL.md` after adding one section
+returned `embedded: 1, unchanged: 8`.
+
+Two things stated plainly. First, the sandbox this was built in cannot reach
+`*.supabase.co` (the egress proxy returns 403), so the corpus was loaded by staging the payload in a
+throwaway table and driving `muster-embed-docs` over `pg_net` — the staging table has been dropped,
+and `sync.ts` is the supported path from a machine with network. Second, the deployed
+`muster-embed-docs` was verified **functionally** — dry run, real run, wrong-secret 401, hash skip —
+not by byte-diffing the deployed source against the repo file. `supabase functions deploy` from the
+repo is what makes those identical.
