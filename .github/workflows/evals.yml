@@ -1,29 +1,20 @@
-# The offline ai_narrative eval suite. Free, no network, no model.
+# The offline test and eval suites. Free, no network, no model.
 #
 # The live tier (evals/ai-narrative/live.ts) is deliberately not here: it spends
 # OpenRouter credit per run, so it belongs to a human before a prompt or model
 # change, not to every push.
 name: evals
 
+# No paths filter, on purpose. There was one, listing the directories the suites
+# were thought to cover, and it went stale the moment a suite started reading a
+# file nobody remembered to add: middleware.js, six of the seven HTML pages,
+# tools/embed-docs, docs/, and the Stripe webhook were all covered by tests that
+# a change to them would not have run. A filter that has to be maintained in
+# lockstep with what every test reads is how coverage disappears quietly. The
+# whole suite is under two seconds; run it on everything.
 on:
   push:
-    paths:
-      - 'evals/**'
-      - 'tests/**'
-      - 'app.html'
-      - 'supabase/functions/muster-agent/**'
-      - 'supabase/functions/muster-resend-webhook/**'
-      - 'supabase/functions/muster-scan/**'
-      - '.github/workflows/evals.yml'
   pull_request:
-    paths:
-      - 'evals/**'
-      - 'tests/**'
-      - 'app.html'
-      - 'supabase/functions/muster-agent/**'
-      - 'supabase/functions/muster-resend-webhook/**'
-      - 'supabase/functions/muster-scan/**'
-      - '.github/workflows/evals.yml'
 
 jobs:
   offline-suites:
@@ -35,6 +26,15 @@ jobs:
           # Native TypeScript type stripping, so the suite imports the shipped
           # Deno .ts modules directly with no build step and nothing to drift.
           node-version: '22'
-      # Both offline suites: the ai_narrative contract and the Resend
-      # webhook's signature verification. No network, no model, no spend.
+          cache: 'npm'
+
+      # This step is the whole reason main was red from 2026-09-08 12:42 to
+      # 18:0x: there wasn't one. tests/routing/middleware.test.ts imports the
+      # shipped middleware.js, which imports @vercel/functions, and with no
+      # node_modules on the runner that resolves to ERR_MODULE_NOT_FOUND. The
+      # suite reported 183 of 194 tests and one failing file, which reads like a
+      # broken test rather than a missing install, and five merges went in on
+      # top of it.
+      - run: npm ci
+
       - run: npm test
