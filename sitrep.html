@@ -477,6 +477,45 @@
   }
 
   // Tooltip engine: event delegation on [data-tooltip], works for dynamically rendered content too.
+  // Right-click context menu suppression. Added 2026-09-08 at the owner's explicit
+  // request, after the tradeoff below was put to them in full.
+  //
+  // WHAT THIS DOES: suppresses the browser context menu on a real right-click.
+  //
+  // WHAT THIS DOES NOT DO, and nobody reading this later should think otherwise:
+  // it does not protect this page's source. Ctrl+U, F12, the browser's own View
+  // Page Source item, `curl`, Save Page As and simply turning JavaScript off all
+  // still read every byte. This is a speed bump on one gesture, not a security
+  // control, and it must never be cited as one in a SITREP, a control register,
+  // or a conversation with a client.
+  //
+  // The protection that is real is architectural and already in place: auth, RLS,
+  // the scan engine, posture scoring, control derivation and SITREP generation all
+  // run in Postgres and edge functions. What ships to a browser is a renderer.
+  //
+  // Two carve-outs keep this from becoming an accessibility defect on a product
+  // that sells accessibility auditing (A11Y-001..007):
+  //
+  //   1. Keyboard-invoked menus pass through. Screen reader and keyboard-only
+  //      users open the context menu with the Menu key or Shift+F10, which arrives
+  //      as a contextmenu event with button 0; a mouse right-click arrives with
+  //      button 2. Only button 2 is suppressed, so the assistive path is untouched.
+  //      Long-press on touch also reports button 0, so mobile copy and paste keeps
+  //      working -- a long-press is not a right-click and blocking it would break
+  //      text selection for every phone user to stop nobody.
+  //   2. Text-entry surfaces keep their native menu. Right-click inside an input,
+  //      textarea or contenteditable is how people paste and how spellcheck
+  //      suggestions are reached. Taking that away is a usability failure with no
+  //      upside, because a form field exposes no source.
+  function initContextMenuGuard() {
+    document.addEventListener('contextmenu', function (e) {
+      if (e.button !== 2) return;
+      var t = e.target;
+      if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return;
+      e.preventDefault();
+    });
+  }
+
   function initTooltips() {
     const tip = document.createElement('div');
     tip.className = 'app-tooltip';
@@ -533,7 +572,7 @@
     window.addEventListener('resize', () => { if (current) position(current); });
   }
 
-  window.addEventListener('DOMContentLoaded', () => { initTooltips(); init(); });
+  window.addEventListener('DOMContentLoaded', () => { initTooltips(); initContextMenuGuard(); init(); });
 </script>
 </body>
 </html>
