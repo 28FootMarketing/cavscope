@@ -647,7 +647,7 @@ a job that fires and fails still writes a `job_run_details` row, caught by
 inactive (already filtered) or its schedule was invalid (rejected by `cron.schedule` at
 creation). What remains is the cutover case.
 
-### Latent bug found while fixing this, deliberately not fixed
+### Latent bug found while fixing this -- FIXED by muster_036
 
 **The 30-minute window is a constant, not derived from each job's schedule.** Every
 current muster job has a period of 15 minutes or less, so it holds today. Any job
@@ -666,3 +666,48 @@ cron is disabled and its watchdog no longer runs, so the drift is inert.
 `supabase/migrations-shared-project/` is history and is not added to. This is the fourth
 intended difference between the two projects, alongside `muster.do_request_scan`,
 `public.muster_create_api_key` and `public.muster_public_pricing`.
+
+## muster_036 -- the missed-window is now schedule-aware
+
+The flat 30-minute window recorded as latent under `muster_035` is gone.
+`muster.cron_period_minutes(schedule)` derives each job's period and the threshold is
+`greatest(2 * period, 15 minutes)`.
+
+| Job | schedule | period | new threshold | old |
+|---|---|---|---|---|
+| `muster-alert-dispatch-5min` | `*/5 * * * *` | 5 | **15 min** | 30 |
+| `muster-watchdog-10min` | `*/10 * * * *` | 10 | **20 min** | 30 |
+| `muster-scan-due` | `*/15 * * * *` | 15 | 30 min | 30 |
+| `muster-embedding-backfill-15min` | `*/15 * * * *` | 15 | 30 min | 30 |
+| `muster-autotriage-15min` | `7,22,37,52 * * * *` | 15 | 30 min | 30 |
+
+The 15-minute jobs are unchanged. The 5- and 10-minute jobs tighten, which is the point.
+
+Demonstrated both directions on hypothetical schedules:
+
+| Case | since last success | old | new |
+|---|---|---|---|
+| `0 3 * * *` running normally | 120 min | **alarm** | quiet |
+| `@hourly` running normally | 65 min | **alarm** | quiet |
+| `30 */6 * * *` running normally | 380 min | **alarm** | quiet |
+| `0 3 * * *` genuinely stalled | 3000 min | alarm | **alarm** |
+| `@hourly` genuinely stalled | 130 min | alarm | **alarm** |
+| `*/5 * * * *` stalled | 16 min | quiet | **alarm** |
+| `*/5 * * * *` one late tick | 11 min | quiet | quiet |
+
+The parser returns NULL for anything it cannot derive with certainty -- day-of-week or
+day-of-month constraints, ranges, steps inside lists, an hour constraint with anything
+but a single minute -- and NULL is treated as not-missed. Guessing a period wrong in the
+alarming direction costs trust in every future alert; not alarming costs one unmonitored
+job. Such jobs are still monitored for *failures*; `failure_count` is untouched. The
+migration asserts that every currently active muster job has a derivable period, so this
+cannot silently swallow a real one.
+
+16 parser cases are asserted inside the migration, alongside the ACL, SECURITY DEFINER
+and `search_path` checks, and a `revoke ... from public` on the new helper -- Postgres
+grants EXECUTE to PUBLIC on every new function, which is why `muster_021`, `muster_022`
+and `muster_032` all exist.
+
+Every regex in it uses POSIX classes and bracketed literals rather than backslash
+escapes, because `muster_016` and `muster_017` exist entirely because backslashes were
+doubled in transcription.
