@@ -45,8 +45,9 @@ fixed for the other project, so it does not get to happen quietly twice.
 ## The files now exist
 
 **`supabase/migrations-muster-project/`** — all 29, exported from that project's own
-`supabase_migrations.schema_migrations` ledger, **every file's md5
-matching the statement Postgres recorded as applied**. Not a reconstruction from the
+`supabase_migrations.schema_migrations` ledger, **every file byte-identical to the
+statement Postgres recorded as applied** (17 md5-match outright, 13 match once a single
+trailing newline is appended — see that directory's README). Not a reconstruction from the
 catalog or from memory.
 
 They are in their own directory, not merged into this one, because `supabase db push`
@@ -297,3 +298,93 @@ hash nobody had seen before.
 
 **Every MUSTER edge function is now identical on both projects and identical to this
 repo**, at the hashes in this section and the one above it.
+
+## Does this repo match the two projects? (audit, 2026-09-08)
+
+Every parity number above this section compares the two projects to each other. None of
+them compares either project to this repo. This section does that, layer by layer, and
+the answer is not uniform.
+
+### Edge functions -- yes, exactly
+
+All 8 byte-identical on both projects and identical to `supabase/functions/`. Hashes in
+the sections above.
+
+### `supabase/config.toml` -- was incomplete, now complete
+
+It declared 2 of the 8 functions. Both declarations were correct, but the omission was
+not harmless: `verify_jwt` defaults to **true** when a function is not declared, and
+four of the six undeclared functions require **false** (`muster-watchdog`,
+`muster-backfill-embeddings`, `muster-stripe-webhook`, `muster-ghl-webhook`). A
+`supabase functions deploy` of any of those from this repo would have silently locked
+out pg_cron, Stripe and GHL, none of which can present a Supabase JWT. All 8 are now
+declared, matching live on both projects.
+
+`project_id` stays `mgtmqucaldkaxvxglguw` deliberately. The CLI applies whatever it
+finds in `supabase/migrations/` to whichever project it is linked to, and that directory
+is the shared project's history -- pointing `project_id` at `hjowfnzpomzxazmzywxw`
+without moving the migrations first would push 48 of the wrong project's migrations into
+the new one.
+
+### `supabase/migrations-muster-project/` vs `hjowfnzpomzxazmzywxw` -- yes, all 30
+
+30 files, 30 applied rows, no file without a row, no row without a file, no name
+mismatch, and every file byte-identical to its stored statement (17 exact, 13 differing
+only by a trailing newline).
+
+### `supabase/migrations/` vs `mgtmqucaldkaxvxglguw` -- NO, and by design as much as by accident
+
+The shared project has **656 applied migrations**; this repo carries 48. That part is
+expected -- the project is shared across every 28FS brand and this repo holds only
+MUSTER's slice. The check that matters is one-directional: does each of the 48 files
+match what was applied under its version? Mostly not.
+
+- **47 of 48** have an applied row. One does not: `20260906032839_muster_autotriage_cron.sql`.
+- Of the 47, **6 match exactly**, **11 match once a trailing newline is appended**, and
+  **30 differ in content**.
+
+The 30 are not corruption. Two causes, both benign, both worth knowing:
+
+1. **Header commentary.** These files carry explanatory headers that were never part of
+   the SQL submitted to `apply_migration`. `20260906044502_muster_watchdog_cron.sql` is
+   the clean example: file 932 bytes, stored statement 569, and the 363-byte difference
+   is a six-line header explaining that the migration was recovered from the ledger. The
+   SQL body is byte-identical.
+2. **SQL that landed under a different version.** The file is a superset of what its own
+   version applied. `20260907022111_muster_agent_retrieval.sql` is 14,266 bytes; the
+   statement stored under `20260907022111` is 830 -- the extension, the
+   `finding_embeddings` table and its three indexes, and nothing else. The rest
+   (`evidence_embeddings`, the search functions, the tool registrations) went in under
+   other versions. This is the same failure mode CLAUDE.md already records: filenames
+   were not read back from the version `apply_migration` actually assigned.
+
+**The database has the SQL either way.** Spot-checked on the live project:
+`muster.evidence_embeddings` exists, both `muster.q_search_*` functions exist, and all
+five MUSTER cron jobs are present and active (`muster-alert-dispatch-5min`,
+`muster-autotriage-15min`, `muster-embedding-backfill-15min`, `muster-scan-due`,
+`muster-watchdog-10min`) -- including the autotriage schedule whose file has no applied
+row at all. Nothing is missing from the running system; what is unreliable is the
+file-to-version correspondence in this one directory.
+
+Practical consequence: **`supabase/migrations/` is a readable history, not a replayable
+one.** Do not rebuild a project from it and assume the result matches
+`mgtmqucaldkaxvxglguw`. `supabase/migrations-muster-project/` *is* replayable, and is
+what actually built `hjowfnzpomzxazmzywxw`.
+
+### Frontend -- points only at the old project, as expected pre-cutover
+
+`index.html`, `signin.html`, `app.html`, `sitrep.html` and `onboarding.html` all carry
+`https://mgtmqucaldkaxvxglguw.supabase.co`. `sitrep-sample.html` carries no Supabase
+reference at all, which is right -- it is the static, no-auth sample. This is the
+expected pre-cutover state and is already on the outstanding list, not drift.
+
+### Auth email templates -- NOT VERIFIED, and not verifiable from here
+
+`supabase/auth-email-templates/` holds the six GoTrue templates. Supabase Auth config is
+not exposed by any tool available in this environment -- there is no read path to the
+templates, SMTP settings, Site URL or redirect allowlist that either project is actually
+serving. So whether the dashboard matches these six files is **unknown**, on both
+projects. `docs/EMAIL.md` already says these have to be pasted in per project and that
+auth config does not migrate between projects; that remains a manual check.
+
+Edge function secrets are in the same position: not readable from here, so not verified.

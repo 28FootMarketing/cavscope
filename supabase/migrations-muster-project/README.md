@@ -1,9 +1,16 @@
 # `hjowfnzpomzxazmzywxw` — MUSTER's dedicated Supabase project
 
 These 30 files are the complete build history of MUSTER's own project, exported from
-that project's `supabase_migrations.schema_migrations` ledger. **Every file's md5
-matches the statement Postgres recorded as actually applied** — they are not a
-reconstruction from memory or from the catalog.
+that project's `supabase_migrations.schema_migrations` ledger. **Every file's content
+is byte-identical to the statement Postgres recorded as actually applied** — they are
+not a reconstruction from memory or from the catalog.
+
+Exactly: 17 of the 30 files md5-match the stored statement outright; the other 13 match
+once a single trailing newline is appended, because those files end with a newline and
+the submitted statement did not. A trailing newline after the final `;` changes nothing
+semantically, but the distinction is recorded here rather than rounded off, because an
+earlier version of this note claimed a plain md5 match for all 30 and that was not
+true.
 
 ## Why this is a separate directory
 
