@@ -6,7 +6,7 @@ Gate: PASS (score 25 or more and level 1 Automated or above).
 
 Profile: **Product** (the default; declare another with --profile or ai-audit.config.json). Software people use directly; AI and automation serve the customer in the product.
 
-Generated 2026-09-08 by @bigsteele/ai-audit on 166 files. Every finding cites files; no source or values were read out. Env files were never opened.
+Generated 2026-09-08 by @bigsteele/ai-audit on 205 files. Every finding cites files; no source or values were read out. Env files were never opened.
 
 ## Scorecard
 
@@ -30,8 +30,8 @@ Generated 2026-09-08 by @bigsteele/ai-audit on 166 files. Every finding cites fi
 
 ## Automated surfaces (16 / 25)
 
-- API handlers (route files, serverless functions, framework routes) (9) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-resend-webhook/index.ts`, +4 more
-- Inbound webhooks (handlers or signature checks) (20) — `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-resend-webhook/index.ts`, `supabase/functions/muster-stripe-webhook/index.ts`, `supabase/functions/muster-resend-webhook/core.ts`
+- API handlers (route files, serverless functions, framework routes) (10) — `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-embed-docs/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, +5 more
+- Inbound webhooks (handlers or signature checks) (20) — `supabase/functions/muster-ghl-webhook/index.ts`, `supabase/functions/muster-resend-webhook/index.ts`, `supabase/functions/muster-stripe-webhook/index.ts`, `supabase/functions/muster-resend-webhook/core.ts`, `supabase/functions/muster-stripe-webhook/core.ts`
 - Schedules (cron jobs, scheduled functions, workflows) (14) — `supabase/migrations/20260908012026_muster_028_cron_jobs_inactive_until_cutover.sql`, `supabase/migrations-shared-project/20260904035815_muster_cron.sql`, `supabase/migrations-shared-project/20260906032838_muster_alert_dispatch_cron.sql`, `supabase/migrations-shared-project/20260906032839_muster_autotriage_cron.sql`, `supabase/migrations-shared-project/20260906044502_muster_watchdog_cron.sql`, +4 more
 
 | Criterion | Earned |
@@ -44,10 +44,10 @@ Generated 2026-09-08 by @bigsteele/ai-audit on 166 files. Every finding cites fi
 
 ## AI systems (14 / 25)
 
-- OpenRouter (3) — `evals/ai-narrative/live.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`
-- Models named in code: claude-sonnet-5, text-embedding-3-small (2) — `evals/ai-narrative/live.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`
+- OpenRouter (4) — `evals/ai-narrative/live.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-embed-docs/index.ts`
+- Models named in code: claude-sonnet-5, text-embedding-3-small (2) — `evals/ai-narrative/live.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-embed-docs/index.ts`, `tools/embed-docs/chunk.ts`
 - Prompts (system prompts, prompt files) (4) — `evals/ai-narrative/live.ts`, `supabase/functions/muster-agent/index.ts`
-- Retrieval: embeddings and vector search (7) — `supabase/migrations/20260907204744_muster_000_extensions.sql`, `supabase/migrations/20260907204804_muster_001_vector_into_public_to_match_source.sql`, `supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql`, `supabase/migrations/20260907222630_muster_009_indexes.sql`, `supabase/migrations-shared-project/20260907022111_muster_agent_retrieval.sql`, +2 more
+- Retrieval: embeddings and vector search (10) — `supabase/migrations/20260907204744_muster_000_extensions.sql`, `supabase/migrations/20260907204804_muster_001_vector_into_public_to_match_source.sql`, `supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql`, `supabase/migrations/20260907222630_muster_009_indexes.sql`, `supabase/migrations/20260908154810_muster_047_doc_chunks_retrieval.sql`, +3 more
 
 | Criterion | Earned |
 |---|---|
@@ -75,12 +75,12 @@ Generated 2026-09-08 by @bigsteele/ai-audit on 166 files. Every finding cites fi
 
 ## Autonomy and operability (22 / 25)
 
-- Reach: 9 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description) (3)
-- Machine surfaces that write (create, update, delete), not only read (4) — `supabase/functions/_external/publish-due/index.ts`
+- Reach: 10 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description) (4)
+- Machine surfaces that write (create, update, delete), not only read (6) — `supabase/functions/_external/publish-due/index.ts`, `tools/code-book/render.py`, `tools/sitrep-pdf/render.py`
 - Observability (structured logs or traces in code) (1) — `supabase/functions/muster-resend-webhook/index.ts`
-- Reliability (retries, backoff, idempotency, dead letters) (3) — `supabase/functions/_external/publish-due/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-resend-webhook/index.ts`
+- Reliability (retries, backoff, idempotency, dead letters) (4) — `supabase/functions/_external/publish-due/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-embed-docs/index.ts`, `supabase/functions/muster-resend-webhook/index.ts`
 - Evals and tests of the AI behaviour (10) — `evals/ai-narrative/fixtures/01-mixed-board.json`, `evals/ai-narrative/fixtures/02-no-findings.json`, `evals/ai-narrative/fixtures/03-single-critical-plain.json`, `evals/ai-narrative/fixtures/04-sparse-technical.json`, `evals/ai-narrative/fixtures/05-full-cap-technical.json`, +3 more
-- Guardrails (rate limits 0, authenticated machine surfaces 8, moderation / redaction / cost caps 2) (10) — `supabase/functions/_external/publish-due/index.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-ghl-webhook/index.ts`, +3 more
+- Guardrails (rate limits 0, authenticated machine surfaces 9, moderation / redaction / cost caps 2) (11) — `supabase/functions/_external/publish-due/index.ts`, `supabase/functions/muster-agent/index.ts`, `supabase/functions/muster-alert-dispatch/index.ts`, `supabase/functions/muster-backfill-embeddings/index.ts`, `supabase/functions/muster-embed-docs/index.ts`, +3 more
 - Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card) (3) — `.well-known/mcp/server-card.json`, `AGENTS.md`, `CLAUDE.md`
 
 | Criterion | Earned |

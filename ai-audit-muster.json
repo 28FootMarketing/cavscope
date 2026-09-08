@@ -1,10 +1,10 @@
 {
   "format": "bigsteele-ai-audit/1",
   "brand": "Big Steele AI Audit",
-  "generated_at": "2026-09-08T05:45:07.105Z",
+  "generated_at": "2026-09-08T17:20:47.646Z",
   "repo": "muster",
   "app": "muster",
-  "files_considered": 166,
+  "files_considered": 205,
   "skipped": [],
   "score": {
     "total": 70,
@@ -304,6 +304,7 @@
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-alert-dispatch/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts",
+            "supabase/functions/muster-embed-docs/index.ts",
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-resend-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
@@ -311,7 +312,7 @@
             "supabase/functions/muster-verify-site/index.ts",
             "supabase/functions/muster-watchdog/index.ts"
           ],
-          "count": 9
+          "count": 10
         },
         {
           "what": "Inbound webhooks (handlers or signature checks)",
@@ -319,7 +320,8 @@
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-resend-webhook/index.ts",
             "supabase/functions/muster-stripe-webhook/index.ts",
-            "supabase/functions/muster-resend-webhook/core.ts"
+            "supabase/functions/muster-resend-webhook/core.ts",
+            "supabase/functions/muster-stripe-webhook/core.ts"
           ],
           "count": 20
         },
@@ -340,14 +342,14 @@
         }
       ],
       "facts": {
-        "api_handlers": 9,
-        "supabase_functions": 9,
+        "api_handlers": 10,
+        "supabase_functions": 10,
         "contract_schemas": 0,
         "capability_inventory": 0,
         "described": "none",
         "openapi": false,
         "graphql": false,
-        "webhooks": 6,
+        "webhooks": 7,
         "schedules": 14,
         "queues": 0,
         "pages": 0
@@ -362,16 +364,19 @@
           "files": [
             "evals/ai-narrative/live.ts",
             "supabase/functions/muster-agent/index.ts",
-            "supabase/functions/muster-backfill-embeddings/index.ts"
+            "supabase/functions/muster-backfill-embeddings/index.ts",
+            "supabase/functions/muster-embed-docs/index.ts"
           ],
-          "count": 3
+          "count": 4
         },
         {
           "what": "Models named in code: claude-sonnet-5, text-embedding-3-small",
           "files": [
             "evals/ai-narrative/live.ts",
             "supabase/functions/muster-agent/index.ts",
-            "supabase/functions/muster-backfill-embeddings/index.ts"
+            "supabase/functions/muster-backfill-embeddings/index.ts",
+            "supabase/functions/muster-embed-docs/index.ts",
+            "tools/embed-docs/chunk.ts"
           ],
           "count": 2
         },
@@ -390,28 +395,29 @@
             "supabase/migrations/20260907204804_muster_001_vector_into_public_to_match_source.sql",
             "supabase/migrations/20260907212647_muster_005_remaining_tables_from_live.sql",
             "supabase/migrations/20260907222630_muster_009_indexes.sql",
+            "supabase/migrations/20260908154810_muster_047_doc_chunks_retrieval.sql",
             "supabase/migrations-shared-project/20260907022111_muster_agent_retrieval.sql",
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts"
           ],
-          "count": 7
+          "count": 10
         }
       ],
       "facts": {
         "providers": [
           "OpenRouter"
         ],
-        "ai_files": 3,
+        "ai_files": 4,
         "models": [
           "claude-sonnet-5",
           "text-embedding-3-small"
         ],
         "prompts": 2,
         "structured_output": 0,
-        "retrieval": 7,
+        "retrieval": 10,
         "voice": [],
         "vision": 0,
-        "ai_server_files": 2
+        "ai_server_files": 3
       }
     },
     {
@@ -468,16 +474,18 @@
       "title": "Autonomy and operability",
       "evidence": [
         {
-          "what": "Reach: 9 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
+          "what": "Reach: 10 handlers (undocumented, counted at a quarter) and 1 tools against 0 pages a person uses (ratio 1; 1 with a full API description)",
           "files": [],
-          "count": 3
+          "count": 4
         },
         {
           "what": "Machine surfaces that write (create, update, delete), not only read",
           "files": [
-            "supabase/functions/_external/publish-due/index.ts"
+            "supabase/functions/_external/publish-due/index.ts",
+            "tools/code-book/render.py",
+            "tools/sitrep-pdf/render.py"
           ],
-          "count": 4
+          "count": 6
         },
         {
           "what": "Observability (structured logs or traces in code)",
@@ -491,9 +499,10 @@
           "files": [
             "supabase/functions/_external/publish-due/index.ts",
             "supabase/functions/muster-alert-dispatch/index.ts",
+            "supabase/functions/muster-embed-docs/index.ts",
             "supabase/functions/muster-resend-webhook/index.ts"
           ],
-          "count": 3
+          "count": 4
         },
         {
           "what": "Evals and tests of the AI behaviour",
@@ -510,18 +519,18 @@
           "count": 10
         },
         {
-          "what": "Guardrails (rate limits 0, authenticated machine surfaces 8, moderation / redaction / cost caps 2)",
+          "what": "Guardrails (rate limits 0, authenticated machine surfaces 9, moderation / redaction / cost caps 2)",
           "files": [
             "supabase/functions/_external/publish-due/index.ts",
             "supabase/functions/muster-agent/index.ts",
             "supabase/functions/muster-alert-dispatch/index.ts",
             "supabase/functions/muster-backfill-embeddings/index.ts",
+            "supabase/functions/muster-embed-docs/index.ts",
             "supabase/functions/muster-ghl-webhook/index.ts",
             "supabase/functions/muster-scan/index.ts",
-            "supabase/functions/muster-verify-site/index.ts",
-            "supabase/functions/muster-watchdog/index.ts"
+            "supabase/functions/muster-verify-site/index.ts"
           ],
-          "count": 10
+          "count": 11
         },
         {
           "what": "Documentation written for agents (AGENTS.md, CLAUDE.md, llms.txt, skills, server card)",
@@ -536,12 +545,12 @@
       "facts": {
         "reach": 1,
         "reach_if_described": 1,
-        "machine_surfaces": 3,
-        "mutating": 1,
+        "machine_surfaces": 4,
+        "mutating": 3,
         "observability": 1,
-        "reliability": 3,
+        "reliability": 4,
         "evals": 10,
-        "guardrails": 10,
+        "guardrails": 11,
         "human_gate": 0,
         "agent_docs": 3
       }
