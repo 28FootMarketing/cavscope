@@ -17,9 +17,8 @@ const DEGRADED_MS = 3000;
 const HSTS_MIN_AGE = 15552000;
 const MAX_HOPS = 6;
 // Identifies MUSTER to every site it touches. The URL has to resolve: the
-// previous +https://muster.28footsystems.com/scanner 404s, because no
-// /scanner page was ever built and that host is not even routed by
-// middleware.js. muster.partners is the product's home and explains what
+// previous +https://muster.28footsystems.com/scanner 404s, because no /scanner
+// page was ever built. muster.partners is the product's home and explains what
 // MUSTER is, which is what an operator seeing this in their logs wants.
 const UA = "Mozilla/5.0 (compatible; MUSTER-Scanner/1.0; +https://muster.partners)";
 

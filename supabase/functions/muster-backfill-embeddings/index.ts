@@ -40,7 +40,7 @@ async function embedText(text: string): Promise<number[]> {
     headers: {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
-      "http-referer": "https://muster.28footsystems.com",
+      "http-referer": "https://muster.partners",
       "x-title": "MUSTER embedding backfill",
     },
     body: JSON.stringify({
