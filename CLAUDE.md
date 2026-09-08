@@ -74,6 +74,20 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   in a dedicated internal sandbox org (`organizations.is_admin_sandbox`), never in a real tenant's risk
   register. This is separate from the guided onboarding flow above and from `sitrep-sample.html` — three
   different tools for three different jobs, not competing demos.
+- **Security headers come from `middleware.js`, on every response.** `SECURITY_HEADERS` (CSP,
+  X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) is applied through `secureRewrite()`
+  and `secureNext()`; there is deliberately no bare `rewrite()` or `next()` left in the file, so a new
+  branch cannot forget them. HSTS is **not** set there — Vercel already sends it on these domains, and
+  two sources for one header is how they drift. The CSP still carries `'unsafe-inline'` on `script-src`
+  because all six pages ship an inline `<script>`; extracting those is the prerequisite for tightening
+  it, and `tests/routing/middleware.test.ts` asserts the current state so the change has to be
+  deliberate. Any new external origin a page loads must be added to the CSP or it is silently blocked.
+- `/privacy` is `privacy.html` on `muster.partners`. `/robots.txt`, `/sitemap.xml` and
+  `/.well-known/security.txt` are real files at the repo root; `/.well-known/` and `/sitemap.xml` are
+  shared across every host (like `/assets/`) so a researcher on an app host finds the disclosure policy
+  rather than a login page, and the app hosts serve `robots-app.txt` instead, which disallows
+  everything. `security.txt` has a hard `Expires:` date — renew it before it lapses, because an expired
+  one counts as no policy.
 - Host and path routing is handled by `middleware.js` (Vercel Routing Middleware, using `@vercel/functions`).
   `vercel.json`'s declarative `rewrites`/`has` cannot branch on the Host header — only real code can — so
   don't reintroduce host-conditional `vercel.json` rewrites for new hosts; add another `if (host === ...)`

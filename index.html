@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="MUSTER by 28 Foot Systems — AI governance assessment for leadership. Find shadow AI, data exposure, and policy gaps before a client, regulator, or attorney does." />
   <title>MUSTER — AI Governance Before AI Becomes a Liability</title>
+  <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
+       pointing at a URL that redirects is worse than none. -->
+  <link rel="canonical" href="https://www.muster.partners/">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -402,6 +405,9 @@
     .foot-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; border-top: 1px solid var(--surface-border); padding-top: 26px; }
     .foot-brand { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-dim); }
     .foot-disclaimer { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); max-width: 46ch; line-height: 1.6; }
+    .foot-links { display: flex; gap: 18px; flex-wrap: wrap; width: 100%; margin-top: 18px; }
+    .foot-links a { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); text-decoration: none; border-bottom: 1px solid transparent; }
+    .foot-links a:hover, .foot-links a:focus-visible { color: var(--teal); border-bottom-color: var(--teal); }
 
     @media (prefers-reduced-motion: reduce) {
       .btn-primary { transition: none; }
@@ -666,6 +672,11 @@
     <div class="foot-row">
       <div class="foot-brand">MUSTER — AI Governance, prepared by After Today, LLC (DBA 28 Foot Systems)</div>
       <div class="foot-disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.</div>
+      <div class="foot-links">
+        <a href="/privacy" data-tooltip="What MUSTER collects, which processors it passes through, and why.">Privacy</a>
+        <a href="/.well-known/security.txt" data-tooltip="Where to report a security vulnerability in MUSTER, per RFC 9116.">Security</a>
+        <a href="/sitrep/sample" data-tooltip="A complete example SITREP built from fictional findings, covering every category and severity.">Sample SITREP</a>
+      </div>
     </div>
   </footer>
 

@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="What MUSTER collects, who processes it, and why — written from what the code actually does." />
+  <title>Privacy — MUSTER</title>
+  <link rel="canonical" href="https://www.muster.partners/privacy">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060a16;
+      --surface-card: #111e38;
+      --surface-border: #1f3358;
+      --surface-border-strong: #2c4574;
+      --text: #f1f6ff;
+      --text-muted: #96a6c1;
+      --text-dim: #5d708e;
+      --teal: #36e2c9;
+      --amber: #fbbf24;
+      --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+      --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --font-sans: var(--font-body);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 48px 22px 96px; }
+    header.masthead {
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 22px;
+      margin-bottom: 34px;
+    }
+    .brand {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      text-decoration: none;
+      display: inline-block;
+    }
+    .brand:hover { color: var(--teal); }
+    .kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-top: 10px;
+    }
+    h1 { font-family: var(--font-display); font-size: 30px; line-height: 1.2; margin: 0 0 6px; }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 19px;
+      margin: 40px 0 12px;
+      padding-top: 18px;
+      border-top: 1px solid var(--surface-border);
+    }
+    h2:first-of-type { border-top: 0; padding-top: 0; }
+    p { margin: 0 0 14px; color: var(--text-muted); }
+    p.lead { color: var(--text); font-size: 16px; }
+    strong { color: var(--text); font-weight: 600; }
+    a { color: var(--teal); }
+    ul { margin: 0 0 14px; padding-left: 20px; color: var(--text-muted); }
+    li { margin-bottom: 8px; }
+    .updated { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); }
+    .note {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border-strong);
+      border-left: 3px solid var(--amber);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin: 22px 0;
+    }
+    .note p:last-child { margin-bottom: 0; }
+    .note .note-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 8px;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 14px; }
+    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--surface-border); vertical-align: top; }
+    th { color: var(--text); font-weight: 600; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+    td { color: var(--text-muted); }
+    .scroller { overflow-x: auto; }
+    code { font-family: var(--font-mono); font-size: 13px; color: var(--teal); }
+    footer {
+      margin-top: 54px;
+      padding-top: 20px;
+      border-top: 1px solid var(--surface-border);
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .app-tooltip {
+      position: fixed;
+      z-index: 300;
+      max-width: 280px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: #0d1a33;
+      border: 1px solid #2e4a78;
+      color: #e6eefb;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(3px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) {
+      .app-tooltip { transition: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <a class="brand" href="/" data-tooltip="Back to the MUSTER home page.">MUSTER</a>
+    <div class="kicker" data-tooltip="Operated by After Today, LLC, doing business as 28 Foot Systems, in Hanover, Pennsylvania.">After Today, LLC — DBA 28 Foot Systems</div>
+  </header>
+
+  <h1>Privacy</h1>
+  <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does.">Last updated 8 September 2026</p>
+
+  <p class="lead">This describes what MUSTER collects, who else it passes through, and why. It is written from what the software actually does, not from a template.</p>
+
+  <div class="note">
+    <div class="note-title" data-tooltip="Read this before relying on this page for a compliance answer.">Scope of this page</div>
+    <p>This is a factual disclosure of current data practices. It is <strong>not</strong> a lawyer-reviewed privacy policy and it does not attempt to state your rights under GDPR, UK GDPR, CCPA or any other regime. If you need a contractual or regulatory answer — a DPA, a subprocessor list with contractual guarantees, a retention commitment, a data-subject request procedure — ask us and we will route it to counsel rather than answer it here.</p>
+  </div>
+
+  <h2>The marketing site</h2>
+  <p>This site, <code>muster.partners</code>, has no forms, no analytics, no tag manager and no tracking pixels. It sets no cookies of its own and stores no session.</p>
+  <p>Three third parties see your IP address because your browser fetches files from them directly:</p>
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Who</th><th>Why your browser contacts them</th></tr></thead>
+      <tbody>
+        <tr><td data-tooltip="Google Fonts serves the typefaces this page uses.">Google Fonts</td><td>The stylesheet and font files for the typefaces on this page.</td></tr>
+        <tr><td data-tooltip="jsDelivr is a public CDN. It serves the Supabase JavaScript client used to read live pricing.">jsDelivr</td><td>The Supabase JavaScript client bundle.</td></tr>
+        <tr><td data-tooltip="Vercel hosts and serves these pages, so it necessarily handles the request.">Vercel</td><td>Hosts and serves these pages. Standard server request logs.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The page makes one call to our Supabase project to read the current published prices. It is an anonymous read of public data and it is configured not to persist a session.</p>
+
+  <h2>The workspace</h2>
+  <p>Signing in at <code>app.muster.partners</code> creates an account record. What we hold is your <strong>email address</strong>, your organization and role, and sign-in timestamps. Authentication is handled by Supabase Auth; your session is stored in your own browser, per origin.</p>
+  <p>We do not ask for, and the software has no field for, a date of birth, a government identifier, a physical address, or a phone number.</p>
+
+  <h2>What a scan collects</h2>
+  <p>MUSTER assesses a website you tell it to assess. It requests pages the same way any anonymous visitor would, identifying itself as <code>MUSTER-Scanner/1.0</code>, and it resolves public DNS records for the domain. It does not sign in, does not submit forms, and does not attempt to access anything a visitor could not reach.</p>
+  <p>What it stores as evidence for each finding:</p>
+  <ul>
+    <li>HTTP response headers and status codes</li>
+    <li>Excerpts of the page HTML, capped in length</li>
+    <li><code>robots.txt</code>, the sitemap, and <code>/.well-known/security.txt</code></li>
+    <li>Public DNS answers — SPF, DMARC and MX records</li>
+  </ul>
+  <p>If the scanned page contains personal data in its public HTML, an excerpt of that HTML may be stored as evidence. That is a consequence of quoting the page we assessed; we do not extract, index or separate personal data out of it.</p>
+
+  <h2>Where your data goes</h2>
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Processor</th><th>What it handles</th></tr></thead>
+      <tbody>
+        <tr><td data-tooltip="Supabase hosts the Postgres database, authentication, and the edge functions that run the scan engine.">Supabase</td><td>Database, authentication, and the scan engine. Findings, evidence and account records live here.</td></tr>
+        <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts.">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
+        <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours.">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
+        <tr><td data-tooltip="Vercel hosts the web pages.">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
+        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP.">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure.">Worth stating plainly</div>
+    <p>Generating the narrative section of a SITREP sends the findings for that scan — rule identifiers, severities, page URLs and the evidence excerpts they cite — to a language model through OpenRouter. If that is unacceptable for a given engagement, say so and we will turn narrative generation off for your organization; every finding, score and SITREP is produced by the deterministic engine and stands without it.</p>
+  </div>
+
+  <h2>Who can see what</h2>
+  <p>Access is enforced in the database itself with row-level security, not only in the interface. A signed-in user sees their own organization's websites, scans, findings and SITREPs, and nothing else. 28 Foot Systems staff with super-admin rights can access a tenant's workspace for support; when they do, it is recorded in an append-only audit log that names the administrator, the target, the stated reason and the time window.</p>
+
+  <h2>Retention</h2>
+  <p>Scan history is kept so that findings can be tracked over time — that is the product. We have not yet set a fixed retention period, and rather than publish a number we do not enforce, we will say so: ask and we will delete your organization's data.</p>
+
+  <h2>Contact</h2>
+  <ul>
+    <li>Privacy and data questions: <a href="mailto:support@mail.muster.partners" data-tooltip="Reaches the MUSTER support inbox.">support@mail.muster.partners</a></li>
+    <li>Security vulnerability reports: <a href="mailto:security@mail.muster.partners" data-tooltip="Reaches the MUSTER security inbox. See also /.well-known/security.txt.">security@mail.muster.partners</a> — see <a href="/.well-known/security.txt" data-tooltip="Our machine-readable vulnerability disclosure policy, per RFC 9116.">our disclosure policy</a></li>
+  </ul>
+
+  <footer>
+    MUSTER is operated by After Today, LLC (DBA 28 Foot Systems), Hanover, Pennsylvania. MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion.
+  </footer>
+
+</div>
+
+<script>
+  // Copied verbatim from app.html's implementation, per the repo's standing
+  // tooltip rule. Delegated events, keyboard focus, Escape to dismiss,
+  // aria-describedby. No library.
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => {
+      const target = findTarget(e.target);
+      if (target) show(target);
+    });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && current) { hide(); suppressed = true; }
+    });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  initTooltips();
+</script>
+</body>
+</html>
