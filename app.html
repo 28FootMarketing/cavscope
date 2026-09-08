@@ -5179,9 +5179,20 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         if (!email) { msg.textContent = 'Enter your email first.'; return; }
         try {
           if (mode === 'magic' || (mode === 'signin' && !password)) {
-            const { error } = await this.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
-            if (error) throw error;
-            msg.textContent = 'Magic link sent. Open it on this device to finish signing in.';
+            // shouldCreateUser is false because its default is true: without it
+            // this modal creates an account for any address typed into it, and
+            // self-serve signup is paused. Same fix as signin.html.
+            await this.sb.auth.signInWithOtp({
+              email,
+              options: {
+                emailRedirectTo: window.location.origin + window.location.pathname,
+                shouldCreateUser: false,
+              },
+            });
+            // Result deliberately not inspected: "signups not allowed" and a
+            // rate-limit refusal each disclose whether the address has an
+            // account, so every outcome gets the same confirmation.
+            msg.textContent = `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
             return;
           }
           if (mode === 'signup') {

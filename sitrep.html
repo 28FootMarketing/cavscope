@@ -254,9 +254,18 @@
     msg.style.color = 'var(--amber)';
     try {
       if (!password) {
-        const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
-        if (error) throw error;
-        msg.textContent = 'Magic link sent. Open it on this device to finish signing in.';
+        // shouldCreateUser is false because its default is true: without it this
+        // form creates an account for any address typed into it, and self-serve
+        // signup is paused (new accounts go through sales). Same fix as
+        // signin.html.
+        await sb.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: window.location.href, shouldCreateUser: false },
+        });
+        // The result is deliberately not inspected. "Signups not allowed" and a
+        // rate-limit refusal both disclose whether the address has an account,
+        // so every outcome gets the same confirmation.
+        msg.textContent = `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
         return false;
       }
       const { error } = await sb.auth.signInWithPassword({ email, password });
