@@ -46,6 +46,12 @@ entrypoint = "./functions/muster-watchdog/index.ts"
 verify_jwt = false
 entrypoint = "./functions/muster-backfill-embeddings/index.ts"
 
+[functions.muster-resend-webhook]
+# Inbound Resend delivery/bounce/complaint events. Authentication IS the Svix
+# signature (RESEND_WEBHOOK_SECRET); Resend cannot send a Supabase JWT.
+verify_jwt = false
+entrypoint = "./functions/muster-resend-webhook/index.ts"
+
 [functions.muster-stripe-webhook]
 # Stripe signs its own requests; verified against STRIPE_WEBHOOK_SECRET over the
 # raw body. Stripe cannot present a Supabase JWT.

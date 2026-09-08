@@ -883,3 +883,87 @@ low: MUSTER's tool schemas live in `muster.agent_tools`-shaped SQL read through
 `muster_engine_agent_tools()`, and the OpenAPI document is generated per request
 by `generateOpenAPISchema`. Neither is a file to grep. That is a property of the
 architecture, not a gap.
+
+## 2026-09-08 -- Resend delivery tracking, suppression, and a magic-link signup hole
+
+### Inspection first: what already existed
+
+MUSTER was not missing an email system. Two paths, both already through Resend, both already
+documented in `docs/EMAIL.md`:
+
+- **Path A, auth email.** GoTrue renders and sends magic link, invite, signup confirm, email change,
+  password reset and reauthentication, reaching Resend only because Resend is its SMTP relay. Six
+  branded templates already in `supabase/auth-email-templates/`.
+- **Path B, application email.** `muster-alert-dispatch` drains `muster.notification_outbox` through
+  the Resend REST API with an idempotency key, multipart HTML + text, a unique dedupe index on
+  `(entity_type, entity_id, category)`, and a 5-attempt retry policy owned by
+  `muster_engine_resolve_alert`.
+
+`mail.muster.partners` is verified, sending enabled, and **click tracking is already off** -- which
+is what keeps a link scanner from rewriting an authentication URL. Nothing to change there.
+
+So the work was gaps, not a rebuild. Building a second sender would have produced duplicate mail.
+
+### Gap 1: nothing distinguished accepted from delivered
+
+`muster-alert-dispatch` called a row `sent` on a 2xx from `POST /emails`. Resend accepts, queues,
+and may bounce minutes later. The proof, captured live during this work:
+
+| | |
+|---|---|
+| Resend's own record for `c23a0198-…` | `Status: delivered` |
+| MUSTER's outbox for the same message | `delivery_status: accepted`, `delivered_at: null` |
+
+MUSTER had no way to close that gap because it never stored the id Resend returned.
+
+`muster_037` adds `muster.email_events`, `muster.email_suppressions`, and
+`provider_message_id` / `delivery_status` / `delivered_at` / `last_event_at` on the outbox.
+`delivery_status` is deliberately a **separate column** from `status`: `status` is the outbox's own
+work state, `delivery_status` is what the provider reported. A send response can only ever produce
+`accepted`.
+
+`muster-resend-webhook` (new) verifies the Svix signature over the raw body and records events.
+Statuses are rank-guarded so a late `email.sent` cannot overwrite a `delivered` and a bounce
+outranks everything; the Svix message id is a unique key so a redelivery inserts nothing.
+
+### Gap 2: bounced addresses were mailed forever
+
+A hard bounce now writes to `muster.email_suppressions`. `muster_engine_claim_alerts` was rewritten
+(from `language sql` to plpgsql) to drop suppressed addresses from the recipient list, and to
+terminate a row whose recipients are *all* suppressed as `skipped` with the reason recorded, rather
+than sending it into a wall. Stored `recipient_emails` are left intact, so lifting a suppression
+restores delivery with no backfill. Transient bounces are recorded but never suppress.
+
+### Gap 3: the sign-in form was an open signup path
+
+`signin.html` called `signInWithOtp` without `shouldCreateUser`. It defaults to **true**. Self-serve
+signup is paused and new accounts are meant to route through sales, so the magic-link form was
+quietly creating an account for any address typed into it -- and, because a new address behaved
+differently from an existing one, it was also an enumeration oracle.
+
+Now `shouldCreateUser: false`, with both link types behind one `requestLink()` that returns the same
+neutral confirmation on every outcome including a 429, plus a 60-second resend cooldown so the user
+sees a countdown instead of an error they cannot act on. The client cooldown does not replace
+GoTrue's server-side limit and is not a security control.
+
+### Deliberate divergence between the two projects
+
+`muster_037` and the new function are on `hjowfnzpomzxazmzywxw` **only**, and the modified
+`muster-alert-dispatch` was deployed there only. The old shared project has all five `muster-*` cron
+jobs inactive (verified), so its dispatcher is never invoked; handing it the new four-argument
+`resolve_alert` call against a schema with no `muster_037` would break it for no benefit. This is the
+first intentional break in the byte-identity rule, and it is safe only because the old side is dark.
+
+### What the send-response id buys, concretely
+
+An operator can now answer "did the tenant actually get the critical alert" from
+`notification_outbox.delivery_status` joined to `muster.email_events`. Before this the honest answer
+was "Resend accepted it", and that was all anyone could ever say.
+
+### Still outstanding (dashboard, cannot be done from here)
+
+- `RESEND_WEBHOOK_SECRET` on `hjowfnzpomzxazmzywxw`. Until it is set the function answers 500 and
+  refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected.
+- The Resend webhook endpoint itself. Not created from here on purpose: it would have started
+  delivering into a function guaranteed to 500 until the secret exists, and repeated 5xx is how an
+  endpoint gets auto-disabled.

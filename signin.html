@@ -200,8 +200,13 @@
 
     <div id="sentState" class="center-msg" hidden>
       <h1>Check your email</h1>
-      <p id="sentMsg">We sent a magic sign-in link to your address. Open it on this device to finish signing in.</p>
-      <p style="margin-top:14px;"><a href="#" onclick="backToForm(); return false;" data-tooltip="Return to the sign-in form.">← Use a different email</a></p>
+      <p id="sentMsg">If that address has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.</p>
+      <p id="resendMsg" style="margin-top:12px; font-size:12.5px; color:var(--text-dim);" hidden></p>
+      <p style="margin-top:14px;">
+        <a href="#" id="resendLink" onclick="resendLast(); return false;" data-tooltip="Send the link again. Nothing arrives instantly; give it a minute and check spam before resending.">Send it again</a>
+        <span style="color:var(--text-dim);"> &middot; </span>
+        <a href="#" onclick="backToForm(); return false;" data-tooltip="Return to the sign-in form and use a different email address.">Use a different email</a>
+      </p>
     </div>
 
   </div>
@@ -287,15 +292,11 @@
     const email = document.getElementById('rsEmail').value.trim();
     if (!email) { setResetMsg('Enter your email first.'); return false; }
     setResetMsg('Sending…', true);
-    try {
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: RESET_URL });
-      if (error) throw error;
-      // Supabase does not disclose whether the address exists, and neither do
-      // we: the same confirmation shows either way.
-      document.getElementById('sentMsg').textContent =
-        `If ${email} has a MUSTER account, a password-reset link is on its way. Open it on this device to choose a new password.`;
-      showState('sentState');
-    } catch (err) { setResetMsg(err.message || String(err)); }
+    // Same neutral confirmation and same cooldown as the magic-link path.
+    // Supabase does not disclose whether the address exists, and neither do we.
+    await requestLink('reset', email);
+    setResetMsg('');
+    showSent('reset', email);
     return false;
   }
 
@@ -320,16 +321,96 @@
     return false;
   }
 
+  // How long before "Send it again" is offered. GoTrue enforces its own
+  // per-address cooldown server-side and answers 429 inside it; this is the
+  // client half, so the user sees a countdown instead of an error they cannot
+  // act on. It does not replace the server limit and is not a security control.
+  const RESEND_COOLDOWN_SECONDS = 60;
+  let lastRequest = null;      // { kind: 'magic' | 'reset', email }
+  let resendTimer = null;
+
+  // One message for every outcome. Whether the address exists, was rate
+  // limited, or was never registered, the page says the same thing -- so this
+  // form cannot be used to test which addresses have MUSTER accounts.
+  function showSent(kind, email) {
+    lastRequest = { kind, email };
+    document.getElementById('sentMsg').textContent = kind === 'reset'
+      ? `If ${email} has a MUSTER account, a password-reset link is on its way. Open it on this device to choose a new password.`
+      : `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
+    showState('sentState');
+    startResendCooldown();
+  }
+
+  function startResendCooldown() {
+    const link = document.getElementById('resendLink');
+    const msg = document.getElementById('resendMsg');
+    let left = RESEND_COOLDOWN_SECONDS;
+    if (resendTimer) clearInterval(resendTimer);
+
+    const paint = () => {
+      if (left > 0) {
+        link.style.pointerEvents = 'none';
+        link.style.opacity = '0.45';
+        msg.hidden = false;
+        msg.textContent = `Nothing yet? You can send another link in ${left}s. Check your spam folder first.`;
+      } else {
+        clearInterval(resendTimer);
+        resendTimer = null;
+        link.style.pointerEvents = '';
+        link.style.opacity = '';
+        msg.hidden = false;
+        msg.textContent = 'Still nothing? Check your spam folder, then send another link.';
+      }
+    };
+    paint();
+    resendTimer = setInterval(() => { left -= 1; paint(); }, 1000);
+  }
+
+  async function resendLast() {
+    if (!lastRequest || resendTimer && document.getElementById('resendLink').style.pointerEvents === 'none') return;
+    const { kind, email } = lastRequest;
+    const msg = document.getElementById('resendMsg');
+    msg.hidden = false;
+    msg.textContent = 'Sending…';
+    await requestLink(kind, email);
+    // Same copy either way, including on a 429. Silence about the outcome is
+    // the point: a differing message would leak whether the address exists.
+    showSent(kind, email);
+  }
+
+  // Single door for both link types. Errors are logged to neither analytics nor
+  // the visible page beyond a generic note, and the token itself never reaches
+  // this code at all -- GoTrue mints it and emails it.
+  async function requestLink(kind, email) {
+    try {
+      if (kind === 'reset') {
+        await sb.auth.resetPasswordForEmail(email, { redirectTo: RESET_URL });
+      } else {
+        await sb.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: WORKSPACE_URL,
+            // Self-serve signup is paused (see the footer: new accounts go
+            // through sales). Left at its default of true, this call would
+            // create an account for any address typed into the form, which is
+            // both an open signup path and an enumeration oracle.
+            shouldCreateUser: false,
+          },
+        });
+      }
+    } catch (_) {
+      // Deliberately swallowed. Reporting "user not found" or "rate limited"
+      // here is exactly the disclosure the neutral message exists to prevent.
+    }
+  }
+
   async function submitMagicLink() {
     const email = document.getElementById('suEmail').value.trim();
     if (!email) { setMsg('Enter your email first.'); return; }
     setMsg('Sending…', true);
-    try {
-      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: WORKSPACE_URL } });
-      if (error) throw error;
-      document.getElementById('sentMsg').textContent = `We sent a magic sign-in link to ${email}. Open it on this device to finish signing in.`;
-      showState('sentState');
-    } catch (err) { setMsg(err.message || String(err)); }
+    await requestLink('magic', email);
+    setMsg('');
+    showSent('magic', email);
   }
 
   async function submitPassword(e) {
