@@ -118,11 +118,33 @@ Edge Function secrets (Supabase dashboard → Edge Functions → Secrets):
 | `RESEND_API_KEY` | **yes** | none — without it every claimed row resolves `failed` with that exact reason, nothing is lost |
 | `MUSTER_ALERT_FROM` | no | `MUSTER Alerts <alerts@mail.muster.partners>` |
 | `MUSTER_APP_URL` | no | `https://app.muster.partners/app` |
-| `MUSTER_ALERT_REPLY_TO` | no | unset — no `Reply-To` header is added |
+| `MUSTER_ALERT_REPLY_TO` | no | unset — falls back to `MUSTER_SUPPORT_EMAIL` |
+| `MUSTER_SUPPORT_EMAIL` | no | unset — the alert footer then names no support address at all |
 
-`MUSTER_ALERT_REPLY_TO` has no default on purpose. Receiving is disabled on
-`mail.muster.partners`, so a reply to the sending address goes nowhere. Point it at a monitored
-inbox and replies start working; leave it unset and the email does not invite one.
+Neither has a default, and that is load-bearing: **an advertised address that cannot receive is
+worse than no address**, because the tenant writes to it and believes someone read it. Set
+`MUSTER_SUPPORT_EMAIL` and the alert footer gains a "Questions about this finding?" line and a
+Reply-To; leave it unset and the email behaves exactly as it did before. `MUSTER_ALERT_REPLY_TO`
+stays as an override for the case where replies should land somewhere other than the address printed
+in the footer, such as a ticketing intake.
+
+### Inbound on `mail.muster.partners`
+
+Receiving was **disabled** on this domain until 2026-09-08 — every address on it was a black hole.
+The capability is now enabled in Resend, which is necessary but not sufficient: inbound also needs an
+MX record, and until it resolves nothing arrives.
+
+| Type | Name | Value | Priority | TTL |
+|---|---|---|---|---|
+| MX | `mail` | `inbound-smtp.us-east-1.amazonaws.com` | 10 | Auto |
+
+While that record is missing the domain reads `partially_verified` in Resend. **Sending is
+unaffected** — DKIM and both SPF CNAMEs stayed verified, and a send from
+`alerts@mail.muster.partners` was confirmed delivered after the capability change.
+
+Do not set `MUSTER_SUPPORT_EMAIL`, and do not put a support address in the frontend, until a real
+message to that address has been received. Advertising it earlier is the exact failure this design
+avoids.
 
 ### Delivery tracking and suppression
 

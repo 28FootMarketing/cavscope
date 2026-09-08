@@ -57,12 +57,23 @@ const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
 // and the workspace host has changed once already.
 const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://app.muster.partners/app";
 
-// Opt-in, with no default on purpose. Receiving is disabled on
-// mail.muster.partners, so a reply to the sending address goes nowhere -- and
-// inventing a support@ that may not exist would be worse than omitting the
-// header. Set MUSTER_ALERT_REPLY_TO to a real monitored inbox and replies
-// start working; leave it unset and the email simply does not invite one.
-const ALERT_REPLY_TO = Deno.env.get("MUSTER_ALERT_REPLY_TO") ?? "";
+// The address MUSTER shows tenants as its support desk, and the default
+// Reply-To. Unset by default, and that default is load-bearing: an advertised
+// address that cannot receive is worse than no address, because the tenant
+// writes to it and believes someone read it.
+//
+// mail.muster.partners had receiving disabled until 2026-09-08. Enabling the
+// capability in Resend is not enough on its own -- inbound needs an MX record
+// (mail -> inbound-smtp.us-east-1.amazonaws.com, priority 10). Until that
+// resolves, leave this unset and the footer simply does not claim a support
+// address exists.
+const SUPPORT_EMAIL = Deno.env.get("MUSTER_SUPPORT_EMAIL") ?? "";
+
+// Reply-To. Defaults to the support address, since a tenant hitting reply on a
+// critical alert is exactly the person support wants to hear from. Kept as a
+// separate override for the case where replies should land somewhere other
+// than the address printed in the footer -- a ticketing intake, say.
+const ALERT_REPLY_TO = Deno.env.get("MUSTER_ALERT_REPLY_TO") || SUPPORT_EMAIL;
 
 const SEVERITY_COLOR: Record<string, string> = {
   critical: "#f43f5e",
@@ -152,7 +163,14 @@ ${paragraphs}
           <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
             <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
               You are receiving this because you are listed as an alert recipient for your MUSTER organization. Alert recipients are managed in your workspace settings.
-            </p>
+            </p>${
+              SUPPORT_EMAIL
+                ? `
+            <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
+              Questions about this finding? Reply to this email, or write to <a href="mailto:${esc(SUPPORT_EMAIL)}" style="color:#2f7a6d;">${esc(SUPPORT_EMAIL)}</a>.
+            </p>`
+                : ""
+            }
             <p style="margin-top:0; margin-bottom:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8e9fb8;">
               MUSTER is website assurance by 28 Foot Systems, After Today, LLC &middot; Hanover, PA
             </p>

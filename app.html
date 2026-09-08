@@ -4323,7 +4323,10 @@ Temporary Password: TempMU!${Math.floor(1000 + Math.random() * 9000)}`;
             <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <small style="color: var(--teal); font-weight: 700;">+${p.pointsToTen} pts to reach 10/10</small>
-              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('aio_${p.id}')" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>
+              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('aio_' + p.id, { id: p.id, fields: [
+                ['AI-readiness area', p.name], ['MUSTER score', p.score + '/10'],
+                ['What MUSTER observed', p.rationale], ['Points available', '+' + p.pointsToTen],
+              ] })}')" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>
             </div>
           </div>
         `).join('');
@@ -4481,15 +4484,100 @@ ${b.disclaimer}`;
       if (modal) modal.classList.remove('open');
     }
 
+    // Context behind each "Copy LLM Fix" button.
+    //
+    // An onclick attribute can only carry a string, so these buttons used to
+    // pass a bare key -- 'defect_F23' -- and the prompt could name nothing but
+    // that key and the domain. The receiving model got an id it has never seen
+    // and no finding to act on. Meanwhile MUSTER already holds the title, the
+    // plain-English impact, the root cause, its own recommended fix, the page
+    // URL and the evidence ids; all of it was being thrown away at render time.
+    //
+    // Objects are registered here as the row renders, keyed by the same string
+    // the button already passes, and read back when it is pressed.
+    const llmPromptContext = Object.create(null);
+    function registerLlmPrompt(key, ctx) { llmPromptContext[key] = ctx; return key; }
+
+    function siteForPrompt() {
+      const c = state.client || {};
+      return c.url || c.domain || 'the site';
+    }
+
+    // Turns a registered finding into a prompt a model can actually act on.
+    //
+    // Two properties matter more than length. It states only what MUSTER
+    // observed, so the model is never handed a finding the scanner did not
+    // make; and it tells the model what it has NOT been given, so the honest
+    // response to an under-specified finding is a question rather than an
+    // invented file path.
+    function buildFixPrompt(ctx) {
+      const fields = (ctx.fields || []).filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '');
+      return [
+        `You are a senior engineer. Fix one specific finding on ${siteForPrompt()}.`,
+        '',
+        `FINDING ${ctx.id || ''} — reported by MUSTER, a website assurance scanner.`,
+        ...fields.map(([label, value]) => `- ${label}: ${String(value).trim()}`),
+        '',
+        'WHAT YOU HAVE NOT BEEN GIVEN',
+        '- The source code, the build configuration, or the server and CDN configuration.',
+        '- Anything beyond the lines above. That is the entirety of what MUSTER observed.',
+        '',
+        'HOW TO RESPOND',
+        '1. Name the single root cause you would change.',
+        '2. Give the exact change as a diff or a complete file, and say which path you expect it at.',
+        '3. If this cannot be fixed without something above that you were not given, say what you need. Do not guess a framework, a file path, or a build system.',
+        '4. Do not introduce findings, standards, or requirements that are not stated above.',
+        '5. Say how to verify the fix, in terms MUSTER can re-check on its next scan.',
+      ].join('\n');
+    }
+
     function copyCardLlmPrompt(key) {
-      let prompt = "";
-      if (key === 'posture') {
-        prompt = `Act as a senior cybersecurity engineer. For domain ${state.client.url}, remediate our active Critical Risk (RSK-101: Stored XSS) and High Risk (RSK-102: Missing Granular Cookie Consent). Provide explicit code modifications and a Content Security Policy header.`;
-      } else if (key === 'wcag_all_fixes' || key === 'wcag_master') {
-        prompt = `Act as a WCAG 2.2 Level AA accessibility architect. For website ${state.client.url}, fix our P0 defect (modal dialog keyboard trap) and P1 defect (icon buttons lacking aria-label). Implement native <dialog> with focus restoration and explicit form validation errors.`;
+      const ctx = llmPromptContext[key];
+      let prompt;
+
+      if (ctx) {
+        prompt = buildFixPrompt(ctx);
+      } else if (key === 'posture') {
+        // Built from the register, not hardcoded. This branch used to assert a
+        // Stored XSS and a cookie-consent gap by name for every tenant that
+        // pressed it, whether or not MUSTER had found either -- fabricated
+        // findings in a product whose whole claim is that findings carry
+        // evidence.
+        const open = (state.risks || []).filter(r => /critical|high/i.test(r.severity || '') && !/closed|resolved/i.test(r.status || ''));
+        prompt = open.length
+          ? [
+              `You are a senior security engineer. Remediate the open critical and high risks MUSTER has recorded for ${siteForPrompt()}.`,
+              '',
+              'OPEN RISKS',
+              ...open.map(r => `- ${r.id} (${r.severity}): ${r.title}${r.source ? ` — source: ${r.source}` : ''}`),
+              '',
+              'For each one: name the root cause, give the exact change as a diff, and say how to verify it. If a risk is too thinly described to fix, say what you need rather than guessing.',
+            ].join('\n')
+          : `MUSTER currently records no open critical or high risks for ${siteForPrompt()}. There is nothing to remediate; do not invent one.`;
+      } else if (key === 'wcag_all_fixes' || key === 'wcag_master' || key === 'wcag_defects_table') {
+        const defects = ((state.accessibility || {}).defects || []).filter(d => !/closed|resolved/i.test(d.status || ''));
+        prompt = defects.length
+          ? [
+              `You are a WCAG 2.2 Level AA accessibility engineer. Fix the open defects MUSTER has recorded for ${siteForPrompt()}.`,
+              '',
+              'OPEN DEFECTS',
+              ...defects.map(d => `- ${d.id} (${d.severity}) ${d.criterion || ''} ${d.criterionName || ''} — ${d.impact || ''}${d.location ? ` [${d.location}]` : ''}`.replace(/\s+/g, ' ').trim()),
+              '',
+              'For each: give the exact markup or code change as a diff, and the assistive-technology behaviour that proves it is fixed. Do not add defects MUSTER did not report.',
+            ].join('\n')
+          : `MUSTER currently records no open accessibility defects for ${siteForPrompt()}. There is nothing to fix; do not invent one.`;
       } else {
-        prompt = `Act as a senior engineer. Remediate finding '${key}' for our domain ${state.client.url}. Follow MUSTER assurance standards and output production-ready code.`;
+        // No context was registered for this key. Say so, rather than emitting
+        // a confident-sounding instruction with nothing in it.
+        prompt = [
+          `You are a senior engineer working on ${siteForPrompt()}.`,
+          '',
+          `MUSTER has a card identified as '${key}', but this button was pressed without the underlying finding attached, so no detail is available to pass you.`,
+          '',
+          'Ask for the finding title, its impact, the affected URL, and MUSTER\'s recommended fix before proposing any change. Do not guess what the finding is.',
+        ].join('\n');
       }
+
       copyToClipboard(prompt);
       showToast("🤖 Prompt copied. AI-generated — review before deploying to production.");
     }
@@ -4608,7 +4696,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <p style="font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <small style="color: var(--teal); font-weight: 700;">+${p.pointsToTen} pts</small>
-              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('wcag_${p.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this accessibility area.">🤖 Copy Fix</button>
+              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('wcag_' + p.id, { id: p.id, fields: [
+                ['Accessibility area', p.name], ['MUSTER score', p.score + '/10'],
+                ['What MUSTER observed', p.rationale], ['Points available', '+' + p.pointsToTen],
+              ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this accessibility area.">🤖 Copy Fix</button>
             </div>
           </div>
         `).join('');
@@ -4632,7 +4723,13 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <small style="color: var(--text-dim); font-family: var(--font-mono);">${d.location}</small>
             </div>
             <div><span style="font-size: 11.5px; color: var(--text-muted);">${d.validation}</span></div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('defect_${d.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this specific defect.">🤖 Copy Fix</button></div>
+            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('defect_' + d.id, { id: d.id, fields: [
+              ['Title', d.criterionName], ['Standard', d.criterion], ['Severity', d.severity],
+              ['Affected component', d.component], ['Page', d.location],
+              ['Impact on users', d.impact], ['Root cause MUSTER observed', d.rootCause],
+              ['MUSTER recommended fix', d.fix], ['How MUSTER validates it', d.validation],
+              ['Current status', d.status],
+            ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this specific defect.">🤖 Copy Fix</button></div>
           </div>
         `).join('');
       }
@@ -4712,7 +4809,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(r.source)}</span></div>
             <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(r.owner)}</span></div>
             <div><span style="font-size: 12px; color: var(--teal);">${escapeHtml(r.status)}</span></div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('risk_${r.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
+            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('risk_' + r.id, { id: r.id, fields: [
+              ['Title', r.title], ['Severity', r.severity], ['Affected site', r.website],
+              ['Source', r.source], ['Owner', r.owner], ['Status', r.status],
+            ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
           </div>
         `).join('');
       }
@@ -4736,7 +4836,9 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           </div>
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.owner)}</span></div>
           <div><span class="pill ${c.status === 'Effective' ? 'pill-approved' : (c.status === 'Deficient' ? 'pill-critical' : 'pill-pending')}">${c.status}</span></div>
-          <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('ctl_${c.code}')" data-tooltip="Copies a prompt for an AI assistant to help satisfy this control.">🤖 Fix</button></div>
+          <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('ctl_' + c.code, { id: c.code, fields: [
+            ['Control', c.name], ['Framework reference', c.code], ['Status', c.status], ['Owner', c.owner],
+          ] })}')" data-tooltip="Copies a prompt for an AI assistant to help satisfy this control.">🤖 Fix</button></div>
         </div>
       `).join('');
     }
@@ -4808,7 +4910,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <span class="eyebrow" style="color: var(--text-dim);">Status</span>
               <span style="font-size: 12px; color: var(--teal);">${escapeHtml(r.status)}</span>
             </div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('risk_${r.id}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
+            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('risk_' + r.id, { id: r.id, fields: [
+              ['Title', r.title], ['Severity', r.severity], ['Affected site', r.website],
+              ['Source', r.source], ['Owner', r.owner], ['Status', r.status],
+            ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
           </div>
         `).join('');
       }

@@ -46,6 +46,23 @@ constraint currently permits `risk_opened` and nothing else, on purpose.
 | SITREP ready | Nobody is told a SITREP has been generated. | Widen `category`, enqueue from the SITREP generator. |
 | Scan complete / weekly digest | No digest exists. | Widen `category`, plus a schedule and a per-org preference, since a digest nobody can turn off is a complaint generator. |
 
+## Support contact
+
+There is no support address in the product today. All four `mailto:` links —
+`index.html` (two), `signin.html`, `app.html`'s auth modal — are **sales** intent
+(`sales@28footsystems.com`), for getting an organization provisioned. A paying client with a problem
+has no route anywhere: not in the workspace, not in the SITREP viewer, not in an alert email. The
+landing page meanwhile sells "Priority support & SLA options" on the enterprise tier.
+
+The alert email is now ready for one: set `MUSTER_SUPPORT_EMAIL` and its footer gains a support line
+and a Reply-To. It is gated on that secret precisely so the address cannot be advertised before it
+can receive.
+
+Frontend support links are deliberately **not** added yet. Static HTML cannot be gated on a secret,
+so putting `support@mail.muster.partners` in a page ships a dead address to production the moment it
+merges. Those links go in once inbound is verified — see the MX record in
+[`EMAIL.md`](EMAIL.md#inbound-on-mailmusterpartners).
+
 ## Rules
 
 - **One owner per event.** Before adding an email, check this table and the provider dashboards.
