@@ -14,7 +14,7 @@ Repeat for every project that serves auth: today `mgtmqucaldkaxvxglguw`, and aga
 |---|---|---|
 | `01-confirm-signup.html` | Confirm signup | `Confirm your MUSTER email address` |
 | `02-invite-user.html` | Invite user | `You have been invited to MUSTER` |
-| `03-magic-link.html` | Magic Link | `Your MUSTER sign-in link` |
+| `03-magic-link.html` | Magic Link | `Your secure MUSTER sign-in link` |
 | `04-change-email.html` | Change Email Address | `Confirm your new MUSTER email address` |
 | `05-reset-password.html` | Reset Password | `Reset your MUSTER password` |
 | `06-reauthentication.html` | Reauthentication | `Your MUSTER verification code` |

@@ -94,6 +94,21 @@
     .signin-msg.ok { color: var(--emerald); }
     .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
     .btn-row .btn-primary, .btn-row .btn-ghost { flex: 1; min-width: 150px; }
+    /* Disabled state has to be visible, not only announced. Opacity alone at
+       0.45 dropped below the 4.5:1 contrast WCAG 2.2 asks for on text. */
+    button[disabled] { opacity: 0.55; cursor: not-allowed; }
+    button[aria-busy="true"] { cursor: progress; }
+
+    /* A control that reads as a link but is a real button: it takes the
+       disabled attribute, so the resend cooldown applies to the keyboard the
+       same way it applies to the mouse. */
+    .btn-linklike {
+      background: none; border: 0; padding: 0;
+      font: inherit; color: var(--teal); font-weight: 600;
+      cursor: pointer; text-decoration: underline;
+    }
+    .btn-linklike:disabled { color: var(--text-dim); text-decoration: none; cursor: not-allowed; opacity: 1; }
+    .btn-linklike:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 2px; }
 
     .signin-footer { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--surface-border); font-size: 12px; color: var(--text-dim); text-align: center; }
     .signin-footer a { color: var(--teal); font-weight: 600; }
@@ -146,13 +161,15 @@
         <p class="signin-desc">Live workspaces run real scans and produce cited SITREPs against your actual website. Enter your work email below.</p>
         <form id="signinForm" onsubmit="return submitPassword(event)">
           <label for="suEmail">Work email</label>
-          <input type="email" id="suEmail" required autocomplete="email" placeholder="you@company.com">
+          <input type="email" id="suEmail" required autocomplete="email" placeholder="you@company.com"
+                 aria-describedby="signinMsg" spellcheck="false" autocapitalize="none">
           <label for="suPassword">Password <span class="hint">(optional — leave blank to use a magic link instead)</span></label>
-          <input type="password" id="suPassword" autocomplete="current-password" placeholder="Leave blank for a magic link">
+          <input type="password" id="suPassword" autocomplete="current-password" placeholder="Leave blank for a magic link"
+                 aria-describedby="signinMsg">
           <div class="signin-msg" id="signinMsg" role="status" aria-live="polite"></div>
           <div class="btn-row">
-            <button type="button" class="btn-ghost" onclick="submitMagicLink()" data-tooltip="Emails a one-time sign-in link to the address above. No password needed.">✉ Send magic link</button>
-            <button type="submit" class="btn-primary" data-tooltip="Sign in with the email and password above.">Sign in →</button>
+            <button type="button" id="magicBtn" class="btn-ghost" onclick="submitMagicLink()" data-tooltip="Emails a one-time sign-in link to the address above. No password needed.">✉ Send Secure Sign-In Link</button>
+            <button type="submit" id="passwordBtn" class="btn-primary" data-tooltip="Sign in with the email and password above.">Sign in →</button>
           </div>
         </form>
         <p class="signin-alt"><a href="#" onclick="showResetRequest(); return false;" data-tooltip="Emails you a link to choose a new password. Use this if you have a password but cannot remember it.">Forgot your password?</a></p>
@@ -169,11 +186,13 @@
         <p class="signin-desc">Enter the email address on your MUSTER account. We will send you a link that lets you choose a new password. The link is single-use and expires.</p>
         <form id="resetForm" onsubmit="return submitResetRequest(event)">
           <label for="rsEmail">Work email</label>
-          <input type="email" id="rsEmail" required autocomplete="email" placeholder="you@company.com" data-tooltip="The address you sign in with. If no account matches it, nothing is sent — and we still show the same confirmation, so this page cannot be used to discover who has an account.">
+          <input type="email" id="rsEmail" required autocomplete="email" placeholder="you@company.com"
+                 aria-describedby="resetMsg" spellcheck="false" autocapitalize="none"
+                 data-tooltip="The address you sign in with. If no account matches it, nothing is sent — and we still show the same confirmation, so this page cannot be used to discover who has an account.">
           <div class="signin-msg" id="resetMsg" role="status" aria-live="polite"></div>
           <div class="btn-row">
             <button type="button" class="btn-ghost" onclick="backToForm()" data-tooltip="Return to the sign-in form without sending anything.">← Back</button>
-            <button type="submit" class="btn-primary" data-tooltip="Emails a password-reset link to the address above.">Send reset link →</button>
+            <button type="submit" id="resetBtn" class="btn-primary" data-tooltip="Emails a password-reset link to the address above.">Send reset link →</button>
           </div>
         </form>
       </div>
@@ -202,11 +221,11 @@
     <div id="sentState" class="center-msg" hidden>
       <h1>Check your email</h1>
       <p id="sentMsg">If that address has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.</p>
-      <p id="resendMsg" style="margin-top:12px; font-size:12.5px; color:var(--text-dim);" hidden></p>
+      <p id="resendMsg" role="status" aria-live="polite" style="margin-top:12px; font-size:12.5px; color:var(--text-dim);" hidden></p>
       <p style="margin-top:14px;">
-        <a href="#" id="resendLink" onclick="resendLast(); return false;" data-tooltip="Send the link again. Nothing arrives instantly; give it a minute and check spam before resending.">Send it again</a>
+        <button type="button" id="resendLink" class="btn-linklike" onclick="resendLast()" data-tooltip="Send the link again. Nothing arrives instantly; give it a minute and check spam before resending.">Resend link</button>
         <span style="color:var(--text-dim);"> &middot; </span>
-        <a href="#" onclick="backToForm(); return false;" data-tooltip="Return to the sign-in form and use a different email address.">Use a different email</a>
+        <button type="button" class="btn-linklike" onclick="backToForm()" data-tooltip="Return to the sign-in form and use a different email address.">Use a different email</button>
       </p>
     </div>
 
@@ -255,6 +274,78 @@
     });
   }
 
+  // ---- pure input handling ------------------------------------------------
+  // Extracted as plain functions so tests/auth/signin.test.ts can exercise the
+  // real ones rather than a copy.
+
+  // Addresses are compared case-insensitively by GoTrue, and a stray space or
+  // a pasted "Name <addr>" is the common way a sign-in silently goes nowhere.
+  function normalizeEmail(raw) {
+    let v = String(raw == null ? '' : raw).trim();
+    const angled = v.match(/<([^>]+)>\s*$/);
+    if (angled) v = angled[1].trim();
+    return v.toLowerCase();
+  }
+
+  // Deliberately not an RFC 5322 regex. This rejects what a person actually
+  // mistypes -- no @, no dot in the domain, spaces, a trailing comma -- and
+  // leaves the real verdict to the mail system, which is the only thing that
+  // can actually know. Being stricter here rejects valid addresses.
+  function isValidEmail(email) {
+    if (!email || email.length > 254) return false;
+    if (/\s/.test(email)) return false;
+    const at = email.lastIndexOf('@');
+    if (at < 1 || at === email.length - 1) return false;
+    const domain = email.slice(at + 1);
+    if (domain.indexOf('.') < 1 || domain.endsWith('.')) return false;
+    if (domain.indexOf('..') !== -1) return false;
+    return /^[^@\s]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email);
+  }
+
+  // GoTrue's own strings are accurate and unhelpful ("Email link is invalid or
+  // has expired"). These are the two states a user can actually act on; the
+  // rest collapse to one message rather than surfacing internals.
+  function describeAuthError(raw) {
+    const t = String(raw == null ? '' : raw).replace(/\+/g, ' ').toLowerCase();
+    if (!t) return '';
+    if (t.includes('expired') || t.includes('invalid') || t.includes('otp_expired')) {
+      return 'This sign-in link has expired or is no longer valid. Request a new secure sign-in link below.';
+    }
+    // GoTrue's own rate-limit string is "For security purposes, you can only
+    // request this after N seconds" -- it contains none of the words a person
+    // would guess, so matching on "rate limit" alone never fired.
+    if (t.includes('rate') || t.includes('too many') || t.includes('429') ||
+        t.includes('security purposes') || t.includes('only request this after')) {
+      return 'Too many requests just now. Wait a minute, then try again.';
+    }
+    return 'That sign-in could not be completed. Request a new secure sign-in link below.';
+  }
+
+  // ---- in-flight lock -----------------------------------------------------
+  // Without this, every click during an in-flight request fires another one:
+  // the cooldown below only starts once the first request has returned.
+  let busy = false;
+  const BUSY_IDS = ['magicBtn', 'passwordBtn', 'resetBtn'];
+
+  function setBusy(on, label) {
+    busy = !!on;
+    BUSY_IDS.forEach(id => {
+      const b = document.getElementById(id);
+      if (!b) return;
+      b.disabled = !!on;
+      if (on) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+      if (b.dataset.idleLabel === undefined) b.dataset.idleLabel = b.textContent;
+      b.textContent = (on && label && id === label.id) ? label.text : b.dataset.idleLabel;
+    });
+  }
+
+  function setFieldError(inputId, text) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    if (text) { el.setAttribute('aria-invalid', 'true'); el.focus(); }
+    else el.removeAttribute('aria-invalid');
+  }
+
   function setMsg(text, ok) {
     const el = document.getElementById('signinMsg');
     el.textContent = text || '';
@@ -290,12 +381,20 @@
 
   async function submitResetRequest(e) {
     e.preventDefault();
-    const email = document.getElementById('rsEmail').value.trim();
-    if (!email) { setResetMsg('Enter your email first.'); return false; }
+    if (busy) return false;
+    const email = normalizeEmail(document.getElementById('rsEmail').value);
+    if (!email) { setResetMsg('Enter your email first.'); setFieldError('rsEmail', true); return false; }
+    if (!isValidEmail(email)) {
+      setResetMsg('That does not look like an email address. Check it and try again.');
+      setFieldError('rsEmail', true);
+      return false;
+    }
+    setFieldError('rsEmail', false);
     setResetMsg('Sending…', true);
+    setBusy(true, { id: 'resetBtn', text: 'Sending…' });
     // Same neutral confirmation and same cooldown as the magic-link path.
     // Supabase does not disclose whether the address exists, and neither do we.
-    await requestLink('reset', email);
+    try { await requestLink('reset', email); } finally { setBusy(false); }
     setResetMsg('');
     showSent('reset', email);
     return false;
@@ -336,8 +435,8 @@
   function showSent(kind, email) {
     lastRequest = { kind, email };
     document.getElementById('sentMsg').textContent = kind === 'reset'
-      ? `If ${email} has a MUSTER account, a password-reset link is on its way. Open it on this device to choose a new password.`
-      : `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
+      ? `Check your email for your password-reset link. If ${email} has a MUSTER account, one is on its way. Open it on this device to choose a new password.`
+      : `Check your email for your secure sign-in link. If ${email} has a MUSTER account, one is on its way. Open it on this device to finish signing in.`;
     showState('sentState');
     startResendCooldown();
   }
@@ -350,15 +449,13 @@
 
     const paint = () => {
       if (left > 0) {
-        link.style.pointerEvents = 'none';
-        link.style.opacity = '0.45';
+        link.disabled = true;
         msg.hidden = false;
         msg.textContent = `Nothing yet? You can send another link in ${left}s. Check your spam folder first.`;
       } else {
         clearInterval(resendTimer);
         resendTimer = null;
-        link.style.pointerEvents = '';
-        link.style.opacity = '';
+        link.disabled = false;
         msg.hidden = false;
         msg.textContent = 'Still nothing? Check your spam folder, then send another link.';
       }
@@ -368,12 +465,14 @@
   }
 
   async function resendLast() {
-    if (!lastRequest || resendTimer && document.getElementById('resendLink').style.pointerEvents === 'none') return;
+    const link = document.getElementById('resendLink');
+    if (busy || !lastRequest || link.disabled) return;
     const { kind, email } = lastRequest;
     const msg = document.getElementById('resendMsg');
+    link.disabled = true;
     msg.hidden = false;
     msg.textContent = 'Sending…';
-    await requestLink(kind, email);
+    try { await requestLink(kind, email); } finally { link.disabled = false; }
     // Same copy either way, including on a 429. Silence about the outcome is
     // the point: a differing message would leak whether the address exists.
     showSent(kind, email);
@@ -406,26 +505,54 @@
   }
 
   async function submitMagicLink() {
-    const email = document.getElementById('suEmail').value.trim();
-    if (!email) { setMsg('Enter your email first.'); return; }
+    if (busy) return;
+    // This button is type="button", so the browser's own type=email validation
+    // never runs on this path. Before this check, anything typed in the field
+    // went straight to GoTrue.
+    const email = normalizeEmail(document.getElementById('suEmail').value);
+    if (!email) { setMsg('Enter your email first.'); setFieldError('suEmail', true); return; }
+    if (!isValidEmail(email)) {
+      setMsg('That does not look like an email address. Check it and try again.');
+      setFieldError('suEmail', true);
+      return;
+    }
+    setFieldError('suEmail', false);
     setMsg('Sending…', true);
-    await requestLink('magic', email);
+    setBusy(true, { id: 'magicBtn', text: 'Sending…' });
+    try {
+      await requestLink('magic', email);
+    } finally {
+      setBusy(false);
+    }
     setMsg('');
     showSent('magic', email);
   }
 
   async function submitPassword(e) {
     e.preventDefault();
-    const email = document.getElementById('suEmail').value.trim();
+    if (busy) return false;
+    const email = normalizeEmail(document.getElementById('suEmail').value);
     const password = document.getElementById('suPassword').value;
-    if (!email) { setMsg('Enter your email first.'); return false; }
-    if (!password) { setMsg('Enter your password, or use "Send magic link" instead.'); return false; }
+    if (!email) { setMsg('Enter your email first.'); setFieldError('suEmail', true); return false; }
+    if (!isValidEmail(email)) {
+      setMsg('That does not look like an email address. Check it and try again.');
+      setFieldError('suEmail', true);
+      return false;
+    }
+    if (!password) { setMsg('Enter your password, or use "Send Secure Sign-In Link" instead.'); setFieldError('suPassword', true); return false; }
+    setFieldError('suEmail', false); setFieldError('suPassword', false);
     setMsg('Signing in…', true);
+    setBusy(true, { id: 'passwordBtn', text: 'Signing in…' });
     try {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = WORKSPACE_URL;
-    } catch (err) { setMsg(err.message || String(err)); }
+    } catch (err) {
+      // Wrong password and unknown address return the same GoTrue error, so
+      // this stays a single message either way.
+      setMsg('That email and password did not match an account.');
+      setFieldError('suPassword', true);
+    } finally { setBusy(false); }
     return false;
   }
 
@@ -443,7 +570,8 @@
     if (HASH_ERROR) {
       recoveryMode = false;
       showState('signinState');
-      setMsg(HASH_ERROR.replace(/\+/g, ' '));
+      setMsg(describeAuthError(HASH_ERROR));
+      setTimeout(() => document.getElementById('suEmail')?.focus(), 50);
       return;
     }
 
