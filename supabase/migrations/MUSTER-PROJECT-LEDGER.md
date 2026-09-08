@@ -788,3 +788,48 @@ Whether JARVIS should be able to propose MUSTER law updates at all, now that MUS
 separate product on a separate project. Zero such approvals have ever been filed, so
 there is no demonstrated need. If the answer is yes, it needs an explicit cross-project
 path on `hjowfnzpomzxazmzywxw` -- not a resurrection of this branch.
+
+## 2026-09-08 -- STRIPE_WEBHOOK_SECRET set on hjowfnzpomzxazmzywxw
+
+Set in the dashboard (Edge Functions -> Secrets); no tool or network route exists from
+here for edge function secrets, so this was the one step that had to be done by hand.
+
+Verified live, without ever handling the secret value, by probing the deployed function
+with an unsigned body over `pg_net`:
+
+```sql
+select net.http_post(
+  url := 'https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-stripe-webhook',
+  headers := jsonb_build_object('Content-Type','application/json'),
+  body := jsonb_build_object('probe', true),
+  timeout_milliseconds := 20000);
+-- then: select status_code, content from net._http_response where id = <returned id>;
+```
+
+The two outcomes are unambiguous, which is what makes this probe worth keeping:
+
+| Response | Meaning |
+|---|---|
+| `500 {"error":"STRIPE_WEBHOOK_SECRET is not set"}` | secret absent (or named wrong) |
+| `401 {"error":"invalid signature"}` | secret present, HMAC failing closed on an unsigned body -- **correct** |
+
+Probes 51, 53, 56 returned 500. Probe 63 (04:26:01Z) returned 401. Secret is in.
+
+Note the probe proves the secret *exists*, not that it *matches* the Stripe endpoint --
+a wrong `whsec_` fails identically at 401. Only a real Stripe-signed delivery separates
+those two, which is the next step.
+
+### Baseline captured before the first live delivery
+
+`muster.pending_commercial_grants` = 0 rows, `max(created_at)` null. Any row appearing
+after a Stripe test send is attributable to that send.
+
+### Still outstanding on this project
+
+- Stripe Payment Link metadata: `tier` + `stage`, one of the four pairs in
+  `muster.commercial_pricing` (`muster`/`seed`, `muster`/`fruit`, `muster_partner`/`seed`,
+  `muster_partner`/`fruit`). `muster_enterprise` is **not** a valid pair -- that tier is
+  sales-assisted through GHL. Mode must be `subscription` and the link must collect email.
+- `GHL_API_KEY` and `GHL_LOCATION_ID` edge secrets.
+- GoTrue email rate limit still at the built-in default (~2/hour) despite custom SMTP.
+- Sitrep redirect allowlist click-test against the 11-entry list.
