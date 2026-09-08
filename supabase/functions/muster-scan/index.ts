@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { dmarcCandidates, evaluateEmailAuth, mailDomain } from "./email-auth.ts";
 
 // MUSTER scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -9,7 +10,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   { "scan_id": 123 }            run one queued scan
 //   { "mode": "due", "limit": 3 } claim due websites and stale queued scans, run each
 
-const ENGINE_VERSION = "http-native-1.0.1";
+const ENGINE_VERSION = "http-native-1.1.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -141,6 +142,59 @@ function attr(tag: string, name: string): string | null {
 function hasAttr(tag: string, name: string) { return new RegExp(`\\s${name}(\\s|=|>|/)`, "i").test(tag); }
 function stripTags(s: string) { return s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); }
 function hostOf(u: string): string | null { try { return new URL(u).hostname.toLowerCase(); } catch { return null; } }
+
+// DNS over HTTPS. The scanner has never resolved a name -- every other check is
+// fetch() against the site -- so this is the one place it asks the DNS system a
+// question. DoH rather than Deno.resolveDns because the edge runtime does not
+// expose a resolver, and because an HTTPS call is subject to the same egress
+// rules as everything else here.
+//
+// Google is primary and Cloudflare is the fallback: a single resolver being
+// unreachable must not become "this domain has no SPF", which would be a
+// high-severity finding manufactured from an outage.
+const DOH_ENDPOINTS = [
+  "https://dns.google/resolve",
+  "https://cloudflare-dns.com/dns-query",
+];
+
+async function resolveTxt(name: string): Promise<{ txt: string[]; failed: boolean }> {
+  for (const base of DOH_ENDPOINTS) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(`${base}?name=${encodeURIComponent(name)}&type=TXT`, {
+        headers: { accept: "application/dns-json" }, signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const body = await res.json();
+      // NXDOMAIN (3) is a real answer -- the name does not exist -- and must be
+      // reported as absence, not as a resolver failure.
+      if (body?.Status !== 0 && body?.Status !== 3) continue;
+      const txt = (body?.Answer ?? [])
+        .filter((a: { type?: number }) => a?.type === 16)
+        .map((a: { data?: string }) => String(a?.data ?? "").replace(/^"|"$/g, "").replace(/"\s+"/g, ""));
+      return { txt, failed: false };
+    } catch { /* try the next resolver */ }
+  }
+  return { txt: [], failed: true };
+}
+
+async function resolveMx(name: string): Promise<string[]> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(`${DOH_ENDPOINTS[0]}?name=${encodeURIComponent(name)}&type=MX`, {
+      headers: { accept: "application/dns-json" }, signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return [];
+    const body = await res.json();
+    return (body?.Answer ?? [])
+      .filter((a: { type?: number }) => a?.type === 15)
+      .map((a: { data?: string }) => String(a?.data ?? "").trim());
+  } catch { return []; }
+}
 
 async function runScan(job: { scan_id: number; website_id: number; target_url: string; website_name: string }) {
   const evidence: Evidence[] = [];
@@ -385,6 +439,43 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     const secOk = sec.status === 200 && /^\s*contact\s*:/im.test(sec.body);
     await ev({ key: "security_txt", kind: "security_txt", url: `${origin}/.well-known/security.txt`, http_status: sec.status, content_type: sec.contentType, response_ms: sec.ms, headers: null, excerpt: sec.body.slice(0, 4000), byte_length: sec.bytes }, sec.body || String(sec.status));
     if (!secOk) add({ rule_id: "SEC-012", severity: "low", title: "No security.txt disclosure policy", detail: `/.well-known/security.txt returned HTTP ${sec.status ?? "error"}${sec.status === 200 ? " without a Contact field" : ""}.`, location: "/.well-known/security.txt", confidence: "high", evidence_keys: ["security_txt"] });
+  }
+
+  // 6. Email authentication (EMAIL-*). Runs regardless of whether the site
+  // responded: a domain that is down can still be spoofed, and the DNS answer
+  // is independent of the web server.
+  const mailHost = hostOf(finalUrl) ?? hostOf(target);
+  if (mailHost) {
+    const domain = mailDomain(mailHost);
+    const spf = await resolveTxt(domain);
+
+    let dmarc: { name: string; txt: string[] } | null = null;
+    let dmarcFailed = false;
+    for (const candidate of dmarcCandidates(mailHost)) {
+      const r = await resolveTxt(candidate);
+      if (r.failed) { dmarcFailed = true; break; }
+      if (r.txt.some((t) => /^v=dmarc1(\s*;|$)/i.test(t.trim()))) { dmarc = { name: candidate, txt: r.txt }; break; }
+    }
+
+    const mx = await resolveMx(domain);
+
+    await ev({ key: "dns_spf", kind: "dns_txt", url: `dns:${domain}?type=TXT`, http_status: null, content_type: null,
+      response_ms: null, headers: null,
+      excerpt: spf.failed ? "resolver unavailable" : (spf.txt.join("\n") || "(no TXT records)"),
+      byte_length: null }, spf.txt.join("\n"));
+
+    await ev({ key: "dns_dmarc", kind: "dns_txt", url: `dns:_dmarc.${domain}?type=TXT`, http_status: null, content_type: null,
+      response_ms: null, headers: null,
+      excerpt: dmarcFailed ? "resolver unavailable" : (dmarc ? `${dmarc.name}\n${dmarc.txt.join("\n")}` : `no DMARC at ${dmarcCandidates(mailHost).join(", ")}`),
+      byte_length: null }, dmarc ? dmarc.txt.join("\n") : "");
+
+    await ev({ key: "dns_mx", kind: "dns_mx", url: `dns:${domain}?type=MX`, http_status: null, content_type: null,
+      response_ms: null, headers: null, excerpt: mx.join("\n") || "(no MX records)", byte_length: null }, mx.join("\n"));
+
+    for (const f of evaluateEmailAuth({
+      host: mailHost, spfTxt: spf.txt, dmarc, mx,
+      resolverFailed: spf.failed || dmarcFailed,
+    })) add(f);
   }
 
   const scanMeta = { final_url: finalUrl, http_status: primary.status, response_ms: primary.ms, engine_version: ENGINE_VERSION };
