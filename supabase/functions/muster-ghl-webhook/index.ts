@@ -41,11 +41,13 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // created in GHL):
 //   POST { "diagnostic": "location" }      -- confirms GHL_LOCATION_ID points
 //                                              at the intended sub-account
-//   POST { "diagnostic": "custom_fields" } -- lists that location's custom
-//                                              fields so the real field id
-//                                              for "Muster Org ID" can be
-//                                              read off once it's created,
-//                                              instead of guessing one
+//   POST { "diagnostic": "custom_fields", "model": "contact"|"opportunity" } --
+//                                              lists that location's custom
+//                                              fields (default model=contact)
+//                                              so the real field id for
+//                                              "Muster Org ID" can be read
+//                                              off once it's created, instead
+//                                              of guessing one
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

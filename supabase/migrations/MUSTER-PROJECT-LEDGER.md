@@ -256,24 +256,44 @@ The one remaining `28footsystems` reference in `supabase/functions/` is the comm
 `muster-alert-dispatch/index.ts` recording that `mail.28footsystems.com` is still a
 verified Resend domain. That is accurate history, not a stale pointer.
 
-### The three functions whose bundle hashes still differ between projects
+### All 8 edge functions now byte-identical across both projects
 
-`muster-watchdog`, `muster-stripe-webhook` and `muster-ghl-webhook` report different
-`ezbr_sha256` on the two projects. **This is a bundling artifact, not a content
-difference.** Those three were last deployed to `mgtmqucaldkaxvxglguw` by a different
-tool than the MCP `deploy_edge_function` used for every deploy on the new project --
-visible in the source rows, whose `entrypoint_path` carries a `_1` build index against
-a `version` of 4, and whose `created_at` equals `updated_at`.
+`muster-watchdog`, `muster-stripe-webhook` and `muster-ghl-webhook` had been reporting
+different `ezbr_sha256` on the two projects. Two causes, not one, and they had to be
+separated before either could be fixed.
 
-Demonstrated, not assumed: `muster-watchdog`'s live source was read back off
-`mgtmqucaldkaxvxglguw` and redeployed verbatim to `hjowfnzpomzxazmzywxw`, which
-produced `107274210ee24d3297eea5f8b5a5e2b3fb4a0a7debe66d483d1bb1b12ba48b67` -- the hash
-that project already had. Identical source, two different bundle hashes across the two
-tools. Every function redeployed through the MCP tool on both projects matches exactly,
-which is the pattern that identifies the tool as the variable.
+**Cause 1 -- the deploy tool.** Those three were last deployed to
+`mgtmqucaldkaxvxglguw` by a different tool than the MCP `deploy_edge_function` used for
+every deploy on the new project. The tell is in the old project's rows: an
+`entrypoint_path` carrying a build index that does not match `version`
+(`..._1/source/index.ts` at version 4), and `created_at` equal to `updated_at`. Two
+bundlers, identical source, two hashes.
 
-`muster-stripe-webhook` and `muster-ghl-webhook` have not been through that same
-demonstration. Neither contains a host or project-ref literal, so neither is a
-stale-hostname case; they were left alone rather than redeployed on a guess. Any
-redeploy of them on `mgtmqucaldkaxvxglguw` through this tool should normalize both
-hashes to the new project's, and that is the cheap way to close it out.
+Normalizing is therefore a redeploy through the same tool, using each function's own
+live source so nothing changes semantically. `muster-watchdog` and
+`muster-stripe-webhook` both landed exactly on the hash the new project already had,
+which is the proof the content was never different:
+
+| Function | `mgtmqucaldkaxvxglguw` | `hjowfnzpomzxazmzywxw` | ezbr_sha256 |
+|---|---|---|---|
+| muster-watchdog | v5 | v2 | `107274210ee24d3297eea5f8b5a5e2b3fb4a0a7debe66d483d1bb1b12ba48b67` |
+| muster-stripe-webhook | v6 | v1 | `bf4d9af61c12b6f5552b91bfe681a7ffd5f7e1d98f63f3b363ea03b440cd23ca` |
+| muster-ghl-webhook | v9 | v2 | `e220d2c8396c7008a72ba6c91d16f51e52db5bab07202c7ce056567b152f2783` |
+
+**Cause 2 -- `muster-ghl-webhook` really did differ, and this repo was the stale side.**
+Redeploying its live source produced a *third* hash rather than the new project's,
+which is what exposed it. The difference was seven lines of header comment: the live
+function on `mgtmqucaldkaxvxglguw` documented the `custom_fields` diagnostic's `model`
+parameter (`"model": "contact"|"opportunity"`, default `contact`); this repo's copy
+described the diagnostic as if it took no parameter. The code supported `model` in both
+copies -- only the documentation lagged, and only here. The repo was corrected to the
+live text, then that text was deployed to the new project, which is why all three now
+read `e220d2c8...`.
+
+Worth keeping in mind: a matching hash across the two projects proves the two projects
+agree. It does not prove either agrees with this repo. `muster-ghl-webhook` is the case
+where those came apart, and the only reason it surfaced is that a redeploy produced a
+hash nobody had seen before.
+
+**Every MUSTER edge function is now identical on both projects and identical to this
+repo**, at the hashes in this section and the one above it.
