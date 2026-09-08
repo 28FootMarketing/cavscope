@@ -711,3 +711,80 @@ and `muster_032` all exist.
 Every regex in it uses POSIX classes and bracketed literals rather than backslash
 escapes, because `muster_016` and `muster_017` exist entirely because backslashes were
 doubled in transcription.
+
+## `apply_approved_kb_updates()` handled (2026-09-08)
+
+The last open cutover item. It turned out to be narrower and more dangerous than the
+one-line note it had been carrying.
+
+### What it actually is
+
+JARVIS's approval executor on the **old** project, run every ten minutes by the cron job
+`kb-update-executor-10min`, which is still active. It handles two categories:
+
+| Category | Writes to | Owner |
+|---|---|---|
+| `kb_update` | `public.kb_documents` | CORA/JARVIS |
+| `muster_law_update` | `muster.jurisdiction_laws` | MUSTER |
+
+So it is a **shared** function. Retiring it wholesale would have broken JARVIS.
+
+### The real risk was a false success, not a crash
+
+If a `muster_law_update` approval had ever been filed after cutover, the executor would
+have updated the decommissioned table, closed the diff, and stamped the approval
+`execution_result = {"ok": true}`. An operator reviewing the queue would see a law update
+that succeeded and never reached production. A false success in an audit trail is worse
+than a visible failure, because nothing ever prompts anyone to look.
+
+### Volume, checked before designing anything
+
+Zero. `muster_law_update`: 0 rows ever. `kb_update`: 0 rows ever. The 235 rows in
+`jarvis_approvals` are `content`, plus small counts of `comms`, `compliance_review`,
+`agents`, `rnd_prototype`, `Testing`, `User Management`. Both branches of this executor
+are dormant, which is why this is a latent trap being closed rather than a live
+integration being cut.
+
+### The change
+
+Only the `muster_law_update` branch. It now marks the approval terminally with
+`ok:false` and a reason naming the new project, and `continue`s -- per-row, so one
+refused MUSTER approval can never block JARVIS's own work in the same pass. The
+`kb_update` and `company_id` branches are byte-identical, the rejected-diff sweep is
+untouched, and the cron job keeps running. `search_path` drops `muster`, so the schema is
+no longer even resolvable from the function.
+
+### Proven behaviourally, then rolled back
+
+A synthetic `muster_law_update` approval was inserted, the executor run, and the outcome
+asserted inside a transaction that then deliberately aborted, so nothing persisted
+(verified: 0 rows remain):
+
+| Assertion | Result |
+|---|---|
+| return value (applied count) | `0` -- refused rows are not counted as applied |
+| `executed_at` set | yes -- terminal, so it does not retry every 10 minutes forever |
+| `ok` flag | `false` -- no false success |
+| reason recorded | names `hjowfnzpomzxazmzywxw` and what to do |
+| law row unchanged | **yes** -- the decommissioned table was not written |
+
+### The wider audit this prompted
+
+Checking the fix surfaced 73 functions in `public` on the old project that reference
+`muster.*`. Broken down:
+
+- **66** are MUSTER's own `muster_*` shims. Expected, dormant, no cron callers.
+- **6** are MUSTER's own unprefixed RPCs -- `get`/`count`/`insert` for finding and
+  evidence embeddings. These are the same six whose missing prefix defeated the shim
+  migrations' `proname like 'muster%'` filter and required `muster_027`. No cron callers.
+- **1** was `apply_approved_kb_updates` -- the only function belonging to another product
+  that reached into MUSTER's schema, and the only one of the 73 with a live scheduler.
+
+So the cross-product coupling was exactly one function, and it is now closed.
+
+### Left open deliberately, because it is a product decision
+
+Whether JARVIS should be able to propose MUSTER law updates at all, now that MUSTER is a
+separate product on a separate project. Zero such approvals have ever been filed, so
+there is no demonstrated need. If the answer is yes, it needs an explicit cross-project
+path on `hjowfnzpomzxazmzywxw` -- not a resurrection of this branch.
