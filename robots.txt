@@ -1,0 +1,57 @@
+# muster.partners -- the public marketing site.
+#
+# /onboarding and /sitrep are behind Supabase Auth and return the signed-out
+# state to a crawler, so they are excluded: indexing them would put an empty
+# sign-in gate in search results under a title that promises a report.
+# /sitrep/sample is the deliberate exception -- it is the static, fictional
+# reference SITREP, and it is meant to be findable. Longest-match wins, so the
+# Allow below beats the Disallow above it.
+
+User-agent: *
+Disallow: /onboarding
+Disallow: /sitrep
+Allow: /sitrep/sample
+
+# AI crawlers, addressed explicitly rather than by silence.
+#
+# MUSTER's own GOV-004 rule reports whether a site has taken a position on these
+# at all, and reports "unaddressed" when it has not. A company selling AI
+# governance should not be the site with no stated position.
+#
+# The position is: allow. This is a marketing site whose whole job is to explain
+# what MUSTER is; being readable by the assistants people now ask is an
+# advantage, not a leak. Nothing here is proprietary -- the product, the SITREP
+# viewer and every tenant's data live behind auth on app.muster.partners, which
+# disallows everything.
+#
+# Flip these to "Disallow: /" if that judgement changes. Note that Google-Extended
+# governs Gemini training only; blocking it does not remove the site from Search.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://www.muster.partners/sitemap.xml

@@ -1,0 +1,6 @@
+# app.muster.partners -- sign-in and the workspace. Nothing here should be
+# indexed: every path is either a sign-in gate or a tenant-scoped page that
+# returns the signed-out state to a crawler.
+
+User-agent: *
+Disallow: /

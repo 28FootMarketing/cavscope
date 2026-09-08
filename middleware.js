@@ -27,6 +27,70 @@ function isUnder(path, base) {
   return path === base || path.startsWith(base + '/');
 }
 
+// ---- security headers ------------------------------------------------------
+//
+// Every response this file produces carries these. Vercel already sets HSTS on
+// muster.partners (SEC-002 and SEC-003 do not fire), so it is deliberately not
+// duplicated here -- two sources for one header is how they drift apart.
+//
+// The CSP is honest about what these pages actually are. They are static HTML
+// with one inline <style> and one inline <script> each, so 'unsafe-inline' is
+// required on both style-src and script-src until those blocks are extracted
+// to files. That is a real weakening: this policy stops an attacker loading a
+// script from a host that is not jsdelivr, and stops the pages being framed,
+// but it does not stop injected inline script. Extracting the inline blocks and
+// dropping 'unsafe-inline' from script-src is the next step, not a finished one.
+//
+// Every allowed origin below is one the pages demonstrably use:
+//   cdn.jsdelivr.net       the supabase-js UMD bundle, on all six pages
+//   fonts.googleapis.com   the stylesheet <link>
+//   fonts.gstatic.com      the font files that stylesheet pulls
+//   *.supabase.co          RPC and auth calls, plus realtime over wss
+//
+// frame-ancestors 'none' is what answers SEC-005; X-Frame-Options is sent too
+// for the older browsers that never learned the CSP directive.
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "img-src 'self' data:",
+  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  "upgrade-insecure-requests",
+].join('; ');
+
+const SECURITY_HEADERS = {
+  'content-security-policy': CSP,
+  'x-frame-options': 'DENY',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  // Deny the capability APIs outright rather than listing self: nothing here
+  // uses a camera, a microphone, a location or a payment handler, and saying so
+  // explicitly is the point of the header.
+  'permissions-policy': [
+    'accelerometer=()', 'camera=()', 'geolocation=()', 'gyroscope=()',
+    'magnetometer=()', 'microphone=()', 'payment=()', 'usb=()',
+    'interest-cohort=()',
+  ].join(', '),
+};
+
+// rewrite() and next() both take an ExtraResponseInit whose `headers` are sent
+// on the user response alongside the origin's own -- see the type declarations
+// in @vercel/functions/middleware.d.ts. Wrapping both here means a new branch
+// added below cannot forget the headers: there is no bare rewrite() or next()
+// left in this file to copy from.
+function secureRewrite(url) {
+  return rewrite(url, { headers: SECURITY_HEADERS });
+}
+
+function secureNext() {
+  return next({ headers: SECURITY_HEADERS });
+}
+
 export default function middleware(request) {
   const host = (request.headers.get('host') || '').toLowerCase();
   const path = normalize(new URL(request.url).pathname);
@@ -35,26 +99,40 @@ export default function middleware(request) {
   // untouched -- without this, a same-origin request like /assets/favicon-32.png
   // would get rewritten to a page below, same as any other path, and the browser
   // would receive that page's HTML mislabeled as an image.
-  if (path.startsWith('/assets/')) return next();
+  if (path.startsWith('/assets/')) return secureNext();
+
+  // A vulnerability disclosure policy has to be findable on whichever host
+  // someone actually reached, so /.well-known/ is shared the same way /assets/
+  // is. Without this the app hosts' catch-all below would answer
+  // /.well-known/security.txt with signin.html, and a researcher looking for
+  // somewhere to report would find a login page.
+  if (path.startsWith('/.well-known/')) return secureNext();
+
+  // Sitemap likewise: it is one file describing muster.partners, and the app
+  // hosts have their own robots.txt below rather than sharing this one.
+  if (path === '/sitemap.xml') return secureNext();
 
   // ---- muster.partners: the main site, path-routed --------------------------
   if (host === 'muster.partners' || host === 'www.muster.partners') {
     if (isUnder(path, '/onboarding')) {
-      return rewrite(new URL('/onboarding.html', request.url));
+      return secureRewrite(new URL('/onboarding.html', request.url));
     }
     if (isUnder(path, '/sitrep')) {
       // The one static, no-auth, fictional SITREP. Everything else under
       // /sitrep is the signed-in, tenant-scoped viewer.
       if (path === '/sitrep/sample') {
-        return rewrite(new URL('/sitrep-sample.html', request.url));
+        return secureRewrite(new URL('/sitrep-sample.html', request.url));
       }
-      return rewrite(new URL('/sitrep.html', request.url));
+      return secureRewrite(new URL('/sitrep.html', request.url));
+    }
+    if (isUnder(path, '/privacy')) {
+      return secureRewrite(new URL('/privacy.html', request.url));
     }
     if (path === '/') {
-      return rewrite(new URL('/index.html', request.url));
+      return secureRewrite(new URL('/index.html', request.url));
     }
     // Anything else falls through to the static file of that name.
-    return next();
+    return secureNext();
   }
 
   // ---- the app hosts: app.muster.partners, app.muster.28footsystems.com -----
@@ -80,24 +158,31 @@ export default function middleware(request) {
   // to. It does have to be on the Supabase project's allowed redirect list;
   // see docs/EMAIL.md.
   if (host === 'app.muster.partners' || host === 'app.muster.28footsystems.com') {
-    if (isUnder(path, '/app')) {
-      return rewrite(new URL('/app.html', request.url));
+    // The app hosts get their own robots.txt, not the marketing site's. Every
+    // path here is a sign-in gate or a tenant-scoped page that renders
+    // signed-out to a crawler, so the answer is disallow everything -- and the
+    // catch-all below would otherwise serve signin.html as the robots file.
+    if (path === '/robots.txt') {
+      return secureRewrite(new URL('/robots-app.txt', request.url));
     }
-    return rewrite(new URL('/signin.html', request.url));
+    if (isUnder(path, '/app')) {
+      return secureRewrite(new URL('/app.html', request.url));
+    }
+    return secureRewrite(new URL('/signin.html', request.url));
   }
 
   // ---- onboarding.muster.28footsystems.com ---------------------------------
   if (host === 'onboarding.muster.28footsystems.com') {
-    return rewrite(new URL('/onboarding.html', request.url));
+    return secureRewrite(new URL('/onboarding.html', request.url));
   }
 
   // ---- sitrep.muster.28footsystems.com -------------------------------------
   if (host === 'sitrep.muster.28footsystems.com') {
     if (isUnder(path, '/sample')) {
-      return rewrite(new URL('/sitrep-sample.html', request.url));
+      return secureRewrite(new URL('/sitrep-sample.html', request.url));
     }
-    return rewrite(new URL('/sitrep.html', request.url));
+    return secureRewrite(new URL('/sitrep.html', request.url));
   }
 
-  return next();
+  return secureNext();
 }
