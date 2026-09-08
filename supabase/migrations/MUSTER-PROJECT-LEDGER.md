@@ -1209,3 +1209,58 @@ It composes nothing. Every number, claim, finding, framework reference and hash 
 SITREP, and the F/E citation scheme survives onto the page, so a reader can trace any sentence back
 to the evidence it came from. First output: MUSTER SITREP #16 v2, muster.partners scan #22, 4 pages,
 posture 100/100 green, 11 resolved, 2 informational open.
+
+---
+
+## Controls register is derived from findings (2026-09-08)
+
+`muster_044` and `muster_045`. The pricing page sells a control register; the product had a
+`controls` table that nobody wrote to. Every scan rule already carries `framework_refs` — SOC 2,
+GDPR, WCAG, PCI DSS, NIST — so the register was already implicit in data the engine produces on
+every scan. It just had no reader.
+
+`muster.rule_control_refs()` normalizes those refs: compound values are split on commas, and a
+`CUSTOM: "WCAG 4.1.2"` wrapper is unwrapped to `WCAG` / `4.1.2` so a reference does not appear
+twice under two framework names.
+
+`muster.sync_controls(website_id)` upserts one row per (framework, reference) reachable from the
+rules that fired, on the existing `control_scope_unique` index. Assessment is derived, not asserted:
+`not_met` when any open critical or high finding maps to the control, `partial` on any open
+medium or low, `met` when the control's rules all came back clean, and `not_assessed` when the site
+has no completed scan. Info severity does not move an assessment — an informational rule reports a
+choice, not a defect.
+
+Rows carry `controls.source`. Derived rows are `source='derived'` and are rewritten on every scan;
+hand-seeded rows are `source='manual'` and are never touched, including when a manual row collides
+with a reference the sync would otherwise own. Verified against the live database: 37 derived rows
+per website across 4 websites, and both pre-existing manual rows on website 3 survived intact —
+including the one whose reference the sync also produces.
+
+`muster_045` wires the sync into `muster.engine_ingest` so the register refreshes with the scan
+rather than on a schedule. It goes through `muster.do_ingest_controls()`, which swallows any error
+into an activity event: a control register that fails to refresh must never take down the ingest
+transaction that carries the findings. That is the same failure that killed scan 18 outright when
+an evidence-kind check rejected a row.
+
+Scan 23 refreshed the register automatically at 15:36:42 with `sync_failures = 0`.
+
+## SITREP carries a jurisdiction section (2026-09-08)
+
+`muster_046`. `q_jurisdiction_advisory` existed and nothing rendered it, so the laws a client is
+exposed to were in the database and absent from the document they actually read.
+
+`muster.q_sitrep_jurisdiction(website_id)` joins jurisdiction laws to that site's open findings
+through `jurisdiction_laws.rule_ids`, and `muster.generate_sitrep` now embeds the result. Each law
+comes back `exposed` (an open critical or high maps to it), `attention` (an open medium or low), or
+`clear`. The advisory disclaimer is carried through verbatim, unedited — this is a pointer to what
+counsel should look at, not a legal opinion, and the document has to say so in its own words.
+
+Verified on scan 23, SITREP id 18: `available=true`, `country=US`, `region=US-PA`, 9 laws, 0
+exposed, 0 attention. berecruitabledaily correctly returns 6 laws at `attention` (ADA Title II
+rule, ADA Title III, BPINA, COPPA, FTC Act Section 5, WCAG 2.2 AA) against 3 clear.
+
+**Known gap, deliberately left open:** no jurisdiction law maps to `EMAIL-001`..`EMAIL-007`.
+`jurisdiction_laws.rule_ids` was written before the EMAIL family existed, so a domain with no SPF
+and no DMARC shows every law `clear` on the mail-authentication axis. Whether an SPF or DMARC
+failure bears on a specific statute is a determination for counsel. Inventing the mapping here
+would put a legal claim in a client document that nobody with the standing to make it ever made.
