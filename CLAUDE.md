@@ -140,6 +140,15 @@ either to make the block "more complete" — each exists because MUSTER sells ac
   `supabase/migrations-shared-project/README.md` for the war story; getting this wrong left 16
   forward references and four applied migrations with no file, three of which were the cron
   schedules.
+- **Auth wiring is verified by `muster-auth-smoke`, not by reading the dashboard.** That edge
+  function mints a real recovery link with the service-role key, follows it, sets a password and
+  signs in with it, and probes the redirect allowlist with a deliberately invalid token plus a
+  host that must be rejected. It returns booleans and redacted origins only -- never a token,
+  link or password. `rotate_password` defaults to false and can only ever target the pinned QA
+  sentinel account. Invocation and the 2026-09-09 results are in `docs/EMAIL.md`. Outstanding
+  after that run: **Site URL on `hjowfnzpomzxazmzywxw` is `https://www.muster.partners/`** and
+  needs to be `https://app.muster.partners/app`, and none of the six auth email templates have
+  been pasted from `supabase/auth-email-templates/` -- bodies and subjects are still GoTrue stock.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is
