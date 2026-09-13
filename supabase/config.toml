@@ -71,3 +71,10 @@ entrypoint = "./functions/muster-ghl-webhook/index.ts"
 # endpoint. Called by tools/embed-docs/sync.ts, which holds no inference key.
 verify_jwt = false
 entrypoint = "./functions/muster-embed-docs/index.ts"
+
+[functions.muster-auth-smoke]
+# Shared secret: x-muster-secret, same vault value as the watchdog. It can mint a
+# real recovery link with the service-role key, so an open endpoint here would be
+# an account-takeover primitive -- the in-function check is the whole gate.
+verify_jwt = false
+entrypoint = "./functions/muster-auth-smoke/index.ts"

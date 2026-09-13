@@ -16,30 +16,57 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
+    /* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */
     :root {
+      /* Ground and surfaces */
       --bg: #060a16;
       --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --bg-grid: rgba(54, 226, 201, 0.035);
       --surface: #0c1527;
       --surface-card: #111e38;
       --surface-elevated: #162648;
-      --surface-border: #1f3358;
+      --surface-raised: #142547;
       --surface-hover: #192b50;
+      --surface-border: #1f3358;
+      --surface-border-strong: #2c4574;
 
+      /* Text */
       --text: #f1f6ff;
       --text-muted: #8e9fb8;
       --text-dim: #5d708e;
 
+      /* Brand and status hues */
       --teal: #36e2c9;
       --teal-dim: #104347;
       --teal-glow: rgba(54, 226, 201, 0.25);
+      --cyan: #38bdf8;
       --amber: #fbbf24;
+      --amber-dim: #453414;
       --rose: #f43f5e;
+      --rose-dim: #4c1825;
+      --purple: #a855f7;
+      --purple-dim: #32164f;
       --emerald: #10b981;
 
+      /* Type. --font-body and --font-display are the landing-page vocabulary for
+       * the same two faces; they are aliases so index.html and privacy.html keep
+       * their existing call sites rather than being rewritten in place. */
       --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      --font-serif: 'Cinzel', Georgia, serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --font-serif: 'Cinzel', Georgia, 'Times New Roman', serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --font-body: var(--font-sans);
+      --font-display: var(--font-serif);
+
+      /* Geometry and depth */
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
+      --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
     }
+    /* muster:tokens:end */
 
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }

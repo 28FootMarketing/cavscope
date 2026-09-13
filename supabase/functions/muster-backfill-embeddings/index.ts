@@ -44,7 +44,7 @@ async function embedText(text: string): Promise<number[]> {
       "x-title": "MUSTER embedding backfill",
     },
     body: JSON.stringify({
-      model: "text-embedding-3-small",
+      model: "openai/text-embedding-3-small",
       input: text,
       encoding_format: "float",
     }),

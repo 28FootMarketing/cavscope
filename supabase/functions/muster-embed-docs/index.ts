@@ -56,7 +56,7 @@ async function embedText(text: string): Promise<number[]> {
       "http-referer": "https://muster.partners",
       "x-title": "MUSTER doc embedding",
     },
-    body: JSON.stringify({ model: "text-embedding-3-small", input: text, encoding_format: "float" }),
+    body: JSON.stringify({ model: "openai/text-embedding-3-small", input: text, encoding_format: "float" }),
     signal: AbortSignal.timeout(15000),
   });
 

@@ -104,6 +104,47 @@ Paste each file from [`supabase/auth-email-templates/`](../supabase/auth-email-t
 its matching template, with the subject line from that directory's README. The files are the
 source of truth; edit there first, then paste.
 
+**Not done on `hjowfnzpomzxazmzywxw` as of 2026-09-09.** Two live emails were read back through
+`muster-auth-smoke` (below) and neither body contained the MUSTER emblem or footer, so both are
+still GoTrue's stock template. The subjects are stock too — `Your sign-in link` and
+`Reset your password`, not `Your secure MUSTER sign-in link` and `Reset your MUSTER password`.
+Everything mechanical around them is correct; what is missing is the branding.
+
+## Verifying it, rather than assuming it
+
+[`supabase/functions/muster-auth-smoke`](../supabase/functions/muster-auth-smoke/index.ts) checks
+this whole document against the live project. It mints a real recovery link with the service-role
+key, follows it, sets a password, and signs in with that password. It reports booleans and
+redacted origins only — never a token, link or password, per the rule at the top of this file.
+
+```
+POST https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-auth-smoke
+  apikey: <publishable key>
+  x-muster-secret: <vault muster_cron_secret>
+  {"rotate_password": true, "resend_email_id": "<optional Resend email id>"}
+```
+
+`rotate_password` defaults to **false**, so the default run mutates nothing. When true, it only
+ever touches `sentinel-qa-verify@28footmarketing.com`; the target is a constant in the function,
+not a request field, so reaching the endpoint does not let anyone aim it at a real account.
+
+Three things make its passes mean something:
+
+- It probes the allowlist by asking `/auth/v1/verify` for a **deliberately invalid** token. GoTrue
+  checks `redirect_to` before it checks the token, so the `Location` header reveals the allowlist
+  decision with no email sent and no token consumed.
+- It probes a host that must be **rejected**. Without that control, a GoTrue that honoured every
+  redirect — an open redirect — would score a clean pass.
+- It signs in with the password it just set. A reset nobody can sign in with is not a reset, and
+  anything short of that step passes on a password that was never stored.
+
+Run 2026-09-09 20:28 UTC, all steps green except the two template-branding checks above:
+the allowlist honours `/reset` and `/app` on both app hosts, rejects an unknown host,
+`app.muster.partners/reset` serves `signin.html` with the new-password form, and the full
+mint → follow → set → sign-in cycle completed. **Site URL was `https://www.muster.partners/`**,
+not the `https://app.muster.partners/app` this document specifies — which is exactly why the
+2026-09-09 19:33 magic link landed on the marketing page.
+
 ## Path B — application email
 
 `muster-alert-dispatch` drains `muster.notification_outbox` every 5 minutes and sends each row

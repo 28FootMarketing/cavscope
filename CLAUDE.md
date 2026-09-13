@@ -45,6 +45,30 @@ either to make the block "more complete" — each exists because MUSTER sells ac
   excluded, because right-click there is how people paste and reach spellcheck suggestions, and a
   form field exposes no source.
 
+## Design tokens live in one file and are generated into the pages
+
+`assets/tokens.css` is the source of truth for every colour, font stack, radius and shadow.
+It is **not served to a browser**. Each page carries an inlined copy inside its `<style>`,
+between `/* muster:tokens:start */` and `/* muster:tokens:end */`, written there by
+`node tools/tokens/sync.mjs`. `tests/ui/design-tokens.test.ts` fails if any page drifts.
+
+**To change a token: edit `assets/tokens.css`, run `node tools/tokens/sync.mjs`, commit both.**
+Editing the block inside a page is editing the wrong file; the next sync overwrites it.
+
+Inlining rather than `<link>`ing is deliberate. Every page here is self-contained and makes
+no stylesheet request; a shared linked file would add a render-blocking request to all seven
+and give them one shared way to render completely unstyled -- one bad deploy, or one CSP edit
+on a new host. The cost of inlining is seven copies, and the test is what makes seven copies
+safe. A new page adopts the block by having its `:root` replaced on the next sync run, and
+must be added to `PAGES` in `tools/tokens/sync.mjs` and to the test.
+
+This was adopted 2026-09-13 after the copies had already drifted silently: `--rose` was
+`#f6516a` on the landing page and `#f43f5e` on the other five, `--text-muted` and `--teal-glow`
+split the same way, and `--font-mono` fell back to a bare `monospace` on five of seven pages.
+Nothing looked broken, which is the point. The landing page's `--font-body` / `--font-display`
+names are kept as aliases of `--font-sans` / `--font-serif` so its existing call sites did not
+have to be rewritten.
+
 ## Other notes
 
 - **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
@@ -140,6 +164,15 @@ either to make the block "more complete" — each exists because MUSTER sells ac
   `supabase/migrations-shared-project/README.md` for the war story; getting this wrong left 16
   forward references and four applied migrations with no file, three of which were the cron
   schedules.
+- **Auth wiring is verified by `muster-auth-smoke`, not by reading the dashboard.** That edge
+  function mints a real recovery link with the service-role key, follows it, sets a password and
+  signs in with it, and probes the redirect allowlist with a deliberately invalid token plus a
+  host that must be rejected. It returns booleans and redacted origins only -- never a token,
+  link or password. `rotate_password` defaults to false and can only ever target the pinned QA
+  sentinel account. Invocation and the 2026-09-09 results are in `docs/EMAIL.md`. Outstanding
+  after that run: **Site URL on `hjowfnzpomzxazmzywxw` is `https://www.muster.partners/`** and
+  needs to be `https://app.muster.partners/app`, and none of the six auth email templates have
+  been pasted from `supabase/auth-email-templates/` -- bodies and subjects are still GoTrue stock.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is
@@ -154,9 +187,22 @@ either to make the block "more complete" — each exists because MUSTER sells ac
 - **Backend: Supabase project `hjowfnzpomzxazmzywxw`, schema `muster`.** MUSTER has its own project
   now; `supabase/config.toml` and all five frontend pages point at it, and `supabase/migrations/` is its
   history. Real scan engine, SITREP generation, RLS, and RPCs are live — see `docs/BACKEND.md`.
-- **The old shared 28FS project `mgtmqucaldkaxvxglguw` is still running MUSTER in production** until the
-  rest of cutover lands. Its edge functions are byte-identical to the new project's, and MUSTER's 48
-  migrations against it are kept as history in `supabase/migrations-shared-project/` — a readable
-  history, not a replayable one. Do not add to that directory. What is still outstanding on the new
-  project (auth users, secrets, GoTrue config, Stripe webhook, cron activation) is tracked in
-  `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+- **The old shared 28FS project `mgtmqucaldkaxvxglguw` no longer runs any part of MUSTER**, as of
+  2026-09-08. Its five `muster-*` cron jobs are unscheduled (not merely inactive), its last MUSTER
+  write was 2026-09-07 20:27 UTC, and both MUSTER API keys are revoked. What is still there: the
+  `muster` schema (45 tables, 58 functions), the 70 `public.muster_*` shims, and 8 deployed edge
+  functions, all dormant. Removing them needs the Supabase CLI — the MCP has no delete for edge
+  functions — and is tracked in `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+  **That project is shared and very much alive for other brands: 334 edge functions, 107 cron jobs,
+  and 14 `auth.users` of which only 3 are MUSTER's.** Anything done there must be surgical and must
+  assert the other-brand counts before and after. `auth.users` must never be touched, not even
+  MUSTER's three rows, because `anthony@28footmarketing.com` is the owner account for the other
+  brands too. MUSTER's 48 migrations against it stay as history in
+  `supabase/migrations-shared-project/` — a readable history, not a replayable one. Do not add to it.
+- **Stripe self-serve is fully configured and verified** (2026-09-08), against
+  `acct_1PUDj1JijfcmbDDB`: both Payment Links carry `tier` and `stage` metadata, the
+  `checkout.session.completed` endpoint points at the new project, and `STRIPE_WEBHOOK_SECRET` and
+  `RESEND_API_KEY` are both set — each proven by observed behaviour, not by reading a checklist.
+  Do not repeat "Stripe is outstanding" from an older note. What IS outstanding: GoTrue SMTP,
+  templates and rate limit on the new project, and `customer.subscription.deleted`, which nothing
+  consumes.
