@@ -6010,13 +6010,30 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
 
           <div class="panel" style="margin-bottom:24px;">
             <div class="panel-head">
-              <div><h3>Public Pricing</h3><p>Controls which price index.html shows publicly for MUSTER and MUSTER Partner. Seed/Fruit is an internal pricing-stage label -- it never changes what a tenant's plan includes.</p></div>
+              <div><h3>Public Pricing</h3><p>Controls which tiers index.html shows publicly, and which Seed/Fruit price each tier uses. Seed/Fruit is an internal pricing-stage label -- it never changes what a tenant's plan includes.</p></div>
               <select class="filter-select" style="padding:5px 10px; font-size:12px;" onchange="Live.setPricingStage(this.value)" data-tooltip="Takes effect immediately on the public pricing page -- no deploy needed.">${['seed', 'fruit'].map(s => `<option value="${s}" ${s === pricing.current_stage ? 'selected' : ''}>${s}</option>`).join('')}</select>
             </div>
-            <div class="panel-body" style="display:flex; gap:36px; flex-wrap:wrap;">
+            <div class="panel-body" style="display:flex; gap:36px; flex-wrap:wrap; margin-bottom:16px;">
               <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">Current stage</small><strong style="color:#fff; font-size:14px; text-transform:capitalize;">${escapeHtml(pricing.current_stage || 'unknown')}</strong></div>
               <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">MUSTER</small><strong style="color:#fff; font-size:14px;">$${(((pricing.muster || {}).monthly_price_cents ?? 0) / 100).toFixed(0)}/mo</strong></div>
               <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">MUSTER Partner</small><strong style="color:#fff; font-size:14px;">$${(((pricing.muster_partner || {}).monthly_price_cents ?? 0) / 100).toFixed(0)}/mo · ${(pricing.muster_partner || {}).included_client_orgs ?? '?'} included</strong></div>
+            </div>
+            <div class="panel-body" style="display:flex; gap:28px; flex-wrap:wrap; border-top:1px solid var(--surface-border); padding-top:16px;">
+              ${[
+                { key: 'muster', label: 'MUSTER', tip: 'Show the base MUSTER card on the public pricing page.' },
+                { key: 'muster_partner', label: 'MUSTER Partner', tip: 'Show the MUSTER Partner card on the public pricing page.' },
+                { key: 'enterprise', label: 'MUSTER Enterprise', tip: 'Show the Enterprise card on the public pricing page. Enterprise has no published price -- the card is a discovery CTA.' },
+              ].map(t => {
+                // Pre-migration RPC has no `visible` key; treat that as Partner-only
+                // so the admin panel matches what index.html already shows.
+                const on = pricing.visible
+                  ? !!pricing.visible[t.key]
+                  : t.key === 'muster_partner';
+                return `<div style="display:flex; align-items:center; gap:12px;">
+                  <label class="toggle-switch" data-tooltip="${t.tip}"><input type="checkbox" ${on ? 'checked' : ''} onchange="Live.setPricingVisibility('${t.key}', this.checked)"><span class="slider"></span></label>
+                  <div><strong style="color:#fff; font-size:13px; display:block;">${t.label}</strong><small style="color:var(--text-dim);">${on ? 'shown publicly' : 'hidden on pricing page'}</small></div>
+                </div>`;
+              }).join('')}
             </div>
           </div>
 
@@ -6240,6 +6257,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       },
       async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setPricingStage(stage) { try { await this.rpc('muster_admin_set_pricing_stage', { p_stage: stage }); showToast(`Public pricing stage set to ${stage}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
+      async setPricingVisibility(tier, on) { try { await this.rpc('muster_admin_set_pricing_visibility', { p_tier: tier, p_visible: on }); showToast(`${tier} ${on ? 'shown' : 'hidden'} on the public pricing page.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
       async setFlag(key, on) { try { await this.rpc('muster_admin_set_flag', { p_key: key, p_enabled: on }); showToast(`${key} default ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },
