@@ -45,6 +45,30 @@ either to make the block "more complete" — each exists because MUSTER sells ac
   excluded, because right-click there is how people paste and reach spellcheck suggestions, and a
   form field exposes no source.
 
+## Design tokens live in one file and are generated into the pages
+
+`assets/tokens.css` is the source of truth for every colour, font stack, radius and shadow.
+It is **not served to a browser**. Each page carries an inlined copy inside its `<style>`,
+between `/* muster:tokens:start */` and `/* muster:tokens:end */`, written there by
+`node tools/tokens/sync.mjs`. `tests/ui/design-tokens.test.ts` fails if any page drifts.
+
+**To change a token: edit `assets/tokens.css`, run `node tools/tokens/sync.mjs`, commit both.**
+Editing the block inside a page is editing the wrong file; the next sync overwrites it.
+
+Inlining rather than `<link>`ing is deliberate. Every page here is self-contained and makes
+no stylesheet request; a shared linked file would add a render-blocking request to all seven
+and give them one shared way to render completely unstyled -- one bad deploy, or one CSP edit
+on a new host. The cost of inlining is seven copies, and the test is what makes seven copies
+safe. A new page adopts the block by having its `:root` replaced on the next sync run, and
+must be added to `PAGES` in `tools/tokens/sync.mjs` and to the test.
+
+This was adopted 2026-09-13 after the copies had already drifted silently: `--rose` was
+`#f6516a` on the landing page and `#f43f5e` on the other five, `--text-muted` and `--teal-glow`
+split the same way, and `--font-mono` fell back to a bare `monospace` on five of seven pages.
+Nothing looked broken, which is the point. The landing page's `--font-body` / `--font-display`
+names are kept as aliases of `--font-sans` / `--font-serif` so its existing call sites did not
+have to be rewritten.
+
 ## Other notes
 
 - **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
