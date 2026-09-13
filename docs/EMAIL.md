@@ -49,10 +49,32 @@ a team in one sitting.
 
 ### 2. URL configuration — Authentication → URL Configuration
 
-**Site URL:** `https://app.muster.partners/app`
+**Site URL:** `https://app.muster.partners`
 
-Not the host root. Root on that host is `signin.html`; a signed-in user landing there just
-bounces. `/app` is the workspace.
+What matters is that it is **on the app host**. Either the root or `/app` works, and the root
+is the chosen value.
+
+Root serves `signin.html`, which bounces a session onward itself:
+
+```js
+if (session) { window.location.href = WORKSPACE_URL; return; }   // signin.html
+```
+
+So a link that falls back to Site URL lands on the sign-in page, the client reads the session
+out of the fragment, and the user is redirected to `/app`. The cost against pointing straight
+at `/app` is one extra page load and a brief flash of the sign-in form. The gain is that the
+value stays correct if `/app` ever moves, and that it keeps `muster-auth-smoke` honest: its
+`allowlist:workspace` probe asserts the requested `/app` redirect was honoured, and if Site URL
+were *also* `/app` a substituted redirect would be indistinguishable from an honoured one.
+
+What is **not** acceptable is a value off the app host, which is what it was until 2026-09-13:
+`https://www.muster.partners/`. That page is not passive about an auth fragment. `index.html`
+builds a Supabase client to call `muster_public_pricing`, and `detectSessionInUrl` defaults to
+true, so it parsed the `#access_token=...`, consumed it, and — with `persistSession: false` —
+stored nothing. Auth links are single use, so the token was spent and discarded on an origin
+that could not have used it anyway, sessions being per-origin. `index.html` now passes
+`detectSessionInUrl: false` so a stray link there fails visibly instead of silently, but the
+real fix is Site URL pointing at a host that can actually complete a sign-in.
 
 **Redirect URLs** (allowlist — every one of these is a target something already points at):
 

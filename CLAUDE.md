@@ -170,9 +170,20 @@ have to be rewritten.
   host that must be rejected. It returns booleans and redacted origins only -- never a token,
   link or password. `rotate_password` defaults to false and can only ever target the pinned QA
   sentinel account. Invocation and the 2026-09-09 results are in `docs/EMAIL.md`. Outstanding
-  after that run: **Site URL on `hjowfnzpomzxazmzywxw` is `https://www.muster.partners/`** and
-  needs to be `https://app.muster.partners/app`, and none of the six auth email templates have
-  been pasted from `supabase/auth-email-templates/` -- bodies and subjects are still GoTrue stock.
+  after that run: **Site URL on `hjowfnzpomzxazmzywxw` must be on the app host** -- the chosen
+  value is `https://app.muster.partners` (see `docs/EMAIL.md` for why the root rather than
+  `/app`), and it was `https://www.muster.partners/` until 2026-09-13. That is a dashboard
+  setting; nothing in this repo can change it. Also outstanding: none of the six auth email
+  templates have been pasted from `supabase/auth-email-templates/` -- bodies and subjects are
+  still GoTrue stock.
+- **Only the pages that complete a sign-in may consume an auth fragment.** `detectSessionInUrl`
+  defaults to **true**, so a page that builds a Supabase client for any other reason will parse
+  and consume the `#access_token=...` of any auth link that reaches it. Auth links are single
+  use, so that silently burns them. `app.html`, `signin.html`, `sitrep.html` and
+  `onboarding.html` each legitimately need it on (magic link, recovery, or an invite link).
+  `index.html` builds a client only to call `muster_public_pricing` and now passes
+  `detectSessionInUrl: false`; `privacy.html` and `sitrep-sample.html` build none at all. A new
+  page that adds a client for data must turn it off explicitly.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is

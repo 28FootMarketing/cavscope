@@ -833,7 +833,14 @@
 
     if (!window.supabase || !window.supabase.createClient) return;
     try {
-      const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
+      // detectSessionInUrl is off deliberately. It defaults to TRUE, and this
+      // client exists only to read public pricing -- it has no auth job at all.
+      // Left on, it parsed the #access_token fragment of any auth link that
+      // landed here, consumed it, and stored nothing (persistSession is false),
+      // silently burning a single-use link on an origin that could not have
+      // used the session anyway. Auth belongs to the app host; this page must
+      // not touch a fragment it cannot honour.
+      const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, detectSessionInUrl: false } });
       const { data, error } = await sb.rpc('muster_public_pricing');
       if (error || !data) return;
       applyPricing(data.current_stage, data.muster, data.muster_partner, data.visible || DEFAULT_VISIBLE);
