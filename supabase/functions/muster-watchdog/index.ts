@@ -36,6 +36,17 @@ async function reportIncident(fingerprint: string, source: string, severity: str
   if (error) throw new Error(`report_incident failed for ${fingerprint}: ${error.message}`);
 }
 
+// The inverse of reportIncident. Only ever called when this run has just observed
+// the condition to be clear, so it takes a source rather than an id.
+async function closeCleared(source: string, evidence: Record<string, unknown>): Promise<number> {
+  const { data, error } = await db.rpc("muster_engine_close_cleared_incidents", {
+    p_source: source,
+    p_evidence: evidence,
+  });
+  if (error) throw new Error(`close_cleared_incidents failed for ${source}: ${error.message}`);
+  return (data as number) ?? 0;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
@@ -45,6 +56,7 @@ Deno.serve(async (req: Request) => {
 
   const today = new Date().toISOString().slice(0, 10);
   let incidentsOpened = 0;
+  let incidentsClosed = 0;
   const checksRun: string[] = [];
 
   // Check 1 (RP-05): any muster-* cron job run in the last 20 minutes that
@@ -99,8 +111,23 @@ Deno.serve(async (req: Request) => {
     if ((s.failed_scans_24h ?? 0) > 0) {
       await reportIncident(`engine_error_spike:${today}`, "engine_error_spike", "info", "muster-scan", { failed_scans_24h: s.failed_scans_24h });
       incidentsOpened++;
+    } else {
+      // The half that was missing until 2026-09-13: this function could open an
+      // incident but nothing could ever close one.
+      //
+      // engine_error_spike is fingerprinted by DATE while the check behind it is
+      // a rolling 24-hour window, so yesterday's row can never be reached by the
+      // condition clearing -- today is a different fingerprint. One failed scan on
+      // 2026-09-08 left two incidents open permanently and bumped them 144 times.
+      // Open-incident count therefore only ever grew, which costs the self-heal
+      // system the one signal it exists to give.
+      //
+      // Zero failures in the window means the condition is clear for every open
+      // row of this source regardless of the date in its fingerprint, so the whole
+      // source closes rather than one row.
+      incidentsClosed += await closeCleared("engine_error_spike", { failed_scans_24h: 0 });
     }
   }
 
-  return json({ checks_run: checksRun.length, incidents_opened: incidentsOpened });
+  return json({ checks_run: checksRun.length, incidents_opened: incidentsOpened, incidents_closed: incidentsClosed });
 });

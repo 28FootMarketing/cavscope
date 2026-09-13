@@ -184,6 +184,26 @@ have to be rewritten.
   `index.html` builds a client only to call `muster_public_pricing` and now passes
   `detectSessionInUrl: false`; `privacy.html` and `sitrep-sample.html` build none at all. A new
   page that adds a client for data must turn it off explicitly.
+- **Every new `public.muster_engine_*` function must REVOKE from `anon, authenticated` by name.**
+  Supabase ships default privileges that GRANT EXECUTE on every new function in the `public`
+  schema to both roles. `revoke all ... from public` does **not** undo that -- `PUBLIC` the
+  pseudo-role and `anon`/`authenticated` the real roles are different grantees -- so a new
+  engine RPC is callable with the publishable key, which ships in page source, from the moment
+  it is created. Engine RPCs are called only by edge functions holding
+  `SUPABASE_SERVICE_ROLE_KEY`; none should ever be reachable by a browser. This was found live
+  on 2026-09-13: `muster_engine_record_email_event` and `muster_engine_resolve_alert` were both
+  anon-executable, which let anyone mark a pending `notification_outbox` row `sent` and suppress
+  a real HIGH-risk alert before it was emailed. Fixed in migrations `20260913150857` and
+  `20260913150920` -- and the first of those created a new function with the same defect, which
+  is how sure the default is. Verify with the ACL query in that migration's header, then prove
+  it with an actual anon call: a revoked function answers `401 / 42501 permission denied`.
+- **The watchdog closes what it opens.** `muster-watchdog` calls
+  `muster_engine_close_cleared_incidents(source, evidence)` when a check comes back clear, so a
+  condition that resolves itself closes its own incident. Before 2026-09-13 nothing could ever
+  close one: `engine_error_spike` is fingerprinted by date while its check is a rolling 24-hour
+  window, so one failed scan on 2026-09-08 left two incidents open forever and bumped them 144
+  times. Open-incident count is only a usable signal while it can go down. A new check that
+  reports an incident needs a matching close path, or it is a counter, not an alarm.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is
