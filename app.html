@@ -5318,11 +5318,36 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.sb = window.supabase.createClient(this.url, this.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
         this.sb.auth.onAuthStateChange((event, session) => {
           this.session = session;
+          // A forced password change is enforced in Postgres, not here:
+          // migration 20260915230805 gates the authorization spine on
+          // app_metadata.force_password_change, so a flagged JWT resolves to no
+          // role anywhere and enter() below would fail on its first RPC with
+          // 42501. Send them to the one page that can actually resolve it --
+          // the password form is on signin.html, and clearing the flag needs
+          // the service role, so there is nothing this page could do about it.
+          // signin.html checks the same flag BEFORE its own bounce to /app, so
+          // this is a handoff and not a loop.
+          if (session && this.forcedPasswordChange(session)) {
+            window.location.replace(window.location.origin + '/');
+            return;
+          }
           if (session && !this.active) this.enter().catch(e => this.fail(e));
           if (!session && this.active) this.exit();
           this.renderTopbar();
         });
         this.renderTopbar();
+      },
+
+      // Same set of shapes the SQL predicate and the edge function accept:
+      // provisioning writes the flag as a JSON boolean and as the string
+      // "true", and a check that catches only one of them is not a check.
+      forcedPasswordChange(session) {
+        const meta = session && session.user ? session.user.app_metadata : null;
+        const v = meta ? meta.force_password_change : undefined;
+        if (v === true) return true;
+        if (typeof v === 'string') return ['true', 't', '1'].includes(v.toLowerCase());
+        if (typeof v === 'number') return v === 1;
+        return false;
       },
 
       async rpc(fn, args) {

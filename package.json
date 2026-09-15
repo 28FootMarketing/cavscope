@@ -7,7 +7,7 @@
     "@vercel/functions": "^3.9.5"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test tests/email/resend-webhook.test.ts tests/ui/impersonation-panel.test.ts tests/ui/fix-prompt.test.ts tests/ui/context-menu-guard.test.ts tests/ui/design-tokens.test.ts tests/ui/pricing-visibility.test.ts tests/scan/email-auth.test.ts tests/routing/middleware.test.ts tests/billing/stripe-webhook.test.ts tests/auth/signin.test.ts tests/auth/landing-auth-fragment.test.ts tests/docs/chunk.test.ts evals/ai-narrative/offline.test.ts",
+    "test": "node --experimental-strip-types --test tests/email/resend-webhook.test.ts tests/ui/impersonation-panel.test.ts tests/ui/fix-prompt.test.ts tests/ui/context-menu-guard.test.ts tests/ui/design-tokens.test.ts tests/ui/pricing-visibility.test.ts tests/scan/email-auth.test.ts tests/routing/middleware.test.ts tests/billing/stripe-webhook.test.ts tests/auth/signin.test.ts tests/auth/landing-auth-fragment.test.ts tests/auth/set-password.test.ts tests/docs/chunk.test.ts evals/ai-narrative/offline.test.ts",
     "test:email": "node --experimental-strip-types --test tests/email/resend-webhook.test.ts",
     "eval:narrative": "node --experimental-strip-types --test evals/ai-narrative/offline.test.ts",
     "eval:narrative:live": "node --experimental-strip-types evals/ai-narrative/live.ts",
@@ -15,7 +15,7 @@
     "test:scan": "node --experimental-strip-types --test tests/scan/email-auth.test.ts",
     "test:routing": "node --experimental-strip-types --test tests/routing/middleware.test.ts",
     "test:billing": "node --experimental-strip-types --test tests/billing/stripe-webhook.test.ts",
-    "test:auth": "node --experimental-strip-types --test tests/auth/signin.test.ts tests/auth/landing-auth-fragment.test.ts",
+    "test:auth": "node --experimental-strip-types --test tests/auth/signin.test.ts tests/auth/landing-auth-fragment.test.ts tests/auth/set-password.test.ts",
     "test:docs": "node --experimental-strip-types --test tests/docs/chunk.test.ts"
   }
 }

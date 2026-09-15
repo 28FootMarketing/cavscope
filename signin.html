@@ -227,13 +227,13 @@
 
     <div id="recoveryState" hidden>
       <div class="signin-card">
-        <h1>Choose a new password</h1>
-        <p class="signin-desc">You opened a password-reset link, so you are signed in just long enough to set a new password. Pick one now — it replaces the old password everywhere.</p>
+        <h1 id="recoveryTitle">Choose a new password</h1>
+        <p class="signin-desc" id="recoveryDesc">You opened a password-reset link, so you are signed in just long enough to set a new password. Pick one now — it replaces the old password everywhere.</p>
         <form id="recoveryForm" onsubmit="return submitNewPassword(event)">
-          <label for="rcPassword">New password <span class="hint">(at least 8 characters)</span></label>
-          <input type="password" id="rcPassword" required minlength="8" autocomplete="new-password" placeholder="New password" data-tooltip="Minimum 8 characters. Longer is better than more punctuation.">
+          <label for="rcPassword">New password <span class="hint">(at least 12 characters)</span></label>
+          <input type="password" id="rcPassword" required minlength="12" autocomplete="new-password" placeholder="New password" data-tooltip="Minimum 12 characters. Length is what makes a password hard to guess; mixing in punctuation is not a substitute for it.">
           <label for="rcPassword2">Confirm new password</label>
-          <input type="password" id="rcPassword2" required minlength="8" autocomplete="new-password" placeholder="Type it again" data-tooltip="Must match the password above. Guards against a typo locking you out.">
+          <input type="password" id="rcPassword2" required minlength="12" autocomplete="new-password" placeholder="Type it again" data-tooltip="Must match the password above. Guards against a typo locking you out.">
           <div class="signin-msg" id="recoveryMsg" role="status" aria-live="polite"></div>
           <div class="btn-row">
             <button type="submit" class="btn-primary" data-tooltip="Saves the new password and takes you into your workspace.">Set password →</button>
@@ -292,6 +292,60 @@
   // carries type=recovery but is gone after a refresh, and the path is stable
   // but is also what someone sees if they just type /reset with no link.
   let recoveryMode = HASH.get('type') === 'recovery' || PATH === '/reset';
+
+  // ---- forced password change ---------------------------------------------
+  //
+  // An account provisioned with a temporary password carries
+  // app_metadata.force_password_change. Until 2026-09-15 nothing anywhere read
+  // it: the flag sat on a live super-admin account and the workspace opened
+  // normally, so the account list said "must change password" about an account
+  // that never had to.
+  //
+  // The enforcement is NOT this page. It is muster.password_change_required()
+  // in Postgres (migration 20260915230805), wired into the authorization spine,
+  // so a flagged JWT resolves to no user id, no super-admin and no role in any
+  // organization -- muster_onboarding_status, muster_my_workspace and
+  // muster_admin_overview all answer 42501 for it. This page is the
+  // explanation, and the only place the change can actually be made. Never
+  // describe the redirect as the control; the SQL is the control.
+  //
+  // app_metadata is service-role-only, which is exactly what makes the flag
+  // worth having -- a user cannot clear their own. So the change goes through
+  // the muster-set-password edge function, which sets the password and clears
+  // the flag in one admin call or neither.
+  let forcedChange = false;
+
+  // Twelve, matching validateNewPassword() in the edge function. Server side is
+  // the copy that decides; this one is here so the refusal arrives before the
+  // round trip. Note the asymmetry: on the ordinary recovery path below,
+  // updateUser goes straight to GoTrue, so 12 is advice until GoTrue's own
+  // minimum password length is raised to match in the dashboard.
+  const MIN_PASSWORD_CHARS = 12;
+
+  // Provisioning tools write the flag as a JSON boolean and as the string
+  // "true"; a check that catches only one of them is not a check. Same set of
+  // shapes the SQL predicate and the edge function accept.
+  function isForced(session) {
+    const meta = session && session.user ? session.user.app_metadata : null;
+    const v = meta ? meta.force_password_change : undefined;
+    if (v === true) return true;
+    if (typeof v === 'string') return ['true', 't', '1'].includes(v.toLowerCase());
+    if (typeof v === 'number') return v === 1;
+    return false;
+  }
+
+  function showForcedChange() {
+    forcedChange = true;
+    // A forced change outranks recovery: both end at the same form, and the
+    // forced path is the one that also clears the flag.
+    recoveryMode = false;
+    document.getElementById('recoveryTitle').textContent = 'Set a new password to continue';
+    document.getElementById('recoveryDesc').textContent =
+      'This account was provisioned with a temporary password and has to replace it before it can be used. '
+      + 'Your workspace stays locked until you do — that is enforced in the database, not just on this page.';
+    showState('recoveryState');
+    setTimeout(() => document.getElementById('rcPassword')?.focus(), 50);
+  }
 
   const STATES = ['checkingState', 'signinState', 'resetState', 'recoveryState', 'sentState'];
 
@@ -431,7 +485,12 @@
     e.preventDefault();
     const pw1 = document.getElementById('rcPassword').value;
     const pw2 = document.getElementById('rcPassword2').value;
-    if (pw1.length < 8) { setRecoveryMsg('Use at least 8 characters.'); return false; }
+    // Spread, not .length: an emoji or an accented character is one character
+    // to the person typing it and two or more UTF-16 code units to .length.
+    if ([...pw1].length < MIN_PASSWORD_CHARS) {
+      setRecoveryMsg(`Use at least ${MIN_PASSWORD_CHARS} characters. Length beats punctuation.`);
+      return false;
+    }
     if (pw1 !== pw2) { setRecoveryMsg('The two passwords do not match.'); return false; }
     setRecoveryMsg('Saving…', true);
     try {
@@ -440,8 +499,44 @@
         setRecoveryMsg('This reset link has expired or was already used. Send yourself a new one below.');
         return false;
       }
-      const { error } = await sb.auth.updateUser({ password: pw1 });
-      if (error) throw error;
+
+      // isForced(session) is re-read rather than trusting the flag set at
+      // render time: the session can have been replaced since the form was
+      // shown, and sending a forced change down the ordinary path would set the
+      // password and leave the account still locked.
+      if (forcedChange || isForced(session)) {
+        const { data, error } = await sb.functions.invoke('muster-set-password', { body: { password: pw1 } });
+        if (error) {
+          // invoke() reports any non-2xx as a generic "non-2xx status" error
+          // and leaves the real message in the response body. Without reading
+          // it back, every refusal -- too short, already your password, policy
+          // -- would show the user the same useless string.
+          let detail = '';
+          try { detail = ((await error.context.json()) || {}).message || ''; } catch { /* not JSON, or body already read */ }
+          setRecoveryMsg(detail || 'That password could not be saved. Try a different one.');
+          return false;
+        }
+        if (!data || data.ok !== true) {
+          setRecoveryMsg((data && data.message) || 'That password could not be saved. Try a different one.');
+          return false;
+        }
+
+        // Required, not cosmetic. JWT claims are minted at sign-in and not read
+        // live, so the access token in hand still says force_password_change
+        // even though the database no longer does -- and the SQL gate reads the
+        // token. Skip this and the workspace loads with every RPC answering
+        // 42501, which looks exactly like the change having failed.
+        const { data: refreshed, error: refreshErr } = await sb.auth.refreshSession();
+        if (refreshErr || isForced(refreshed && refreshed.session)) {
+          setRecoveryMsg('Your new password is saved. Sign in with it to finish.');
+          return false;
+        }
+      } else {
+        const { error } = await sb.auth.updateUser({ password: pw1 });
+        if (error) throw error;
+      }
+
+      forcedChange = false;
       recoveryMode = false;
       window.location.href = WORKSPACE_URL;
     } catch (err) { setRecoveryMsg(err.message || String(err)); }
@@ -609,6 +704,13 @@
       // go to the workspace" rule below would bounce the user straight past
       // the one form they came here to fill in. Recovery wins.
       if (event === 'PASSWORD_RECOVERY') recoveryMode = true;
+      // Ahead of BOTH the recovery branch and the workspace bounce below.
+      // Ahead of recovery because the forced path is the only one that also
+      // clears the flag, and ahead of the bounce because a flagged session sent
+      // to /app lands in a workspace where every RPC answers 42501 -- and
+      // app.html sends it straight back here, which is a redirect loop if this
+      // page ever decides to bounce it onward.
+      if (session && isForced(session)) { showForcedChange(); return; }
       if (recoveryMode) {
         showState('recoveryState');
         setTimeout(() => document.getElementById('rcPassword')?.focus(), 50);

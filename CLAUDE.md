@@ -196,6 +196,23 @@ have to be rewritten.
   pins the behaviour and, more importantly, the negatives -- an in-page anchor like `#pricing`
   must never redirect, and the forwarder must not be able to loop onto its own origin. This is
   a mitigation for a wrong Site URL, not a substitute for fixing it.
+- **`app_metadata.force_password_change` is enforced in Postgres, not in a page.** Migration
+  `20260915230805` added `muster.password_change_required()` -- a predicate over the caller's own
+  JWT claims -- and wired it into the authorization spine (`current_user_id`, `is_super_admin`,
+  `org_role`, `shares_org_with`, `onboarding_caller`, `ensure_user_from_auth`). A flagged caller
+  resolves to no role anywhere, so tenant RPCs raise `42501` and RLS answers empty. Before that,
+  nothing in the entire stack read the flag: it sat on a live `super_admin` account that signed in
+  on the old password and went straight to the workspace. Clearing it needs the service role, so it
+  goes through the **`muster-set-password`** edge function, which sets the password and clears the
+  flag in ONE admin call -- never add a separate "clear the flag" endpoint, that is a bypass with
+  extra steps. After a successful change the browser **must** call `refreshSession()`: claims are
+  minted at sign-in and not read live, so the old token still says `true` and the workspace looks
+  broken until it is replaced. `signin.html` owns the form and checks the flag **before** its bounce
+  to `/app`; `app.html` sends a flagged session back to `/` -- that ordering is the only thing
+  keeping the two from looping, and `tests/auth/set-password.test.ts` asserts it. Password policy is
+  12 characters, no composition rules, blocklist checked against the padded stem too; it lives in
+  that function's `core.ts`. Break-glass and the full rationale are in `docs/BACKEND.md` and the
+  migration header.
 - **Every new `public.muster_engine_*` function must REVOKE from `anon, authenticated` by name.**
   Supabase ships default privileges that GRANT EXECUTE on every new function in the `public`
   schema to both roles. `revoke all ... from public` does **not** undo that -- `PUBLIC` the
