@@ -172,8 +172,10 @@ have to be rewritten.
   sentinel account. Invocation and the 2026-09-09 results are in `docs/EMAIL.md`. Outstanding
   after that run: **Site URL on `hjowfnzpomzxazmzywxw` must be on the app host** -- the chosen
   value is `https://app.muster.partners` (see `docs/EMAIL.md` for why the root rather than
-  `/app`), and it was `https://www.muster.partners/` until 2026-09-13. That is a dashboard
-  setting; nothing in this repo can change it. Also outstanding: none of the six auth email
+  `/app`). **It was believed changed on 2026-09-13 and it is not: on 2026-09-15 a real magiclink
+  again landed on `https://www.muster.partners/` with live tokens in the fragment.** That is a
+  dashboard setting; nothing in this repo can change it, and nothing in this repo can verify it
+  either except `muster-auth-smoke` plus an actual link. Do not mark it done from a note. Also outstanding: none of the six auth email
   templates have been pasted from `supabase/auth-email-templates/` -- bodies and subjects are
   still GoTrue stock.
 - **Only the pages that complete a sign-in may consume an auth fragment.** `detectSessionInUrl`
@@ -184,6 +186,16 @@ have to be rewritten.
   `index.html` builds a client only to call `muster_public_pricing` and now passes
   `detectSessionInUrl: false`; `privacy.html` and `sitrep-sample.html` build none at all. A new
   page that adds a client for data must turn it off explicitly.
+- **`index.html` forwards a stray auth fragment; it does not swallow it.** Declining to consume
+  the fragment (above) keeps the tokens alive but leaves the user on marketing copy holding a
+  session no page will take. So a head-level script in `index.html` runs before paint and
+  `location.replace()`s any fragment carrying `access_token`, `refresh_token`, `error_code` or
+  `error_description` to `https://app.muster.partners/`, fragment intact. Root, not `/app`:
+  `signin.html` handles a live session, `type=recovery` and an expired link; `app.html` would
+  drop a recovery session into the workspace with no password form. `tests/auth/landing-auth-fragment.test.ts`
+  pins the behaviour and, more importantly, the negatives -- an in-page anchor like `#pricing`
+  must never redirect, and the forwarder must not be able to loop onto its own origin. This is
+  a mitigation for a wrong Site URL, not a substitute for fixing it.
 - **Every new `public.muster_engine_*` function must REVOKE from `anon, authenticated` by name.**
   Supabase ships default privileges that GRANT EXECUTE on every new function in the `public`
   schema to both roles. `revoke all ... from public` does **not** undo that -- `PUBLIC` the

@@ -67,14 +67,37 @@ value stays correct if `/app` ever moves, and that it keeps `muster-auth-smoke` 
 `allowlist:workspace` probe asserts the requested `/app` redirect was honoured, and if Site URL
 were *also* `/app` a substituted redirect would be indistinguishable from an honoured one.
 
-What is **not** acceptable is a value off the app host, which is what it was until 2026-09-13:
-`https://www.muster.partners/`. That page is not passive about an auth fragment. `index.html`
-builds a Supabase client to call `muster_public_pricing`, and `detectSessionInUrl` defaults to
-true, so it parsed the `#access_token=...`, consumed it, and — with `persistSession: false` —
-stored nothing. Auth links are single use, so the token was spent and discarded on an origin
-that could not have used it anyway, sessions being per-origin. `index.html` now passes
-`detectSessionInUrl: false` so a stray link there fails visibly instead of silently, but the
-real fix is Site URL pointing at a host that can actually complete a sign-in.
+What is **not** acceptable is a value off the app host: `https://www.muster.partners/`. That page
+is not passive about an auth fragment. `index.html` builds a Supabase client to call
+`muster_public_pricing`, and `detectSessionInUrl` defaults to true, so it parsed the
+`#access_token=...`, consumed it, and — with `persistSession: false` — stored nothing. Auth links
+are single use, so the token was spent and discarded on an origin that could not have used it
+anyway, sessions being per-origin. `index.html` now passes `detectSessionInUrl: false`, so the
+fragment survives, but the real fix is Site URL pointing at a host that can actually complete a
+sign-in.
+
+> **Still wrong as of 2026-09-15.** A magiclink minted 22:48:50 UTC for a real admin account
+> (`admin@anthonywashingtonsr.com`) landed on `https://www.muster.partners/` — bare root, no
+> path — carrying a live `access_token` and `refresh_token`. Root of `www` is not a redirect
+> target any page in this repo asks for: `signin.html` asks for `origin + '/app'` and
+> `sitrep.html` asks for `window.location.href`. A link arriving at a target nothing requests is
+> the Site URL fallback, which means either Site URL was never moved to the app host on
+> 2026-09-13 as this document recorded, or it was moved back. **Verify it in the dashboard
+> before assuming either.** Note that `https://www.muster.partners/**` being on the allowlist
+> below does *not* explain it — an allowlist entry is only consulted when a `redirect_to` is
+> actually sent, and a dashboard-issued magic link or an admin `generateLink` call sends none.
+
+Since 2026-09-15 `index.html` no longer merely declines the fragment — it **forwards** it. A
+head-level script runs before the page paints, and if the fragment carries `access_token`,
+`refresh_token`, `error_code` or `error_description`, it `location.replace()`s to
+`https://app.muster.partners/` with the fragment intact. Declining alone left the user looking at
+marketing copy while holding a live session they had no page willing to take; the tokens were
+never the problem. The destination is app host **root**, not `/app`, because `signin.html` is the
+one page that handles all three arrivals — a live session (bounces to `/app`), `type=recovery`
+(shows the new-password form), and an expired link (explains, and offers a fresh one). This is a
+belt, not the braces: it stops a wrong Site URL stranding anyone, it does not make Site URL right.
+`tests/auth/landing-auth-fragment.test.ts` pins it, including the two negatives that matter — an
+in-page anchor (`#pricing`) must never redirect, and the forwarder must not be able to loop.
 
 **Redirect URLs** (allowlist — every one of these is a target something already points at):
 
@@ -164,8 +187,14 @@ Run 2026-09-09 20:28 UTC, all steps green except the two template-branding check
 the allowlist honours `/reset` and `/app` on both app hosts, rejects an unknown host,
 `app.muster.partners/reset` serves `signin.html` with the new-password form, and the full
 mint → follow → set → sign-in cycle completed. **Site URL was `https://www.muster.partners/`**,
-not the `https://app.muster.partners/app` this document specifies — which is exactly why the
+not the `https://app.muster.partners` this document specifies — which is exactly why the
 2026-09-09 19:33 magic link landed on the marketing page.
+
+**Re-run this before believing Site URL is fixed.** The 2026-09-15 arrival above says it is not,
+and this smoke test is the cheap way to settle it: no email is sent, no token is spent. A run
+whose `allowlist:*` probes pass but whose magic links still arrive at `www` root means the
+allowlist is fine and Site URL is the thing left to change — they are two different settings on
+the same dashboard page, and only one of them is what a link with no `redirect_to` falls back to.
 
 ## Path B — application email
 
