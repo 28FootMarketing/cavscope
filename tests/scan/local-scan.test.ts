@@ -46,11 +46,18 @@ test("the adapter fails loudly rather than cutting a region it does not recognis
   for (const anchor of [
     'import { createClient } from "jsr:@supabase/supabase-js@2";',
     'const db = createClient(Deno.env.get("SUPABASE_URL")!',
-    '"./email-auth.ts"',
     'await db.rpc("muster_engine_ingest"',
   ]) {
     assert.equal(original.split(anchor).length - 1, 1, `anchor is no longer unique: ${anchor}`);
   }
+
+  // Sibling imports are rewritten wholesale rather than by name, so a new one
+  // needs no adapter change -- but it must still end up absolute, because the
+  // adapted module is written to a temp dir.
+  const adapted = await adaptSource();
+  assert.ok(original.includes('from "./'), "the engine should still import at least one sibling module");
+  assert.ok(!adapted.includes('from "./'), "no relative import may survive into the adapted module");
+  assert.ok(adapted.includes('from "file://'), "sibling imports must be rewritten to absolute file URLs");
 });
 
 test("the local engine scans a real response and raises the expected findings", async () => {
@@ -92,6 +99,53 @@ test("the local engine scans a real response and raises the expected findings", 
     // A resolver we cannot reach must never manufacture an email finding.
     // (Offline, DoH fails and the EMAIL-* family correctly reports nothing.)
     assert.ok(!ids.has("AVAIL-001"), "the server answered, so it is not unreachable");
+  } finally {
+    server.close();
+  }
+});
+
+test("origin files are probed on the target's own port", async () => {
+  // Regression test for issue #94. The engine used to build the origin from
+  // hostname alone, so on a non-default port it fetched robots.txt, the sitemap
+  // and security.txt from the DEFAULT port -- judging a different server, or
+  // none -- and raised GOV-001, GOV-002 and SEC-012 against a target that had
+  // all three. This test can only pass if the port is carried through, and it is
+  // the case the local runner hits every time it scans a dev server.
+  const server = createServer((req, res) => {
+    if (req.url === "/robots.txt") {
+      res.writeHead(200, { "content-type": "text/plain" });
+      return res.end("User-agent: *\nAllow: /\nSitemap: PLACEHOLDER/sitemap.xml\n".replace("PLACEHOLDER", base));
+    }
+    if (req.url === "/sitemap.xml") {
+      res.writeHead(200, { "content-type": "application/xml" });
+      return res.end(`<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${base}/</loc></url></urlset>`);
+    }
+    if (req.url === "/.well-known/security.txt") {
+      res.writeHead(200, { "content-type": "text/plain" });
+      return res.end("Contact: mailto:security@example.test\nExpires: 2027-01-01T00:00:00.000Z\n");
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><p>${"body copy ".repeat(40)}</p><a href="/privacy">Privacy</a></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}`;
+  assert.notEqual(port, 80, "the whole point is a non-default port");
+
+  try {
+    const engine = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ findings: Array<{ rule_id: string; detail: string }> }>;
+    };
+    const out = await engine.runScan({ scan_id: 0, website_id: 0, target_url: `${base}/`, website_name: "test" });
+    const byId = new Map(out.findings.map((f) => [f.rule_id, f]));
+
+    for (const id of ["GOV-001", "GOV-002", "SEC-012"]) {
+      assert.ok(!byId.has(id), `${id} must not fire when the file is served on the target's port (got: ${byId.get(id)?.detail})`);
+    }
+    // The AI-crawler rule is informational and always reports, which proves
+    // robots.txt was actually read rather than merely not 404ing.
+    assert.ok(byId.has("GOV-004"), "robots.txt should have been read");
   } finally {
     server.close();
   }

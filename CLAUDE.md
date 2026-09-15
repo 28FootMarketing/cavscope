@@ -148,6 +148,18 @@ have to be rewritten.
   `20260907223344_muster_012_helper_functions_sql.sql` into `tools/local-scan/score.mjs`; change one and
   you must change the other. `tests/scan/local-scan.test.ts` pins the adapter and scans a local server
   end to end.
+- **Rule logic that can be pure belongs in a sibling module with tests, not inline in `runScan()`.**
+  `supabase/functions/muster-scan/html.ts` is that module today: `stripTags`, `stripToBodyText` and
+  `detectClientRendered`, pinned by `tests/scan/html.test.ts`, alongside `email-auth.ts` and its own
+  tests. The client-rendered check lived inline until 2026-09-15 and shipped a defect nothing could
+  catch: it measured "visible text" that still included the `<title>` and the tail of any comment whose
+  prose contained a `>` (because `stripTags`'s `<[^>]*>` ends at that first `>`). A Vite SPA shell whose
+  real body was `<div id="root"></div>` measured 411 characters against the 200 threshold, so the engine
+  called it server-rendered and reported `PRIV-001` at **medium severity and medium confidence with no
+  caveat** on a page it had never read. That is the same class of failure as telling a client they are
+  covered when they are not, pointed the other way. Issues #93 and #94; engine `http-native-1.2.0`.
+  **`ENGINE_VERSION` moves whenever rule output changes**, because a finding's severity is only
+  comparable across scans on the same version.
 - **Security headers come from `middleware.js`, on every response.** `SECURITY_HEADERS` (CSP,
   X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) is applied through `secureRewrite()`
   and `secureNext()`; there is deliberately no bare `rewrite()` or `next()` left in the file, so a new

@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { dmarcCandidates, evaluateEmailAuth, mailDomain } from "./email-auth.ts";
+import { detectClientRendered, stripTags } from "./html.ts";
 
 // MUSTER scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -10,7 +11,11 @@ import { dmarcCandidates, evaluateEmailAuth, mailDomain } from "./email-auth.ts"
 //   { "scan_id": 123 }            run one queued scan
 //   { "mode": "due", "limit": 3 } claim due websites and stale queued scans, run each
 
-const ENGINE_VERSION = "http-native-1.1.1";
+// 1.2.0, not 1.1.2: this changes what the engine reports, not just how. Client-
+// rendered pages now downgrade content findings as they were always meant to
+// (issue #93), and origin-file probes follow the target's port (issue #94).
+// A finding's severity is only comparable across scans on the same version.
+const ENGINE_VERSION = "http-native-1.2.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -140,7 +145,6 @@ function attr(tag: string, name: string): string | null {
   return (m[2] ?? m[3] ?? m[4] ?? "").trim();
 }
 function hasAttr(tag: string, name: string) { return new RegExp(`\\s${name}(\\s|=|>|/)`, "i").test(tag); }
-function stripTags(s: string) { return s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); }
 function hostOf(u: string): string | null { try { return new URL(u).hostname.toLowerCase(); } catch { return null; } }
 
 // DNS over HTTPS. The scanner has never resolved a name -- every other check is
@@ -233,7 +237,12 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
       location: "homepage", confidence: "high", evidence_keys: ["chain", "primary"] });
   }
 
-  // 2. HTTP -> HTTPS probe
+  // 2. HTTP -> HTTPS probe.
+  // This one drops the port on purpose: SEC-001 asks whether plain HTTP on port
+  // 80 redirects to HTTPS, which is a question about port 80 specifically. Do
+  // not "fix" it to match the origin below (issue #94) -- that changes what the
+  // rule measures. When the probe cannot connect it raises nothing, because a
+  // probe that never reached a server is not evidence of a missing redirect.
   const host = hostOf(finalUrl) ?? hostOf(target);
   if (host) {
     const probe = await fetchOnce(`http://${host}/`, "HEAD");
@@ -287,8 +296,7 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   if (isHtml) {
     const snippets: string[] = [];
     // Client-rendered apps ship almost no markup; content rules then carry low confidence until the browser engine runs.
-    const visibleText = stripTags(html.replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, ""));
-    const clientRendered = visibleText.length < 200 && /<script\b/i.test(html);
+    const clientRendered = detectClientRendered(html);
     const csrNote = clientRendered ? " The page appears to render client-side; the HTTP engine only sees the initial HTML. Confirm with the browser engine." : "";
     const csrConf = (c: "high" | "medium" | "low") => (clientRendered ? "low" : c);
     const snip = async (key: string, label: string, tags: string[]) => {
@@ -407,7 +415,12 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
 
   // 5. robots.txt, sitemap, security.txt
   if (reachable && host) {
-    const origin = `${isHttps ? "https" : "http"}://${host}`;
+    // Must be the full origin, port included: `host` is hostname-only, so a
+    // target on a non-default port had robots.txt, the sitemap and security.txt
+    // fetched from the default port -- judging a different server, or none.
+    // See issue #94. `host` stays hostname-only for the same-site comparisons
+    // in TP-001 and PRIV-003, where a port would be wrong.
+    const origin = new URL(finalUrl).origin;
     const robots = await fetchOnce(`${origin}/robots.txt`, "GET");
     const robotsOk = robots.status === 200 && !/text\/html/i.test(robots.contentType ?? "") && robots.body.length > 0;
     await ev({ key: "robots", kind: "robots_txt", url: `${origin}/robots.txt`, http_status: robots.status, content_type: robots.contentType, response_ms: robots.ms, headers: null, excerpt: robots.body.slice(0, 8000), byte_length: robots.bytes }, robots.body || String(robots.status));

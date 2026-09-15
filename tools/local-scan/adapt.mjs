@@ -29,7 +29,6 @@ export const ENGINE_SRC = join(ENGINE_DIR, "index.ts");
 
 const RUNTIME_TYPES = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";\n';
 const CLIENT_IMPORT = 'import { createClient } from "jsr:@supabase/supabase-js@2";\n';
-const EMAIL_IMPORT = '"./email-auth.ts"';
 const DB_CONST = 'const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);\n';
 const TAIL_ANCHOR = "  const { data: ingest, error: ingestErr } = await db.rpc(\"muster_engine_ingest\"";
 
@@ -59,8 +58,15 @@ export async function adaptSource() {
   src = cut(src, CLIENT_IMPORT, "the supabase-js import");
   src = cut(src, DB_CONST, "the service-role client");
 
-  if (src.split(EMAIL_IMPORT).length - 1 !== 1) throw new Error("adapter: expected exactly 1 relative import of email-auth.ts");
-  src = src.replace(EMAIL_IMPORT, JSON.stringify(pathToFileURL(join(ENGINE_DIR, "email-auth.ts")).href));
+  // Relative sibling imports are rewritten to absolute file URLs, because the
+  // adapted module is written to a temp dir and "./html.ts" would resolve there.
+  let rewritten = 0;
+  src = src.replace(/(from\s+)"\.\/([A-Za-z0-9._-]+\.ts)"/g, (_m, from, file) => {
+    rewritten += 1;
+    return from + JSON.stringify(pathToFileURL(join(ENGINE_DIR, file)).href);
+  });
+  if (rewritten === 0) throw new Error("adapter: expected at least one relative sibling import to rewrite");
+  if (src.includes('from "./')) throw new Error("adapter: a relative import survived the rewrite");
 
   const at = src.indexOf(TAIL_ANCHOR);
   if (at === -1) throw new Error("adapter: could not find the muster_engine_ingest call that ends runScan(). Update tools/local-scan/adapt.mjs.");
