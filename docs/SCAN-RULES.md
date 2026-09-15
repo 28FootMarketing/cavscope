@@ -34,6 +34,12 @@ across a crawl or silently under-report it.
 
 `tools/code-book/` renders this whole catalog, scope column included, as a client-ready PDF.
 
+`tools/local-scan/` runs this same rule set from a terminal against any URL, with no database and
+no key — `npm run scan:local -- https://example.com`. It is an adapter over
+`supabase/functions/muster-scan/index.ts`, not a second copy of the rules, so the codes below are
+the codes it raises. It writes nothing and produces no SITREP; see
+[`tools/local-scan/README.md`](../tools/local-scan/README.md).
+
 ---
 
 ## Security — 13 rules

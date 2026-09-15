@@ -137,6 +137,17 @@ have to be rewritten.
   in a dedicated internal sandbox org (`organizations.is_admin_sandbox`), never in a real tenant's risk
   register. This is separate from the guided onboarding flow above and from `sitrep-sample.html` — three
   different tools for three different jobs, not competing demos.
+- **`tools/local-scan/` is a fourth way to get findings, and the only one that writes nothing.**
+  `npm run scan:local -- https://example.com` runs the real engine's rule code against a URL with no
+  database, no service-role key and no tenant, then prints the findings and a posture score and exits
+  non-zero on any `critical` or `high`. Use it for triage, for CI, or from a machine with no keys; use
+  the admin console's "Run a URL scan" when the result should be recorded. It is an **adapter** over
+  `supabase/functions/muster-scan/index.ts` — it reads that file and strips the Supabase client, the two
+  `muster_engine_*` RPCs and `Deno.serve()`, asserting each cut — so there is still exactly one copy of
+  the 38 rules. The one thing duplicated is the posture weights, copied from
+  `20260907223344_muster_012_helper_functions_sql.sql` into `tools/local-scan/score.mjs`; change one and
+  you must change the other. `tests/scan/local-scan.test.ts` pins the adapter and scans a local server
+  end to end.
 - **Security headers come from `middleware.js`, on every response.** `SECURITY_HEADERS` (CSP,
   X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) is applied through `secureRewrite()`
   and `secureNext()`; there is deliberately no bare `rewrite()` or `next()` left in the file, so a new
