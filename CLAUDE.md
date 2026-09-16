@@ -318,6 +318,21 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   CPA firm's examination. MUSTER produces evidence for one and readiness signal between them; route
   the attestation question to the client's auditor. Full table and the deliberate ASVS omission are
   in `docs/SCAN-RULES.md`.
+- **A scan rule stays inactive until the engine that emits it is deployed.** Not tidiness: an
+  active rule the engine never evaluates has no findings by construction, and `sync_controls()`
+  scores a reference with no open findings as **met** -- so the register reports a check that was
+  never run as passed. `SEC-014`, `SEC-015` and `EMAIL-008` are held inactive by migration
+  `20260916210100` for exactly this reason; the activation statement is in its header and in
+  `docs/SCAN-RULES.md`. Same rule as feature-flag `enforcement`: never declare a thing enabled
+  before the code reading it exists.
+- **Edge functions deploy from CI, not from a paste.** `.github/workflows/deploy-functions.yml`
+  runs `supabase functions deploy` on merge to main for anything under `supabase/functions/`. It
+  skips with a notice, rather than failing, until the `SUPABASE_ACCESS_TOKEN` repository secret is
+  set. Before this, every function in the project was deployed by pasting its source through a chat
+  tool, which is fine at 7 KB and stops being fine at `muster-scan`'s 38 KB across three files: the
+  paste becomes the risk, and a silent transcription slip ships a broken scanner with no diff to
+  review. Migrations are deliberately **not** in that workflow -- their files are named after the
+  version `apply_migration` assigned, which a `db push` would not reproduce.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is
