@@ -176,6 +176,48 @@ keyboard traps and live ARIA state are **not** assessed today.
 Only `critical` and `high` open an alert (`muster.notification_outbox` accepts `risk_opened` at
 those two severities only — see [`EMAIL-INVENTORY.md`](EMAIL-INVENTORY.md)).
 
+## Framework mapping
+
+`scan_rules.framework_refs` is what every finding, SITREP and control-register row cites.
+`muster.controls` is a pure projection of it (`muster.sync_controls`), so a mapping added here
+appears in the register on the next scan without any other change.
+
+| Framework | Rules | What it covers here |
+|---|---|---|
+| NIST CSF 2.0 | 24 | `PR.DS-01/02`, `PR.PS-01`, `PR.IR-04`, `DE.CM-01`, `GV.SC-04`, `ID.RA-08` |
+| NIST CSF 1.1 | 24 | kept for buyers mid-transition; every value is a withdrawn identifier |
+| NIST SP 800-53 Rev. 5 | 26 | `SC-8`, `SC-18`, `SC-23`, `CM-6`, `CM-7`, `AC-4`, `SI-8`, `PT-4/5`, `SR-3` |
+| OWASP Top 10:2025 | 14 | `A02:2025` misconfiguration, `A03:2025` supply chain, `A07:2025` auth |
+| OWASP Secure Headers | 9 | one per response header rule |
+| SOC 2 (AICPA TSC) | 15 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
+
+Three things about this that matter when a client asks:
+
+**A mapping is not a test.** Citing `A02:2025` says the finding belongs to that category. It does
+not say MUSTER tests the category. The engine is HTTP-native with no browser and no authenticated
+crawl, so injection, broken access control and authentication are out of reach by construction and
+always will be under this architecture. The register states the same limit on every row.
+
+**The CSF 2.0 pass was a correction, not an addition.** Every `NIST_CSF` value was a CSF 1.1
+identifier, and 2.0 withdrew all of them. `TP-001` cited `ID.SC-2`, which no longer exists anywhere
+in IDENTIFY: supply chain became `GV.SC` under the new GOVERN function. A prospect's GRC team
+working in 2.0 could not have reconciled it.
+
+**None of this is a SOC 2 opinion.** A SOC 2 report is issued by a licensed CPA firm after an
+examination. What MUSTER produces is continuous, timestamped, independently collected evidence a
+client hands to that firm, plus readiness signal between audits. Route the attestation question to
+the client's auditor.
+
+**Not mapped, deliberately:** OWASP ASVS. ASVS 5.0 renumbered against 4.0 and the current chapter
+identifiers were not verifiable when this pass was made. Guessing control identifiers in a
+compliance product is the one unrecoverable mistake, so ASVS waits for someone with the document
+open.
+
+Frameworks live in `muster.frameworks` (key, label), which `controls.framework` references by
+foreign key. Adding one is an insert there, not a constraint edit. Before 2026-09-16 the set was a
+hardcoded `CHECK` plus a `varchar(16)` column, and the AI-governance rules broke the whole register
+for an hour by introducing a 30-character key.
+
 ## What the engine does not check
 
 Worth being able to say out loud, because a prospect will ask:
