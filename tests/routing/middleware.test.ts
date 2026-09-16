@@ -46,6 +46,7 @@ const EVERY_ROUTE: Array<[string, string]> = [
   ["https://app.muster.partners/", "app.muster.partners"],
   ["https://app.muster.partners/app", "app.muster.partners"],
   ["https://app.muster.partners/signin", "app.muster.partners"],
+  ["https://app.muster.partners/admin", "app.muster.partners"],
   ["https://app.muster.partners/reset", "app.muster.partners"],
   ["https://app.muster.partners/robots.txt", "app.muster.partners"],
   ["https://app.muster.28footsystems.com/app", "app.muster.28footsystems.com"],
@@ -139,11 +140,29 @@ test("the app hosts still serve both pages, and /reset lands on signin", () => {
   }
 });
 
+// The platform console shares the app origin deliberately: a Supabase session
+// is stored per-origin, so a console served from anywhere else would load
+// signed-out for someone who had just signed in. The route itself is not the
+// gate -- muster_admin_console() raises 42501 for a non-super-admin -- so the
+// only thing worth pinning here is that the path resolves on both app hosts.
+test("the platform console is served from the app origin, not its own host", () => {
+  for (const host of ["app.muster.partners", "app.muster.28footsystems.com"]) {
+    assert.equal(rewriteTarget(call(`https://${host}/admin`, host)), "/admin.html");
+    assert.equal(rewriteTarget(call(`https://${host}/admin/`, host)), "/admin.html");
+  }
+  // And nowhere else. /admin on the marketing site is not a console; it falls
+  // through to a static file of that name, which does not exist.
+  assert.equal(rewriteTarget(call("https://muster.partners/admin", "muster.partners")), null);
+});
+
 test("isUnder does not match a sibling with a shared prefix", () => {
   // /sitrepfoo is not part of the /sitrep family; on muster.partners it falls
   // through to a static file of that name, which does not exist.
   assert.equal(rewriteTarget(call("https://muster.partners/sitrepfoo", "muster.partners")), null);
   assert.equal(rewriteTarget(call("https://muster.partners/privacywall", "muster.partners")), null);
+  // /administrator is not the console. On an app host it falls to signin.html
+  // like any other unknown path, not to admin.html.
+  assert.equal(rewriteTarget(call("https://app.muster.partners/administrator", "app.muster.partners")), "/signin.html");
 });
 
 test("a trailing slash resolves the same as no trailing slash", () => {

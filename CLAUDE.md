@@ -2,7 +2,7 @@
 
 ## Tooltips are mandatory on every page
 
-Every page in this repo (`index.html`, `app.html`, `signin.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
+Every page in this repo (`index.html`, `app.html`, `admin.html`, `signin.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
 tooltips on its interactive and informational elements — buttons, links, nav items, form fields,
 status indicators, data points, badges, chips, and anything else a user might not immediately
 understand. This is a standing requirement; do not wait to be asked again per page or per change.
@@ -56,7 +56,7 @@ between `/* muster:tokens:start */` and `/* muster:tokens:end */`, written there
 Editing the block inside a page is editing the wrong file; the next sync overwrites it.
 
 Inlining rather than `<link>`ing is deliberate. Every page here is self-contained and makes
-no stylesheet request; a shared linked file would add a render-blocking request to all seven
+no stylesheet request; a shared linked file would add a render-blocking request to every one of them
 and give them one shared way to render completely unstyled -- one bad deploy, or one CSP edit
 on a new host. The cost of inlining is seven copies, and the test is what makes seven copies
 safe. A new page adopts the block by having its `:root` replaced on the next sync run, and
@@ -64,10 +64,54 @@ must be added to `PAGES` in `tools/tokens/sync.mjs` and to the test.
 
 This was adopted 2026-09-13 after the copies had already drifted silently: `--rose` was
 `#f6516a` on the landing page and `#f43f5e` on the other five, `--text-muted` and `--teal-glow`
-split the same way, and `--font-mono` fell back to a bare `monospace` on five of seven pages.
+split the same way, and `--font-mono` fell back to a bare `monospace` on five of the seven pages
+that existed then.
 Nothing looked broken, which is the point. The landing page's `--font-body` / `--font-display`
 names are kept as aliases of `--font-sans` / `--font-serif` so its existing call sites did not
 have to be rewritten.
+
+## A feature flag says where it is enforced, or it says it is enforced nowhere
+
+`muster.feature_flags.enforcement` is a `text[]` of `sql` / `app` / `edge`. An empty
+array means **no code reads this key** — and the Super Admin console renders that as a
+"read by nothing" badge with both switches disabled, because a switch you can move that
+changes nothing is worse than a missing one: it reports a control that does not exist.
+
+This was added 2026-09-16 after the console had been shipping exactly that for months.
+Eleven of twenty-two flags were enforced nowhere and nothing on screen said so, including
+three that read as safety controls — `scheduled_scans` (pg_cron scanned regardless),
+`telegram_alerts` (there is no Telegram relay in this project), and `super_admin_console`
+(console access is `users.role = super_admin`, checked inside every `muster_admin_*`
+function; the flag gates nothing and turning it off would not close the console). Ten
+shipped surfaces had no flag at all, and `app.html` read `o.flags.white_label`, a key that
+has never existed, so the white-label badge said OFF whatever the real flag was set to.
+
+**When you add a flag:** set `enforcement` in the same migration that adds the code
+reading it, never before. `muster_admin_create_flag` deliberately hard-codes `'{}'` — a
+key that did not exist a minute ago is read by nothing, and the console must say so.
+`tests/ui/flag-registry.test.ts` checks every claim against the repo in both directions,
+including the dangerous one: a flag claiming *no* enforcement that SQL is in fact gating on
+would leave the console disabling a live switch.
+
+**`has_flag` vs `flag_state_for_org`.** `muster.has_flag(org, key)` consults the *calling
+user's* overrides first — right for a tenant asking "can I do this". `muster.flag_state_for_org`
+is the same minus that step, for the two jobs where a user must not enter into it: engine
+paths running as `service_role` with no user at all, and the console asking what org 17
+resolves to, where the answer must not change depending on which super admin is looking.
+
+Four flags are wired as of migration `20260916022923`, all defaulting on:
+`scheduled_scans` (the due-scan CTE in `muster.engine_claim`; `next_run_at` is not bumped
+for a gated website, so switching it back on resumes rather than having skipped windows),
+`email_alerts` (`muster_engine_claim_alerts` — the gate is on the **claim**, so off holds
+already-queued alerts as `pending` rather than dropping them), `support_impersonation` and
+`admin_url_scanner`. Ten remain unwired on purpose; each row carries a `wiring_note`
+saying why and what would wire it. `commercial_use_enabled` can never be wired — it is a
+licence term, not a code path, and must not be presented as a control.
+
+Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
+missing from the workspace payload leaves the nav item visible. These flags gate
+visibility, not authority — the RPC behind every view enforces RLS whatever the sidebar
+shows — so a partial load must not silently strip half a tenant's workspace.
 
 ## Other notes
 
@@ -78,11 +122,32 @@ have to be rewritten.
   `app.muster.28footsystems.com/app`, and retiring those hosts would strand every link in the wild.
   Retire them only once nothing outstanding references them.
 - **Sign-in and the workspace live on `app.muster.partners`** — `/` is `signin.html`, `/app` is
-  `app.html`, `/signin` is an alias. They are on their own host, not on `muster.partners`, and they
+  `app.html`, `/admin` is `admin.html`, `/signin` is an alias. They are on their own host, not on `muster.partners`, and they
   are always served **together**: a Supabase session from a password sign-in is stored per-origin, so
   splitting `signin.html` and `app.html` across hosts makes sign-in appear to succeed and then the
   workspace loads signed-out. A host serves both or neither. `app.muster.28footsystems.com` still
   serves the same pair for links already in the wild.
+- **`admin.html` is the standalone Super Admin Console, at `app.muster.partners/admin`.** It is on the
+  app hosts, not a console host of its own, for exactly the reason `signin.html` and `app.html` are
+  served together: a Supabase session is stored per-origin, so a console anywhere else loads
+  signed-out for someone who just signed in. It builds a client with `detectSessionInUrl: false` --
+  it never completes a sign-in, it requires one that already happened here -- and bounces to `/` when
+  there is no session. **It holds no role check of its own, deliberately.** Everything it renders
+  comes from one RPC, `public.muster_admin_console()` (migration `20260916023416`), which is
+  `SECURITY DEFINER`, gated on `muster.is_super_admin()`, and raises `42501` for anyone else; the
+  page recognises that error and shows a "not a super admin" gate. Grants match every other
+  `muster_admin_*` RPC -- `authenticated` only, `anon` revoked by name.
+  Two figures on it have **no instrumentation behind them and the payload says so** rather than
+  guessing, and neither may be quietly replaced with a nicer number: API request volume is not
+  metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
+  `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
+  `customer.subscription.deleted` is unhandled, so a cancelled customer prices in until their plan
+  is changed by hand. Four nav sections (Workspaces, AI Readiness, Domain Monitor, Reports) render
+  an explicit "not instrumented" panel naming what would have to exist first, because the schema
+  cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
+  table. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
+  view, which still backs `muster_admin_overview()` and owns the write actions (plan changes,
+  impersonation, URL runner, incident triage). `app.html`'s super admin hero links across to it.
 - `signin.html` derives its redirect target as `window.location.origin + '/app'` rather than
   hardcoding a host, so it is same-origin on whichever app host served it. It must stay **absolute**:
   it is passed to `signInWithOtp` as `emailRedirectTo`, which Supabase requires to be a full URL —
@@ -184,7 +249,7 @@ have to be rewritten.
   use, so that silently burns them. `app.html`, `signin.html`, `sitrep.html` and
   `onboarding.html` each legitimately need it on (magic link, recovery, or an invite link).
   `index.html` builds a client only to call `muster_public_pricing` and now passes
-  `detectSessionInUrl: false`; `privacy.html` and `sitrep-sample.html` build none at all. A new
+  `detectSessionInUrl: false`, and `admin.html` does the same for the same reason; `privacy.html` and `sitrep-sample.html` build none at all. A new
   page that adds a client for data must turn it off explicitly.
 - **`index.html` forwards a stray auth fragment; it does not swallow it.** Declining to consume
   the fragment (above) keeps the tokens alive but leaves the user on marketing copy holding a
@@ -208,7 +273,9 @@ have to be rewritten.
   extra steps. After a successful change the browser **must** call `refreshSession()`: claims are
   minted at sign-in and not read live, so the old token still says `true` and the workspace looks
   broken until it is replaced. `signin.html` owns the form and checks the flag **before** its bounce
-  to `/app`; `app.html` sends a flagged session back to `/` -- that ordering is the only thing
+  to `/app`; `app.html` and `admin.html` send a flagged session back to `/` -- `admin.html`
+  before its first RPC, because it renders a `42501` as "access denied" and that is the wrong
+  answer for a super admin whose only problem is an old password. That ordering is the only thing
   keeping the two from looping, and `tests/auth/set-password.test.ts` asserts it. Password policy is
   12 characters, no composition rules, blocklist checked against the padded stem too; it lives in
   that function's `core.ts`. Break-glass and the full rationale are in `docs/BACKEND.md` and the

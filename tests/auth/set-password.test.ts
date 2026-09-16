@@ -90,8 +90,12 @@ test("the SQL predicate accepts the same truthy set as the TypeScript one", () =
   );
 });
 
-test("both browser pages test the same truthy set", () => {
-  for (const page of ["signin.html", "app.html"]) {
+test("every browser page that reads the flag tests the same truthy set", () => {
+  // admin.html was added on main while this branch was in flight. It is in this
+  // list because the gate makes muster_admin_console() raise 42501 for a flagged
+  // caller, and that page renders a 42501 as "access denied" -- a message that
+  // would be false for a super admin whose only problem is an old password.
+  for (const page of ["signin.html", "app.html", "admin.html"]) {
     const html = read(page);
     assert.match(html, /\['true', 't', '1'\]\.includes\(v\.toLowerCase\(\)\)/,
       `${page} does not use the shared truthy set`);
@@ -286,6 +290,18 @@ test("app.html hands a flagged session to the sign-in page instead of entering",
   // replace(), not href: a flagged user pressing Back should not land in a
   // workspace that cannot answer.
   assert.match(html.slice(check, check + 400), /window\.location\.replace\(window\.location\.origin \+ '\/'\)/);
+});
+
+test("admin.html checks the flag before its first RPC, not after", () => {
+  // After is too late: load() raises 42501 and the catch shows the access-denied
+  // gate, which is the wrong answer and sends someone hunting a permissions bug.
+  const html = read("admin.html");
+  const check = html.indexOf("if (forcedPasswordChange(session))");
+  const load = html.indexOf("await load();");
+  assert.notEqual(check, -1, "admin.html does not check for a forced change");
+  assert.notEqual(load, -1, "admin.html's load() call moved; re-check the ordering by hand");
+  assert.ok(check < load, "the check must come before the first RPC");
+  assert.match(html.slice(check, check + 300), /location\.replace\(window\.location\.origin \+ '\/'\)/);
 });
 
 test("the forced path refreshes the session before leaving the page", () => {

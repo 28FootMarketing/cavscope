@@ -919,6 +919,8 @@
     .grid-admin-incidents { grid-template-columns: 0.7fr 1.8fr 1.1fr 0.8fr 1.3fr; }
     .grid-admin-flags { grid-template-columns: 1.4fr 2fr 0.7fr 0.9fr; }
     .grid-admin-overrides { grid-template-columns: 1fr 1fr 0.6fr 1.6fr; }
+    .grid-admin-registry { grid-template-columns: 1.3fr 2.2fr 0.9fr 70px 60px 1fr; }
+    .grid-admin-ovr { grid-template-columns: 1.3fr 0.5fr 1.8fr 1.1fr 90px; }
     .grid-admin-jurisdictions { grid-template-columns: 1.4fr 0.8fr 1fr; }
     .grid-admin-users { grid-template-columns: 1.6fr 1.8fr 1fr 1fr; }
     .grid-admin-imp { grid-template-columns: 1.3fr 1.3fr 1.8fr 1fr 0.7fr 0.8fr; }
@@ -2688,6 +2690,10 @@
             </div>
             <div class="hero-actions">
               <button class="btn-ghost" onclick="exportAllTenantsJSON()" data-tooltip="Downloads every client organization and its workspace data as one JSON file.">↓ Export Roster (.json)</button>
+              <!-- The standalone console at /admin is on this same origin, so the
+                   Supabase session carries straight over -- see middleware.js. -->
+              <a class="btn-ghost" href="/admin" style="border-color: rgba(251, 191, 36, 0.45); color: var(--amber); text-decoration: none; display: inline-flex; align-items: center;"
+                data-tooltip="Opens the full-screen platform console: headline counts, 30-day scan activity, portfolio health and a computed action queue, all from one super-admin-gated RPC.">◱ Open Platform Console</a>
               <button class="btn-primary" onclick="openModal('create_tenant')" data-tooltip="Set up a new client organization with its own isolated workspace.">＋ Provision New Tenant</button>
             </div>
           </div>
@@ -5418,7 +5424,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       exit() {
         this.active = false;
         this.stopPolling();
-        this.ws = this.org = this.website = this.overview = this.admin = null;
+        this.ws = this.org = this.website = this.overview = this.admin = this.flagRegistry = null;
         this.restoreDemo();
         this.setSync('Demo workspace · sample data');
         this.renderTopbar();
@@ -5556,9 +5562,13 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         tenant.data = this.buildState(o, this.overview);
         activeTenantId = tenant.id;
         state = tenant.data;
-        platformFeatureFlags.whiteLabeling = !!(o.flags && o.flags.white_label);
+        // The key is white_label_enabled. It was read as `white_label` here until
+        // 2026-09-16, which is not a flag that has ever existed, so this always
+        // resolved undefined and the badge read OFF no matter what the flag said.
+        platformFeatureFlags.whiteLabeling = !!(o.flags && o.flags.white_label_enabled);
         const toggle = document.getElementById('ffWhiteLabelToggle');
         if (toggle) { toggle.checked = platformFeatureFlags.whiteLabeling; toggle.disabled = !this.ws.is_super_admin; }
+        this.applyFlagsToNav(o.flags || {});
         // This nav tab holds real tenant self-service (team, API keys, alert
         // preferences) alongside platform-wide super-admin controls. A regular
         // member shouldn't have to open something literally labeled "Super Admin
@@ -5573,6 +5583,43 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.renderTopbar();
         this.renderLivePanels();
         if (this.ws.is_super_admin) this.loadAdmin().catch(e => this.fail(e));
+      },
+      // ---------- flags decide what the workspace shows ----------
+      //
+      // Ten nav items map to a flag whose enforcement column says 'app'. Before
+      // 2026-09-16 that mapping existed only in the flag's description: every
+      // nav item rendered for every tenant regardless, so turning one of these
+      // off in the console changed nothing. This is the code that makes the
+      // enforcement claim true, and tests/ui/flag-registry.test.ts checks that
+      // every key claiming 'app' appears here.
+      //
+      // Fail open, deliberately. A flag missing from the payload -- an older
+      // q_flags, a partial load -- leaves the item visible. The alternative is
+      // a tenant whose workspace silently loses half its nav because a read
+      // failed, and these flags gate visibility, not authority: the RPCs behind
+      // each view enforce RLS whatever the sidebar shows.
+      navFlagMap: {
+        accessibility: 'accessibility_audit',
+        aio:           'aio_audit',
+        risks:         'risk_register',
+        controls:      'control_mapping',
+        evidence:      'evidence_library',
+        remediation:   'remediation_plan',
+        board:         'board_reporting',
+        plainReport:   'plain_english_report',
+        governance:    'governance_exceptions',
+        assurance:     'assurance_testing',
+      },
+      applyFlagsToNav(flags) {
+        for (const [view, key] of Object.entries(this.navFlagMap)) {
+          const btn = document.querySelector(`#mainNav button[data-view="${view}"]`);
+          if (!btn) continue;
+          const on = !(key in flags) || !!flags[key];
+          btn.hidden = !on;
+          // If the tenant is standing on a view that just went away, put them
+          // somewhere that still exists rather than on a blank pane.
+          if (!on && btn.classList.contains('active')) showView('overview');
+        }
       },
       sevCap(s) { return ({ critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Low' })[s] || 'Low'; },
       lik(s) { return ({ critical: 5, high: 4, medium: 3, low: 2, info: 1 })[s] || 1; },
@@ -5930,11 +5977,12 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
 
       // ---------- super admin console ----------
       async loadAdmin() {
-        [this.admin, this.adminUrlRuns, this.imp, this.impLog] = await Promise.all([
+        [this.admin, this.adminUrlRuns, this.imp, this.impLog, this.flagRegistry] = await Promise.all([
           this.rpc('muster_admin_overview'),
           this.rpc('muster_admin_url_runs'),
           this.rpc('muster_admin_impersonate_status'),
           this.rpc('muster_admin_impersonation_log', { p_limit: 25 }),
+          this.rpc('muster_admin_flag_registry'),
         ]);
         const a = this.admin;
         const demoBlocks = document.getElementById('superadminDemoBlocks');
@@ -6062,32 +6110,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             </div>
           </div>
 
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Feature Flags</h3><p>Platform-wide defaults. A flag with a plan minimum only applies at that tier and above.</p></div></div>
-            <div class="table-header grid-admin-flags"><span>Flag</span><span>Description</span><span>Default</span><span>Kill Switch</span></div>
-            <div class="list">
-              ${flags.map(f => `<div class="table-row grid-admin-flags">
-                <div><code style="color:var(--teal); font-size:11.5px;">${escapeHtml(f.key)}</code><br><small style="color:var(--text-dim);">${escapeHtml(f.scope)}</small></div>
-                <div style="color:var(--text-muted); font-size:12px;">${escapeHtml(f.description)}${f.plan_minimum ? ` · <strong style="color:#fff;">${escapeHtml(f.plan_minimum)}+</strong>` : ''}</div>
-                <div class="switch-wrap"><label class="toggle-switch" data-tooltip="Default on/off for every org, unless overridden per-org below."><input type="checkbox" ${f.default_enabled ? 'checked' : ''} onchange="Live.setFlag('${f.key}', this.checked)"><span class="slider"></span></label></div>
-                <div class="switch-wrap"><label class="toggle-switch" data-tooltip="Forces this flag off for everyone, ignoring the default and every override."><input type="checkbox" ${f.kill_switch ? 'checked' : ''} onchange="Live.killSwitch('${f.key}', this.checked)"><span class="slider"></span></label></div>
-              </div>`).join('')}
-            </div>
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Per-Org Flag Overrides (${overrides.length})</h3><p>Exceptions to the defaults above -- a specific org or user turned on or off independent of plan.</p></div></div>
-            ${overrides.length ? `
-              <div class="table-header grid-admin-overrides"><span>Target</span><span>Flag</span><span>State</span><span>Reason / Expiry</span></div>
-              <div class="list">
-                ${overrides.map(o => `<div class="table-row grid-admin-overrides">
-                  <div style="color:var(--text-dim); font-size:12px;">${o.organization_id ? `org #${o.organization_id}` : (o.user_id ? `user #${o.user_id}` : '')}</div>
-                  <div><code style="color:var(--teal); font-size:11.5px;">${escapeHtml(o.flag_key)}</code></div>
-                  <div><span class="pill ${o.enabled ? 'pill-low' : 'pill-high'}">${o.enabled ? 'on' : 'off'}</span></div>
-                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(o.reason || '')}${o.expires_at ? ` · expires ${String(o.expires_at).slice(0, 10)}` : ''}</div>
-                </div>`).join('')}
-              </div>` : `<div class="panel-body" style="color:var(--text-dim); font-size:12.5px;">None set.</div>`}
-          </div>
+          ${this.renderFlagRegistry()}
 
           <div class="panel" style="margin-bottom:24px;">
             <div class="panel-head"><div><h3>Platform Agents (${agents.length})</h3><p>AI agents and API keys not scoped to any single tenant -- platform-level automation and integrations.</p></div></div>
@@ -6194,6 +6217,280 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
 
         this.startImpersonationTicker();
         if (imp.active) this.loadImpersonatedView().catch(() => {});
+      },
+      // ---------- feature flag registry ----------
+      //
+      // The panel this replaced listed 22 flags with a default toggle and a kill
+      // switch beside each, and eleven of those switches were wired to nothing.
+      // Nothing on screen distinguished them, so the console reported controls
+      // that did not exist -- and ten shipped surfaces had no flag at all.
+      //
+      // muster_admin_flag_registry carries an `enforcement` array per flag, and
+      // everything here is built around showing it: an unwired flag gets a plain
+      // "read by nothing" badge and its switches are disabled, because a switch
+      // you can move that changes nothing is the thing being fixed.
+      flagCategories: [
+        ['workspace',     'Workspace surfaces',                'Nav items and views inside a tenant workspace.'],
+        ['reporting',     'Reporting and deliverables',        'What a client is handed: SITREPs, board packs, the plain-English report.'],
+        ['engine',        'Scan engine',                       'What the scanner does and when it runs.'],
+        ['notifications', 'Notifications',                     'Outbound application email. Auth email is GoTrue and is not covered by any flag here.'],
+        ['partner',       'Partner and white-label',           'Entitlements sold with the Partner tier.'],
+        ['platform',      'Platform capabilities',             'Tools that act across tenants, or outside them.'],
+        ['unbuilt',       'Declared, not built',               'Kept because they are real product commitments. Nothing reads them and nothing can, yet.'],
+        ['other',         'Uncategorised',                     'Created from this console and not yet filed.'],
+      ],
+      renderFlagRegistry() {
+        const reg = this.flagRegistry;
+        if (!reg) return '';
+        const sum = reg.summary || {}, plans = reg.plans || [], flags = reg.flags || [];
+        const unwired = sum.unwired || 0;
+        const planOpts = (sel) => ['<option value="">no plan gate</option>']
+          .concat(plans.map(p => `<option value="${p.plan}" ${p.plan === sel ? 'selected' : ''}>${escapeHtml(p.plan)}+</option>`)).join('');
+
+        const row = (f) => {
+          const wired = !!f.wired;
+          const enf = (f.enforcement || []).join(' + ');
+          const orgs = sum.organizations || 0;
+          const ovs = f.overrides || [];
+          const liveOvs = ovs.filter(o => !o.expired);
+          return `
+            <div class="table-row grid-admin-registry" style="${wired ? '' : 'opacity:0.82;'}">
+              <div>
+                <code style="color:${wired ? 'var(--teal)' : 'var(--text-dim)'}; font-size:11.5px;">${escapeHtml(f.key)}</code>
+                <br><small style="color:var(--text-dim);">${escapeHtml(f.scope)}${f.name ? ' · ' + escapeHtml(f.name) : ''}</small>
+              </div>
+              <div style="color:var(--text-muted); font-size:12px;">
+                ${escapeHtml(f.surface || f.description || '')}
+                <div style="margin-top:4px;">
+                  ${wired
+                    ? `<span class="pill pill-low" data-tooltip="Something in the codebase reads this key, so the switches beside it take effect. Enforced in: ${escapeHtml(enf)}.">enforced in ${escapeHtml(enf)}</span>`
+                    : `<span class="pill pill-high" data-tooltip="No code reads this key. Moving these switches would change nothing, so they are disabled. Open the row for why, and what would wire it.">read by nothing</span>`}
+                  ${f.kill_switch ? '<span class="pill pill-critical" data-tooltip="The kill switch is on, so this flag resolves off for everyone regardless of defaults, plans and overrides.">killed</span>' : ''}
+                </div>
+              </div>
+              <div>
+                <select class="filter-select" style="padding:4px 8px; font-size:11.5px;" onchange="Live.setFlagPlan('${escapeHtml(f.key)}', this.value)"
+                        data-tooltip="The lowest plan that gets this flag. An org below it resolves off whatever the default says; a per-org override still beats the plan gate.">${planOpts(f.plan_minimum)}</select>
+              </div>
+              <div class="switch-wrap"><label class="toggle-switch" data-tooltip="${wired ? 'Default on/off for every org, before plan gates and overrides.' : 'Disabled: nothing reads this key, so this switch would be theatre.'}">
+                <input type="checkbox" ${f.default_enabled ? 'checked' : ''} ${wired ? '' : 'disabled'} onchange="Live.setFlag('${escapeHtml(f.key)}', this.checked)"><span class="slider"></span></label></div>
+              <div class="switch-wrap"><label class="toggle-switch" data-tooltip="${wired ? 'Forces this flag off for everyone, ignoring the default, the plan gate and every override.' : 'Disabled: nothing reads this key, so there is nothing to kill.'}">
+                <input type="checkbox" ${f.kill_switch ? 'checked' : ''} ${wired ? '' : 'disabled'} onchange="Live.killSwitch('${escapeHtml(f.key)}', this.checked)"><span class="slider"></span></label></div>
+              <div style="font-size:12px; color:var(--text-dim);"
+                   data-tooltip="How many organizations this flag currently resolves ON for, counting kill switch, overrides, plan gates and the default -- not what the default says.">
+                ${f.orgs_enabled ?? 0}/${orgs} orgs${liveOvs.length ? ` · <span style="color:var(--amber);">${liveOvs.length} override${liveOvs.length === 1 ? '' : 's'}</span>` : ''}
+              </div>
+              <div style="grid-column:1 / -1;">
+                <details style="margin-top:8px;">
+                  <summary style="cursor:pointer; color:var(--teal); font-size:11.5px; list-style:none;"
+                           data-tooltip="Full description, per-plan resolution, every override on this flag, and the form to add one.">▸ detail, overrides and per-plan resolution</summary>
+                  <div style="padding:12px 0 4px 0;">
+                    <p style="color:var(--text-muted); font-size:12.5px; margin:0 0 10px 0;">${escapeHtml(f.description || '')}</p>
+                    ${f.wiring_note ? `<p style="color:var(--amber); font-size:12px; margin:0 0 10px 0; border-left:2px solid var(--amber); padding-left:10px;"
+                         data-tooltip="Why this flag is read by nothing, and what would have to change for it to mean something.">${escapeHtml(f.wiring_note)}</p>` : ''}
+
+                    <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;"
+                         data-tooltip="What an org on each plan resolves to from the default and the plan gate alone. A per-org override beats this.">
+                      ${plans.map(p => {
+                        const on = !!(f.enabled_by_plan || {})[p.plan];
+                        return `<span style="font-size:11.5px; color:${on ? 'var(--emerald)' : 'var(--text-dim)'};">${on ? '●' : '○'} ${escapeHtml(p.plan)}</span>`;
+                      }).join('')}
+                    </div>
+
+                    ${ovs.length ? `
+                      <div class="table-header grid-admin-ovr"><span>Target</span><span>State</span><span>Reason</span><span>Set by / expires</span><span style="text-align:right;">Revoke</span></div>
+                      <div class="list">
+                        ${ovs.map(o => `<div class="table-row grid-admin-ovr" style="${o.expired ? 'opacity:0.5;' : ''}">
+                          <div style="color:#fff; font-size:12px;">${escapeHtml(o.target_label || '')}<br><small style="color:var(--text-dim);">${escapeHtml(o.target_kind)}</small></div>
+                          <div><span class="pill ${o.enabled ? 'pill-low' : 'pill-high'}">${o.enabled ? 'on' : 'off'}</span></div>
+                          <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(o.reason || '—')}</div>
+                          <div style="color:var(--text-dim); font-size:11.5px;">${escapeHtml(o.set_by || 'unknown')}<br>${o.expires_at ? (o.expired ? 'expired ' : 'expires ') + String(o.expires_at).slice(0, 10) : 'no expiry'}</div>
+                          <div style="text-align:right;"><button class="btn-ghost" style="padding:3px 9px; font-size:11px;" onclick="Live.clearFlagOverride(${o.id})"
+                                  data-tooltip="Removes this exception. The target falls back to the plan gate and the default immediately.">Revoke</button></div>
+                        </div>`).join('')}
+                      </div>` : `<div style="color:var(--text-dim); font-size:12px; margin-bottom:10px;">No overrides on this flag.</div>`}
+
+                    <form onsubmit="Live.addFlagOverride(event, '${escapeHtml(f.key)}'); return false;"
+                          style="display:grid; grid-template-columns:1.4fr 0.7fr 2fr 1fr auto; gap:8px; align-items:end; margin-top:12px; border-top:1px solid var(--surface-border); padding-top:12px;">
+                      <div>
+                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Organization</label>
+                        <select name="org" class="filter-select" style="width:100%; padding:7px 9px; font-size:12px;" required
+                                data-tooltip="Which tenant this exception applies to. An override beats both the plan gate and the default, in either direction.">
+                          ${(this.admin && this.admin.tenants || []).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('') || '<option value="" disabled>No tenants</option>'}
+                        </select>
+                      </div>
+                      <div>
+                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">State</label>
+                        <select name="enabled" class="filter-select" style="width:100%; padding:7px 9px; font-size:12px;"
+                                data-tooltip="On grants the feature to an org that would not otherwise have it. Off takes it away from one that would.">
+                          <option value="true">on</option><option value="false">off</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Reason</label>
+                        <input name="reason" required minlength="8" placeholder="e.g. pilot for the Q4 renewal, agreed with sales"
+                               style="width:100%; padding:7px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                               data-tooltip="Required. An override with no stated reason is indistinguishable from a mistake six months later.">
+                      </div>
+                      <div>
+                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label>
+                        <input name="expires" type="date"
+                               style="width:100%; padding:6px 9px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                               data-tooltip="Optional. An override with an expiry cleans itself up; one without stays until someone revokes it by hand.">
+                      </div>
+                      <button class="btn-primary" type="submit" style="padding:7px 12px; font-size:11.5px;"
+                              data-tooltip="Saves the exception. It takes effect on this org's next request -- no deploy, no restart.">Add override</button>
+                    </form>
+
+                    ${wired ? '' : `<div style="margin-top:12px;"><button class="btn-ghost" style="padding:4px 10px; font-size:11px; border-color:var(--rose); color:var(--rose);"
+                        onclick="Live.deleteFlag('${escapeHtml(f.key)}')"
+                        data-tooltip="Removes the flag and every override on it. Only offered because nothing reads this key -- the database refuses to delete a flag that is enforced, since has_flag would then answer false for it everywhere.">Delete this flag</button></div>`}
+                  </div>
+                </details>
+              </div>
+            </div>`;
+        };
+
+        const groups = this.flagCategories.map(([cat, title, blurb]) => {
+          const inCat = flags.filter(f => (f.category || 'other') === cat);
+          if (!inCat.length) return '';
+          return `
+            <div style="padding:14px 20px 4px 20px; border-top:1px solid var(--surface-border);">
+              <strong style="color:#fff; font-size:12.5px;">${escapeHtml(title)}</strong>
+              <span style="color:var(--text-dim); font-size:11.5px;"> · ${escapeHtml(blurb)}</span>
+            </div>
+            <div class="table-header grid-admin-registry"><span>Flag</span><span>What it gates</span><span>Plan gate</span><span>Default</span><span>Kill</span><span>Reach</span></div>
+            <div class="list">${inCat.map(row).join('')}</div>`;
+        }).join('');
+
+        return `
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head">
+              <div>
+                <h3>Feature Flags (${sum.total ?? 0})</h3>
+                <p>Every flag in the platform, what reads it, what each plan resolves to, and every exception. A flag marked "read by nothing" has its switches disabled on purpose.</p>
+              </div>
+            </div>
+            <div class="panel-body" style="display:flex; gap:28px; flex-wrap:wrap; padding-bottom:14px;">
+              <div data-tooltip="Flags that some code actually reads, so their switches take effect."><small style="color:var(--text-dim); display:block;">Enforced</small><strong style="color:var(--emerald); font-size:18px;">${sum.wired ?? 0}</strong></div>
+              <div data-tooltip="Flags nothing reads. Each one is either a feature that is not built or an entitlement recorded but not gated in code -- open the row for which."><small style="color:var(--text-dim); display:block;">Read by nothing</small><strong style="color:${unwired ? 'var(--amber)' : '#fff'}; font-size:18px;">${unwired}</strong></div>
+              <div data-tooltip="Flags forced off for everyone by their kill switch."><small style="color:var(--text-dim); display:block;">Killed</small><strong style="color:#fff; font-size:18px;">${sum.kill_switched ?? 0}</strong></div>
+              <div data-tooltip="Live per-org and per-user exceptions across every flag. Expired ones are not counted."><small style="color:var(--text-dim); display:block;">Overrides</small><strong style="color:#fff; font-size:18px;">${sum.overrides ?? 0}</strong></div>
+              <div data-tooltip="Organizations these flags resolve against."><small style="color:var(--text-dim); display:block;">Organizations</small><strong style="color:#fff; font-size:18px;">${sum.organizations ?? 0}</strong></div>
+            </div>
+            ${unwired ? `<div class="panel-body" style="padding-top:0;">
+              <div style="border:1px solid var(--amber); border-radius:var(--radius-md); background:rgba(251,191,36,0.07); padding:12px 14px; font-size:12.5px; color:var(--text-muted);"
+                   data-tooltip="These keys appear nowhere in the SQL, the pages or the edge functions. Their switches are disabled here so the console cannot report a control that does not exist.">
+                <strong style="color:var(--amber);">${unwired} flag${unwired === 1 ? '' : 's'} are read by nothing:</strong>
+                ${(reg.unwired_keys || []).map(k => `<code style="color:var(--text-dim); font-size:11.5px;">${escapeHtml(k)}</code>`).join(', ')}.
+                Each row says why. They are kept because they are real product commitments, not because they work.
+              </div>
+            </div>` : ''}
+            ${groups}
+            <div class="panel-body" style="border-top:1px solid var(--surface-border); margin-top:14px;">
+              <details>
+                <summary style="cursor:pointer; color:var(--teal); font-size:12.5px;"
+                         data-tooltip="Creates a flag row. It will be marked read by nothing until code is written that reads the key -- creating it here does not gate anything on its own.">▸ New flag</summary>
+                <form onsubmit="Live.createFlag(event); return false;" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:12px;">
+                  <div>
+                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Key</label>
+                    <input name="key" required pattern="[a-z][a-z0-9_]{2,47}" placeholder="lower_snake_case"
+                           style="width:100%; padding:8px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                           data-tooltip="What the code will read. lower_snake_case, 3 to 48 characters. It cannot be renamed afterwards without a migration.">
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Name</label>
+                    <input name="name" required placeholder="Human-readable name"
+                           style="width:100%; padding:8px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                           data-tooltip="What this appears as in the console.">
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Category</label>
+                    <select name="category" class="filter-select" style="width:100%; padding:8px 9px; font-size:12px;"
+                            data-tooltip="Which group this flag is filed under above.">
+                      ${this.flagCategories.map(([c, t]) => `<option value="${c}">${escapeHtml(t)}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div style="grid-column:1 / -1;">
+                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Description</label>
+                    <input name="description" required minlength="10" placeholder="What this gates, written for whoever finds the switch next"
+                           style="width:100%; padding:8px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
+                           data-tooltip="Required. This is what the next person reads before deciding whether it is safe to flip.">
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Scope</label>
+                    <select name="scope" class="filter-select" style="width:100%; padding:8px 9px; font-size:12px;"
+                            data-tooltip="Organization is the usual choice. Platform means it is not per-tenant at all.">
+                      <option value="organization">organization</option><option value="platform">platform</option><option value="user">user</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Plan gate</label>
+                    <select name="plan" class="filter-select" style="width:100%; padding:8px 9px; font-size:12px;"
+                            data-tooltip="Lowest plan that gets it. Leave unset for no plan gate.">${planOpts(null)}</select>
+                  </div>
+                  <div style="display:flex; align-items:end; gap:10px;">
+                    <label class="toggle-switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships."><input type="checkbox" name="default_enabled"><span class="slider"></span></label>
+                    <button class="btn-primary" type="submit" style="padding:8px 14px; font-size:12px;"
+                            data-tooltip="Creates the flag, marked read by nothing until code reads the key.">Create flag</button>
+                  </div>
+                </form>
+              </details>
+            </div>
+          </div>
+        `;
+      },
+      async setFlagPlan(key, plan) {
+        try {
+          await this.rpc('muster_admin_set_flag_plan_minimum', { p_key: key, p_plan: plan || null });
+          showToast(plan ? `${key} now requires ${plan}+.` : `${key} plan gate removed.`);
+          await this.loadWorkspace();
+        } catch (e) { this.fail(e); }
+      },
+      async addFlagOverride(e, key) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          await this.rpc('muster_admin_set_flag', {
+            p_key: key,
+            p_enabled: f.get('enabled') === 'true',
+            p_organization_id: Number(f.get('org')),
+            p_reason: f.get('reason'),
+            p_expires_at: f.get('expires') ? new Date(f.get('expires') + 'T23:59:59Z').toISOString() : null,
+          });
+          showToast(`Override saved on ${key}.`);
+          await this.loadWorkspace();
+        } catch (err) { this.fail(err); }
+      },
+      async clearFlagOverride(id) {
+        try {
+          const r = await this.rpc('muster_admin_clear_flag_override', { p_id: id });
+          showToast(`Override on ${r.flag_key} revoked.`);
+          await this.loadWorkspace();
+        } catch (e) { this.fail(e); }
+      },
+      async createFlag(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          const r = await this.rpc('muster_admin_create_flag', {
+            p_key: f.get('key'), p_name: f.get('name'), p_description: f.get('description'),
+            p_scope: f.get('scope'), p_category: f.get('category'),
+            p_default_enabled: f.get('default_enabled') === 'on',
+            p_plan_minimum: f.get('plan') || null,
+          });
+          showToast(`${r.key} created. Nothing reads it yet.`);
+          e.target.reset();
+          await this.loadWorkspace();
+        } catch (err) { this.fail(err); }
+      },
+      async deleteFlag(key) {
+        if (!confirm(`Delete the flag ${key} and every override on it? This cannot be undone.`)) return;
+        try {
+          await this.rpc('muster_admin_delete_flag', { p_key: key });
+          showToast(`${key} deleted.`);
+          await this.loadWorkspace();
+        } catch (e) { this.fail(e); }
       },
       // ---------- support impersonation ----------
       //
