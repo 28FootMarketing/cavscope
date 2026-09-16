@@ -894,6 +894,7 @@
     .grid-remediation { grid-template-columns: 2fr 1.2fr 1fr 1.2fr 110px; }
     .grid-tests { grid-template-columns: 1.6fr 1fr 1fr 1.4fr 110px; }
     .grid-objectives { grid-template-columns: 2fr 1.2fr 1fr 1.2fr 100px; }
+    .grid-auditHistory { grid-template-columns: 1.8fr 0.9fr 0.9fr 1fr 1.6fr 1.2fr; }
     .grid-aio-p0 { grid-template-columns: 100px 1.5fr 2fr 1.2fr 100px; }
     .grid-wcag-defects { grid-template-columns: 90px 1.2fr 2fr 1.4fr 120px 110px; }
     .grid-superadmin-tenants { grid-template-columns: 1.6fr 1.4fr 1.2fr 1.1fr 100px 140px; }
@@ -1569,6 +1570,11 @@
         <button data-view="assurance" data-tooltip="Records of tests proving each control actually works.">
           <span class="ico">▤</span>
           <span>Assurance Testing</span>
+        </button>
+        <button data-view="auditHistory" data-tooltip="Every scan MUSTER has run for this tenant, across every website, kept permanently.">
+          <span class="ico">⌗</span>
+          <span>Audit History</span>
+          <span class="nav-count" id="badgeAuditHistory">0</span>
         </button>
 
         <div class="nav-label" style="margin-top: 10px;">Platform Administration</div>
@@ -2643,6 +2649,56 @@
           </div>
         </section>
 
+        <!-- ================= VIEW: TENANT AUDIT HISTORY ================= -->
+        <section id="auditHistory" class="view">
+          <div class="hero">
+            <div class="hero-content">
+              <span class="eyebrow">Live Audit Runs</span>
+              <h2>Audit History Across Every Website</h2>
+              <p>Every scan MUSTER has run for this tenant, across every website it covers, kept permanently and searchable here.</p>
+            </div>
+            <div class="hero-actions">
+              <button class="btn-ghost" id="btnAuditHistoryRefresh" onclick="Live.loadAuditHistory(true)" data-tooltip="Reloads the audit history with the current filters.">⟳ Refresh</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head" style="flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h3>Audit Run Log</h3>
+                <p>Every scan run for this tenant, newest first</p>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="auditHistoryWebsiteFilter" class="filter-select" onchange="Live.setAuditHistoryFilter('websiteId', this.value)" data-tooltip="Show audit runs for one website only, or every website in this tenant.">
+                  <option value="">All websites</option>
+                </select>
+                <select id="auditHistoryStatusFilter" class="filter-select" onchange="Live.setAuditHistoryFilter('status', this.value)" data-tooltip="Show only runs in this state: queued, running, complete, or failed.">
+                  <option value="">Any status</option>
+                  <option value="complete">Complete</option>
+                  <option value="running">Running</option>
+                  <option value="queued">Queued</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-header grid-auditHistory">
+              <span>Website</span>
+              <span>Trigger</span>
+              <span>Status</span>
+              <span>Posture</span>
+              <span>Findings (new / resolved)</span>
+              <span>Finished</span>
+            </div>
+            <div id="auditHistoryTableBody" class="list">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px;">
+              <span class="live-muted" id="auditHistoryCount" style="font-size: 12px;"></span>
+              <button class="btn-ghost" id="btnAuditHistoryMore" style="padding: 6px 14px; font-size: 12px;" onclick="Live.loadAuditHistory(false)" data-tooltip="Loads the next set of older audit runs." hidden>Load more</button>
+            </div>
+            <p class="live-muted" id="auditHistorySignedOut" style="padding: 14px 20px; display: none;">Sign in to a live workspace to see real audit run history across every website in this tenant. Demo mode does not model multi-website scan history.</p>
+          </div>
+        </section>
+
         <!-- ================= VIEW 11: PLATFORM SUPER ADMIN CONSOLE ================= -->
         <section id="superadmin" class="view">
           <div class="hero">
@@ -3277,6 +3333,7 @@
 
       if (targetView) targetView.classList.add('active');
       if (targetBtn) targetBtn.classList.add('active');
+      if (viewId === 'auditHistory' && typeof Live !== 'undefined') Live.renderAuditHistoryTable();
 
       const sidebar = document.getElementById('sidebar');
       if (sidebar) sidebar.classList.remove('open');
@@ -5111,6 +5168,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       sb: null, session: null, active: false, showingDemo: false,
       ws: null, org: null, website: null, overview: null, admin: null,
       demoStore: null, demoTenantId: null, poll: null, countries: null,
+      auditHistory: { rows: [], total: 0, limit: 25, offset: 0, websiteId: '', status: '' },
 
       init() {
         if (!window.supabase || !window.supabase.createClient) { console.warn('supabase-js not loaded; live mode off'); return; }
@@ -5201,6 +5259,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.restoreDemo();
         this.setSync('Demo workspace · sample data (signed in)');
         this.renderTopbar();
+        this.renderAuditHistoryTable();
       },
       async showLive() {
         this.showingDemo = false;
@@ -5325,6 +5384,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.setSync(`Live · ${o.name} · ${o.plan} plan`);
         this.renderTopbar();
         this.renderLivePanels();
+        this.auditHistory = { rows: [], total: 0, limit: 25, offset: 0, websiteId: '', status: '' };
+        const wf = document.getElementById('auditHistoryWebsiteFilter'); if (wf) wf.dataset.built = '';
+        const sf = document.getElementById('auditHistoryStatusFilter'); if (sf) sf.value = '';
+        this.loadAuditHistory(true).catch(e => this.fail(e));
         if (this.ws.is_super_admin) this.loadAdmin().catch(e => this.fail(e));
       },
       sevCap(s) { return ({ critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Low' })[s] || 'Low'; },
@@ -5438,6 +5501,68 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         }, 6000);
       },
       stopPolling() { if (this.poll) { clearInterval(this.poll); this.poll = null; } },
+
+      // ---------- audit history: every scan, every website, this tenant ----------
+      async loadAuditHistory(reset) {
+        if (!this.org) return;
+        try {
+          const page = await this.rpc('muster_org_scans', {
+            p_organization_id: this.org.id,
+            p_limit: this.auditHistory.limit,
+            p_offset: reset ? 0 : this.auditHistory.offset,
+            p_website_id: this.auditHistory.websiteId ? Number(this.auditHistory.websiteId) : null,
+            p_status: this.auditHistory.status || null
+          });
+          const rows = page.rows || [];
+          this.auditHistory.rows = reset ? rows : this.auditHistory.rows.concat(rows);
+          this.auditHistory.total = page.total || 0;
+          this.auditHistory.offset = this.auditHistory.rows.length;
+          this.renderAuditHistoryFilters();
+          this.renderAuditHistoryTable();
+        } catch (e) { this.fail(e); }
+      },
+      setAuditHistoryFilter(key, value) {
+        this.auditHistory[key] = value;
+        this.loadAuditHistory(true);
+      },
+      renderAuditHistoryFilters() {
+        const sel = document.getElementById('auditHistoryWebsiteFilter');
+        if (sel && sel.dataset.built !== '1') {
+          const sites = (this.org && this.org.websites) || [];
+          sel.innerHTML = '<option value="">All websites</option>' + sites.map(w => `<option value="${w.id}">${escapeHtml(w.name)}</option>`).join('');
+          sel.dataset.built = '1';
+        }
+      },
+      renderAuditHistoryTable() {
+        const body = document.getElementById('auditHistoryTableBody');
+        if (!body) return;
+        const badge = document.getElementById('badgeAuditHistory');
+        const countEl = document.getElementById('auditHistoryCount');
+        const moreBtn = document.getElementById('btnAuditHistoryMore');
+        const signedOut = document.getElementById('auditHistorySignedOut');
+        const live = this.active && !this.showingDemo && !!this.org;
+        if (signedOut) signedOut.style.display = live ? 'none' : 'block';
+        if (!live) { body.innerHTML = ''; if (countEl) countEl.textContent = ''; if (moreBtn) moreBtn.hidden = true; if (badge) badge.textContent = '0'; return; }
+        const rows = this.auditHistory.rows;
+        if (badge) badge.textContent = this.auditHistory.total;
+        body.innerHTML = rows.length ? rows.map(s => {
+          const posture = (s.summary && s.summary.posture_score != null) ? `${s.summary.posture_score} (${s.summary.posture_band})` : '—';
+          const findings = (s.summary && s.summary.new != null) ? `${s.summary.new} new / ${s.summary.resolved || 0} resolved` : '—';
+          const finished = s.finished_at ? String(s.finished_at).slice(0, 16).replace('T', ' ') : (s.status === 'failed' ? 'failed to finish' : 'in progress');
+          const statusPill = s.status === 'complete' ? 'pill-approved' : (s.status === 'failed' ? 'pill-critical' : 'pill-pending');
+          const errTip = s.error_message ? ` data-tooltip="${escapeHtml(s.error_message)}"` : '';
+          return `<div class="table-row grid-auditHistory">
+            <div><strong style="font-size: 13px; color: #fff;">${escapeHtml(s.website_name)}</strong><br><small style="color: var(--text-dim); font-size: 11px;">Scan #${s.id} · ${escapeHtml(s.engine_version || 'engine')}</small></div>
+            <div><span style="font-size: 12px; color: var(--text-muted); text-transform: capitalize;">${escapeHtml(s.trigger)}</span></div>
+            <div><span class="pill ${statusPill}"${errTip}>${escapeHtml(s.status)}</span></div>
+            <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(posture)}</span></div>
+            <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(findings)}</span></div>
+            <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(finished)}</span></div>
+          </div>`;
+        }).join('') : '<p class="live-muted" style="padding: 16px 20px;">No audit runs yet for this filter.</p>';
+        if (countEl) countEl.textContent = rows.length ? `Showing ${rows.length} of ${this.auditHistory.total}` : '';
+        if (moreBtn) moreBtn.hidden = rows.length >= this.auditHistory.total;
+      },
 
       // ---------- live panels injected into existing views ----------
       panel(id, view) {

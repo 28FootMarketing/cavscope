@@ -71,6 +71,10 @@ Signed in:
 - `muster_add_website`, `muster_request_scan`, `muster_update_scan_settings`
 - `muster_website_overview(p_website_id)` -> summary + compliance posture + brand + open findings + recent scans
 - `muster_findings`, `muster_scans`, `muster_sitrep`, `muster_latest_sitrep`, `muster_evidence`, `muster_compliance_posture`
+- `muster_org_scans(p_organization_id, p_limit default 25, p_offset default 0, p_website_id default null, p_status default null)` ->
+  `{total, rows: [scan + website_name/website_url]}` — every audit run across every website in the tenant, newest first,
+  paginated (`p_limit`/`p_offset`) and filterable by website or status. `muster_scans` stays per-website and capped at 100;
+  this is the full tenant history.
 - `muster_update_finding_status(p_finding_id, p_status, p_note)`, `muster_promote_finding_to_risk(p_finding_id)`
 - `muster_brand`, `muster_save_brand(p)`, `muster_save_preferences(p)`
 - `muster_invite(p_organization_id, p_email, p_role)`, `muster_claim_invites()`
