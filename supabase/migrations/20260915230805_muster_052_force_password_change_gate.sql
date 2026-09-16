@@ -68,17 +68,6 @@
 -- not a gate. Verified against all six claim shapes (boolean true, string
 -- "true", boolean false, key absent, no app_metadata, empty claims) before this
 -- migration was written.
---
--- VERIFIED AFTER APPLYING, with set_config('request.jwt.claims', ...) inside a
--- rolled-back transaction rather than by changing a real account:
---   flagged   -> current_user_id null, is_super_admin false, org_role null,
---                is_org_member false, can_write_org false, onboarding_caller 0 rows,
---                muster_onboarding_status / muster_my_workspace / muster_ensure_user
---                raise 42501 password_change_required, muster_admin_overview 42501
---                forbidden, muster_admin_impersonate_status 42501.
---   unflagged -> the same account resolves to user id 4, super_admin, full write.
---   service   -> predicate false.
---   public    -> muster_plans and muster_public_pricing still answer, as they must.
 
 set check_function_bodies = off;
 

@@ -83,3 +83,28 @@ is both.
 That endpoint was dropped by `muster_026` and the token grants nothing on any system.
 It is left in place because this directory is a history, and editing history to look
 tidier is how a ledger stops being trustworthy. Do not reuse the value.
+
+## Post-apply verification notes go here, not into the migration file
+
+A migration file in this directory is a verbatim record of the statement Postgres
+recorded. Anything learned *after* applying — a verification run, a caveat, a thing
+that turned out to matter — cannot go into the file without breaking that, because the
+file would then say it is the applied statement while no longer being it. It goes in
+this README instead, under the version it belongs to.
+
+This rule is written down because it was broken immediately. `20260915230805`
+(`muster_052`) carried eleven appended comment lines recording how it had been verified
+after the fact, which made the file 754 bytes longer than what ran. The note was worth
+keeping; putting it in the file was not. It is kept here:
+
+- **`20260915230805` — `muster_052_force_password_change_gate`.** Verified after
+  applying with `set_config('request.jwt.claims', ...)` inside a rolled-back
+  transaction, rather than by changing a real account:
+  - *flagged* → `current_user_id` null, `is_super_admin` false, `org_role` null,
+    `is_org_member` false, `can_write_org` false, `onboarding_caller` 0 rows;
+    `muster_onboarding_status` / `muster_my_workspace` / `muster_ensure_user` raise
+    `42501 password_change_required`; `muster_admin_overview` `42501 forbidden`;
+    `muster_admin_impersonate_status` `42501`.
+  - *unflagged* → the same account resolves to user id 4, `super_admin`, full write.
+  - *service* → predicate false.
+  - *public* → `muster_plans` and `muster_public_pricing` still answer, as they must.
