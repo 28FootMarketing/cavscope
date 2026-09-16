@@ -115,14 +115,30 @@ The sequence numbers are a reading aid, not an identifier. Nothing keys on them:
 
 ## How to check this directory against the ledger
 
-Neither the drift above nor the two-byte edits below were caught by anything; both were
-found by hand. Until something automates it, the check is:
+Neither the numbering collision above nor the two-byte edits were caught by anything;
+both were found by hand. They are now checkable:
 
-```sql
-select version, name, md5(array_to_string(statements,'')) as md5_raw
-from supabase_migrations.schema_migrations order by version;
+```
+npm run migrations:check -- --sql                    # print the dump query
+npm run migrations:check -- --ledger ledger.json     # compare
 ```
 
-A file matches when its md5 equals `md5_raw`, or equals it with one trailing newline
-appended — the documented difference for files that end in a newline. Anything else
-means the file and the database disagree about what ran, and the database is right.
+Run the query against `hjowfnzpomzxazmzywxw` with whatever holds credentials — the
+Supabase MCP, `psql`, the dashboard SQL editor — and save the JSON array it returns.
+The tool takes no connection string and opens no socket, so it cannot leak one. It
+reports four things and exits non-zero on any:
+
+| | |
+|---|---|
+| **diverged** | the file claims to be the applied statement and is not. The database is right. If the dump carried `statement`, it prints the first differing line. |
+| **applied with no file** | ran against the database, not recorded here — usually a branch that has not merged. Check before writing a new file; two files for one version is worse than none. |
+| **forward reference** | a file for a version the ledger has never seen. This is what left sixteen of them on the old shared project. |
+| **local problems** | duplicate versions, duplicate or out-of-order sequence numbers, malformed filenames. |
+
+A file matches when its md5 equals the statement's, or equals it with one trailing
+newline appended — the documented difference for files that end in a newline.
+
+The local problems need no database, so `tests/migrations/ledger.test.ts` runs them in
+CI on every push. The `muster_052` collision would have failed there the moment it
+existed. Gaps in the sequence are deliberately **not** reported: a gap means a branch
+has not merged yet, and a check that fails on ordinary in-flight work gets switched off.
