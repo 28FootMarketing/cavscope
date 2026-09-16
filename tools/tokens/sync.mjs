@@ -26,6 +26,7 @@ export const PAGES = [
   "onboarding.html",
   "sitrep.html",
   "sitrep-sample.html",
+  "admin.html",
   "privacy.html",
 ];
 
