@@ -1,8 +1,25 @@
 # MUSTER backend (phase 1)
 
 Product: MUSTER, by 28 Foot Systems. Target host: muster.28footsystems.com.
-Data plane: shared Supabase project `mgtmqucaldkaxvxglguw`, schema `muster`, plus `public.muster_*` RPC shims.
-Orchestration: Supabase Edge Functions + pg_cron. No n8n.
+Data plane: dedicated Supabase project `hjowfnzpomzxazmzywxw` ("Muster"), schema `muster`, plus
+`public.muster_*` RPC shims. Orchestration: Supabase Edge Functions + pg_cron. No n8n.
+
+**2026-09-16 project split, unresolved:** MUSTER was originally built on the shared `mgtmqucaldkaxvxglguw`
+("28 Foot Systems") project (everything below this note was written against it, including the phase-1
+migration filenames). At some point a dedicated `hjowfnzpomzxazmzywxw` project was stood up with the same
+starting data (same org ids/names) and has since run independently — it now has its own edge functions
+(`muster-scan`, `muster-agent`, `muster-alert-dispatch`, `muster-watchdog`, `muster-embed-docs`,
+`muster-verify-site`, `muster-stripe-webhook`, `muster-ghl-webhook`, `muster-resend-webhook`,
+`muster-backfill-embeddings`, `muster-auth-smoke`, `muster-set-password` — most with no source in this repo)
+and its own active cron jobs, diverging from the shared project's data ever since. `app.html`, `index.html`,
+and `sitrep.html` all now point at `hjowfnzpomzxazmzywxw` (confirmed authoritative 2026-09-16). The shared
+project's `muster-scan-due-15min` cron job was still active and still scanning as of that date — it has not
+been decommissioned. Until it is, the shared project keeps generating its own diverging scans/findings/sitreps
+that nothing reads. Decommissioning it (disabling the cron job, and deciding whether to drop the shared
+project's `muster.*` schema and edge functions) is a deliberate call for Anthony to make, not something to do
+by default — this note exists so nobody assumes the shared project is dead just because the frontend moved on.
+This doc, `supabase/migrations/`, and `supabase/config.toml` describe the dedicated project going forward;
+treat any remaining `mgtmqucaldkaxvxglguw` reference below as historical unless a section says otherwise.
 
 ## What phase 1 delivers
 
@@ -87,7 +104,7 @@ Errors use SQLSTATE `42501` (forbidden, PostgREST 403), `22023` (bad input), `P0
 
 ## Agent gateway
 
-`https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-agent`
+`https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-agent`
 
 - `GET` returns the tool catalog (no auth).
 - MCP: POST JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`, `ping`) with header `x-muster-api-key`.
@@ -98,7 +115,7 @@ Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `la
 Claude Desktop / Claude Code config:
 
 ```json
-{ "mcpServers": { "muster": { "url": "https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-agent", "headers": { "x-muster-api-key": "mk_..." } } } }
+{ "mcpServers": { "muster": { "url": "https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-agent", "headers": { "x-muster-api-key": "mk_..." } } } }
 ```
 
 ## Scan engine

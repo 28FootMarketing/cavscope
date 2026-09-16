@@ -1,6 +1,9 @@
-# Supabase project configuration for MUSTER (shared 28FS project mgtmqucaldkaxvxglguw).
-# Only the pieces that matter for deploys from this repo are declared.
-project_id = "mgtmqucaldkaxvxglguw"
+# Supabase project configuration for MUSTER (dedicated project hjowfnzpomzxazmzywxw).
+# Only the pieces that matter for deploys from this repo are declared. The live project has
+# additional deployed functions (muster-verify-site, muster-watchdog, muster-backfill-embeddings,
+# muster-stripe-webhook, muster-alert-dispatch, muster-ghl-webhook, muster-resend-webhook,
+# muster-embed-docs, muster-auth-smoke, muster-set-password) with no source checked into this repo.
+project_id = "hjowfnzpomzxazmzywxw"
 
 [functions.muster-scan]
 verify_jwt = true

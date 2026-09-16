@@ -33,5 +33,9 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   `vercel.json`'s declarative `rewrites`/`has` cannot branch on the Host header — only real code can — so
   don't reintroduce host-conditional `vercel.json` rewrites for new subdomains; add another `if (host === ...)`
   branch to `middleware.js` instead.
-- Backend: Supabase project `mgtmqucaldkaxvxglguw`, schema `muster`. Real scan engine, SITREP generation,
-  RLS, and RPCs are already live — see `docs/BACKEND.md`.
+- Backend: dedicated Supabase project `hjowfnzpomzxazmzywxw` ("Muster"), schema `muster`. Real scan engine,
+  SITREP generation, RLS, and RPCs are already live — see `docs/BACKEND.md`. This project superseded the
+  original build on the shared `mgtmqucaldkaxvxglguw` ("28 Foot Systems") project as of 2026-09-16; that
+  shared project still has an active `muster-scan-due-15min` cron job and its own diverged muster data and
+  must not be treated as a second source of truth — confirm with Anthony before writing to it again, and see
+  the decommission note in `docs/BACKEND.md`.
