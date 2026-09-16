@@ -69,6 +69,49 @@ Nothing looked broken, which is the point. The landing page's `--font-body` / `-
 names are kept as aliases of `--font-sans` / `--font-serif` so its existing call sites did not
 have to be rewritten.
 
+## A feature flag says where it is enforced, or it says it is enforced nowhere
+
+`muster.feature_flags.enforcement` is a `text[]` of `sql` / `app` / `edge`. An empty
+array means **no code reads this key** — and the Super Admin console renders that as a
+"read by nothing" badge with both switches disabled, because a switch you can move that
+changes nothing is worse than a missing one: it reports a control that does not exist.
+
+This was added 2026-09-16 after the console had been shipping exactly that for months.
+Eleven of twenty-two flags were enforced nowhere and nothing on screen said so, including
+three that read as safety controls — `scheduled_scans` (pg_cron scanned regardless),
+`telegram_alerts` (there is no Telegram relay in this project), and `super_admin_console`
+(console access is `users.role = super_admin`, checked inside every `muster_admin_*`
+function; the flag gates nothing and turning it off would not close the console). Ten
+shipped surfaces had no flag at all, and `app.html` read `o.flags.white_label`, a key that
+has never existed, so the white-label badge said OFF whatever the real flag was set to.
+
+**When you add a flag:** set `enforcement` in the same migration that adds the code
+reading it, never before. `muster_admin_create_flag` deliberately hard-codes `'{}'` — a
+key that did not exist a minute ago is read by nothing, and the console must say so.
+`tests/ui/flag-registry.test.ts` checks every claim against the repo in both directions,
+including the dangerous one: a flag claiming *no* enforcement that SQL is in fact gating on
+would leave the console disabling a live switch.
+
+**`has_flag` vs `flag_state_for_org`.** `muster.has_flag(org, key)` consults the *calling
+user's* overrides first — right for a tenant asking "can I do this". `muster.flag_state_for_org`
+is the same minus that step, for the two jobs where a user must not enter into it: engine
+paths running as `service_role` with no user at all, and the console asking what org 17
+resolves to, where the answer must not change depending on which super admin is looking.
+
+Four flags are wired as of migration `20260916022923`, all defaulting on:
+`scheduled_scans` (the due-scan CTE in `muster.engine_claim`; `next_run_at` is not bumped
+for a gated website, so switching it back on resumes rather than having skipped windows),
+`email_alerts` (`muster_engine_claim_alerts` — the gate is on the **claim**, so off holds
+already-queued alerts as `pending` rather than dropping them), `support_impersonation` and
+`admin_url_scanner`. Ten remain unwired on purpose; each row carries a `wiring_note`
+saying why and what would wire it. `commercial_use_enabled` can never be wired — it is a
+licence term, not a code path, and must not be presented as a control.
+
+Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
+missing from the workspace payload leaves the nav item visible. These flags gate
+visibility, not authority — the RPC behind every view enforces RLS whatever the sidebar
+shows — so a partial load must not silently strip half a tenant's workspace.
+
 ## Other notes
 
 - **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
