@@ -658,7 +658,7 @@
           <li>Custom domain or subdomain capability where technically supported</li>
           <li>Expansion billing based on active client organizations</li>
         </ul>
-        <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens a short intake so you can start your MUSTER Partner subscription.">Become a MUSTER Partner →</a>
+        <a class="btn-primary price-cta" id="partnerCta" href="mailto:sales@28footsystems.com?subject=MUSTER%20Partner%20Inquiry" data-tooltip="Emails 28 Foot Systems to start your MUSTER Partner subscription. Partner checkout is not self-serve yet.">Become a MUSTER Partner →</a>
       </div>
 
       <div class="price-card enterprise-card" id="cardEnterprise" hidden>
@@ -752,18 +752,75 @@
   const MUSTER_SELF_SERVE_PAUSED = true;
   const MUSTER_PAUSED_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Interest';
 
-  // MUSTER Partner/Enterprise: still sales-assisted, payment collected
-  // inside GHL itself (native invoicing / Stripe-connect), not this Stripe
-  // account. This is a placeholder GHL funnel/form URL -- swap the base
-  // URL once a real one exists; keep the query params, GHL's form should
-  // capture them as hidden fields into the src:/product:/intent: tag
-  // taxonomy. Once a GHL workflow marks a deal won, it calls the
-  // muster-ghl-webhook Edge Function to provision the tenant.
-  const GHL_PARTNER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-partner-signup';
+  // MUSTER Partner checkout, resolved in priority order. The Partner CTA is
+  // the only CTA on the only card this page shows by default, so it must never
+  // resolve to a dead or wrong destination.
+  //
+  // 1. Stripe Payment Links, once they exist. The two links above are
+  //    tier: muster -- $97/$197 for the base plan. Partner is $197/$497 with
+  //    client-org allowances and needs its OWN links carrying
+  //    metadata {tier: muster_partner, stage: seed|fruit}, because
+  //    muster-stripe-webhook reads that metadata to decide which plan to
+  //    grant. Pointing this CTA at a base-tier link would undercharge the
+  //    buyer AND provision them the wrong tier. These stay empty until the
+  //    real ones exist -- muster.commercial_pricing.stripe_price_id is null
+  //    for muster_partner on both stages, which is the same fact from the
+  //    database side.
+  // 2. A GHL funnel/form, if one is stood up instead. Sales-assisted, payment
+  //    collected inside GHL (native invoicing / Stripe-connect), not this
+  //    Stripe account. The query params feed GHL's hidden fields into the
+  //    src:/product:/intent: tag taxonomy; once a GHL workflow marks the deal
+  //    won it calls the muster-ghl-webhook Edge Function to provision the
+  //    tenant.
+  // 3. Sales email. The floor, reached whenever 1 and 2 are unset or still a
+  //    placeholder, so a visitor is never handed a link that goes nowhere.
+  //    This is what ships today.
+  const STRIPE_PARTNER_SEED_PAYMENT_LINK = '';
+  const STRIPE_PARTNER_FRUIT_PAYMENT_LINK = '';
+  const GHL_PARTNER_SIGNUP_URL = '';
+  const PARTNER_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Partner%20Inquiry';
+
+  // A destination counts as real only if it is absolute https and not an
+  // example/placeholder host. RFC 2606 and RFC 6761 reserve example.com and
+  // the .example/.test/.invalid/.localhost TLDs; the 'your-' check catches the
+  // swap-me-in hostnames placeholders here are conventionally written as.
+  function isRealHttpsUrl(value) {
+    if (typeof value !== 'string' || value === '') return false;
+    let u;
+    try { u = new URL(value); } catch { return false; }
+    if (u.protocol !== 'https:') return false;
+    const host = u.hostname.toLowerCase();
+    if (host.startsWith('your-') || host.includes('.your-')) return false;
+    if (/(^|\.)example\.(com|net|org)$/.test(host)) return false;
+    return !/\.(example|test|invalid|localhost)$/.test(host);
+  }
 
   function buildGhlUrl(base, product, intent) {
     const params = new URLSearchParams({ src: 'pricing_page', product, intent });
     return `${base}?${params.toString()}`;
+  }
+
+  // Returns { href, tooltip } for the Partner CTA at the given pricing stage.
+  // The tooltip moves with the href: a mailto must not be described as opening
+  // checkout.
+  function partnerCheckout(isSeed) {
+    const stripeLink = isSeed ? STRIPE_PARTNER_SEED_PAYMENT_LINK : STRIPE_PARTNER_FRUIT_PAYMENT_LINK;
+    if (isRealHttpsUrl(stripeLink)) {
+      return {
+        href: stripeLink,
+        tooltip: 'Opens Stripe checkout to start your MUSTER Partner subscription.',
+      };
+    }
+    if (isRealHttpsUrl(GHL_PARTNER_SIGNUP_URL)) {
+      return {
+        href: buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', isSeed ? 'seed_signup' : 'fruit_signup'),
+        tooltip: 'Opens a short intake so you can start your MUSTER Partner subscription.',
+      };
+    }
+    return {
+      href: PARTNER_CONTACT_HREF,
+      tooltip: 'Emails 28 Foot Systems to start your MUSTER Partner subscription. Partner checkout is not self-serve yet.',
+    };
   }
 
   // Which cards the public page shows. Partner-only is the intentional default
@@ -803,7 +860,6 @@
 
   function applyPricing(stage, muster, partner, visible) {
     const isSeed = stage === 'seed';
-    const intent = isSeed ? 'seed_signup' : 'fruit_signup';
 
     if (muster && typeof muster.monthly_price_cents === 'number') {
       document.getElementById('musterPrice').textContent = `$${Math.round(muster.monthly_price_cents / 100)}`;
@@ -822,7 +878,10 @@
     document.getElementById('musterCta').href = MUSTER_SELF_SERVE_PAUSED
       ? MUSTER_PAUSED_CONTACT_HREF
       : (isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK);
-    document.getElementById('partnerCta').href = buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', intent);
+    const partnerCtaEl = document.getElementById('partnerCta');
+    const partnerTarget = partnerCheckout(isSeed);
+    partnerCtaEl.href = partnerTarget.href;
+    partnerCtaEl.setAttribute('data-tooltip', partnerTarget.tooltip);
 
     applyVisibility(visible || DEFAULT_VISIBLE);
   }
