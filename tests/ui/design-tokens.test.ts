@@ -5,8 +5,8 @@
 // assets/tokens.css is the source of truth; every page carries an inlined copy
 // between the muster:tokens markers, written there by tools/tokens/sync.mjs.
 // Inlining is deliberate -- the pages are self-contained, and a linked
-// stylesheet would give all seven a shared way to render unstyled. The cost of
-// that choice is seven copies, and these tests are what make seven copies safe.
+// stylesheet would give all of them a shared way to render unstyled. The cost of
+// that choice is one copy per page, and these tests are what make the copies safe.
 //
 // Before this existed the copies had already drifted, in the quiet way: --rose
 // was #f6516a on the landing page and #f43f5e on the other five, --text-muted
@@ -30,6 +30,7 @@ const PAGES = [
   "onboarding.html",
   "sitrep.html",
   "sitrep-sample.html",
+  "admin.html",
   "privacy.html",
 ];
 

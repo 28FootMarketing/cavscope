@@ -2688,6 +2688,10 @@
             </div>
             <div class="hero-actions">
               <button class="btn-ghost" onclick="exportAllTenantsJSON()" data-tooltip="Downloads every client organization and its workspace data as one JSON file.">↓ Export Roster (.json)</button>
+              <!-- The standalone console at /admin is on this same origin, so the
+                   Supabase session carries straight over -- see middleware.js. -->
+              <a class="btn-ghost" href="/admin" style="border-color: rgba(251, 191, 36, 0.45); color: var(--amber); text-decoration: none; display: inline-flex; align-items: center;"
+                data-tooltip="Opens the full-screen platform console: headline counts, 30-day scan activity, portfolio health and a computed action queue, all from one super-admin-gated RPC.">◱ Open Platform Console</a>
               <button class="btn-primary" onclick="openModal('create_tenant')" data-tooltip="Set up a new client organization with its own isolated workspace.">＋ Provision New Tenant</button>
             </div>
           </div>

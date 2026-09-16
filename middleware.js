@@ -147,7 +147,8 @@ export default function middleware(request) {
   // at /app so an already-authenticated redirect (from signin.html, a magic
   // link, or onboarding.html) has somewhere to land that isn't the sign-in page
   // again. /signin is kept as an alias to avoid breaking the link already
-  // shipped to it.
+  // shipped to it. /admin is the platform console -- same origin for the same
+  // session reason, gated in Postgres rather than by the route.
   //
   // /reset is deliberately NOT a branch of its own: it is the redirect target
   // of a password-reset email, and signin.html is the page that handles it
@@ -167,6 +168,15 @@ export default function middleware(request) {
     }
     if (isUnder(path, '/app')) {
       return secureRewrite(new URL('/app.html', request.url));
+    }
+    // The standalone platform console. It lives on this host rather than a
+    // console-only one for the same reason /app does: a Supabase session is
+    // stored per-origin, so a console on its own host would load signed-out for
+    // someone who signed in here. It is not a second gate -- admin.html holds no
+    // role check of its own; muster_admin_console() raises 42501 for anyone who
+    // is not a super admin, and the page renders whatever the database allows.
+    if (isUnder(path, '/admin')) {
+      return secureRewrite(new URL('/admin.html', request.url));
     }
     return secureRewrite(new URL('/signin.html', request.url));
   }

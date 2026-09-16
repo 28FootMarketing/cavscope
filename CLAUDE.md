@@ -2,7 +2,7 @@
 
 ## Tooltips are mandatory on every page
 
-Every page in this repo (`index.html`, `app.html`, `signin.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
+Every page in this repo (`index.html`, `app.html`, `admin.html`, `signin.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
 tooltips on its interactive and informational elements — buttons, links, nav items, form fields,
 status indicators, data points, badges, chips, and anything else a user might not immediately
 understand. This is a standing requirement; do not wait to be asked again per page or per change.
@@ -56,7 +56,7 @@ between `/* muster:tokens:start */` and `/* muster:tokens:end */`, written there
 Editing the block inside a page is editing the wrong file; the next sync overwrites it.
 
 Inlining rather than `<link>`ing is deliberate. Every page here is self-contained and makes
-no stylesheet request; a shared linked file would add a render-blocking request to all seven
+no stylesheet request; a shared linked file would add a render-blocking request to every one of them
 and give them one shared way to render completely unstyled -- one bad deploy, or one CSP edit
 on a new host. The cost of inlining is seven copies, and the test is what makes seven copies
 safe. A new page adopts the block by having its `:root` replaced on the next sync run, and
@@ -64,7 +64,8 @@ must be added to `PAGES` in `tools/tokens/sync.mjs` and to the test.
 
 This was adopted 2026-09-13 after the copies had already drifted silently: `--rose` was
 `#f6516a` on the landing page and `#f43f5e` on the other five, `--text-muted` and `--teal-glow`
-split the same way, and `--font-mono` fell back to a bare `monospace` on five of seven pages.
+split the same way, and `--font-mono` fell back to a bare `monospace` on five of the seven pages
+that existed then.
 Nothing looked broken, which is the point. The landing page's `--font-body` / `--font-display`
 names are kept as aliases of `--font-sans` / `--font-serif` so its existing call sites did not
 have to be rewritten.
@@ -78,11 +79,32 @@ have to be rewritten.
   `app.muster.28footsystems.com/app`, and retiring those hosts would strand every link in the wild.
   Retire them only once nothing outstanding references them.
 - **Sign-in and the workspace live on `app.muster.partners`** — `/` is `signin.html`, `/app` is
-  `app.html`, `/signin` is an alias. They are on their own host, not on `muster.partners`, and they
+  `app.html`, `/admin` is `admin.html`, `/signin` is an alias. They are on their own host, not on `muster.partners`, and they
   are always served **together**: a Supabase session from a password sign-in is stored per-origin, so
   splitting `signin.html` and `app.html` across hosts makes sign-in appear to succeed and then the
   workspace loads signed-out. A host serves both or neither. `app.muster.28footsystems.com` still
   serves the same pair for links already in the wild.
+- **`admin.html` is the standalone Super Admin Console, at `app.muster.partners/admin`.** It is on the
+  app hosts, not a console host of its own, for exactly the reason `signin.html` and `app.html` are
+  served together: a Supabase session is stored per-origin, so a console anywhere else loads
+  signed-out for someone who just signed in. It builds a client with `detectSessionInUrl: false` --
+  it never completes a sign-in, it requires one that already happened here -- and bounces to `/` when
+  there is no session. **It holds no role check of its own, deliberately.** Everything it renders
+  comes from one RPC, `public.muster_admin_console()` (migration `20260916023416`), which is
+  `SECURITY DEFINER`, gated on `muster.is_super_admin()`, and raises `42501` for anyone else; the
+  page recognises that error and shows a "not a super admin" gate. Grants match every other
+  `muster_admin_*` RPC -- `authenticated` only, `anon` revoked by name.
+  Two figures on it have **no instrumentation behind them and the payload says so** rather than
+  guessing, and neither may be quietly replaced with a nicer number: API request volume is not
+  metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
+  `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
+  `customer.subscription.deleted` is unhandled, so a cancelled customer prices in until their plan
+  is changed by hand. Four nav sections (Workspaces, AI Readiness, Domain Monitor, Reports) render
+  an explicit "not instrumented" panel naming what would have to exist first, because the schema
+  cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
+  table. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
+  view, which still backs `muster_admin_overview()` and owns the write actions (plan changes,
+  impersonation, URL runner, incident triage). `app.html`'s super admin hero links across to it.
 - `signin.html` derives its redirect target as `window.location.origin + '/app'` rather than
   hardcoding a host, so it is same-origin on whichever app host served it. It must stay **absolute**:
   it is passed to `signInWithOtp` as `emailRedirectTo`, which Supabase requires to be a full URL —
@@ -182,7 +204,7 @@ have to be rewritten.
   use, so that silently burns them. `app.html`, `signin.html`, `sitrep.html` and
   `onboarding.html` each legitimately need it on (magic link, recovery, or an invite link).
   `index.html` builds a client only to call `muster_public_pricing` and now passes
-  `detectSessionInUrl: false`; `privacy.html` and `sitrep-sample.html` build none at all. A new
+  `detectSessionInUrl: false`, and `admin.html` does the same for the same reason; `privacy.html` and `sitrep-sample.html` build none at all. A new
   page that adds a client for data must turn it off explicitly.
 - **Every new `public.muster_engine_*` function must REVOKE from `anon, authenticated` by name.**
   Supabase ships default privileges that GRANT EXECUTE on every new function in the `public`

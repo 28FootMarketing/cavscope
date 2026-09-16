@@ -1,0 +1,1644 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="MUSTER Super Admin Console — platform-wide view of every organization, assessment, risk and system check." />
+  <title>MUSTER — Super Admin Console</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    /* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */
+    :root {
+      /* Ground and surfaces */
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --bg-grid: rgba(54, 226, 201, 0.035);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-raised: #142547;
+      --surface-hover: #192b50;
+      --surface-border: #1f3358;
+      --surface-border-strong: #2c4574;
+
+      /* Text */
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      /* Brand and status hues */
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --cyan: #38bdf8;
+      --amber: #fbbf24;
+      --amber-dim: #453414;
+      --rose: #f43f5e;
+      --rose-dim: #4c1825;
+      --purple: #a855f7;
+      --purple-dim: #32164f;
+      --emerald: #10b981;
+
+      /* Type. --font-body and --font-display are the landing-page vocabulary for
+       * the same two faces; they are aliases so index.html and privacy.html keep
+       * their existing call sites rather than being rewritten in place. */
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, 'Times New Roman', serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --font-body: var(--font-sans);
+      --font-display: var(--font-serif);
+
+      /* Geometry and depth */
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
+      --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+    }
+    /* muster:tokens:end */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+
+    /* ---- the shell: fixed rail, scrolling main ---------------------------- */
+    .shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+
+    .rail {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: rgba(6, 10, 22, 0.86);
+      border-right: 1px solid var(--surface-border);
+      padding: 18px 14px 14px;
+      overflow-y: auto;
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 20px; }
+    .brand img { width: 40px; height: 40px; object-fit: contain; }
+    .brand-word { font-family: var(--font-serif); font-size: 21px; font-weight: 700; letter-spacing: 3px; color: var(--amber); line-height: 1; }
+    .brand-sub { font-size: 7.5px; letter-spacing: 1.6px; color: var(--text-dim); text-transform: uppercase; margin-top: 4px; }
+
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav button {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.14s ease, color 0.14s ease;
+    }
+    .nav button:hover { background: var(--surface-hover); color: var(--text); }
+    .nav button[aria-current="page"] {
+      background: var(--surface-elevated);
+      border-color: var(--surface-border-strong);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .nav .ico { width: 17px; text-align: center; font-size: 14px; opacity: 0.85; flex: none; }
+    .nav .tally {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-dim);
+      background: var(--surface-raised);
+      border-radius: var(--radius-full);
+      padding: 1px 7px;
+    }
+
+    .rail-promo {
+      margin-top: auto;
+      padding: 16px 15px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--surface-border);
+      background: linear-gradient(160deg, rgba(22, 38, 72, 0.9), rgba(12, 21, 39, 0.9));
+      position: relative;
+      overflow: hidden;
+    }
+    .rail-promo h4 { font-family: var(--font-serif); font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 7px; }
+    .rail-promo p { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+    .rail-promo::after {
+      content: "";
+      position: absolute;
+      inset: auto -30% -60% -10%;
+      height: 96px;
+      background: radial-gradient(ellipse at 50% 0%, var(--teal-glow), transparent 70%);
+      pointer-events: none;
+    }
+
+    .main { min-width: 0; display: flex; flex-direction: column; }
+
+    /* ---- topbar ----------------------------------------------------------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 26px;
+      background: rgba(6, 10, 22, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .search { position: relative; flex: 1; max-width: 620px; }
+    .search input {
+      width: 100%;
+      padding: 10px 56px 10px 38px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .search input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }
+    .search input::placeholder { color: var(--text-dim); }
+    .search .glass { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 13px; pointer-events: none; }
+    .search kbd {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim);
+      border: 1px solid var(--surface-border); border-radius: var(--radius-sm); padding: 2px 6px;
+      pointer-events: none;
+    }
+
+    .picker {
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+    .picker:focus { outline: none; border-color: var(--teal); }
+
+    .bell {
+      position: relative;
+      width: 38px; height: 38px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .bell .count {
+      position: absolute; top: -6px; right: -6px;
+      min-width: 18px; height: 18px; padding: 0 4px;
+      border-radius: var(--radius-full);
+      background: var(--rose); color: #fff;
+      font-size: 10px; font-weight: 700; line-height: 18px;
+    }
+    .bell .count[hidden] { display: none; }
+
+    .who { display: flex; align-items: center; gap: 10px; padding-left: 4px; }
+    .who .avatar {
+      width: 38px; height: 38px; flex: none;
+      border-radius: var(--radius-full);
+      background: linear-gradient(140deg, var(--amber), #b4801a);
+      color: #1a1204;
+      font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .who-name { font-size: 13px; font-weight: 600; line-height: 1.25; }
+    .who-org { font-size: 11px; color: var(--text-dim); }
+
+    /* ---- page ------------------------------------------------------------- */
+    .page { padding: 24px 26px 0; flex: 1; }
+
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    .page-head h1 { font-family: var(--font-serif); font-size: 34px; font-weight: 700; letter-spacing: 0.3px; }
+    .page-head p { color: var(--text-muted); font-size: 13.5px; margin-top: 4px; }
+    .motto { text-align: right; flex: none; }
+    .motto em { color: var(--text-muted); font-size: 13px; font-style: italic; }
+    .motto span { display: block; font-family: var(--font-serif); font-size: 11px; letter-spacing: 2.4px; color: var(--amber); margin-top: 4px; }
+
+    /* ---- cards ------------------------------------------------------------ */
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-subtle);
+    }
+
+    .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .kpi { padding: 14px 14px 15px; display: flex; gap: 11px; min-width: 0; }
+    .kpi-ico {
+      width: 38px; height: 38px; flex: none;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      background: var(--surface-raised);
+      border: 1px solid var(--surface-border);
+    }
+    .kpi-ico.teal { background: var(--teal-dim); color: var(--teal); border-color: rgba(54, 226, 201, 0.3); }
+    .kpi-ico.amber { background: var(--amber-dim); color: var(--amber); border-color: rgba(251, 191, 36, 0.3); }
+    .kpi-ico.rose { background: var(--rose-dim); color: var(--rose); border-color: rgba(244, 63, 94, 0.32); }
+    .kpi-ico.purple { background: var(--purple-dim); color: var(--purple); border-color: rgba(168, 85, 247, 0.3); }
+    .kpi-body { min-width: 0; }
+    .kpi-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+    .kpi-value { display: flex; align-items: baseline; gap: 7px; margin: 3px 0 2px; flex-wrap: wrap; }
+    .kpi-value b { font-size: 25px; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
+    .kpi-value b.uninstrumented { font-size: 14px; white-space: nowrap; }
+    .kpi-foot { font-size: 10.5px; color: var(--text-dim); line-height: 1.45; overflow-wrap: anywhere; }
+    .delta { font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .delta.up { color: var(--emerald); }
+    .delta.down { color: var(--rose); }
+    .delta.flat { color: var(--text-dim); }
+    .uninstrumented { color: var(--amber); font-weight: 600; }
+
+    /* ---- panel grid ------------------------------------------------------- */
+    .row { display: grid; gap: 13px; margin-bottom: 18px; }
+    .row.a { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.15fr) minmax(0, 1fr); }
+    .row.b { grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr) minmax(0, 1fr); }
+
+    .panel { display: flex; flex-direction: column; min-width: 0; }
+    .panel-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      padding: 15px 17px 12px;
+    }
+    .panel-head h3 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .panel-head h3 .badge {
+      min-width: 19px; height: 19px; padding: 0 5px;
+      border-radius: var(--radius-full);
+      background: var(--rose); color: #fff;
+      font-size: 10.5px; font-weight: 700; line-height: 19px; text-align: center;
+    }
+    .panel-head p { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+    .panel-body { padding: 0 17px 16px; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    /* A table narrower than its columns clips the last one silently. Scroll it. */
+    .panel-body .tbl { display: block; overflow-x: auto; white-space: nowrap; }
+    .panel-body .tbl thead, .panel-body .tbl tbody { display: table; width: 100%; }
+    .link-more {
+      background: none; border: none; cursor: pointer;
+      color: var(--teal); font-family: inherit; font-size: 11.5px; font-weight: 600;
+      white-space: nowrap; padding: 2px 0;
+    }
+    .link-more:hover { text-decoration: underline; }
+
+    .empty { color: var(--text-dim); font-size: 12.5px; padding: 18px 0; text-align: center; }
+    .empty.good { color: var(--emerald); }
+
+    /* ---- chart ------------------------------------------------------------ */
+    .chart { width: 100%; flex: 1; min-height: 190px; display: block; }
+    .chart .grid-line { stroke: var(--surface-border); stroke-width: 1; }
+    .chart .axis { fill: var(--text-dim); font-size: 9.5px; font-family: var(--font-mono); }
+    .legend { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 12px; flex: none; }
+    .legend span { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+    .legend i { width: 8px; height: 8px; border-radius: var(--radius-full); display: block; }
+
+    /* ---- list rows -------------------------------------------------------- */
+    .rows { display: flex; flex-direction: column; }
+    .rows > * { padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+    .rows > *:last-child { border-bottom: none; }
+
+    .risk { display: flex; align-items: center; gap: 11px; }
+    .risk-main { flex: 1; min-width: 0; }
+    .risk-main b { display: block; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .risk-main small { font-size: 11px; color: var(--text-dim); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .risk-when { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .pill.critical { background: var(--rose-dim); color: var(--rose); }
+    .pill.high { background: var(--amber-dim); color: var(--amber); }
+    .pill.medium { background: var(--surface-raised); color: var(--text-muted); }
+    .pill.low { background: var(--teal-dim); color: var(--teal); }
+    .pill.ok { background: var(--teal-dim); color: var(--teal); }
+
+    /* ---- donut ------------------------------------------------------------ */
+    .health { display: flex; align-items: center; gap: 16px; }
+    .donut { position: relative; width: 142px; height: 142px; flex: none; }
+    .donut svg { transform: rotate(-90deg); }
+    .donut-mid {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+    }
+    .donut-mid b { font-size: 25px; font-weight: 700; line-height: 1; }
+    .donut-mid small { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+    .health-key { flex: 1; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+    .health-key div { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .health-key i { width: 8px; height: 8px; border-radius: var(--radius-full); flex: none; }
+    .health-key b { margin-left: auto; font-weight: 600; }
+    .health-key span.pct { color: var(--text-dim); font-size: 11px; width: 42px; text-align: right; }
+
+    /* ---- tables ----------------------------------------------------------- */
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--surface-border);
+      white-space: nowrap;
+    }
+    .tbl td {
+      padding: 11px 10px;
+      font-size: 12.5px;
+      border-bottom: 1px solid var(--surface-border);
+      vertical-align: middle;
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tbody tr:hover { background: var(--surface-hover); }
+    .tbl .num { font-family: var(--font-mono); font-size: 12px; }
+    .tbl .muted { color: var(--text-dim); }
+
+    .avatar-sq {
+      width: 25px; height: 25px; flex: none;
+      border-radius: var(--radius-sm);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border-strong);
+      color: var(--text);
+    }
+    .org-cell { display: flex; align-items: center; gap: 9px; }
+
+    .score {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 32px; padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+    }
+    .score.green { background: var(--teal-dim); color: var(--teal); }
+    .score.amber { background: var(--amber-dim); color: var(--amber); }
+    .score.red { background: var(--rose-dim); color: var(--rose); }
+
+    /* ---- status rows ------------------------------------------------------ */
+    .status { display: flex; align-items: center; gap: 11px; }
+    .status .dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex: none; }
+    .status .dot.ok { background: var(--emerald); box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+    .status .dot.warn { background: var(--amber); box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
+    .status .dot.bad { background: var(--rose); box-shadow: 0 0 8px rgba(244, 63, 94, 0.6); }
+    .status-name { flex: 1; font-size: 12.5px; }
+    .status-val { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+
+    .action { display: flex; align-items: center; gap: 11px; }
+    .action-ico {
+      width: 27px; height: 27px; flex: none;
+      border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .action-ico.critical { background: var(--rose-dim); color: var(--rose); }
+    .action-ico.high { background: var(--amber-dim); color: var(--amber); }
+    .action-ico.medium { background: var(--surface-raised); color: var(--cyan); }
+    .action-ico.low { background: var(--surface-raised); color: var(--text-muted); }
+    .action-main { flex: 1; min-width: 0; }
+    .action-main b { display: block; font-size: 12.5px; font-weight: 600; }
+    .action-main small { font-size: 11px; color: var(--text-dim); }
+
+    /* ---- footer strip ------------------------------------------------------ */
+    .strip {
+      display: flex; align-items: center; gap: 0;
+      margin: 6px 26px 22px;
+      padding: 0 6px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--surface-border);
+      background: var(--surface-card);
+    }
+    .strip-badge {
+      width: 46px; height: 46px; margin: 7px 12px 7px 6px; flex: none;
+      border-radius: var(--radius-md);
+      background: var(--amber-dim); color: var(--amber);
+      display: flex; align-items: center; justify-content: center; font-size: 17px;
+    }
+    .strip-links { display: flex; align-items: center; flex: 1; flex-wrap: wrap; }
+    .strip-links a {
+      padding: 10px 18px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-right: 1px solid var(--surface-border);
+    }
+    .strip-links a:last-child { border-right: none; }
+    .strip-links a:hover { color: var(--text); }
+    .strip-tag { font-size: 12px; color: var(--text-dim); padding: 0 16px; white-space: nowrap; }
+    .strip-cta {
+      margin: 7px 6px 7px 0; flex: none;
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--amber);
+      background: none; color: var(--amber);
+      font-family: var(--font-serif); font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .strip-cta:hover { background: var(--amber-dim); }
+
+    /* ---- gates ------------------------------------------------------------ */
+    .gate { max-width: 560px; margin: 16vh auto; padding: 0 22px; text-align: center; }
+    .gate h2 { font-family: var(--font-serif); font-size: 26px; margin-bottom: 10px; }
+    .gate p { color: var(--text-muted); font-size: 13.5px; margin-bottom: 18px; }
+    .gate a {
+      display: inline-block; padding: 11px 22px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--teal); color: var(--teal);
+      font-size: 13px; font-weight: 600; text-decoration: none;
+    }
+    .gate a:hover { background: var(--teal-dim); }
+
+    .notice {
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--surface-border-strong);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+    .notice b { color: var(--text); font-size: 13px; display: block; margin-bottom: 6px; }
+    .notice code { font-family: var(--font-mono); font-size: 11.5px; color: var(--cyan); }
+
+    .section-head { margin-bottom: 16px; }
+    .section-head h2 { font-family: var(--font-serif); font-size: 26px; font-weight: 700; }
+    .section-head p { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+
+    /* ---- tooltip (verbatim from app.html) ---------------------------------- */
+    .app-tooltip {
+      position: fixed;
+      z-index: 300;
+      max-width: 280px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: #0d1a33;
+      border: 1px solid #2e4a78;
+      color: #e6eefb;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(3px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+
+    .app-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1440px) {
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+      .row.a, .row.b { grid-template-columns: 1fr 1fr; }
+      .row.a > :first-child, .row.b > :first-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 1000px) {
+      .shell { grid-template-columns: 1fr; }
+      .rail { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: none; border-bottom: 1px solid var(--surface-border); }
+      .rail .nav { flex-direction: row; flex-wrap: wrap; }
+      .rail .nav button { width: auto; }
+      .rail-promo { display: none; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .row.a, .row.b { grid-template-columns: 1fr; }
+      .search kbd { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="gateLoading" class="gate">
+  <h2>Super Admin Console</h2>
+  <p id="gateLoadingMsg">Checking your session…</p>
+</div>
+
+<div id="gateDenied" class="gate" hidden>
+  <h2>Not a super admin</h2>
+  <p id="gateDeniedMsg">This console is platform-wide and only opens for a super admin. Your own workspace is where your organization's data lives.</p>
+  <a href="/app" data-tooltip="Opens the MUSTER workspace for the organizations you belong to.">Go to your workspace</a>
+</div>
+
+<div class="shell" id="shell" hidden>
+
+  <aside class="rail">
+    <div class="brand">
+      <img src="/assets/muster-emblem.png" alt="" width="40" height="40">
+      <div>
+        <div class="brand-word">MUSTER</div>
+        <div class="brand-sub">Trust · Readiness · Progress</div>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav" aria-label="Super admin sections"></nav>
+
+    <div class="rail-promo" data-tooltip="MUSTER's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it.">
+      <h4>Build a more<br>assured internet.</h4>
+      <p>AI readiness. Real protection. Measurable trust.</p>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <header class="topbar">
+      <div class="search">
+        <span class="glass" aria-hidden="true">⌕</span>
+        <input id="search" type="search" autocomplete="off"
+          placeholder="Search organizations, sites, users, findings… (e.g. acme.com)"
+          aria-label="Search the platform"
+          data-tooltip="Filters every table on this console at once — organizations, websites, users, scans and findings. Press ⌘K or Ctrl+K to jump here.">
+        <kbd>⌘K</kbd>
+      </div>
+
+      <select class="picker" id="orgFilter" aria-label="Organization filter"
+        data-tooltip="Narrows every panel to one organization. 'All organizations' is the platform-wide view."></select>
+
+      <select class="picker" id="rangeFilter" aria-label="Date range"
+        data-tooltip="Window for the activity chart and the recent-scan table. It does not change the headline tiles, which are current-state counts, not period totals.">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+      </select>
+
+      <button class="bell" id="bell" type="button" aria-label="Open action items"
+        data-tooltip="Outstanding action items. Each one is a live count against a real table, not a notification feed.">
+        ⚑<span class="count" id="bellCount" hidden>0</span>
+      </button>
+
+      <div class="who">
+        <div class="avatar" id="whoInitials" aria-hidden="true">··</div>
+        <div>
+          <div class="who-name" id="whoName">Super Admin</div>
+          <div class="who-org" id="whoEmail">MUSTER</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page" id="page"></main>
+
+    <div class="strip">
+      <div class="strip-badge" aria-hidden="true">▤</div>
+      <div class="strip-links">
+        <a href="#website-assurance" data-tooltip="Every registered site, its posture score and when it was last scanned.">Website Assurance</a>
+        <a href="#ai-readiness" data-tooltip="Readiness for AI systems and agent governance. Not instrumented in this schema yet.">AI Readiness</a>
+        <a href="#audit-queue" data-tooltip="Every scan the engine has run, newest first.">Audit</a>
+        <a href="#organizations" data-tooltip="The full tenant roster.">Assurance</a>
+        <a href="#compliance" data-tooltip="Control effectiveness across every scanned site.">Compliance</a>
+      </div>
+      <span class="strip-tag">One platform. One version of the truth.</span>
+      <a class="strip-cta" href="/app" data-tooltip="Leaves the platform console and opens the tenant workspace.">MUSTER →</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // MUSTER Super Admin Console.
+  //
+  // This page is a renderer. Every figure on it comes from one RPC --
+  // public.muster_admin_console() -- which is SECURITY DEFINER, gated on
+  // muster.is_super_admin(), and computes its aggregates in Postgres. Nothing
+  // here decides who may see what; the database does, and a non-super-admin
+  // gets 42501 on the very first call.
+  //
+  // Two figures on the design this page was built from have no instrumentation
+  // behind them, and the payload says so rather than guessing: API request
+  // volume is not metered anywhere, and revenue is plan-implied (nothing reads
+  // Stripe's invoices, and customer.subscription.deleted is unhandled, so a
+  // cancelled customer still prices in until someone changes their plan).
+  // Those two tiles render an explicit "not metered" / "plan-implied" state.
+  // Do not replace either with a number that looks better.
+
+  const SB_URL = 'https://hjowfnzpomzxazmzywxw.supabase.co';
+  const SB_KEY = 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL';
+
+  let sb = null;
+  let DATA = null;
+  let section = 'overview';
+  let orgFilter = 'all';
+  let rangeDays = 30;
+  let query = '';
+
+  // ---- plumbing -----------------------------------------------------------
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  }
+
+  function num(n) { return Number(n || 0).toLocaleString('en-US'); }
+
+  function money(cents) {
+    return '$' + (Number(cents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function initials(s) {
+    const parts = String(s || '').trim().split(/[\s@._-]+/).filter(Boolean);
+    if (!parts.length) return '··';
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  // Relative time, rounded down. "just now" below a minute; a plain date past
+  // a month, because "47 days ago" is harder to act on than the date.
+  function ago(iso) {
+    if (!iso) return 'never';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return 'never';
+    const mins = Math.floor((Date.now() - then) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + 'h ago';
+    const days = Math.floor(hours / 24);
+    if (days < 31) return days + 'd ago';
+    return String(iso).slice(0, 10);
+  }
+
+  function stamp(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  // muster.posture_band's own thresholds, so a score reads the same colour here
+  // as it does in the workspace and in a SITREP.
+  function band(score) {
+    if (score == null) return '';
+    return score >= 85 ? 'green' : score >= 60 ? 'amber' : 'red';
+  }
+
+  function matches(...fields) {
+    if (!query) return true;
+    const hay = fields.filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(query);
+  }
+
+  function inOrg(orgId) {
+    return orgFilter === 'all' || String(orgId) === orgFilter;
+  }
+
+  // ---- sections -----------------------------------------------------------
+  //
+  // Each nav entry names a renderer. The four marked `stub: true` are surfaces
+  // the design calls for that this schema genuinely cannot answer yet; they
+  // render what is missing and where the nearest real thing lives, rather than
+  // a plausible-looking screen. That is deliberate -- a console that invents a
+  // number is worse than one that admits a gap.
+
+  const SECTIONS = [
+    { id: 'overview',          icon: '▦', label: 'Overview',           tip: 'Platform-wide snapshot: headline counts, 30-day scan activity, live risk and what needs doing.' },
+    { id: 'organizations',     icon: '▣', label: 'Organizations',      tip: 'Every tenant on the platform, its plan, its worst site score and when it last scanned.' },
+    { id: 'workspaces',        icon: '◫', label: 'Workspaces',         tip: 'Not a separate object in this schema — an organization is the workspace.', stub: true },
+    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every MUSTER user, their platform role and when they last signed in.' },
+    { id: 'audit-queue',       icon: '▤', label: 'Audit Queue',        tip: 'Scans the engine has run, with status, trigger and the resulting site score.' },
+    { id: 'website-assurance', icon: '◍', label: 'Website Assurance',  tip: 'Every registered site, its posture score, open findings and verification state.' },
+    { id: 'ai-readiness',      icon: '◈', label: 'AI Readiness',       tip: 'Sold on the landing page; no readiness assessment tables exist in this schema yet.', stub: true },
+    { id: 'compliance',        icon: '▥', label: 'Compliance',         tip: 'Control effectiveness across every scanned site, plus the jurisdictions behind it.' },
+    { id: 'domain-monitor',    icon: '◎', label: 'Domain Monitor',     tip: 'Continuous DNS, WHOIS and certificate watching. Not instrumented in this schema.', stub: true },
+    { id: 'reports',           icon: '▧', label: 'Reports',            tip: 'SITREP generation is live, but this console does not index them yet.', stub: true },
+    { id: 'billing',           icon: '◱', label: 'Billing',            tip: 'Plan-implied revenue, the live pricing stage and which tiers are visible on the site.' },
+    { id: 'integrations',      icon: '⚯', label: 'Integrations',       tip: 'Stripe grants and Resend delivery — what this platform actually observes about its integrations.' },
+    { id: 'system-health',     icon: '◬', label: 'System Health',      tip: 'Cron schedules with last successful run, scan queue depth, open watchdog incidents.' },
+    { id: 'settings',          icon: '⚙', label: 'Settings',           tip: 'The feature-flag registry: scope, plan gate, kill switch and how each flag is enforced.' },
+  ];
+
+  function tallyFor(id) {
+    if (!DATA) return null;
+    const k = DATA.kpi || {};
+    switch (id) {
+      case 'organizations': return (k.organizations || {}).total;
+      case 'users': return (DATA.users || []).length;
+      case 'website-assurance': return (DATA.websites || []).length;
+      case 'audit-queue': return (DATA.recent_scans || []).length;
+      case 'system-health': return ((DATA.system || {}).incidents || {}).open;
+      case 'settings': return (DATA.flags || []).length;
+      default: return null;
+    }
+  }
+
+  function renderNav() {
+    document.getElementById('nav').innerHTML = SECTIONS.map((s) => {
+      const tally = tallyFor(s.id);
+      return `<button type="button" data-section="${s.id}" ${s.id === section ? 'aria-current="page"' : ''}
+        data-tooltip="${escapeHtml(s.tip)}">
+        <span class="ico" aria-hidden="true">${s.icon}</span>
+        <span>${escapeHtml(s.label)}</span>
+        ${tally != null && tally !== 0 ? `<span class="tally">${num(tally)}</span>` : ''}
+      </button>`;
+    }).join('');
+  }
+
+  // ---- overview -----------------------------------------------------------
+
+  function kpiRow() {
+    const k = DATA.kpi || {};
+    const org = k.organizations || {}, asmt = k.assessments || {}, risk = k.high_risk || {};
+    const comp = k.compliance || {}, rev = k.revenue || {}, api = k.api || {};
+
+    const tiles = [
+      {
+        cls: 'amber', icon: '▣', label: 'Active Organizations',
+        value: num(org.total),
+        delta: org.new_30d > 0 ? { dir: 'up', text: '+' + org.new_30d } : { dir: 'flat', text: 'no change' },
+        foot: `${num(org.new_30d)} new in 30 days · ${num(org.sandbox)} internal sandbox excluded`,
+        tip: 'Organizations provisioned on the platform, excluding the internal sandbox that ad-hoc admin URL scans are parked in. The sandbox is not a tenant and is never counted as one.',
+      },
+      {
+        cls: 'teal', icon: '▶', label: 'Assessments Running',
+        value: num((asmt.queued || 0) + (asmt.running || 0)),
+        delta: { dir: 'flat', text: num(asmt.queued) + ' queued' },
+        foot: `${num(asmt.complete_24h)} completed · ${num(asmt.failed_24h)} failed in 24h`,
+        tip: 'Scans queued or running on the live engine right now. A number that never falls means the scan worker is not draining the queue — check muster-scan-due under System Health.',
+      },
+      {
+        cls: 'rose', icon: '⚠', label: 'High-Risk Alerts',
+        value: num(risk.open),
+        delta: risk.new_24h > 0 ? { dir: 'down', text: '+' + risk.new_24h + ' new' } : { dir: 'flat', text: 'none new' },
+        foot: `${num(risk.critical)} critical · ${num(risk.high)} high · across ${num(risk.orgs_affected)} org${risk.orgs_affected === 1 ? '' : 's'}`,
+        tip: 'Open or reopened findings at critical or high severity — the ones the alert dispatcher emails a tenant about. Sandbox findings are excluded.',
+      },
+      {
+        cls: 'teal', icon: '◈', label: 'Control Effectiveness',
+        value: comp.rate == null ? '—' : comp.rate + '%',
+        delta: { dir: comp.not_met > 0 ? 'down' : 'flat', text: num(comp.not_met) + ' not met' },
+        foot: comp.total ? `${num(comp.met)} met of ${num(comp.total)} · ${num(comp.partial)} partial` : 'no controls derived yet',
+        tip: 'Share of derived controls assessed "met". Partial is deliberately not rounded up to met — a half-implemented control is exactly what an auditor asks about. This is scanner evidence, never a certification of compliance.',
+      },
+      {
+        cls: 'amber', icon: '◱', label: 'Monthly Revenue',
+        value: money(rev.mrr_cents),
+        delta: { dir: 'flat', text: 'plan-implied' },
+        foot: `${num(rev.paying_orgs)} priced · ${num(rev.unpriced_orgs)} on internal or unpriced plans`,
+        tip: 'What the current plan assignments price out to at each organization’s commercial stage. It is NOT billed revenue: nothing in this platform reads Stripe invoices, and customer.subscription.deleted is unhandled, so a cancelled customer still prices in until their plan is changed by hand.',
+      },
+      {
+        cls: 'purple', icon: '⌨', label: 'API Usage',
+        value: api.instrumented ? num(api.requests_30d) : 'Not metered',
+        delta: { dir: 'flat', text: num(api.keys_active) + ' active keys' },
+        foot: `${num(api.keys_used_24h)} key${api.keys_used_24h === 1 ? '' : 's'} used in 24h · ${num(api.keys_total)} issued`,
+        tip: 'Request volume is not counted anywhere in this schema, so this tile reports what IS recorded — issued, active and recently used API keys. Metering requests needs a counter on the agent API before this can show a number.',
+        flagUninstrumented: !api.instrumented,
+      },
+    ];
+
+    return `<div class="kpis">${tiles.map((t) => `
+      <div class="card kpi" data-tooltip="${escapeHtml(t.tip)}">
+        <div class="kpi-ico ${t.cls}" aria-hidden="true">${t.icon}</div>
+        <div class="kpi-body">
+          <div class="kpi-label">${escapeHtml(t.label)}</div>
+          <div class="kpi-value">
+            <b class="${t.flagUninstrumented ? 'uninstrumented' : ''}">${escapeHtml(t.value)}</b>
+            <span class="delta ${t.delta.dir}">${escapeHtml(t.delta.text)}</span>
+          </div>
+          <div class="kpi-foot">${escapeHtml(t.foot)}</div>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  // Stacked bars, drawn as plain SVG. A chart library would be the only
+  // external dependency on this page and would need a CSP origin added for it.
+  function activityChart() {
+    const all = DATA.activity || [];
+    const series = all.slice(-rangeDays);
+    const bands = [
+      { key: 'scheduled', label: 'Scheduled', colour: 'var(--amber)' },
+      { key: 'manual', label: 'Manual', colour: 'var(--cyan)' },
+      { key: 'other', label: 'Other triggers', colour: 'var(--purple)' },
+    ];
+
+    const W = 720, H = 190, padL = 34, padB = 22, padT = 8;
+    const peak = Math.max(1, ...series.map((d) => d.total || 0));
+    // Round the axis up to something a person reads cleanly.
+    const step = peak <= 4 ? 1 : peak <= 20 ? 5 : Math.ceil(peak / 4 / 10) * 10;
+    const top = Math.ceil(peak / step) * step;
+    const plotH = H - padB - padT, plotW = W - padL;
+    const slot = plotW / Math.max(series.length, 1);
+    const barW = Math.max(3, Math.min(18, slot * 0.62));
+
+    const gridlines = [];
+    for (let v = 0; v <= top; v += step) {
+      const y = padT + plotH - (v / top) * plotH;
+      gridlines.push(`<line class="grid-line" x1="${padL}" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}"></line>`);
+      gridlines.push(`<text class="axis" x="${padL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${v}</text>`);
+    }
+
+    const bars = series.map((d, i) => {
+      const x = padL + i * slot + (slot - barW) / 2;
+      let cursor = padT + plotH;
+      const stack = bands.map((b) => {
+        const v = d[b.key] || 0;
+        if (!v) return '';
+        const h = (v / top) * plotH;
+        cursor -= h;
+        return `<rect x="${x.toFixed(1)}" y="${cursor.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${b.colour}" rx="1.5"></rect>`;
+      }).join('');
+      const label = `${d.day}: ${d.total} scan${d.total === 1 ? '' : 's'}` +
+        (d.failed ? ` (${d.failed} failed)` : '');
+      return `<g data-tooltip="${escapeHtml(label)}"><rect x="${(padL + i * slot).toFixed(1)}" y="${padT}" width="${slot.toFixed(1)}" height="${plotH}" fill="transparent"></rect>${stack}</g>`;
+    }).join('');
+
+    const ticks = series.map((d, i) => {
+      const everyN = series.length > 14 ? 5 : 2;
+      if (i % everyN !== 0) return '';
+      const x = padL + i * slot + slot / 2;
+      const day = new Date(d.day + 'T00:00:00Z');
+      const text = day.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+      return `<text class="axis" x="${x.toFixed(1)}" y="${H - 6}" text-anchor="middle">${escapeHtml(text)}</text>`;
+    }).join('');
+
+    const total = series.reduce((sum, d) => sum + (d.total || 0), 0);
+
+    return `
+      <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+        aria-label="Scans per day over the last ${rangeDays} days, ${total} in total">
+        ${gridlines.join('')}${bars}${ticks}
+      </svg>
+      <div class="legend">
+        ${bands.map((b) => `<span data-tooltip="${escapeHtml(b.label === 'Scheduled' ? 'Scans the pg_cron schedule started, with no human involved.' : b.label === 'Manual' ? 'Scans a person started from the workspace or the admin URL runner.' : 'Scans started by an agent API key or by onboarding.')}"><i style="background:${b.colour}"></i>${escapeHtml(b.label)}</span>`).join('')}
+        <span style="margin-left:auto; color: var(--text-dim);">${num(total)} scans in ${rangeDays} days</span>
+      </div>`;
+  }
+
+  function riskWatch() {
+    const rows = (DATA.risk_watch || []).filter((r) => inOrg(r.organization_id) && matches(r.title, r.organization, r.website, r.rule_id));
+    if (!rows.length) {
+      return `<div class="empty good">No open critical, high or medium findings${orgFilter === 'all' ? ' anywhere on the platform' : ' for this organization'}.</div>`;
+    }
+    return `<div class="rows">${rows.map((r) => `
+      <div class="risk">
+        <span class="pill ${escapeHtml(r.severity)}">${escapeHtml(r.severity)}</span>
+        <div class="risk-main">
+          <b data-tooltip="${escapeHtml(r.rule_id ? 'Rule ' + r.rule_id + ' — open on ' + (r.website || 'this organization') : 'Open finding')}">${escapeHtml(r.title)}</b>
+          <small>${escapeHtml(r.organization)}${r.website ? ' · ' + escapeHtml(r.website) : ''}</small>
+        </div>
+        <span class="risk-when" data-tooltip="Last confirmed by a scan at ${escapeHtml(stamp(r.last_seen_at))}. First seen ${escapeHtml(stamp(r.first_seen_at))}.">${escapeHtml(ago(r.last_seen_at))}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function orgHealth() {
+    const h = DATA.org_health || {};
+    const slices = [
+      { key: 'healthy',  label: 'Healthy',  colour: 'var(--emerald)', n: h.healthy || 0,  tip: 'Every site in the organization scores 85 or better.' },
+      { key: 'at_risk',  label: 'At Risk',  colour: 'var(--amber)',   n: h.at_risk || 0,  tip: 'The organization’s worst site scores 60 to 84.' },
+      { key: 'critical', label: 'Critical', colour: 'var(--rose)',    n: h.critical || 0, tip: 'The organization’s worst site scores below 60.' },
+      { key: 'trial',    label: 'Trial',    colour: 'var(--cyan)',    n: h.trial || 0,    tip: 'On the trial plan; banded separately from scored tenants.' },
+      { key: 'unscored', label: 'Unscored', colour: 'var(--text-dim)', n: h.unscored || 0, tip: 'No website registered yet, so there is nothing to score.' },
+    ].filter((s) => s.n > 0);
+
+    const total = h.total || 0;
+    if (!total) return `<div class="empty">No organizations yet.</div>`;
+
+    const R = 56, C = 2 * Math.PI * R;
+    let offset = 0;
+    const arcs = slices.map((s) => {
+      const len = (s.n / total) * C;
+      const el = `<circle cx="71" cy="71" r="${R}" fill="none" stroke="${s.colour}" stroke-width="17"
+        stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}"></circle>`;
+      offset += len;
+      return el;
+    }).join('');
+
+    return `<div class="health">
+      <div class="donut" data-tooltip="An organization is banded by its WORST site, not its average — a portfolio is only as assured as the weakest thing in it.">
+        <svg width="142" height="142" viewBox="0 0 142 142" role="img" aria-label="Organization health by band">
+          <circle cx="71" cy="71" r="56" fill="none" stroke="var(--surface-raised)" stroke-width="17"></circle>
+          ${arcs}
+        </svg>
+        <div class="donut-mid"><b>${num(total)}</b><small>Organizations</small></div>
+      </div>
+      <div class="health-key">
+        ${slices.map((s) => `<div data-tooltip="${escapeHtml(s.tip)}">
+          <i style="background:${s.colour}"></i>${escapeHtml(s.label)}
+          <b>${num(s.n)}</b><span class="pct">(${Math.round((s.n / total) * 100)}%)</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  function recentScans(limit) {
+    const rows = (DATA.recent_scans || [])
+      .filter((r) => inOrg(r.organization_id) && matches(r.organization, r.website, r.status, r.trigger))
+      .slice(0, limit || 8);
+    if (!rows.length) return `<div class="empty">No scans match.</div>`;
+    return `<table class="tbl">
+      <thead><tr>
+        <th data-tooltip="The tenant the scan ran for.">Organization</th>
+        <th data-tooltip="The registered site, or the raw URL for an ad-hoc admin run.">Website</th>
+        <th data-tooltip="What started it: the cron schedule, a person, or an agent key.">Trigger</th>
+        <th data-tooltip="Engine status for this scan. 'failed' means the engine could not complete it, so it produced no findings.">Status</th>
+        <th data-tooltip="The site's posture score right now: 100 minus the weighted severity of everything still open on it.">Score</th>
+        <th data-tooltip="When the scan finished.">Last Scan</th>
+      </tr></thead>
+      <tbody>${rows.map((r) => `<tr>
+        <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(r.organization))}</span>${escapeHtml(r.organization)}</span></td>
+        <td class="muted">${escapeHtml(r.website || '—')}</td>
+        <td class="muted">${escapeHtml(r.trigger || '—')}</td>
+        <td>${r.status === 'complete'
+            ? '<span class="pill ok">complete</span>'
+            : r.status === 'failed'
+              ? '<span class="pill critical">failed</span>'
+              : `<span class="pill medium">${escapeHtml(r.status)}</span>`}</td>
+        <td>${r.score == null ? '<span class="muted">—</span>' : `<span class="score ${band(r.score)}">${r.score}</span>`}</td>
+        <td class="muted num" data-tooltip="${escapeHtml(stamp(r.at))}">${escapeHtml(ago(r.at))}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  function systemStatus() {
+    const sys = DATA.system || {};
+    const inc = sys.incidents || {}, q = sys.queue || {}, al = sys.alerts || {};
+    const cron = sys.cron || [];
+
+    // A cron row being "active" only proves a schedule exists. Late is measured
+    // against the schedule's own interval, doubled, because a job that ran one
+    // tick ago is on time and a job that missed two is not.
+    const stale = cron.filter((j) => {
+      if (!j.active) return true;
+      if (!j.last_success_at) return true;
+      const everyMin = /^\*\/(\d+)/.exec(j.schedule) ? Number(/^\*\/(\d+)/.exec(j.schedule)[1]) : 15;
+      return (Date.now() - new Date(j.last_success_at).getTime()) > everyMin * 2 * 60000;
+    });
+
+    const rows = [
+      {
+        name: 'Platform', state: inc.open ? (inc.critical ? 'bad' : 'warn') : 'ok',
+        val: inc.open ? `${num(inc.open)} open incident${inc.open === 1 ? '' : 's'}` : 'No open incidents',
+        tip: 'Open findings from muster-watchdog’s own health checks. The watchdog closes an incident when its check comes back clear, so this count can go down — that is what makes it an alarm and not a counter.',
+      },
+      {
+        name: 'Scan Queue', state: q.queued > 20 ? 'warn' : 'ok',
+        val: `${num(q.queued)} queued · ${num(q.running)} running`,
+        tip: q.oldest_queued_at ? `Oldest item queued ${ago(q.oldest_queued_at)}.` : 'Nothing is waiting. The engine drains the queue on the muster-scan-due schedule.',
+      },
+      {
+        name: 'Scheduled Jobs', state: stale.length ? 'bad' : 'ok',
+        val: stale.length ? `${stale.length} of ${cron.length} late or off` : `${cron.length} healthy`,
+        tip: stale.length
+          ? 'Late or disabled: ' + stale.map((j) => j.jobname).join(', ') + '. Measured against each job’s own interval, doubled — not against a fixed threshold.'
+          : 'Every muster-* pg_cron job has a successful run inside twice its own interval.',
+      },
+      {
+        name: 'Alert Delivery', state: al.dead_letter ? 'bad' : al.pending > 10 ? 'warn' : 'ok',
+        val: al.dead_letter ? `${num(al.dead_letter)} dead-letter` : `${num(al.sent_24h)} sent in 24h`,
+        tip: 'Outbound critical-finding email to tenants. Dead-letter means a send failed five times and stopped retrying — Resend’s own logs are the next place to look.',
+      },
+      {
+        name: 'Billing Webhook', state: 'ok',
+        val: 'Signature-verified',
+        tip: 'muster-stripe-webhook verifies the Stripe signature and gates on payment_status before recording a grant. Cancellation is NOT handled: nothing consumes customer.subscription.deleted, so a cancelled customer keeps their plan until someone changes it.',
+      },
+    ];
+
+    return `<div class="rows">${rows.map((r) => `
+      <div class="status" data-tooltip="${escapeHtml(r.tip)}">
+        <span class="dot ${r.state}" aria-hidden="true"></span>
+        <span class="status-name">${escapeHtml(r.name)}</span>
+        <span class="status-val">${escapeHtml(r.val)}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function actionItems() {
+    const items = DATA.action_items || [];
+    if (!items.length) return `<div class="empty good">Nothing queued. Every derived check is clear.</div>`;
+    const glyph = { critical: '!', high: '▲', medium: '◆', low: '·' };
+    return `<div class="rows">${items.map((a) => `
+      <div class="action" data-tooltip="${escapeHtml(a.detail)}">
+        <span class="action-ico ${escapeHtml(a.severity)}" aria-hidden="true">${glyph[a.severity] || '·'}</span>
+        <div class="action-main">
+          <b>${num(a.count)} · ${escapeHtml(a.title)}</b>
+          <small>${escapeHtml(a.detail)}</small>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  function panel(title, subtitle, body, opts) {
+    const o = opts || {};
+    return `<section class="card panel"${o.id ? ` id="${o.id}"` : ''}>
+      <div class="panel-head">
+        <div>
+          <h3${o.tip ? ` data-tooltip="${escapeHtml(o.tip)}"` : ''}>${escapeHtml(title)}${o.badge ? `<span class="badge">${escapeHtml(String(o.badge))}</span>` : ''}</h3>
+          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}
+        </div>
+        ${o.more ? `<button class="link-more" type="button" data-section="${o.more}" data-tooltip="${escapeHtml(o.moreTip || '')}">View all →</button>` : ''}
+      </div>
+      <div class="panel-body">${body}</div>
+    </section>`;
+  }
+
+  function renderOverview() {
+    return `
+      <div class="page-head">
+        <div>
+          <h1>Super Admin Console</h1>
+          <p>Manage the entire MUSTER platform across all organizations.</p>
+        </div>
+        <div class="motto">
+          <em>“Safer organizations. A more trusted world.”</em>
+          <span>— MUSTER</span>
+        </div>
+      </div>
+      ${kpiRow()}
+      <div class="row a">
+        ${panel('Platform Overview', 'Scans run across every organization, stacked by what started them', activityChart(), {
+          tip: 'One bar per day. Height is scans started that day; the stack shows whether the schedule, a person or an agent key started them.',
+          more: 'audit-queue', moreTip: 'Opens the full audit queue.',
+        })}
+        ${panel('Risk Watch', 'Highest-severity open findings, platform-wide', riskWatch(), {
+          tip: 'Open or reopened findings at critical, high or medium severity, worst first, then most recently confirmed.',
+          more: 'website-assurance', moreTip: 'Opens every site and its open findings.',
+        })}
+        ${panel('Organization Health', 'Portfolio snapshot', orgHealth(), {
+          tip: 'Every tenant banded by the posture score of its worst site.',
+          more: 'organizations', moreTip: 'Opens the full tenant roster.',
+        })}
+      </div>
+      <div class="row b">
+        ${panel('Recent Audit Activity', 'Latest scans across all organizations', recentScans(8), {
+          more: 'audit-queue', moreTip: 'Opens the full audit queue.',
+        })}
+        ${panel('System Status', 'What this platform can actually observe about itself', systemStatus(), {
+          more: 'system-health', moreTip: 'Opens cron schedules and incident detail.',
+        })}
+        ${panel('Top Action Items', 'Computed from live counts, not curated', actionItems(), {
+          badge: (DATA.action_items || []).length || null,
+          tip: 'Every row is a real count against a real table, and a row with a zero count is omitted — so an empty list means there is genuinely nothing queued.',
+        })}
+      </div>`;
+  }
+
+  // ---- roster sections ----------------------------------------------------
+
+  function head(title, sub) {
+    return `<div class="section-head"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(sub)}</p></div>`;
+  }
+
+  function renderOrganizations() {
+    const rows = (DATA.organizations || []).filter((o) => inOrg(o.id) && matches(o.name, o.plan, o.jurisdiction, o.onboarding_status));
+    return head('Organizations', 'Every tenant on the platform. The internal sandbox is listed but flagged — it is not a customer.') +
+      panel('Tenant roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
+        <thead><tr>
+          <th>Organization</th>
+          <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag.">Plan</th>
+          <th data-tooltip="Members with a seat, and registered websites.">Members / Sites</th>
+          <th data-tooltip="Open critical and high findings across all of this tenant's sites.">Open Risk</th>
+          <th data-tooltip="The posture score of this tenant's WORST site — a portfolio is only as assured as its weakest thing.">Worst Score</th>
+          <th data-tooltip="When any site in this organization last finished a scan.">Last Scan</th>
+        </tr></thead>
+        <tbody>${rows.map((o) => `<tr>
+          <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(o.name))}</span>
+            <span><b>${escapeHtml(o.name)}</b>${o.is_admin_sandbox ? ' <span class="pill medium">sandbox</span>' : ''}
+            <br><small class="muted">${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${escapeHtml(o.onboarding_status)}</small></span></span></td>
+          <td><span class="pill ${o.plan === 'trial' ? 'medium' : 'low'}">${escapeHtml(o.plan)}</span> <small class="muted">${escapeHtml(o.stage || '')}</small></td>
+          <td class="muted num">${num(o.members)} / ${num(o.websites)}</td>
+          <td>${o.open_critical ? `<span class="pill critical">${o.open_critical} critical</span> ` : ''}${o.open_high ? `<span class="pill high">${o.open_high} high</span>` : (!o.open_critical ? '<span class="muted">clear</span>' : '')}</td>
+          <td>${o.worst_score == null ? '<span class="muted">—</span>' : `<span class="score ${band(o.worst_score)}">${o.worst_score}</span>`}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(o.last_scan_at))}">${escapeHtml(ago(o.last_scan_at))}</td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">No organizations match.</div>');
+  }
+
+  function renderUsers() {
+    const rows = (DATA.users || []).filter((u) => matches(u.name, u.email, u.role));
+    return head('Users & Roles', 'Every MUSTER user. Role here is the platform role; what a user can see inside an organization is decided by RLS, not by this page.') +
+      panel('User roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
+        <thead><tr>
+          <th>User</th>
+          <th data-tooltip="Platform role. super_admin is what opens this console; everything else is scoped by RLS to the organizations the user belongs to.">Role</th>
+          <th data-tooltip="Organizations this user has a seat in.">Memberships</th>
+          <th data-tooltip="How the account signs in.">Login</th>
+          <th data-tooltip="Last recorded sign-in.">Last Seen</th>
+        </tr></thead>
+        <tbody>${rows.map((u) => `<tr>
+          <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(u.name || u.email))}</span>
+            <span><b>${escapeHtml(u.name || '(no name)')}</b><br><small class="muted">${escapeHtml(u.email)}</small></span></span></td>
+          <td><span class="pill ${u.role === 'super_admin' ? 'high' : 'medium'}">${escapeHtml(u.role)}</span></td>
+          <td class="muted num">${num(u.memberships)}</td>
+          <td class="muted">${escapeHtml(u.login_method || '—')}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(u.last_signed_in))}">${escapeHtml(ago(u.last_signed_in))}</td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">No users match.</div>');
+  }
+
+  function renderAuditQueue() {
+    const sys = DATA.system || {}, q = sys.queue || {}, a = (DATA.kpi || {}).assessments || {};
+    return head('Audit Queue', 'Scans the engine has run, newest first, plus what is waiting on it now.') +
+      `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
+        ${panel('Recent scans', 'Most recent runs across every organization', recentScans(50))}
+        ${panel('Queue depth', 'Live engine state', `<div class="rows">
+          <div class="status" data-tooltip="Waiting for the next muster-scan-due tick to pick them up."><span class="dot ${q.queued > 20 ? 'warn' : 'ok'}"></span><span class="status-name">Queued</span><span class="status-val">${num(q.queued)}</span></div>
+          <div class="status" data-tooltip="Currently executing on the engine."><span class="dot ok"></span><span class="status-name">Running</span><span class="status-val">${num(q.running)}</span></div>
+          <div class="status" data-tooltip="Completed successfully in the last 24 hours."><span class="dot ok"></span><span class="status-name">Completed (24h)</span><span class="status-val">${num(a.complete_24h)}</span></div>
+          <div class="status" data-tooltip="Failed in the last 24 hours. A failed scan produces no findings, so a site that only fails silently keeps its old score."><span class="dot ${a.failed_24h ? 'bad' : 'ok'}"></span><span class="status-name">Failed (24h)</span><span class="status-val">${num(a.failed_24h)}</span></div>
+          <div class="status" data-tooltip="Completed in the last 7 days."><span class="dot ok"></span><span class="status-name">Completed (7d)</span><span class="status-val">${num(a.complete_7d)}</span></div>
+        </div>`)}
+      </div>`;
+  }
+
+  function renderWebsiteAssurance() {
+    const rows = (DATA.websites || []).filter((w) => inOrg(w.organization_id) && matches(w.name, w.url, w.organization, w.environment));
+    return head('Website Assurance', 'Every registered site, its live posture score, and whether ownership has been proved.') +
+      panel('Sites', `${rows.length} shown`, rows.length ? `<table class="tbl">
+        <thead><tr>
+          <th>Website</th>
+          <th>Organization</th>
+          <th data-tooltip="Production, staging or development. Environment changes which rules are expected to apply.">Env</th>
+          <th data-tooltip="100 minus the weighted severity of everything still open on the site.">Score</th>
+          <th data-tooltip="Open or reopened findings of any severity.">Open</th>
+          <th data-tooltip="Ownership proof. Until a site is verified, the deeper checks stay off.">Verified</th>
+          <th data-tooltip="Last completed scan.">Last Scan</th>
+        </tr></thead>
+        <tbody>${rows.map((w) => `<tr>
+          <td><b>${escapeHtml(w.name)}</b><br><small class="muted">${escapeHtml(w.url)}</small></td>
+          <td class="muted">${escapeHtml(w.organization)}</td>
+          <td class="muted">${escapeHtml(w.environment || '—')}</td>
+          <td><span class="score ${band(w.score)}">${w.score}</span></td>
+          <td class="num ${w.open_findings ? '' : 'muted'}">${num(w.open_findings)}</td>
+          <td>${w.verified_at ? '<span class="pill ok">verified</span>' : '<span class="pill high">unverified</span>'}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(w.last_scan_at))}">${escapeHtml(ago(w.last_scan_at))}</td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">No websites match.</div>');
+  }
+
+  function renderCompliance() {
+    const c = (DATA.kpi || {}).compliance || {};
+    const total = c.total || 0;
+    const bar = (label, n, colour, tip) => `
+      <div class="status" data-tooltip="${escapeHtml(tip)}">
+        <span class="dot" style="background:${colour}"></span>
+        <span class="status-name">${escapeHtml(label)}</span>
+        <span class="status-val">${num(n)}${total ? ` · ${Math.round((n / total) * 100)}%` : ''}</span>
+      </div>`;
+    return head('Compliance', 'Control effectiveness derived from scanner evidence. This is not a certification and must never be presented as one.') +
+      `<div class="row b" style="grid-template-columns: 1fr 1fr;">
+        ${panel('Control effectiveness', `${num(total)} derived controls across every scanned site`, total ? `<div class="rows">
+          ${bar('Met', c.met, 'var(--emerald)', 'No open scanner finding maps to this control.')}
+          ${bar('Partial', c.partial, 'var(--amber)', 'Partly satisfied. Deliberately not counted toward the headline rate — a half-implemented control is exactly what an auditor asks about.')}
+          ${bar('Not met', c.not_met, 'var(--rose)', 'An open finding maps directly to this control. Each one needs a remediation owner.')}
+          ${bar('Unassessed', c.unassessed, 'var(--text-dim)', 'Derived but not yet assessed either way.')}
+        </div>` : '<div class="empty">No controls derived yet. Controls come from completed scans.</div>')}
+        ${panel('What this number is', 'Read this before quoting it to a client', `<div class="notice">
+          <b>Scanner evidence, not an audit opinion.</b>
+          A control marked <code>met</code> means no open finding from the scan engine maps to it. It does not mean an
+          auditor has tested it, and it does not mean the underlying obligation is satisfied. The same caveat is
+          carried on every SITREP this platform generates, and it belongs on any number taken off this page.
+        </div>`)}
+      </div>`;
+  }
+
+  function renderBilling() {
+    const rev = (DATA.kpi || {}).revenue || {};
+    const pricing = DATA.pricing || {};
+    // muster_public_pricing() returns one object per tier keyed by tier name,
+    // plus a `visible` map -- not an array. Enterprise is contact-only and has
+    // no price object at all, which is why price is optional below.
+    const visible = pricing.visible || {};
+    const tiers = [
+      { key: 'muster', name: 'MUSTER', price: (pricing.muster || {}).monthly_price_cents },
+      { key: 'muster_partner', name: 'MUSTER Partner', price: (pricing.muster_partner || {}).monthly_price_cents,
+        note: (pricing.muster_partner || {}).included_client_orgs != null
+          ? `${pricing.muster_partner.included_client_orgs} client orgs included` : null },
+      { key: 'enterprise', name: 'Enterprise', price: null, note: 'contact sales' },
+    ].map((t) => ({ ...t, visible: visible[t.key] !== false }));
+    const paused = !!((pricing.cta || {}).muster_self_serve_paused);
+    return head('Billing', 'What the current plan assignments price out to, and what the public site is currently offering.') +
+      `<div class="row b" style="grid-template-columns: 1fr 1fr;">
+        ${panel('Plan-implied MRR', `Commercial stage: ${escapeHtml(DATA.stage || 'unknown')}`, `
+          <div class="kpi" style="padding:0;">
+            <div class="kpi-body">
+              <div class="kpi-value"><b>${money(rev.mrr_cents)}</b><span class="delta flat">per month</span></div>
+              <div class="kpi-foot">${num(rev.paying_orgs)} organization${rev.paying_orgs === 1 ? '' : 's'} on a priced plan · ${num(rev.unpriced_orgs)} internal or unpriced</div>
+            </div>
+          </div>
+          <div class="notice" style="margin-top:14px;">
+            <b>This is not billed revenue.</b>
+            Nothing in this platform reads Stripe invoices. The figure is each organization's plan multiplied by that
+            plan's price at its commercial stage. <code>customer.subscription.deleted</code> is unhandled, so a customer
+            who cancelled in Stripe still prices in here until someone changes their plan by hand.
+          </div>`)}
+        ${panel('Pricing surface', 'What muster.partners is showing buyers right now', `<table class="tbl">
+          <thead><tr>
+            <th>Tier</th>
+            <th data-tooltip="Monthly list price at the current commercial stage.">Price</th>
+            <th data-tooltip="Whether this tier renders on the public pricing grid. Hidden tiers still exist and can still be sold by hand.">On the site</th>
+          </tr></thead>
+          <tbody>${tiers.map((t) => `<tr>
+            <td><b>${escapeHtml(t.name)}</b>${t.note ? `<br><small class="muted">${escapeHtml(t.note)}</small>` : ''}</td>
+            <td class="num">${t.price != null ? money(t.price) : '<span class="muted">contact</span>'}</td>
+            <td>${t.visible ? '<span class="pill ok">visible</span>' : '<span class="pill medium">hidden</span>'}</td>
+          </tr>`).join('')}</tbody></table>
+          <div class="status" style="margin-top:14px;" data-tooltip="${escapeHtml(paused
+            ? 'Self-serve checkout is paused, so the landing page and signin.html point at sales instead of a Stripe link. New accounts are provisioned by hand.'
+            : 'Self-serve checkout is live: the Stripe Payment Links are reachable from the pricing grid, and muster-stripe-webhook records the grant.')}">
+            <span class="dot ${paused ? 'warn' : 'ok'}"></span>
+            <span class="status-name">Self-serve checkout</span>
+            <span class="status-val">${paused ? 'paused — sales-led' : 'live'}</span>
+          </div>`)}
+      </div>`;
+  }
+
+  function renderIntegrations() {
+    const al = (DATA.system || {}).alerts || {};
+    return head('Integrations', 'What this platform can observe about its own outbound dependencies. Each row is inferred from real rows, not from a health endpoint.') +
+      `<div class="row b" style="grid-template-columns: 1fr 1fr;">
+        ${panel('Observed state', 'Inferred from live tables', `<div class="rows">
+          <div class="status" data-tooltip="Signature-verified and gated on payment_status. Cancellation is not handled: nothing consumes customer.subscription.deleted."><span class="dot ok"></span><span class="status-name">Stripe — checkout.session.completed</span><span class="status-val">handled</span></div>
+          <div class="status" data-tooltip="No consumer exists for this event, so a cancelled customer keeps their plan until it is changed by hand. This is a known gap, not a transient failure."><span class="dot bad"></span><span class="status-name">Stripe — subscription.deleted</span><span class="status-val">not handled</span></div>
+          <div class="status" data-tooltip="Application email: muster-alert-dispatch calls Resend's REST API directly for critical-finding alerts."><span class="dot ${al.dead_letter ? 'bad' : 'ok'}"></span><span class="status-name">Resend — alert dispatch</span><span class="status-val">${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter</span></div>
+          <div class="status" data-tooltip="Magic link, invite, recovery and email-change are sent by Supabase Auth (GoTrue), which relays through Resend as its SMTP provider. That path is configured in the Supabase dashboard, not in this codebase, and this console cannot observe it."><span class="dot warn"></span><span class="status-name">Supabase Auth email</span><span class="status-val">not observable here</span></div>
+        </div>`)}
+        ${panel('Why two email paths', 'They are not the same system', `<div class="notice">
+          <b>Auth email and application email never share a template.</b>
+          Sign-in links, invites and password resets are rendered by Supabase Auth and only reach Resend because Resend
+          is configured as its SMTP relay — a Resend <em>template</em> can never render them. Application email
+          (currently just the <code>risk_opened</code> alert) goes through Resend's REST API from
+          <code>muster-alert-dispatch</code>. Conflating the two is how an auth template ends up edited in the wrong place.
+        </div>`)}
+      </div>`;
+  }
+
+  function renderSystemHealth() {
+    const sys = DATA.system || {};
+    const cron = sys.cron || [];
+    return head('System Health', 'Schedules, queue depth and open incidents. An active cron row proves a schedule exists; the last successful run is what proves it fired.') +
+      `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
+        ${panel('Scheduled jobs', `${cron.length} muster-* pg_cron job${cron.length === 1 ? '' : 's'}`, cron.length ? `<table class="tbl">
+          <thead><tr>
+            <th>Job</th>
+            <th data-tooltip="The pg_cron schedule, in UTC.">Schedule</th>
+            <th data-tooltip="Whether the schedule is enabled at all.">Active</th>
+            <th data-tooltip="Status of the most recent run, successful or not.">Last Run</th>
+            <th data-tooltip="The last run that actually succeeded. This, not the active flag, is what proves the job is working.">Last Success</th>
+          </tr></thead>
+          <tbody>${cron.map((j) => `<tr>
+            <td><b>${escapeHtml(j.jobname)}</b></td>
+            <td class="num muted">${escapeHtml(j.schedule)}</td>
+            <td>${j.active ? '<span class="pill ok">on</span>' : '<span class="pill critical">off</span>'}</td>
+            <td>${j.last_status === 'succeeded' ? '<span class="pill ok">succeeded</span>' : j.last_status ? `<span class="pill critical">${escapeHtml(j.last_status)}</span>` : '<span class="muted">never run</span>'}</td>
+            <td class="muted num" data-tooltip="${escapeHtml(stamp(j.last_success_at))}">${escapeHtml(ago(j.last_success_at))}</td>
+          </tr>`).join('')}</tbody></table>` : '<div class="empty">No muster-* cron jobs are scheduled. Nothing is running on a timer.</div>')}
+        ${panel('Platform status', 'Live', systemStatus())}
+      </div>`;
+  }
+
+  function renderSettings() {
+    const flags = (DATA.flags || []).filter((f) => matches(f.key, f.name, f.category, f.surface));
+    return head('Settings', 'The feature-flag registry. Scope, plan gate and — the column that matters — how each flag is actually enforced.') +
+      panel('Feature flags', `${flags.length} shown`, flags.length ? `<table class="tbl">
+        <thead><tr>
+          <th>Flag</th>
+          <th data-tooltip="What the flag governs.">Category</th>
+          <th data-tooltip="Whether it applies platform-wide, per organization, or per user.">Scope</th>
+          <th data-tooltip="The lowest plan that gets this by default.">Plan Gate</th>
+          <th data-tooltip="Where the flag is read and enforced. A flag with no enforcement is documentation, not a control.">Enforcement</th>
+          <th data-tooltip="A kill switch is checked at the point of use and turns the capability off immediately, everywhere.">Kill</th>
+          <th data-tooltip="Per-organization or per-user overrides currently set on this flag.">Overrides</th>
+        </tr></thead>
+        <tbody>${flags.map((f) => `<tr>
+          <td><b>${escapeHtml(f.name || f.key)}</b><br><small class="muted num">${escapeHtml(f.key)}</small></td>
+          <td class="muted">${escapeHtml(f.category || '—')}</td>
+          <td class="muted">${escapeHtml(f.scope || '—')}</td>
+          <td class="muted">${escapeHtml(f.plan_minimum || 'any')}</td>
+          <td class="muted">${escapeHtml(f.enforcement || 'unspecified')}</td>
+          <td>${f.kill_switch ? '<span class="pill high">kill switch</span>' : '<span class="muted">—</span>'}</td>
+          <td class="num ${f.overrides ? '' : 'muted'}">${num(f.overrides)}</td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">No flags registered.</div>');
+  }
+
+  // Surfaces the design calls for that this schema cannot answer. Each one says
+  // what would have to exist, rather than rendering a convincing empty table.
+  const STUBS = {
+    workspaces: {
+      title: 'Workspaces',
+      sub: 'There is no separate workspace object in this schema.',
+      body: `An organization <em>is</em> the workspace: <code>muster.organizations</code> owns the websites, the members,
+        the findings and the plan, and RLS scopes everything to it. A distinct workspace layer would mean one organization
+        holding several isolated sets of sites — nothing in the product needs that today, and adding a table for it would
+        add a second thing for RLS to get wrong. Until that changes, <strong>Organizations</strong> is this screen.`,
+      go: 'organizations',
+    },
+    'ai-readiness': {
+      title: 'AI Readiness',
+      sub: 'Named on the landing page; not yet a module in this schema.',
+      body: `There is no AI-readiness assessment table, no scoring rules and no findings category for it — the scan engine
+        currently produces website assurance, accessibility and compliance evidence only. Shipping a readiness dashboard
+        before the assessment exists would mean inventing every number on it. What would have to land first: a rule set
+        in <code>muster.scan_rules</code>, a findings category the engine emits, and a score derivation to sit beside
+        <code>muster.posture_score</code>.`,
+      go: 'website-assurance',
+    },
+    'domain-monitor': {
+      title: 'Domain Monitor',
+      sub: 'Continuous domain watching is not instrumented.',
+      body: `Certificate expiry, DNS drift, WHOIS change and domain spoofing all need a watcher that runs against a domain
+        on its own schedule and records a time series. The scan engine is site-scoped and point-in-time, and there is no
+        table holding domain state between runs. Today the closest real signal is the scan engine's own findings on each
+        registered site — that is under <strong>Website Assurance</strong>.`,
+      go: 'website-assurance',
+    },
+    reports: {
+      title: 'Reports',
+      sub: 'SITREP generation is live; this console does not index them.',
+      body: `<code>muster.sitreps</code> holds real generated SITREPs, and tenants read them at
+        <code>/sitrep</code> — a signed-in, tenant-scoped viewer that uses the same auth session and the same RLS as the
+        workspace. What is missing here is a platform-wide index across tenants, which needs its own RPC. The static
+        reference SITREP covering every finding category lives at <code>/sitrep/sample</code>.`,
+      go: null,
+    },
+  };
+
+  function renderStub(id) {
+    const s = STUBS[id];
+    return head(s.title, s.sub) + `<div class="notice" style="max-width:820px;">
+      <b>Not instrumented yet — and this page will not pretend otherwise.</b>
+      ${s.body}
+      ${s.go ? `<div style="margin-top:14px;"><button class="link-more" type="button" data-section="${s.go}">Go to ${escapeHtml(SECTIONS.find((x) => x.id === s.go).label)} →</button></div>` : ''}
+    </div>`;
+  }
+
+  const RENDER = {
+    overview: renderOverview,
+    organizations: renderOrganizations,
+    users: renderUsers,
+    'audit-queue': renderAuditQueue,
+    'website-assurance': renderWebsiteAssurance,
+    compliance: renderCompliance,
+    billing: renderBilling,
+    integrations: renderIntegrations,
+    'system-health': renderSystemHealth,
+    settings: renderSettings,
+  };
+
+  function render() {
+    if (!DATA) return;
+    renderNav();
+    const fn = RENDER[section];
+    document.getElementById('page').innerHTML = fn ? fn() : renderStub(section);
+    const n = (DATA.action_items || []).length;
+    const bell = document.getElementById('bellCount');
+    bell.textContent = String(n);
+    bell.hidden = n === 0;
+  }
+
+  function go(next) {
+    if (!next || next === section) return;
+    section = next;
+    if (location.hash.slice(1) !== next) history.replaceState(null, '', '#' + next);
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---- boot ---------------------------------------------------------------
+
+  async function load() {
+    const { data, error } = await sb.rpc('muster_admin_console');
+    if (error) throw error;
+    DATA = data;
+
+    const orgs = (DATA.organizations || []);
+    const sel = document.getElementById('orgFilter');
+    sel.innerHTML = '<option value="all">All organizations</option>' +
+      orgs.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}${o.is_admin_sandbox ? ' (sandbox)' : ''}</option>`).join('');
+    sel.value = orgFilter;
+
+    const hash = location.hash.slice(1);
+    if (hash && (RENDER[hash] || STUBS[hash])) section = hash;
+
+    document.getElementById('gateLoading').hidden = true;
+    document.getElementById('shell').hidden = false;
+    render();
+  }
+
+  async function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      document.getElementById('gateLoadingMsg').textContent =
+        'Could not load the Supabase client. Refresh, and check that cdn.jsdelivr.net is reachable.';
+      return;
+    }
+
+    // detectSessionInUrl is false on purpose. It defaults to TRUE, and a page
+    // that parses an auth fragment consumes it -- auth links are single use, so
+    // a stray magic link that landed here would be burned without signing
+    // anyone in. This page never completes a sign-in; it requires one that
+    // already happened on this origin. Only app.html, signin.html, sitrep.html
+    // and onboarding.html may consume a fragment.
+    sb = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    });
+
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      // Root on this host is the sign-in page, and it shares this origin -- which
+      // is the whole reason signin.html and the app are served together.
+      location.replace(window.location.origin + '/?next=/admin');
+      return;
+    }
+
+    const email = session.user && session.user.email;
+    document.getElementById('whoEmail').textContent = email || 'MUSTER';
+    document.getElementById('whoInitials').textContent = initials(email);
+    document.getElementById('whoName').textContent = 'Super Admin';
+
+    try {
+      await load();
+    } catch (err) {
+      // The database is the gate. 42501 is what a non-super-admin gets on the
+      // very first call, and it is the only "denied" this page knows how to
+      // recognise -- there is no client-side role check to disagree with it.
+      const denied = String((err && (err.code || err.message)) || '').includes('42501') ||
+        /forbidden|permission denied/i.test(String((err && err.message) || ''));
+      document.getElementById('gateLoading').hidden = true;
+      if (denied) {
+        document.getElementById('gateDenied').hidden = false;
+      } else {
+        document.getElementById('gateLoading').hidden = false;
+        document.getElementById('gateLoadingMsg').textContent =
+          'Could not load the console: ' + ((err && err.message) || 'unknown error');
+      }
+    }
+  }
+
+  // ---- events -------------------------------------------------------------
+
+  document.addEventListener('click', (e) => {
+    const nav = e.target.closest && e.target.closest('[data-section]');
+    if (nav) { e.preventDefault(); go(nav.getAttribute('data-section')); return; }
+    if (e.target.closest && e.target.closest('#bell')) { go('overview'); }
+  });
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'search') { query = e.target.value.trim().toLowerCase(); render(); }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'orgFilter') { orgFilter = e.target.value; render(); }
+    if (e.target.id === 'rangeFilter') { rangeDays = Number(e.target.value); render(); }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      const s = document.getElementById('search');
+      if (s) s.focus();
+    }
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hash = location.hash.slice(1);
+    if (hash && (RENDER[hash] || STUBS[hash]) && hash !== section) { section = hash; render(); }
+  });
+
+  // Right-click context menu suppression. Added 2026-09-08 at the owner's explicit
+  // request, after the tradeoff below was put to them in full, and carried onto
+  // every new page since.
+  //
+  // WHAT THIS DOES: suppresses the browser context menu on a real right-click.
+  //
+  // WHAT THIS DOES NOT DO, and nobody reading this later should think otherwise:
+  // it does not protect this page's source. Ctrl+U, F12, the browser's own View
+  // Page Source item, `curl`, Save Page As and simply turning JavaScript off all
+  // still read every byte. This is a speed bump on one gesture, not a security
+  // control, and it must never be cited as one in a SITREP, a control register,
+  // or a conversation with a client.
+  //
+  // On this page in particular that distinction matters twice over: what ships to
+  // the browser is a renderer with a publishable key in it, and the only thing
+  // standing between that key and the whole platform's data is
+  // muster.is_super_admin() inside a SECURITY DEFINER function. Hiding the source
+  // would protect nothing; the database refusing the call protects everything.
+  //
+  // Two carve-outs keep this from becoming an accessibility defect on a product
+  // that sells accessibility auditing (A11Y-001..007):
+  //
+  //   1. Keyboard-invoked menus pass through. Screen reader and keyboard-only
+  //      users open the context menu with the Menu key or Shift+F10, which arrives
+  //      as a contextmenu event with button 0; a mouse right-click arrives with
+  //      button 2. Only button 2 is suppressed, so the assistive path is untouched.
+  //      Long-press on touch also reports button 0, so mobile copy and paste keeps
+  //      working -- a long-press is not a right-click.
+  //   2. Text-entry surfaces keep their native menu, because right-click there is
+  //      how people paste and reach spellcheck suggestions, and a form field
+  //      exposes no source anyway.
+  //
+  // Both are pinned by tests/ui/context-menu-guard.test.ts. Do not remove either
+  // to make the block "more complete".
+  function initContextMenuGuard() {
+    document.addEventListener('contextmenu', function (e) {
+      if (e.button !== 2) return;
+      var t = e.target;
+      if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return;
+      e.preventDefault();
+    });
+  }
+
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => {
+      const target = findTarget(e.target);
+      if (target) show(target);
+    });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && current) { hide(); suppressed = true; }
+    });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    initTooltips();
+    initContextMenuGuard();
+    init();
+  });
+</script>
+
+</body>
+</html>
