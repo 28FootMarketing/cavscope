@@ -300,6 +300,24 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   window, so one failed scan on 2026-09-08 left two incidents open forever and bumped them 144
   times. Open-incident count is only a usable signal while it can go down. A new check that
   reports an incident needs a matching close path, or it is a counter, not an alarm.
+- **Frameworks are data, in `muster.frameworks`; adding one is an insert, not a constraint edit.**
+  `controls.framework` is a foreign key to that table and `muster.framework_label()` reads it, so a
+  new framework needs one row (key + display label) and nothing else. Before 2026-09-16 the valid
+  set was a hardcoded `CHECK` on a `varchar(16)` column, and the AI-governance rules broke the whole
+  control register for an hour by introducing a 30-character key: `sync_controls` threw 22001,
+  `muster_045` swallowed it into an `activity_events` row by design, and the register silently went
+  stale. `muster-watchdog` now opens a `control_register_failure` incident on that activity row and
+  closes it when the count returns to zero, because a deliberately swallowed error needs a watcher
+  or it is just a silent error.
+- **A framework mapping is a citation, not a test, and the distinction is the product's integrity.**
+  `scan_rules.framework_refs` maps rules to NIST CSF 2.0 and 1.1, NIST SP 800-53 Rev. 5, OWASP Top
+  10:2025, OWASP Secure Headers, SOC 2 (AICPA TSC), ISO 27001, PCI DSS, GDPR and WCAG. Citing
+  `A02:2025` says a finding belongs to that category; it never says MUSTER tests the category. The
+  engine is HTTP-native with no browser and no authenticated crawl, so most of the Top 10 is out of
+  reach by construction. **Never describe MUSTER as providing a SOC 2 opinion** -- that is a licensed
+  CPA firm's examination. MUSTER produces evidence for one and readiness signal between them; route
+  the attestation question to the client's auditor. Full table and the deliberate ASVS omission are
+  in `docs/SCAN-RULES.md`.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is

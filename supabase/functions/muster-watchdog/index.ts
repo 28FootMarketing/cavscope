@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
   // structured summary (keeps this function free of raw SQL against
   // business tables -- it only ever calls RPCs, same as every other
   // MUSTER client).
-  checksRun.push("scan_silent_failure", "commercial_grant_stuck", "alert_dead_letter", "engine_error_spike");
+  checksRun.push("scan_silent_failure", "commercial_grant_stuck", "alert_dead_letter", "engine_error_spike", "control_register_failure");
   {
     const { data: summary, error } = await db.rpc("muster_engine_watchdog_summary");
     if (error) throw new Error(`watchdog summary failed: ${error.message}`);
@@ -94,6 +94,7 @@ Deno.serve(async (req: Request) => {
       stuck_grants: Array<{ id: number; email: string; created_at: string }>;
       dead_letter_alerts: number;
       failed_scans_24h: number;
+      control_register_failures_24h: number;
     };
 
     for (const scan of s.silent_scans ?? []) {
@@ -126,6 +127,25 @@ Deno.serve(async (req: Request) => {
       // row of this source regardless of the date in its fingerprint, so the whole
       // source closes rather than one row.
       incidentsClosed += await closeCleared("engine_error_spike", { failed_scans_24h: 0 });
+    }
+
+    // muster.sync_controls() rebuilds the control register at the end of every
+    // ingest, and muster_045 deliberately swallows its failure into an
+    // activity_events row so a summary table cannot cost a scan its findings.
+    // That trade is right and it is also why the register broke on 2026-09-16
+    // and nothing noticed for an hour. A swallowed error needs a watcher, or it
+    // is just a silent error.
+    if ((s.control_register_failures_24h ?? 0) > 0) {
+      await reportIncident(
+        `control_register_failure:${today}`,
+        "control_register_failure",
+        "warning",
+        "muster.sync_controls via muster.do_ingest_controls",
+        { failures_24h: s.control_register_failures_24h },
+      );
+      incidentsOpened++;
+    } else {
+      incidentsClosed += await closeCleared("control_register_failure", { failures_24h: 0 });
     }
   }
 
