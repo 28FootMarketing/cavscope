@@ -1,0 +1,88 @@
+# Deploy the Supabase edge functions on merge to main.
+#
+# Why this exists: until 2026-09-16 every edge function in this project was
+# deployed by pasting its source through a chat tool. That works for a 7 KB
+# watchdog and stops working at muster-scan, which is 38 KB across three files --
+# large enough that the paste itself becomes the risk, and a silent transcription
+# slip ships a broken scanner to production with no diff to review. The fix is
+# not a more careful paste. It is that the artifact deployed should be the commit
+# that was reviewed.
+#
+# SETUP, one time, before this can run:
+#   1. Generate a Supabase access token: https://supabase.com/dashboard/account/tokens
+#   2. Add it as the repository secret SUPABASE_ACCESS_TOKEN
+#      (Settings -> Secrets and variables -> Actions -> New repository secret)
+#
+# Until that secret exists the job is skipped, not failed: a missing secret must
+# not turn main red, and a red main is how the last outage went unnoticed for
+# five merges.
+#
+# What this does NOT do: apply migrations. `supabase db push` against production
+# from CI is a bigger decision than this file should make on its own -- migrations
+# here are applied deliberately and their files are named after the version the
+# tool assigned, which a push would not reproduce. Functions are the safe half:
+# a redeploy is idempotent and the previous version stays available.
+name: deploy-functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Unlike the test workflow, a paths filter is correct here: this job has a
+      # side effect on production, and it should not fire for a README change.
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+concurrency:
+  # Two deploys of the same function racing would leave whichever finished last,
+  # which is not necessarily the newer commit.
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: guard
+        name: Check the deploy secret is configured
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SUPABASE_ACCESS_TOKEN is not set; skipping deploy. See the header of this workflow for setup."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.guard.outputs.configured == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - if: steps.guard.outputs.configured == 'true'
+        name: Deploy edge functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          # project_id in supabase/config.toml is the deploy target, so the
+          # linked project and the migrations directory cannot disagree.
+          PROJECT_REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          echo "Deploying to $PROJECT_REF"
+          # Each function is deployed by name so a new directory has to be added
+          # here deliberately, and verify_jwt comes from config.toml rather than
+          # from a flag that could drift from what the repo declares.
+          for dir in supabase/functions/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              _*) continue ;;
+            esac
+            echo "::group::$name"
+            supabase functions deploy "$name" --project-ref "$PROJECT_REF"
+            echo "::endgroup::"
+          done

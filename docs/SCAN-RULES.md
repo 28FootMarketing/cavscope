@@ -191,6 +191,31 @@ appears in the register on the next scan without any other change.
 | OWASP Secure Headers | 9 | one per response header rule |
 | SOC 2 (AICPA TSC) | 15 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
 
+### Held pending the engine deploy
+
+`SEC-014` (Subresource Integrity), `SEC-015` (CAA) and `EMAIL-008` (MTA-STS) exist in
+`muster.scan_rules` but are **inactive**, and must stay inactive until `muster-scan` is running
+engine version `http-native-1.2.0` or later. The reason is not tidiness. `rule_control_refs()`
+projects every *active* rule into the control register, and `sync_controls()` scores a reference
+`met` when a scanned website has no open findings against it. A rule the engine never evaluates has
+no findings by construction, so an active-but-unevaluated rule renders as a **met control** -- a
+report saying a site was checked for SRI and passed, when it was never checked. That is a fabricated
+assurance, which is the worst thing a compliance product can emit.
+
+Activation is one statement, after confirming the deployed engine version on a fresh scan:
+
+```sql
+update muster.scan_rules set active = true, updated_at = now()
+ where rule_id in ('SEC-014','SEC-015','EMAIL-008');
+```
+
+`SEC-014` is the rule worth understanding before it goes live. It **excludes** tag managers,
+analytics, chat widgets and payment scripts, because those files are meant to change and pinning a
+hash breaks them on the vendor's next deploy. "Add SRI to Google Tag Manager" is advice that takes a
+site down. The finding says how many scripts it excluded and points at CSP and vendor review for
+those, rather than pretending they are fine or inventing a defect nobody can fix. That exclusion is
+pinned by `tests/scan/hardening.test.ts`, which treats it as the most important case in the file.
+
 Three things about this that matter when a client asks:
 
 **A mapping is not a test.** Citing `A02:2025` says the finding belongs to that category. It does
@@ -227,6 +252,14 @@ Worth being able to say out loud, because a prospect will ask:
   no computed styles.
 - **No authenticated crawl.** Only what an anonymous visitor sees.
 - **One page by default.** `website_scan_settings.max_pages` defaults to 1.
-- **No DKIM, BIMI or MTA-STS check.** SPF and DMARC are covered by the `EMAIL-*` family above;
-  DKIM cannot be checked without knowing the selector, and BIMI and MTA-STS are not assessed.
-- **No TLS certificate inspection.** Expiry, chain and cipher suite are not assessed.
+- **No DKIM or BIMI check.** SPF and DMARC are covered by the `EMAIL-*` family above; DKIM cannot
+  be checked without knowing the selector, and BIMI is not assessed. **MTA-STS is now covered** by
+  `EMAIL-008`.
+- **No TLS certificate inspection.** Expiry, chain and cipher suite are not assessed, and this is a
+  runtime limit rather than an oversight: the edge runtime's `Deno.connectTls()` exposes only the
+  negotiated ALPN protocol in `TlsHandshakeInfo`, with no access to the peer certificate. Reading
+  expiry from Certificate Transparency logs instead was considered and rejected -- CT shows what was
+  *issued*, not what the server is *serving*, so "your certificate expires in five days" could be
+  said of a certificate that was replaced a month ago. A wrong expiry warning on a compliance report
+  is worse than no expiry warning. It needs either a browser engine or a helper that can complete a
+  TLS handshake and read the chain.
