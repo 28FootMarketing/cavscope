@@ -83,3 +83,25 @@ is both.
 That endpoint was dropped by `muster_026` and the token grants nothing on any system.
 It is left in place because this directory is a history, and editing history to look
 tidier is how a ledger stops being trustworthy. Do not reuse the value.
+
+## `055`–`057` call themselves `052`–`054` inside, and that cannot be fixed
+
+`20260916022827`, `20260916022923` and `20260916023009` were written and applied on a
+branch at the same time `20260915230805` was being written on another. Both branches
+picked the next free sequence number independently, so `muster_052` was claimed twice.
+
+`20260915230805` keeps it. It is earlier by version, and it is the one the **live
+database** agrees with: the comment on `muster.password_change_required()` reads
+"see migration muster_052 header", so the catalog itself points at that file. The
+other three are renumbered `055`–`057` in their filenames, which restores unique,
+chronological numbering.
+
+What is *not* changed is their contents. All three open with a `-- muster_05N:` line
+and refer to each other by the old numbers, and those lines are part of the statement
+Postgres recorded. Correcting them would make the files disagree with the ledger, which
+is the one thing a file in this directory may never do — so the stale self-references
+stay. **The filename is authoritative; a `muster_05N` mentioned inside one of these
+three is off by three.** The version prefix is the real ordering and always was.
+
+The sequence numbers are a reading aid, not an identifier. Nothing keys on them:
+`supabase_migrations.schema_migrations` keys on the version, and so does the CLI.
