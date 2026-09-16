@@ -1,9 +1,23 @@
-"""Render muster.sitreps row 16 as a PDF.
+"""Render a muster.sitreps row as a PDF.
 
 Faithful rendering only: every number, claim, finding and hash comes from the
 stored SITREP. Nothing is composed here that the engine did not produce.
+
+Two copies of the same SITREP are produced from the same JSON:
+
+  render.py sitrep.json client.pdf --prepared-for "Client Name"
+      The client copy. --prepared-for replaces the organization name on the
+      masthead; an ad-hoc scan from the admin URL runner is stored under the
+      internal sandbox org, which is not who the report is for.
+
+  render.py sitrep.json platform.pdf --annex annex.json
+      The platform copy. Identical body, plus an "Operator annex" appended
+      from annex.json and an INTERNAL mark on every page. The annex is
+      operator-authored context (database references, hosting constraints,
+      the remediation plan) and is labelled as such on the page: it is not
+      engine output and must not be presented as if it were.
 """
-import json, sys, datetime
+import argparse, json, datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -12,9 +26,18 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer,
                                 Table, TableStyle, KeepTogether, HRFlowable)
 
-SRC = sys.argv[1]
-OUT = sys.argv[2]
+ap = argparse.ArgumentParser(description="Render a stored MUSTER SITREP as a PDF.")
+ap.add_argument("src", help="JSON produced by export.sql")
+ap.add_argument("out", help="PDF to write")
+ap.add_argument("--prepared-for", dest="prepared_for", default=None,
+                help="name shown on the masthead in place of the stored organization (client copy)")
+ap.add_argument("--annex", default=None,
+                help="operator annex JSON to append; marks every page INTERNAL (platform copy)")
+args = ap.parse_args()
+SRC, OUT = args.src, args.out
 D = json.load(open(SRC))
+ANNEX = json.load(open(args.annex)) if args.annex else None
+PREPARED_FOR = args.prepared_for or D["org"]
 
 INK      = colors.HexColor("#0c1527")
 INK_SOFT = colors.HexColor("#46587a")
@@ -86,10 +109,10 @@ A = story.append
 # ---------------------------------------------------------------- masthead
 site = D["website"]; sr = D["sitrep"]; scan = D["scan"]; summ = scan["summary"]
 
-A(Paragraph("MUSTER &#183; WEBSITE ASSURANCE SITREP", S["kicker"]))
+A(Paragraph("MUSTER &#183; WEBSITE ASSURANCE SITREP" + (" &#183; INTERNAL &#183; PLATFORM COPY" if ANNEX else ""), S["kicker"]))
 A(Spacer(1, 3))
 A(Paragraph(esc(site["name"]), S["title"]))
-A(Paragraph(f'{esc(site["url"])} &#183; prepared for {esc(D["org"])}', S["sub"]))
+A(Paragraph(f'{esc(site["url"])} &#183; prepared for {esc(PREPARED_FOR)}', S["sub"]))
 A(Spacer(1, 7))
 A(HRFlowable(width="100%", thickness=1.1, color=INK, spaceAfter=10))
 
@@ -169,13 +192,29 @@ A(t)
 A(Spacer(1, 14))
 
 # ---------------------------------------------------------------- open findings
+# The intro has to be derived from the findings on the page, not written for
+# one row: the first version said "Both are informational", which was true of
+# SITREP 16 and false of every other.
+n_open = len(D["top_findings"])
+n_info = sum(1 for f in D["top_findings"] if f["severity"] == "info")
+if n_open == 0:
+    intro_text = "No open findings on this scan."
+elif n_info == n_open:
+    intro_text = ("All are informational. MUSTER reports inventory and policy positions at this level: "
+                  "they describe a state of affairs, not a defect to remediate.")
+else:
+    intro_text = ("Ordered by severity. Each carries the engine's recommended action and the evidence it was "
+                  "derived from. Informational items describe inventory or policy positions, not defects; "
+                  "everything above that level is a remediation item.")
 open_intro = [
-    Paragraph(f'Open findings ({len(D["top_findings"])})', S["h2"]),
-    Paragraph("Both are informational. MUSTER reports inventory and policy positions at this level: "
-              "they describe a state of affairs, not a defect to remediate.", S["bodydim"]),
+    Paragraph(f'Open findings ({n_open})', S["h2"]),
+    Paragraph(intro_text, S["bodydim"]),
     Spacer(1, 7),
 ]
 pending_intro = True
+if n_open == 0:
+    for x in open_intro: A(x)
+    pending_intro = False
 
 for f in D["top_findings"]:
     sev = f["severity"]
@@ -325,6 +364,30 @@ A(Paragraph(
     "obligations. Framework references indicate where a finding is relevant to a control, not that any "
     "certification has been achieved.", S["small"]))
 
+# ---------------------------------------------------------------- operator annex
+# Platform copy only. Authored by the operator, not the engine, and the page
+# says so. Shape: {"prepared_by": str, "sections": [{"heading": str,
+# "paragraphs": [str], "records": [[key, value]]}]}
+if ANNEX:
+    A(Spacer(1, 10))
+    A(HRFlowable(width="100%", thickness=1.1, color=INK, spaceAfter=8))
+    A(Paragraph("INTERNAL &#183; NOT PART OF THE ENGINE OUTPUT", S["kicker"]))
+    A(Spacer(1, 3))
+    A(Paragraph("Operator annex", S["h2"]))
+    A(Paragraph(f'Written by {esc(ANNEX.get("prepared_by", "the operator"))} for the platform record. '
+                "Everything above this rule was produced by the engine and is hashed; everything below "
+                "is analysis and context added by a person, and is not.", S["bodydim"]))
+    A(Spacer(1, 8))
+    for sec in ANNEX.get("sections", []):
+        block = [Paragraph(esc(sec["heading"]), S["h3"]), Spacer(1, 3)]
+        for para in sec.get("paragraphs", []):
+            block += [Paragraph(esc(para), S["body"]), Spacer(1, 4)]
+        if sec.get("records"):
+            block += [kv_table([(k, f'<font face="Courier" size="7.8">{esc(v)}</font>' if sec.get("mono") else esc(v))
+                                for k, v in sec["records"]], w1=40*mm, w2=118*mm)]
+        block += [Spacer(1, 10)]
+        A(KeepTogether(block))
+
 # ---------------------------------------------------------------- page furniture
 def furniture(canvas, doc):
     canvas.saveState()
@@ -335,7 +398,7 @@ def furniture(canvas, doc):
     canvas.setFillColor(INK_DIM)
     canvas.drawString(20*mm, 11*mm,
         f'MUSTER SITREP #{sr["id"]} v{sr["version"]}  |  scan #{scan["scan_id"]}  |  {site["url"]}')
-    canvas.drawRightString(w - 20*mm, 11*mm, f"Page {doc.page}")
+    canvas.drawRightString(w - 20*mm, 11*mm, ("INTERNAL  |  " if ANNEX else "") + f"Page {doc.page}")
     # The content hash goes on its own line. Centring it on the same baseline
     # ran it straight through the URL on the left.
     canvas.setFont("Courier", 5.8)
@@ -345,7 +408,7 @@ def furniture(canvas, doc):
 
 doc = BaseDocTemplate(OUT, pagesize=LETTER,
                       leftMargin=20*mm, rightMargin=20*mm, topMargin=18*mm, bottomMargin=22*mm,
-                      title=f'MUSTER SITREP - {site["name"]} - scan {scan["scan_id"]}',
+                      title=f'MUSTER SITREP - {site["name"]} - scan {scan["scan_id"]}' + (" - platform copy" if ANNEX else ""),
                       author="MUSTER by 28 Foot Systems (After Today, LLC)",
                       subject=sr["headline"])
 frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
