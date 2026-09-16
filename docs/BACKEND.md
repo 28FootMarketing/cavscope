@@ -62,6 +62,48 @@ not shipped.
 - `service_role` (edge functions, cron) uses `public.muster_engine_*` only. Those functions are revoked from `anon` and `authenticated`.
 - Agents authenticate with `x-muster-api-key: mk_...`. Keys are stored as SHA-256 hashes. Scopes: `read`, `scan`, `write`, `admin`. Org-scoped keys cannot reach other tenants; platform keys (org null) are super-admin issued.
 
+### Forced password change
+
+An account provisioned with a temporary password carries
+`app_metadata.force_password_change`. As of migration `20260915230805` that flag is enforced,
+by `muster.password_change_required()` — a predicate over the caller's own JWT claims, wired
+into the six functions that are the authorization spine: `current_user_id`, `is_super_admin`,
+`org_role`, `shares_org_with`, `onboarding_caller`, `ensure_user_from_auth`. A flagged caller
+resolves to no user id, no super-admin and no role in any organization, so every tenant-scoped
+RPC and every RLS policy that routes through them answers empty or raises `42501`.
+
+Before that migration **nothing read the flag at all** — not a page, not a policy, not a
+function. It was set on a live `super_admin` account, which signed in on the old password and
+went straight to the workspace while the account list said a change was required. A control
+nobody checks still reads as satisfied to whoever audits it, which is worse than no control.
+
+Spine coverage was measured, not assumed: of the `public.muster_*` functions executable by
+`authenticated`, exactly five bypass the spine (`muster_countries`, `muster_plans`,
+`muster_regions`, `muster_public_pricing`, `muster_jurisdiction_advisory`) and all five return
+public reference data. Of 79 RLS policies in schema `muster`, the 27 that bypass the spine are
+24 `to muster_app` (a non-browser role) plus 3 catalog reads.
+
+Clearing the flag needs the service role, so it goes through the **`muster-set-password`** edge
+function, which sets the new password and clears the flag in one admin call or neither. There is
+deliberately no "clear the flag" endpoint — that would be a bypass with extra steps. The browser
+then **must** call `refreshSession()`: JWT claims are minted at sign-in and not read live, so
+until the token is replaced the gate still sees the old claim and the workspace looks broken.
+
+`service_role` is exempt by construction rather than by an exception clause: a service-role JWT
+carries no `app_metadata`, so the predicate is already false for it. An edge function that
+forwards a *user's* `Authorization` header (`muster-verify-site` does) is correctly gated.
+
+Break-glass, if the gate ever locks someone out with no way through — it cannot lock anyone out
+of the Supabase dashboard:
+
+```sql
+update auth.users
+   set raw_app_meta_data = raw_app_meta_data - 'force_password_change'
+ where email = 'someone@example.com';
+```
+
+They must then sign out and back in, for the same claims-are-minted reason.
+
 ### Bootstrap the first super admin
 
 Run once as `postgres` after the operator has signed in at least once:

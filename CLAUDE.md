@@ -237,8 +237,10 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   sentinel account. Invocation and the 2026-09-09 results are in `docs/EMAIL.md`. Outstanding
   after that run: **Site URL on `hjowfnzpomzxazmzywxw` must be on the app host** -- the chosen
   value is `https://app.muster.partners` (see `docs/EMAIL.md` for why the root rather than
-  `/app`), and it was `https://www.muster.partners/` until 2026-09-13. That is a dashboard
-  setting; nothing in this repo can change it. Also outstanding: none of the six auth email
+  `/app`). **It was believed changed on 2026-09-13 and it is not: on 2026-09-15 a real magiclink
+  again landed on `https://www.muster.partners/` with live tokens in the fragment.** That is a
+  dashboard setting; nothing in this repo can change it, and nothing in this repo can verify it
+  either except `muster-auth-smoke` plus an actual link. Do not mark it done from a note. Also outstanding: none of the six auth email
   templates have been pasted from `supabase/auth-email-templates/` -- bodies and subjects are
   still GoTrue stock.
 - **Only the pages that complete a sign-in may consume an auth fragment.** `detectSessionInUrl`
@@ -249,6 +251,35 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `index.html` builds a client only to call `muster_public_pricing` and now passes
   `detectSessionInUrl: false`, and `admin.html` does the same for the same reason; `privacy.html` and `sitrep-sample.html` build none at all. A new
   page that adds a client for data must turn it off explicitly.
+- **`index.html` forwards a stray auth fragment; it does not swallow it.** Declining to consume
+  the fragment (above) keeps the tokens alive but leaves the user on marketing copy holding a
+  session no page will take. So a head-level script in `index.html` runs before paint and
+  `location.replace()`s any fragment carrying `access_token`, `refresh_token`, `error_code` or
+  `error_description` to `https://app.muster.partners/`, fragment intact. Root, not `/app`:
+  `signin.html` handles a live session, `type=recovery` and an expired link; `app.html` would
+  drop a recovery session into the workspace with no password form. `tests/auth/landing-auth-fragment.test.ts`
+  pins the behaviour and, more importantly, the negatives -- an in-page anchor like `#pricing`
+  must never redirect, and the forwarder must not be able to loop onto its own origin. This is
+  a mitigation for a wrong Site URL, not a substitute for fixing it.
+- **`app_metadata.force_password_change` is enforced in Postgres, not in a page.** Migration
+  `20260915230805` added `muster.password_change_required()` -- a predicate over the caller's own
+  JWT claims -- and wired it into the authorization spine (`current_user_id`, `is_super_admin`,
+  `org_role`, `shares_org_with`, `onboarding_caller`, `ensure_user_from_auth`). A flagged caller
+  resolves to no role anywhere, so tenant RPCs raise `42501` and RLS answers empty. Before that,
+  nothing in the entire stack read the flag: it sat on a live `super_admin` account that signed in
+  on the old password and went straight to the workspace. Clearing it needs the service role, so it
+  goes through the **`muster-set-password`** edge function, which sets the password and clears the
+  flag in ONE admin call -- never add a separate "clear the flag" endpoint, that is a bypass with
+  extra steps. After a successful change the browser **must** call `refreshSession()`: claims are
+  minted at sign-in and not read live, so the old token still says `true` and the workspace looks
+  broken until it is replaced. `signin.html` owns the form and checks the flag **before** its bounce
+  to `/app`; `app.html` and `admin.html` send a flagged session back to `/` -- `admin.html`
+  before its first RPC, because it renders a `42501` as "access denied" and that is the wrong
+  answer for a super admin whose only problem is an old password. That ordering is the only thing
+  keeping the two from looping, and `tests/auth/set-password.test.ts` asserts it. Password policy is
+  12 characters, no composition rules, blocklist checked against the padded stem too; it lives in
+  that function's `core.ts`. Break-glass and the full rationale are in `docs/BACKEND.md` and the
+  migration header.
 - **Every new `public.muster_engine_*` function must REVOKE from `anon, authenticated` by name.**
   Supabase ships default privileges that GRANT EXECUTE on every new function in the `public`
   schema to both roles. `revoke all ... from public` does **not** undo that -- `PUBLIC` the

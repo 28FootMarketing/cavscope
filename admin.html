@@ -1447,6 +1447,19 @@
     render();
   }
 
+  // Same set of shapes the SQL predicate, the muster-set-password edge function
+  // and the other two pages accept: provisioning writes the flag as a JSON
+  // boolean and as the string "true", and a check that catches only one of them
+  // is not a check.
+  function forcedPasswordChange(session) {
+    const meta = session && session.user ? session.user.app_metadata : null;
+    const v = meta ? meta.force_password_change : undefined;
+    if (v === true) return true;
+    if (typeof v === 'string') return ['true', 't', '1'].includes(v.toLowerCase());
+    if (typeof v === 'number') return v === 1;
+    return false;
+  }
+
   async function init() {
     if (!window.supabase || !window.supabase.createClient) {
       document.getElementById('gateLoadingMsg').textContent =
@@ -1469,6 +1482,22 @@
       // Root on this host is the sign-in page, and it shares this origin -- which
       // is the whole reason signin.html and the app are served together.
       location.replace(window.location.origin + '/?next=/admin');
+      return;
+    }
+
+    // A forced password change outranks everything this page does. The gate is
+    // in Postgres (migration 20260915230805): a flagged JWT makes
+    // muster.is_super_admin() false, so muster_admin_console() raises 42501 and
+    // the catch below would show "access denied" to a real super admin whose
+    // only problem is an unchanged password. That message would be a lie, and
+    // it is the kind that sends someone hunting for a permissions bug.
+    //
+    // Root on this host is signin.html, which owns the password form and checks
+    // the same flag before its own bounce to /app. No ?next= here on purpose:
+    // signin.html sends a completed sign-in to /app and reads no query string,
+    // so promising a return trip to /admin would be a second lie.
+    if (forcedPasswordChange(session)) {
+      location.replace(window.location.origin + '/');
       return;
     }
 

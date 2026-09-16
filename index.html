@@ -471,6 +471,66 @@
     a[data-tooltip], button[data-tooltip] { cursor: pointer; }
     [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
   </style>
+
+  <!-- Stray auth fragment forwarder. Runs in <head>, before anything paints,
+       because the whole job is to not be seen.
+
+       This page has no auth job and cannot complete a sign-in: a Supabase
+       session is stored per-origin, and this is not the app origin. It still
+       receives auth fragments, because GoTrue substitutes the project's Site
+       URL whenever a link is minted without a redirect_to -- a magic link sent
+       from the Supabase dashboard, or an admin generateLink call -- and Site
+       URL has pointed at this host. Observed live on 2026-09-15: a magiclink
+       for a real admin account landed on https://www.muster.partners/ with a
+       valid access_token and refresh_token still in the fragment.
+
+       Before this, index.html passed detectSessionInUrl:false and then did
+       nothing further, so the user got the marketing page and a URL full of
+       credentials they had no way to spend. That is not "failing visibly" --
+       it is failing where nobody can see it. The tokens were still good; there
+       was simply no page willing to take them.
+
+       So hand them to the page that can. The destination is app host ROOT,
+       not /app, on purpose: signin.html handles all three arrivals -- a live
+       session (it reads it and bounces on to /app), type=recovery (it shows
+       the new-password form), and an expired or invalid link (it explains and
+       offers a fresh one). app.html would drop a recovery session straight
+       into the workspace with no password form, which is the exact failure
+       docs/EMAIL.md warns about.
+
+       This is a belt, not the braces. The fix is Site URL on the app host --
+       see docs/EMAIL.md. This only stops a wrong dashboard setting stranding
+       anyone, and it costs one redirect to a hardcoded first-party origin over
+       HTTPS. A fragment is never sent to a server; it moves browser-side only. -->
+  <script>
+    // Named and side-effect-free so tests/auth/landing-auth-fragment.test.ts
+    // exercises this function rather than a copy of it.
+    const MUSTER_AUTH_HOST = 'https://app.muster.partners';
+
+    function authFragmentTarget(hash, origin) {
+      const raw = String(hash == null ? '' : hash).replace(/^#/, '');
+      // A plain in-page anchor (#pricing) carries no '=' and must never redirect.
+      if (!raw || raw.indexOf('=') === -1) return null;
+      const q = new URLSearchParams(raw);
+      // access_token / refresh_token is a completed sign-in; error_code and
+      // error_description are GoTrue's failure shape (#error=access_denied&
+      // error_code=otp_expired&...). Either way the app host owns it.
+      const isAuth = q.has('access_token') || q.has('refresh_token') ||
+                     q.has('error_code') || q.has('error_description');
+      if (!isAuth) return null;
+      // Never forward to ourselves. This page is not served on the app host
+      // today, and if that ever changes this must not become a redirect loop.
+      if (origin === MUSTER_AUTH_HOST) return null;
+      return MUSTER_AUTH_HOST + '/#' + raw;
+    }
+
+    (function forwardStrayAuthFragment() {
+      const target = authFragmentTarget(window.location.hash, window.location.origin);
+      // replace(), not assign(): the tokens should not be left sitting in this
+      // origin's session history behind a Back button.
+      if (target) window.location.replace(target);
+    })();
+  </script>
 </head>
 <body>
 
