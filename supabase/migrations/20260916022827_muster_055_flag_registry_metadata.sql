@@ -129,7 +129,7 @@ values
    'The risk_opened alert email to org executives and risk owners -- the only application email MUSTER sends (Resend REST, via muster-alert-dispatch). Auth email is GoTrue and is not affected by this flag. Off holds the queue rather than dropping it: pending rows stay pending and drain when it is switched back on.',
    'organization', true, 'trial', false, 'notifications', 'public.muster_engine_claim_alerts', array['sql'], null),
   ('support_impersonation', 'Support Impersonation',
-   'Whether a super admin can open a read-only impersonation session at all. Off refuses every new session platform-wide; sessions already open still expire on their own timer. The per-session audit trail is unaffected -- it is append-only and does not depend on this flag.',
+   'Whether a super admin can open a read-only impersonation session at all. Off refuses every new session platform-wide; sessions already open still expire on their own timer. The per-session audit trail is unaffected -- it is append-only and does not consult this flag.',
    'platform', true, null, false, 'platform', 'public.muster_admin_impersonate_start', array['sql'], null),
   ('admin_url_scanner', 'Ad-hoc URL Scanner',
    'The super admin "Run a URL scan" tool, which scans any URL on the live engine into the internal sandbox org. Off refuses new ad-hoc runs; it does not touch a tenant''s own scans.',

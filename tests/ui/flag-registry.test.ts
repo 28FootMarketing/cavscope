@@ -34,7 +34,7 @@ const migrationsDir = join(repoRoot, "supabase", "migrations");
 
 const read = (p: string) => readFileSync(join(repoRoot, p), "utf8");
 
-const REGISTRY_MIGRATION = "20260916022827_muster_052_flag_registry_metadata.sql";
+const REGISTRY_MIGRATION = "20260916022827_muster_055_flag_registry_metadata.sql";
 
 // Every migration body concatenated, for "is this key gated anywhere in SQL".
 const allMigrations = readdirSync(migrationsDir)
@@ -130,7 +130,7 @@ test("a flag claiming no enforcement is not secretly gated in SQL", () => {
 });
 
 test("the four flags muster_053 wired are gated where it says they are", () => {
-  const wiring = readFileSync(join(migrationsDir, "20260916022923_muster_053_wire_the_dead_feature_flags.sql"), "utf8");
+  const wiring = readFileSync(join(migrationsDir, "20260916022923_muster_056_wire_the_dead_feature_flags.sql"), "utf8");
   // scheduled_scans gates the due-scan CTE only -- not the manual/api catch-up
   // claim below it, which is a member's own request and a different flag.
   assert.match(wiring, /and muster\.flag_state_for_org\(w\.organization_id, 'scheduled_scans'\)/);
@@ -144,7 +144,7 @@ test("the four flags muster_053 wired are gated where it says they are", () => {
 });
 
 test("flag_state_for_org ignores per-user overrides, unlike has_flag", () => {
-  const wiring = readFileSync(join(migrationsDir, "20260916022923_muster_053_wire_the_dead_feature_flags.sql"), "utf8");
+  const wiring = readFileSync(join(migrationsDir, "20260916022923_muster_056_wire_the_dead_feature_flags.sql"), "utf8");
   const body = wiring.slice(
     wiring.indexOf("create or replace function muster.flag_state_for_org"),
     wiring.indexOf("comment on function muster.flag_state_for_org"),
@@ -166,13 +166,13 @@ test("the console disables the switches on a flag nothing reads", () => {
 test("the console resolves per-org state without the viewing admin's own overrides", () => {
   // orgs_enabled comes from flag_state_for_org, so the number on screen does
   // not change depending on which super admin is looking at it.
-  const rpcs = readFileSync(join(migrationsDir, "20260916023009_muster_054_flag_registry_rpcs.sql"), "utf8");
+  const rpcs = readFileSync(join(migrationsDir, "20260916023009_muster_057_flag_registry_rpcs.sql"), "utf8");
   assert.match(rpcs, /'orgs_enabled',[\s\S]{0,120}muster\.flag_state_for_org\(o\.id, f\.key\)/);
   assert.doesNotMatch(rpcs.slice(rpcs.indexOf("muster_admin_flag_registry"), rpcs.indexOf("muster_admin_create_flag")), /has_flag/);
 });
 
 test("a flag that code reads cannot be deleted from the console", () => {
-  const rpcs = readFileSync(join(migrationsDir, "20260916023009_muster_054_flag_registry_rpcs.sql"), "utf8");
+  const rpcs = readFileSync(join(migrationsDir, "20260916023009_muster_057_flag_registry_rpcs.sql"), "utf8");
   const del = rpcs.slice(rpcs.indexOf("function public.muster_admin_delete_flag"));
   assert.match(del, /array_length\(f\.enforcement, 1\), 0\) > 0/);
   assert.match(del, /raise exception 'flag % is enforced in %/);
@@ -181,7 +181,7 @@ test("a flag that code reads cannot be deleted from the console", () => {
 test("every new admin RPC is revoked from anon", () => {
   // Supabase grants EXECUTE on every new public function to anon and
   // authenticated by default, and `revoke ... from public` does not undo it.
-  const rpcs = readFileSync(join(migrationsDir, "20260916023009_muster_054_flag_registry_rpcs.sql"), "utf8");
+  const rpcs = readFileSync(join(migrationsDir, "20260916023009_muster_057_flag_registry_rpcs.sql"), "utf8");
   for (const fn of [
     "muster_admin_flag_registry",
     "muster_admin_create_flag",

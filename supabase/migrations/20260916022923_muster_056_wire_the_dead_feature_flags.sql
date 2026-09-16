@@ -188,7 +188,7 @@ $function$;
 
 -- Engine RPCs are called only by edge functions holding the service-role key.
 -- Supabase's default privileges GRANT EXECUTE on every new public function to
--- anon and authenticated, and `revoke ... from public` does not undo that --
+-- anon and authenticated, and `revoke ... from public` does not undo that:
 -- PUBLIC the pseudo-role and anon/authenticated the real roles are different
 -- grantees. CREATE OR REPLACE preserves the existing ACL, but the revoke is
 -- named anyway so a future copy of this block cannot inherit the hole that
