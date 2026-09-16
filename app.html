@@ -6024,8 +6024,9 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
                 { key: 'muster_partner', label: 'MUSTER Partner', tip: 'Show the MUSTER Partner card on the public pricing page.' },
                 { key: 'enterprise', label: 'MUSTER Enterprise', tip: 'Show the Enterprise card on the public pricing page. Enterprise has no published price -- the card is a discovery CTA.' },
               ].map(t => {
-                // Pre-migration RPC has no `visible` key; treat that as Partner-only
-                // so the admin panel matches what index.html already shows.
+                // muster_public_pricing() has returned `visible` since migration
+                // 20260916012445. The Partner-only fallback is for a response that
+                // predates it, and matches what index.html renders in that case.
                 const on = pricing.visible
                   ? !!pricing.visible[t.key]
                   : t.key === 'muster_partner';
@@ -6035,6 +6036,66 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
                 </div>`;
               }).join('')}
             </div>
+          </div>
+
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head">
+              <div><h3>Checkout Destinations</h3><p>Where each button on the public pricing page actually sends a visitor. Saved straight to the database and live on the next page load -- no deploy. Blank means "fall back to the address built into the page", which is always a working sales mailto, so a button is never dead.</p></div>
+            </div>
+            ${(() => {
+              const cta = pricing.cta || {};
+              // Precedence per card, highest first. Same order index.html's
+              // partnerCheckout() / musterCheckout() apply; the server rejects
+              // anything invalid on write, so "first one set wins" is the whole
+              // rule here. index.html remains the authority -- this is display.
+              const groups = [
+                {
+                  title: 'MUSTER Partner',
+                  note: 'No Partner price exists in Stripe yet, so this card falls through to the contact address. Creating one means a Partner product, two prices, and two Payment Links carrying metadata tier=muster_partner with stage=seed or fruit.',
+                  rows: [
+                    { key: 'partner_seed_checkout_url', label: 'Stripe Payment Link — Seed', tip: 'Stripe Payment Link used while the pricing stage is Seed. It must carry metadata tier=muster_partner and stage=seed, because muster-stripe-webhook reads that metadata to decide which plan the buyer gets. A base-tier link is rejected here.' },
+                    { key: 'partner_fruit_checkout_url', label: 'Stripe Payment Link — Fruit', tip: 'Same as the Seed link, for when the pricing stage is Fruit. Metadata must read tier=muster_partner, stage=fruit.' },
+                    { key: 'partner_intake_url', label: 'GHL intake form', tip: 'A GHL funnel or form base URL, used only when no Stripe Partner link is set. src, product and intent are appended automatically so the form can tag the lead.' },
+                    { key: 'partner_contact_url', label: 'Contact address', tip: 'Where the Partner button goes when neither a Stripe link nor an intake form is set. This is what ships today. A mailto: or an https link both work.' },
+                  ],
+                },
+                {
+                  title: 'MUSTER (base tier)',
+                  note: 'Self-serve checkout is paused. It cannot be un-paused until the self_serve_onboarding flag below is on, because a buyer who pays while onboarding is disabled has nowhere to land.',
+                  rows: [
+                    { key: 'muster_seed_checkout_url', label: 'Stripe Payment Link — Seed', tip: 'Used only while self-serve checkout is live. Carries metadata tier=muster, stage=seed.' },
+                    { key: 'muster_fruit_checkout_url', label: 'Stripe Payment Link — Fruit', tip: 'Used only while self-serve checkout is live. Carries metadata tier=muster, stage=fruit.' },
+                    { key: 'muster_contact_url', label: 'Contact address', tip: 'Where the MUSTER button goes while self-serve checkout is paused, or if no Payment Link is set.' },
+                  ],
+                },
+                {
+                  title: 'MUSTER Enterprise',
+                  note: 'Enterprise has no published price and no checkout. The card is a discovery CTA.',
+                  rows: [
+                    { key: 'enterprise_contact_url', label: 'Contact address', tip: 'Where the Enterprise button goes. A mailto:, or an https scheduling link if you would rather book a call directly.' },
+                  ],
+                },
+              ];
+
+              return groups.map(g => {
+                const live = g.rows.find(r => cta[r.key]);
+                return `<div class="panel-body" style="border-top:1px solid var(--surface-border); padding-top:16px;">
+                  <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
+                    <strong style="color:#fff; font-size:13px;">${g.title}</strong>
+                    <small style="color:var(--text-dim);" data-tooltip="The first destination that is filled in wins. Everything below it is ignored until you clear the one above.">in use: <code style="color:var(--teal);">${live ? escapeHtml(live.label) : 'page fallback (sales mailto)'}</code></small>
+                  </div>
+                  <p style="color:var(--text-muted); font-size:12px; margin:0 0 12px;">${g.note}</p>
+                  ${g.title === 'MUSTER (base tier)' ? `<div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                    <label class="toggle-switch" data-tooltip="On sends visitors to Stripe checkout. Off sends them to the contact address instead. Turning it on is refused while the self_serve_onboarding flag is off, because the buyer would pay and then hit a disabled onboarding wizard."><input type="checkbox" ${cta.muster_self_serve_paused === false ? 'checked' : ''} onchange="Live.setSelfServePaused(!this.checked)"><span class="slider"></span></label>
+                    <div><strong style="color:#fff; font-size:13px; display:block;">Self-serve checkout</strong><small style="color:var(--text-dim);">${cta.muster_self_serve_paused === false ? 'live — visitors go to Stripe' : 'paused — visitors go to the contact address'}</small></div>
+                  </div>` : ''}
+                  ${g.rows.map(r => `<div class="form-group">
+                    <label data-tooltip="${r.tip}">${r.label}</label>
+                    <input type="text" value="${escapeHtml(cta[r.key] || '')}" placeholder="blank = use the page's built-in fallback" onchange="Live.setCheckoutUrl('${r.key}', this.value)" data-tooltip="${r.tip} Clear the field and tab away to reset it to the page default.">
+                  </div>`).join('')}
+                </div>`;
+              }).join('');
+            })()}
           </div>
 
           <div class="panel" style="margin-bottom:24px;">
@@ -6258,6 +6319,8 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setPricingStage(stage) { try { await this.rpc('muster_admin_set_pricing_stage', { p_stage: stage }); showToast(`Public pricing stage set to ${stage}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
       async setPricingVisibility(tier, on) { try { await this.rpc('muster_admin_set_pricing_visibility', { p_tier: tier, p_visible: on }); showToast(`${tier} ${on ? 'shown' : 'hidden'} on the public pricing page.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
+      async setCheckoutUrl(key, url) { try { await this.rpc('muster_admin_set_checkout_url', { p_key: key, p_url: url }); showToast(url && url.trim() ? 'Checkout destination saved.' : 'Checkout destination cleared — the page fallback applies.'); await this.loadAdmin(); } catch (e) { this.fail(e); await this.loadAdmin(); } },
+      async setSelfServePaused(paused) { try { await this.rpc('muster_admin_set_self_serve_paused', { p_paused: paused }); showToast(paused ? 'Self-serve checkout paused.' : 'Self-serve checkout is live.'); await this.loadAdmin(); } catch (e) { this.fail(e); await this.loadAdmin(); } },
       async setFlag(key, on) { try { await this.rpc('muster_admin_set_flag', { p_key: key, p_enabled: on }); showToast(`${key} default ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
       async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },

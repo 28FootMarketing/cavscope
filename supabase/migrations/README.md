@@ -5,17 +5,37 @@
 this directory agree. They must stay in agreement: the moment they disagree,
 `supabase db push` applies one project's history to a different project.
 
-These 37 files are the complete build history of MUSTER's own project, exported from
+These files are the complete build history of MUSTER's own project, exported from
 that project's `supabase_migrations.schema_migrations` ledger. **Every file's content
 is byte-identical to the statement Postgres recorded as actually applied** — they are
 not a reconstruction from memory or from the catalog.
 
-Exactly: 24 of the 37 files md5-match the stored statement outright; the other 13 match
-once a single trailing newline is appended, because those files end with a newline and
-the submitted statement did not. A trailing newline after the final `;` changes nothing
+That invariant runs in both directions, and the second direction is the one that got
+missed. A file here must match what was applied; a file here must also *have* been
+applied. On 2026-09-16 `20260911002553_muster_049_public_pricing_tier_visibility.sql`
+turned out to be neither — it was written on 2026-09-11, committed, and never run
+against the project. Its own header said the filename timestamp was provisional and to
+rename it once it landed, and it never landed. The cost: three toggles in the admin
+console calling `muster_admin_set_pricing_visibility()`, a function that did not exist,
+throwing `PGRST202` on every click for five days without anyone noticing, because
+`muster_public_pricing()` returned no `visible` key either and `index.html` fell back to
+exactly the Partner-only default the toggles were meant to produce. The two wrongs
+agreed. A `tests/ui/` test pinned the migration the whole time and passed, because it
+read the file rather than the database. The file has been deleted and its content is
+superseded by `20260916012445`, which really did run.
+
+**A file whose version is not in the ledger is a forward reference. Check it, don't
+assume it.** The MCP `list_migrations` tool returns the applied versions; anything in
+this directory that is not in that list has not run.
+
+The md5 audit behind the byte-identical claim was done when this directory held 37
+files: 24 md5-matched the stored statement outright and the other 13 matched once a
+single trailing newline was appended, because those files end with a newline and the
+submitted statement did not. A trailing newline after the final `;` changes nothing
 semantically, but the distinction is recorded here rather than rounded off, because an
 earlier version of this note claimed a plain md5 match for all 30 and that was not
-true.
+true. Files added since were each verified the same way at the time they were written;
+the audit has not been re-run across all 53 at once.
 
 ## Why the old project's history is in a different directory
 

@@ -1415,3 +1415,84 @@ gets read back as truth. Verified against the live account `acct_1PUDj1JijfcmbDD
 Still genuinely outstanding: GoTrue SMTP, the six auth email templates and the rate limit on the new
 project, none of which are readable from any tool here, and `customer.subscription.deleted`, which
 nothing consumes so a cancelled customer keeps their plan.
+
+## 2026-09-16 — pricing-page CTA destinations become a super-admin control
+
+Applied to `hjowfnzpomzxazmzywxw`:
+
+| Version | Name |
+|---|---|
+| `20260916012445` | `muster_pricing_cta_admin_control` |
+| `20260916013038` | `muster_partner_checkout_cannot_reuse_base_tier_link` |
+
+Both files in `supabase/migrations/` are byte-identical to the stored statement
+(`381c7de2042bba3db4caa203f15171f5` and `2fc19eec827ac619b8ea7f8c7abb89dc`, md5 of the
+file, compared against `md5(array_to_string(statements,''))` in the ledger).
+
+### What prompted it
+
+`index.html`'s MUSTER Partner CTA pointed at
+`https://forms.your-ghl-domain.example.com/muster-partner-signup`. Partner is the only
+card the pricing page shows by default, so that one button was the entire public
+conversion path, and `example.com` does not resolve — every click died at DNS. Nothing in
+`tests/` pinned the constant.
+
+The obvious patch is the expensive one. The only Stripe Payment Links MUSTER has carry
+`metadata {tier: muster}` at $97/$197; Partner is $197/$497 with client-org allowances,
+and `muster-stripe-webhook` reads that metadata to pick the plan. Pointing the Partner CTA
+at one would undercharge the buyer *and* provision them the base tier.
+`commercial_pricing.stripe_price_id` is null for `muster_partner` on both stages, which is
+the same fact from the database side: **there is no Partner price in Stripe to link to.**
+
+### The thing worth remembering
+
+**Migration 049 was written, committed, and never applied.**
+`20260911002553_muster_049_public_pricing_tier_visibility.sql`, dated 2026-09-11, created
+`muster_admin_set_pricing_visibility()` and the three `show_*` columns. It never ran. So
+for five days the three visibility toggles in the admin console called a function that did
+not exist and threw `PGRST202` on every click.
+
+Nothing surfaced it, and the reason is worth sitting with: `muster_public_pricing()`
+returned no `visible` key either, so `index.html` fell back to its hardcoded Partner-only
+default — which is exactly the state the toggles were supposed to produce. **Two wrongs
+agreed, so the page looked correct.** A `tests/ui/` test pinned migration 049 and passed
+the whole time, because it read the file rather than the database.
+
+A file in `supabase/migrations/` whose version is not in `list_migrations` has not run.
+049 has been deleted; its content is superseded by `20260916012445`, which did.
+
+### What exists now
+
+`muster.pricing_settings` holds the whole CTA surface: three `show_*` flags,
+`muster_self_serve_paused`, and eight destination columns. `muster_public_pricing()`
+returns them under `visible` and `cta` (anon-callable, for the logged-out pricing page);
+`muster_admin_overview()` hands the same object to the console, which grew a "Checkout
+Destinations" panel. Writers are `muster_admin_set_pricing_visibility`,
+`muster_admin_set_checkout_url` and `muster_admin_set_self_serve_paused` — super-admin
+only, granted to `authenticated` and `service_role`, **anon revoked by name**, per the
+2026-09-13 rule about Supabase default privileges.
+
+Five refusals, each because the thing it blocks used to fail silently:
+
+1. A destination that is not absolute `https` to a real host or a `mailto:`
+   (`muster.is_valid_cta_destination()`) — and it is a table CHECK as well as an RPC
+   check, so a direct `UPDATE` is caught too.
+2. An unknown destination key.
+3. A base-tier Payment Link in a Partner slot, compared against whatever the base-tier
+   columns currently hold rather than a hardcoded pair. Found by a test written *before*
+   the guard existed, which is the only reason it was caught: nothing else would have
+   flagged a real https URL on a real Stripe host.
+4. Hiding the last visible tier, which renders an empty pricing section.
+5. Un-pausing base-tier self-serve while the `self_serve_onboarding` flag is off, which
+   takes a buyer's money and hands them a disabled onboarding wizard.
+
+All five were exercised against the live project as a real super admin (claims set to
+`muster.users` id 3), plus one happy-path write and clear, with `pricing_settings`
+verified byte-for-byte unchanged afterward.
+
+### Still outstanding
+
+Creating an actual Partner product, two prices, and two Payment Links carrying
+`metadata {tier: muster_partner, stage: seed|fruit}` in `acct_1PUDj1JijfcmbDDB`. No
+Stripe MCP is connected, so this cannot be done from here. Until it is, the Partner card
+resolves to `sales@28footsystems.com`, which is a destination that works.

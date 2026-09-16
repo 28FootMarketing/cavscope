@@ -630,7 +630,7 @@
         </ul>
         <p class="price-excludes" data-tooltip="These require the MUSTER Partner tier instead.">Does not include white-labeling, commercial client usage, client management, or removal of MUSTER branding.</p>
         <p class="price-note" data-tooltip="We're focused on onboarding MUSTER Partner agencies and consultants right now. Standalone self-serve signup will reopen later.">Self-serve signup is paused while we onboard MUSTER Partner agencies and consultants.</p>
-        <a class="btn-primary price-cta" id="musterCta" data-tooltip="Emails us about MUSTER for your own organization — self-serve signup is paused right now.">Ask About MUSTER →</a>
+        <a class="btn-primary price-cta" id="musterCta" href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us about MUSTER for your own organization — self-serve signup is paused right now.">Ask About MUSTER →</a>
       </div>
 
       <div class="price-card featured" id="cardPartner">
@@ -682,7 +682,7 @@
           <li>Priority support &amp; SLA options</li>
         </ul>
         <p class="price-note" data-tooltip="Not every Enterprise customer receives every feature listed above -- scope, features, and price are set during a discovery conversation.">Enterprise scope is determined during discovery.</p>
-        <a class="btn-primary price-cta" id="enterpriseCta" data-tooltip="Opens an email to 28 Foot Systems to start an Enterprise discovery conversation.">Talk to 28 Foot Systems →</a>
+        <a class="btn-primary price-cta" id="enterpriseCta" href="mailto:sales@28footsystems.com?subject=MUSTER%20Enterprise%20Inquiry" data-tooltip="Opens an email to 28 Foot Systems to start an Enterprise discovery conversation.">Talk to 28 Foot Systems →</a>
       </div>
 
     </div>
@@ -795,6 +795,31 @@
     return !/\.(example|test|invalid|localhost)$/.test(host);
   }
 
+  // A contact destination may also be a mailto. The same placeholder rules apply
+  // to the https case; muster.is_valid_cta_destination() is the server-side twin.
+  function isUsableContactHref(value) {
+    if (isRealHttpsUrl(value)) return true;
+    return typeof value === 'string' && /^mailto:[^@\s]+@[a-z0-9.-]+\.[a-z]{2,}(\?\S*)?$/i.test(value);
+  }
+
+  // Every CTA destination is owned by the super admin console and delivered by
+  // muster_public_pricing().cta. The constants above are the fallback for when
+  // that RPC is unreachable or a value has never been set, so the page still
+  // renders working buttons with no network at all. A stored value only wins if
+  // it passes the same validation as a hardcoded one: the database is trusted to
+  // be the source of truth, not trusted to be well-formed.
+  let CTA = {};
+
+  function pickCheckoutUrl(stored, fallback) {
+    if (isRealHttpsUrl(stored)) return stored;
+    return isRealHttpsUrl(fallback) ? fallback : '';
+  }
+
+  function pickContactHref(stored, fallback) {
+    if (isUsableContactHref(stored)) return stored;
+    return isUsableContactHref(fallback) ? fallback : '';
+  }
+
   function buildGhlUrl(base, product, intent) {
     const params = new URLSearchParams({ src: 'pricing_page', product, intent });
     return `${base}?${params.toString()}`;
@@ -803,24 +828,83 @@
   // Returns { href, tooltip } for the Partner CTA at the given pricing stage.
   // The tooltip moves with the href: a mailto must not be described as opening
   // checkout.
+  // The base tier's own checkout links, whatever they currently are. A Partner
+  // slot must never hold one of these: they carry metadata {tier: muster} at
+  // $97/$197, Partner is $197/$497 on a different plan, and
+  // muster-stripe-webhook reads that metadata to decide which plan to grant. So
+  // the buyer would be undercharged AND provisioned the base tier. This is the
+  // single most likely wrong paste into the admin console, because those two
+  // links are the only Stripe Payment Links MUSTER has. Compared by value
+  // rather than against a hardcoded pair, so it keeps working if the base tier
+  // links are ever changed. muster_admin_set_checkout_url() refuses the same
+  // thing at write time; this is the read-side backstop for a row that predates
+  // that check or was written some other way.
+  function baseTierCheckoutLinks() {
+    return [
+      pickCheckoutUrl(CTA.muster_seed_checkout_url, STRIPE_MUSTER_SEED_PAYMENT_LINK),
+      pickCheckoutUrl(CTA.muster_fruit_checkout_url, STRIPE_MUSTER_FRUIT_PAYMENT_LINK),
+    ].filter(Boolean);
+  }
+
   function partnerCheckout(isSeed) {
-    const stripeLink = isSeed ? STRIPE_PARTNER_SEED_PAYMENT_LINK : STRIPE_PARTNER_FRUIT_PAYMENT_LINK;
-    if (isRealHttpsUrl(stripeLink)) {
+    let stripeLink = pickCheckoutUrl(
+      isSeed ? CTA.partner_seed_checkout_url : CTA.partner_fruit_checkout_url,
+      isSeed ? STRIPE_PARTNER_SEED_PAYMENT_LINK : STRIPE_PARTNER_FRUIT_PAYMENT_LINK);
+    if (stripeLink && baseTierCheckoutLinks().indexOf(stripeLink) !== -1) stripeLink = '';
+    if (stripeLink) {
       return {
         href: stripeLink,
         tooltip: 'Opens Stripe checkout to start your MUSTER Partner subscription.',
       };
     }
-    if (isRealHttpsUrl(GHL_PARTNER_SIGNUP_URL)) {
+    const intake = pickCheckoutUrl(CTA.partner_intake_url, GHL_PARTNER_SIGNUP_URL);
+    if (intake) {
       return {
-        href: buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', isSeed ? 'seed_signup' : 'fruit_signup'),
+        href: buildGhlUrl(intake, 'muster_partner', isSeed ? 'seed_signup' : 'fruit_signup'),
         tooltip: 'Opens a short intake so you can start your MUSTER Partner subscription.',
       };
     }
     return {
-      href: PARTNER_CONTACT_HREF,
+      href: pickContactHref(CTA.partner_contact_url, PARTNER_CONTACT_HREF),
       tooltip: 'Emails 28 Foot Systems to start your MUSTER Partner subscription. Partner checkout is not self-serve yet.',
     };
+  }
+
+  // Base tier. Self-serve is paused from the admin console, not from a constant.
+  // muster_admin_set_self_serve_paused() refuses to un-pause while the
+  // self_serve_onboarding flag is off, so a visitor cannot be sent to checkout
+  // for an onboarding wizard that will refuse them on the other side.
+  function musterCheckout(isSeed) {
+    const paused = typeof CTA.muster_self_serve_paused === 'boolean'
+      ? CTA.muster_self_serve_paused
+      : MUSTER_SELF_SERVE_PAUSED;
+    if (!paused) {
+      const link = pickCheckoutUrl(
+        isSeed ? CTA.muster_seed_checkout_url : CTA.muster_fruit_checkout_url,
+        isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK);
+      if (link) {
+        return { href: link, tooltip: 'Opens Stripe checkout to start your MUSTER subscription.' };
+      }
+    }
+    return {
+      href: pickContactHref(CTA.muster_contact_url, MUSTER_PAUSED_CONTACT_HREF),
+      tooltip: 'Emails us about MUSTER for your own organization. Self-serve signup is paused right now.',
+    };
+  }
+
+  function enterpriseCheckout() {
+    return {
+      href: pickContactHref(CTA.enterprise_contact_url, ENTERPRISE_CONTACT_HREF),
+      tooltip: 'Opens an email to 28 Foot Systems to start an Enterprise discovery conversation.',
+    };
+  }
+
+  // Never blanks an href: if every candidate failed validation the markup
+  // fallback stays, which is a working mailto on all three cards.
+  function applyCta(el, target) {
+    if (!el || !target.href) return;
+    el.href = target.href;
+    el.setAttribute('data-tooltip', target.tooltip);
   }
 
   // Which cards the public page shows. Partner-only is the intentional default
@@ -875,19 +959,14 @@
     badge.classList.toggle('fruit', !isSeed);
     document.getElementById('partnerLock').hidden = !isSeed;
 
-    document.getElementById('musterCta').href = MUSTER_SELF_SERVE_PAUSED
-      ? MUSTER_PAUSED_CONTACT_HREF
-      : (isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK);
-    const partnerCtaEl = document.getElementById('partnerCta');
-    const partnerTarget = partnerCheckout(isSeed);
-    partnerCtaEl.href = partnerTarget.href;
-    partnerCtaEl.setAttribute('data-tooltip', partnerTarget.tooltip);
+    applyCta(document.getElementById('musterCta'), musterCheckout(isSeed));
+    applyCta(document.getElementById('partnerCta'), partnerCheckout(isSeed));
+    applyCta(document.getElementById('enterpriseCta'), enterpriseCheckout());
 
     applyVisibility(visible || DEFAULT_VISIBLE);
   }
 
   async function initPricing() {
-    document.getElementById('enterpriseCta').href = ENTERPRISE_CONTACT_HREF;
     applyPricing('seed', null, null, DEFAULT_VISIBLE); // static Partner-only fallback
 
     if (!window.supabase || !window.supabase.createClient) return;
@@ -902,6 +981,7 @@
       const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, detectSessionInUrl: false } });
       const { data, error } = await sb.rpc('muster_public_pricing');
       if (error || !data) return;
+      CTA = (data.cta && typeof data.cta === 'object') ? data.cta : {};
       applyPricing(data.current_stage, data.muster, data.muster_partner, data.visible || DEFAULT_VISIBLE);
     } catch {
       // Network or RLS failure: the static Partner-only fallback rendered above stays.

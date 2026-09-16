@@ -211,6 +211,36 @@ Resolved 2026-09-08 (`.planning/autonomy/BLOCKERS-AND-DECISIONS.md` B-1): **MUST
 - **MUSTER base tier -- Stripe self-serve (live).** Two live Payment Links, one per pricing stage (`https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t` seed, `https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u` fruit), each carrying `metadata: {tier, stage}`. `muster-stripe-webhook` verifies the Stripe signature, handles `checkout.session.completed`, invites the Supabase Auth user if new, and records a `muster.pending_commercial_grants` row keyed by email -- **it does not create the organization itself**. The organization is created the normal way, when the buyer actually runs the existing self-serve onboarding wizard in `app.html` (`muster_onboard` -> `muster.do_onboard`); `do_onboard` now checks for a pending grant matching the user's email right after creating the org and applies the real plan/stage instead of leaving it on `trial`. Deliberately reuses the already-verified onboarding path instead of building a second one. Product: `prod_VCwq3MBRwc16WC`. Prices: `price_1UCWx0JijfcmbDDBLEFrn3Et` (seed, $97/mo), `price_1UCWx0JijfcmbDDBKaHbJyGW` (fruit, $197/mo) -- also recorded in `muster.commercial_pricing.stripe_price_id`.
   - Requires the `STRIPE_WEBHOOK_SECRET` edge function secret (from registering the webhook endpoint in the Stripe dashboard, pointed at `muster-stripe-webhook`, subscribed to `checkout.session.completed` -- not done via MCP, no tool exposes webhook-endpoint creation).
 - **MUSTER Partner/Enterprise -- GHL sales-assisted (live).** Unchanged: a human marks a GHL deal Closed Won, its workflow calls `muster-ghl-webhook`, which calls `public.muster_ghl_provision`.
+  - **Every pricing-page CTA destination is now a super-admin control, not a constant.**
+    `muster.pricing_settings` carries the whole surface: three `show_*` visibility flags,
+    `muster_self_serve_paused`, and eight destination columns (`partner_seed_checkout_url`,
+    `partner_fruit_checkout_url`, `partner_intake_url`, `partner_contact_url`,
+    `muster_seed_checkout_url`, `muster_fruit_checkout_url`, `muster_contact_url`,
+    `enterprise_contact_url`). `muster_public_pricing()` returns them under `visible` and
+    `cta` (anon-callable, for `index.html`); `muster_admin_overview()` passes the same
+    object to the console. Writes go through `muster_admin_set_pricing_visibility`,
+    `muster_admin_set_checkout_url` and `muster_admin_set_self_serve_paused` -- super-admin
+    only, `authenticated` + `service_role`, anon revoked by name. Migrations
+    `20260916012445` and `20260916013038`. The panel is "Checkout Destinations" in
+    `app.html`'s admin console. `index.html` keeps its constants as a fallback for when the
+    RPC is unreachable, and validates a stored value exactly as it validates a hardcoded
+    one, so a bad row cannot put a dead link on the page.
+  - **Four things the writers refuse**, each because it produced a silent failure rather
+    than an error: a destination that is not absolute https to a real host or a `mailto:`
+    (`muster.is_valid_cta_destination()`, also a table CHECK, so a direct `UPDATE` is
+    caught too); a base-tier Payment Link in a Partner slot, compared against whatever the
+    base-tier columns currently hold; hiding the last visible tier, which would render an
+    empty pricing section; and un-pausing base-tier self-serve while the
+    `self_serve_onboarding` flag is off, which would take a buyer's money and then hand
+    them a disabled onboarding wizard. All five guards were exercised against the live
+    project on 2026-09-16 as a real super admin, with state restored afterward.
+  - **The admin visibility toggles never worked until 2026-09-16.** Migration 049
+    (`20260911002553_muster_049_public_pricing_tier_visibility.sql`) was committed on
+    2026-09-11 and never applied, so `muster_admin_set_pricing_visibility()` did not exist
+    and every click threw `PGRST202`. Nothing surfaced it because
+    `muster_public_pricing()` returned no `visible` key either and `index.html` fell back
+    to the same Partner-only default the toggles were supposed to produce. See
+    `supabase/migrations/README.md`.
   - **The provisioning half is live; the front door was not.** `index.html`'s Partner CTA -- the only CTA on the only pricing card shown by default -- pointed at `https://forms.your-ghl-domain.example.com/muster-partner-signup`, a placeholder host that does not resolve, so every click on the public pricing page failed at DNS. No GHL funnel or form has ever been stood up at a real URL. Fixed 2026-09-16: `partnerCheckout()` in `index.html` now resolves Stripe Partner Payment Links first, a real GHL form second, and the `sales@28footsystems.com` mailto as the floor, and `tests/ui/partner-cta.test.ts` fails if a placeholder host or a base-tier Stripe link ever reaches that CTA. The mailto is what ships today.
   - **There are no Partner Stripe Payment Links.** `muster.commercial_pricing.stripe_price_id` is null for `muster_partner` on both stages (verified against `hjowfnzpomzxazmzywxw`, 2026-09-16). Partner is $197/mo seed (5 included client orgs, $39/org after) and $497/mo fruit (10 included, $49/org after) -- different prices and a different plan from the base tier. The two Payment Links above carry `metadata: {tier: muster}`, so pointing Partner at one would both undercharge the buyer and make `muster-stripe-webhook` grant them the base tier. To go Stripe self-serve on Partner: create a Partner product and two prices, create two Payment Links carrying `{tier: muster_partner, stage: seed|fruit}`, record the price ids in `muster.commercial_pricing`, and paste the links into `STRIPE_PARTNER_SEED_PAYMENT_LINK` / `STRIPE_PARTNER_FRUIT_PAYMENT_LINK` in `index.html`.
 - **`muster.onboard_client`:** stays dead and unused (deployed 2026-09-06, no caller, buggy `organization_members.role = 'owner'` insert -- see migration `20260906012143`'s header comment). The Stripe flow above does not use it and never will; do not resurrect it.

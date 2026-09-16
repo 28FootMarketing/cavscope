@@ -69,6 +69,39 @@ Nothing looked broken, which is the point. The landing page's `--font-body` / `-
 names are kept as aliases of `--font-sans` / `--font-serif` so its existing call sites did not
 have to be rewritten.
 
+## Pricing-page CTA destinations live in the database, not in page source
+
+Where every button on the public pricing page sends a visitor is a row in
+`muster.pricing_settings`, edited from the "Checkout Destinations" panel in `app.html`'s
+super admin console and delivered to `index.html` by `muster_public_pricing().cta`.
+Migrations `20260916012445` and `20260916013038`.
+
+**Do not re-hardcode a destination.** The constants still in `index.html` are the
+fallback for an unreachable RPC, nothing more. Adding a new CTA means a column, a key in
+the `muster_admin_set_checkout_url()` whitelist, and a field in the panel — all three, or
+the control is a toast that says `unknown CTA destination key`.
+
+Two rules that exist because breaking them costs money, both enforced server-side and
+mirrored in the page, both pinned by `tests/ui/pricing-cta.test.ts` and
+`tests/ui/checkout-destinations.test.ts`:
+
+- **A base-tier Stripe Payment Link must never sit in a MUSTER Partner slot.** The two
+  links MUSTER has carry `metadata {tier: muster}` at $97/$197. Partner is $197/$497 on a
+  different plan, and `muster-stripe-webhook` reads that metadata to decide what to grant,
+  so such a link undercharges the buyer *and* provisions them the base tier. No Partner
+  price exists in Stripe at all — `commercial_pricing.stripe_price_id` is null for
+  `muster_partner` on both stages — so the Partner card correctly falls through to the
+  sales mailto today.
+- **Base-tier self-serve cannot be un-paused while the `self_serve_onboarding` flag is
+  off.** The flag decides whether a payment can become an organization; without the
+  interlock the buyer pays and then hits a disabled wizard.
+
+A destination is valid only if it is absolute `https` to a non-placeholder host, or a
+`mailto:`. `muster.is_valid_cta_destination()` is the server-side twin of
+`isRealHttpsUrl()` in `index.html`, and is a table CHECK as well as an RPC check, so a
+direct `UPDATE` cannot smuggle a placeholder in. A stored value is validated on read too:
+the database is the source of truth, not automatically well-formed.
+
 ## Other notes
 
 - **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
