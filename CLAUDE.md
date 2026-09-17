@@ -243,7 +243,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   the admin console's "Run a URL scan" when the result should be recorded. It is an **adapter** over
   `supabase/functions/muster-scan/index.ts` — it reads that file and strips the Supabase client, the two
   `muster_engine_*` RPCs and `Deno.serve()`, asserting each cut — so there is still exactly one copy of
-  the 38 rules. The one thing duplicated is the posture weights, copied from
+  the rule set. The one thing duplicated is the posture weights, copied from
   `20260907223344_muster_012_helper_functions_sql.sql` into `tools/local-scan/score.mjs`; change one and
   you must change the other. `tests/scan/local-scan.test.ts` pins the adapter and scans a local server
   end to end.
@@ -398,10 +398,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `skipped_inactive` in the scan summary, so a rule the engine is ahead of is visible rather than
   silent. Deactivating a rule therefore also retires its open findings, which is reversible:
   reactivate, rescan, and they reopen against the same fingerprint. Evidence is never gated, only
-  findings, so activating later does not lose the artefacts already collected. `SEC-014`, `SEC-015` and `EMAIL-008` are held inactive by migration
-  `20260916210100` for exactly this reason; the activation statement is in its header and in
-  `docs/SCAN-RULES.md`. Same rule as feature-flag `enforcement`: never declare a thing enabled
-  before the code reading it exists.
+  findings, so activating later does not lose the artefacts already collected. `SEC-014`, `SEC-015`
+  and `EMAIL-008` were held inactive by migration `20260916210100` for exactly this reason and
+  **activated by `20260917111614`** once engine `http-native-1.4.0` was observed in production;
+  `docs/SCAN-RULES.md` carries the confirmations. Same rule as feature-flag `enforcement`: never
+  declare a thing enabled before the code reading it exists. Two things that hold for the next
+  rule held this way: a version gate in a migration header is a **floor, not an equality** --
+  `20260916210100` named `1.2.0`, which was superseded twice and never deployed, so waiting for
+  that literal string would have waited forever. And `skipped_inactive` on a real scan is the
+  proof the deploy landed, because it means the engine emitted a held finding and ingest refused
+  it; the version string alone is only ever compared to itself.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent

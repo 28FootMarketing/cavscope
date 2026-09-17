@@ -26,7 +26,9 @@ product), so CI can gate on it.
 
 ## It is an adapter, not a copy
 
-The 38 rules live in exactly one place: `supabase/functions/muster-scan/index.ts`.
+Every rule lives in exactly one place: `supabase/functions/muster-scan/index.ts`.
+The count moves (47 active as of 2026-09-17), so this file does not carry one -- a
+stale number here would be a claim about coverage that nothing checks.
 `adapt.mjs` reads that file at runtime and removes four things — the Deno runtime
 typings import, the Supabase client, the two `muster_engine_*` RPCs at the tail of
 `runScan()`, and the `Deno.serve()` handler. Every rule, threshold, evidence key

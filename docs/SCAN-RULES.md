@@ -1,6 +1,6 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **38 rules, all active**, all
+Every defect code the engine can raise, by audit area. **47 rules, all active**, all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -42,10 +42,10 @@ the codes it raises. It writes nothing and produces no SITREP; see
 
 ---
 
-## Security — 13 rules
+## Security — 15 rules
 
-Seven more rules (`EMAIL-001`..`EMAIL-007`) also carry `category = security`; they are listed under
-[Email authentication](#email-authentication--7-rules) below, so the `security` category totals 20.
+Eight more rules (`EMAIL-001`..`EMAIL-008`) also carry `category = security`; they are listed under
+[Email authentication](#email-authentication--8-rules) below, so the `security` category totals 23.
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
@@ -62,8 +62,14 @@ Seven more rules (`EMAIL-001`..`EMAIL-007`) also carry `category = security`; th
 | `SEC-011` | medium | Cookie set without protective flags | SOC 2 CC6.1, NIST PR.DS-1 |
 | `SEC-012` | low | No security.txt disclosure policy | NIST RS.CO-1, ISO 27001 A.5.5 |
 | `SEC-013` | **critical** | Final page served over HTTP | PCI DSS 4.2.1, NIST PR.DS-2 |
+| `SEC-014` | medium | Third-party scripts load without Subresource Integrity | OWASP A03:2025, SOC 2 CC9.2, NIST GV.SC-04, 800-53 SR-3/SI-7 |
+| `SEC-015` | low | No CAA record restricts who may issue certificates | RFC 8659, OWASP A02:2025, NIST PR.DS-02, 800-53 SC-17 |
 
-## Email authentication — 7 rules
+`SEC-015` reads DNS, not HTTP, despite living in this family rather than the email one: a CAA record
+governs certificate issuance for the web host, so it is walked from the scanned host upward the way
+a certificate authority walks it, not from the `www.`-stripped mail domain.
+
+## Email authentication — 8 rules
 
 Category `security`. These are the only rules that read DNS rather than HTTP: the engine resolves
 TXT and MX over DNS-over-HTTPS (Google primary, Cloudflare fallback) and judges the answers. A
@@ -83,6 +89,7 @@ inherits its parent's policy.
 | `EMAIL-005` | medium | DMARC is not enforcing (`p=none`, or no `p=`) | RFC 7489, NIST PR.DS-2 |
 | `EMAIL-006` | low | DMARC has no reporting address (no `rua=`) | RFC 7489, NIST DE.CM-1 |
 | `EMAIL-007` | high | Multiple DMARC records | RFC 7489 §6.6.3, NIST PR.DS-2 |
+| `EMAIL-008` | low | No MTA-STS policy | RFC 8461, NIST PR.DS-02, 800-53 SC-8 |
 
 `EMAIL-003` and `EMAIL-007` are high, not medium, and that is deliberate. Both RFCs say a name with
 more than one record is a permanent error, so receivers apply none of them. The exposure is
@@ -103,12 +110,19 @@ the selector is chosen by whatever sends the mail. Selectors cannot be enumerate
 "no DKIM" would be a guess, and probing common selectors would report false defects against
 correctly configured domains.
 
-## Availability — 2 rules
+**`EMAIL-008` is silent on a domain with no MX record**, and that silence is a result, not a gap.
+MTA-STS tells a *sending* server how to reach yours over TLS; a domain that accepts no mail has
+nothing for it to govern, so demanding a policy would be inventing a defect. The engine records the
+`dns_mx` and `_mta-sts` lookups as evidence either way, because in a report a rule that passed and a
+rule that never ran look identical, and only the evidence rows tell them apart.
+
+## Availability — 3 rules
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
 | `AVAIL-001` | **critical** | Site unreachable or returning an error | SOC 2 A1.2, NIST DE.CM-1 |
 | `AVAIL-002` | medium | Slow first response | NIST PR.DS-4 |
+| `AVAIL-003` | **critical** | Site could not be assessed: the scanner was refused | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
 
 ## Accessibility — 7 rules
 
@@ -140,6 +154,26 @@ correctly configured domains.
 | `GOV-004` | info | AI crawler directives | AIO readiness |
 | `GOV-005` | info | Canonical link missing | AIO readiness |
 
+## AI governance — 5 rules
+
+Category `ai_governance`. These are the only rules keyed to **state statute** rather than a
+framework, which is why their `rule_id`s are slugs rather than a numbered family: the citation is
+the law, and a numbered code would imply a catalog position the statutes do not have. Adding the
+first of them is what broke the control register on 2026-09-16 -- a 30-character key against a
+`varchar(16)` column -- which is why `muster.frameworks` is a table now.
+
+| Code | Sev | Title | Maps to |
+|---|---|---|---|
+| `ai-admt-policy-silent` | high | Automated decision-making used without policy disclosure | Colorado SB 26-189 |
+| `ai-chatbot-present-undisclosed` | medium | Conversational AI present without disclosure | Colorado HB 26-1263 |
+| `ai-vendor-undisclosed` | medium | Third-party AI vendor undisclosed | — |
+| `ai-generated-content-undisclosed` | low | AI-generated content shown without disclosure | California SB 942 |
+| `ai-crawler-directives-missing` | info | No AI-crawler policy in robots.txt / llms.txt | — |
+
+**These are disclosure checks, not eligibility rulings.** MUSTER reports that a site appears to use
+automated decision-making or a chatbot and publishes no disclosure. Whether a given operator is in
+scope of a given statute is a question for the client's counsel, and the finding text says so.
+
 ## Third party — 1 rule
 
 | Code | Sev | Title | Maps to |
@@ -150,7 +184,7 @@ correctly configured domains.
 
 ## How the product groups these
 
-The workspace does not show six flat categories. It reshapes them into three views.
+The workspace does not show the seven flat categories. It reshapes them into three views.
 
 **Accessibility view** — eight pillars. Seven map one-to-one onto `A11Y-001`..`A11Y-007`; the
 eighth is *Browser engine (keyboard, contrast, ARIA)*, which scores **0/10 and is not checked**.
@@ -173,11 +207,11 @@ keyboard traps and live ARIA state are **not** assessed today.
 
 | Severity | Count | Codes |
 |---|---|---|
-| critical | 2 | `AVAIL-001`, `SEC-013` |
-| high | 7 | `EMAIL-001`–`004`, `EMAIL-007`, `SEC-001`, `SEC-010` |
-| medium | 14 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `AVAIL-002`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011` |
-| low | 11 | `A11Y-005`, `EMAIL-006`, `GOV-001`, `GOV-002`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012` |
-| info | 4 | `GOV-003`, `GOV-004`, `GOV-005`, `TP-001` |
+| critical | 3 | `AVAIL-001`, `AVAIL-003`, `SEC-013` |
+| high | 8 | `ai-admt-policy-silent`, `EMAIL-001`–`004`, `EMAIL-007`, `SEC-001`, `SEC-010` |
+| medium | 17 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `ai-chatbot-present-undisclosed`, `ai-vendor-undisclosed`, `AVAIL-002`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011`, `SEC-014` |
+| low | 14 | `A11Y-005`, `ai-generated-content-undisclosed`, `EMAIL-006`, `EMAIL-008`, `GOV-001`, `GOV-002`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012`, `SEC-015` |
+| info | 5 | `ai-crawler-directives-missing`, `GOV-003`, `GOV-004`, `GOV-005`, `TP-001` |
 
 Only `critical` and `high` open an alert (`muster.notification_outbox` accepts `risk_opened` at
 those two severities only — see [`EMAIL-INVENTORY.md`](EMAIL-INVENTORY.md)).
@@ -190,12 +224,18 @@ appears in the register on the next scan without any other change.
 
 | Framework | Rules | What it covers here |
 |---|---|---|
-| NIST CSF 2.0 | 24 | `PR.DS-01/02`, `PR.PS-01`, `PR.IR-04`, `DE.CM-01`, `GV.SC-04`, `ID.RA-08` |
-| NIST CSF 1.1 | 24 | kept for buyers mid-transition; every value is a withdrawn identifier |
-| NIST SP 800-53 Rev. 5 | 26 | `SC-8`, `SC-18`, `SC-23`, `CM-6`, `CM-7`, `AC-4`, `SI-8`, `PT-4/5`, `SR-3` |
-| OWASP Top 10:2025 | 14 | `A02:2025` misconfiguration, `A03:2025` supply chain, `A07:2025` auth |
+| NIST SP 800-53 Rev. 5 | 30 | `SC-8`, `SC-17`, `SC-18`, `SC-23`, `CM-6`, `CM-7`, `AC-4`, `SI-4`, `SI-7`, `SI-8`, `PT-4/5`, `SR-3` |
+| NIST CSF 2.0 | 28 | `PR.DS-01/02`, `PR.PS-01`, `PR.IR-04`, `DE.CM-01`, `GV.SC-04`, `ID.RA-08` |
+| NIST CSF 1.1 | 28 | kept for buyers mid-transition; every value is a withdrawn identifier |
+| RFC / other (`CUSTOM`) | 18 | the standard itself where no framework cites it: RFC 7208, 7489, 8461, 8659 |
+| SOC 2 (AICPA TSC) | 17 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
+| OWASP Top 10:2025 | 16 | `A02:2025` misconfiguration, `A03:2025` supply chain, `A07:2025` auth |
 | OWASP Secure Headers | 9 | one per response header rule |
-| SOC 2 (AICPA TSC) | 15 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
+| WCAG 2.1 | 7 | one per `A11Y-*` rule, A and AA success criteria only |
+| GDPR | 3 | Art. 6, 7, 13, 32 |
+| PCI DSS | 2 | 4.2.1 |
+| ISO 27001 | 1 | A.5.5 |
+| US state AI statutes | 3 | Colorado SB 26-189 and HB 26-1263, California SB 942 |
 
 ### AVAIL-003: refused is not unreachable
 
@@ -219,51 +259,67 @@ everyone, so the remediation answers both readings.
 DNS-derived rules are unaffected by a refusal and still run: SPF, DMARC, CAA and MTA-STS do not
 depend on the web server.
 
-### Held pending the engine deploy
+### Held for the engine deploy, activated 2026-09-17
 
-`SEC-014` (Subresource Integrity), `SEC-015` (CAA) and `EMAIL-008` (MTA-STS) exist in
-`muster.scan_rules` but are **inactive**, and must stay inactive until `muster-scan` is running
-engine version `http-native-1.2.0` or later. The reason is not tidiness. `rule_control_refs()`
-projects every *active* rule into the control register, and `sync_controls()` scores a reference
-`met` when a scanned website has no open findings against it. A rule the engine never evaluates has
-no findings by construction, so an active-but-unevaluated rule renders as a **met control** -- a
-report saying a site was checked for SRI and passed, when it was never checked. That is a fabricated
-assurance, which is the worst thing a compliance product can emit.
+`SEC-014` (Subresource Integrity), `SEC-015` (CAA) and `EMAIL-008` (MTA-STS) are **active** as of
+migration `20260917111614`. They were added by #103 and deliberately held inactive by
+`20260916210100` for three weeks until the engine that evaluates them was actually deployed. The
+hold is over; the reason for it is not, and the next rule added ahead of its engine gets the same
+treatment.
 
-Two things to know before reaching for that statement.
+**Why a rule waits for its engine.** `rule_control_refs()` projects every *active* rule into the
+control register, and `sync_controls()` scores a reference `met` when a scanned website has no open
+findings against it. A rule the engine never evaluates has no findings by construction, so an
+active-but-unevaluated rule renders as a **met control** -- a report saying a site was checked for
+SRI and passed, when it was never checked. That is a fabricated assurance, which is the worst thing
+a compliance product can emit.
 
-**`1.2.0` was never deployed.** It was the version at #103, which added these three rules, but the
-engine on production is still `http-native-1.1.1` -- confirmed against `muster.scans`, where every
-one of the last 25 completed scans reports it. `1.2.0` was then superseded in the repo by `1.3.0`
-(issues #93 and #94), so the first deployed engine that carries SRI, CAA and MTA-STS will be
-`1.3.0`. "Or later" above is doing real work; do not read the literal `1.2.0` out of migration
-`20260916210100`'s header and wait for a version that will never be served.
+**The hold is enforced at ingest, not only in the control register.** Migration `20260917061404`
+makes `muster.engine_ingest` drop findings whose rule is inactive. Before it, the flag governed
+`rule_control_refs()` only, and the engine -- which does not know which rules are active -- would
+have written findings into live registers the moment it deployed. A scan reports how many it
+dropped as `skipped_inactive` in its summary, so an engine running ahead of its schema is visible
+rather than silent. That counter is what proved the deploy: scan 51 reported
+`skipped_inactive = 1`, meaning the engine emitted a held finding and ingest refused it -- stronger
+evidence that the code path runs end to end than a version string, which is only ever compared to
+itself.
 
-**The deploy is blocked, silently.** `.github/workflows/deploy-functions.yml` skips rather than
-fails when `SUPABASE_ACCESS_TOKEN` is unset, and that secret is unset -- its one run to date, on
-#103's merge, skipped both deploy steps and reported success. So nothing will announce that these
-rules are still parked. Set the secret, merge anything under `supabase/functions/`, then confirm
-the version on a fresh scan.
+**What the hold outlasted, and why "or later" mattered.** `20260916210100`'s header names engine
+`http-native-1.2.0`. `1.2.0` was **never deployed**: it was the version at #103, superseded in the
+repo by `1.3.0` (#93, #94) and then `1.4.0` (#106, #107) before any of them reached production,
+which sat on `1.1.1`. Production went `1.1.1` -> `1.3.0` (2026-09-17 06:56) -> `1.4.0` (07:17).
+Waiting for the literal `1.2.0` would have been waiting for a version that will never be served.
+Read a version gate as a floor, never as an equality.
 
-**The hold is enforced at ingest, not only in the control register.** Migration
-`20260917061404` makes `muster.engine_ingest` drop findings whose rule is inactive. Before it, the
-flag governed `rule_control_refs()` only, and the engine -- which does not know which rules are
-active -- would have written `SEC-014`, `SEC-015` and `EMAIL-008` findings into live registers the
-moment it deployed. A scan reports how many it dropped as `skipped_inactive` in its summary, so an
-engine running ahead of its schema is visible rather than silent.
+**The deploy was blocked silently for three weeks.** `.github/workflows/deploy-functions.yml`
+skips rather than fails when `SUPABASE_ACCESS_TOKEN` is unset, and that secret was unset -- its one
+run to date, on #103's merge, skipped both deploy steps and reported success. Nothing announced
+that the rules were parked. A gate that skips on a missing secret needs someone watching the
+result, or it is a silent no-op.
 
-Activation is one statement, after confirming the deployed engine version on a fresh scan:
+**Verified live, not assumed.** Scan 52 against `muster.partners` on engine `http-native-1.4.0`
+returned `skipped_inactive: 0` and produced evidence for all three:
 
-```sql
-update muster.scan_rules set active = true, updated_at = now()
- where rule_id in ('SEC-014','SEC-015','EMAIL-008');
-```
+| Rule | Evidence kind | Outcome |
+|---|---|---|
+| `SEC-014` | `html_excerpt` (external script hosts) | **medium finding**, `cdn.jsdelivr.net` loads `@supabase/supabase-js` with no `integrity` |
+| `SEC-015` | `dns_caa` | ran, genuine pass -- four `issue` records present |
+| `EMAIL-008` | `dns_txt` on `_mta-sts`, plus `dns_mx` | ran, correctly suppressed -- the domain publishes no MX, so there is no inbound mail to police |
 
-`SEC-014` is the rule worth understanding before it goes live. It **excludes** tag managers,
-analytics, chat widgets and payment scripts, because those files are meant to change and pinning a
-hash breaks them on the vendor's next deploy. "Add SRI to Google Tag Manager" is advice that takes a
-site down. The finding says how many scripts it excluded and points at CSP and vendor review for
-those, rather than pretending they are fine or inventing a defect nobody can fix. That exclusion is
+That last row is the distinction to hold onto when reading a quiet rule: **no finding and no
+evaluation look identical in a report and are not the same thing.** The evidence rows are what
+separate them, which is why a DNS lookup is recorded even when it returns nothing.
+
+The finding on `SEC-014` is against MUSTER's own marketing site, which is the correct outcome.
+Its remediation is not a one-liner: `index.html` pins a floating major
+(`@supabase/supabase-js@2`), and a hash cannot be taken of a file that is meant to change. Pinning
+an exact version comes first, and `SEC-014`'s remediation text says so.
+
+`SEC-014` is the rule worth understanding. It **excludes** tag managers, analytics, chat widgets
+and payment scripts, because those files are meant to change and pinning a hash breaks them on the
+vendor's next deploy. "Add SRI to Google Tag Manager" is advice that takes a site down. The finding
+says how many scripts it excluded and points at CSP and vendor review for those, rather than
+pretending they are fine or inventing a defect nobody can fix. That exclusion is
 pinned by `tests/scan/hardening.test.ts`, which treats it as the most important case in the file.
 
 Three things about this that matter when a client asks:
