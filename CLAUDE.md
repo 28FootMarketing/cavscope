@@ -437,6 +437,13 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   that literal string would have waited forever. And `skipped_inactive` on a real scan is the
   proof the deploy landed, because it means the engine emitted a held finding and ingest refused
   it; the version string alone is only ever compared to itself.
+  **`EMAIL-009` followed the same path on 2026-09-17** (`20260917150811` adds it inactive,
+  `20260917161039` activates it after engine `http-native-1.5.0` was observed), and it adds a third
+  way to prove the gate. `skipped_inactive` could not be the proof here: the rule correctly emitted
+  nothing on the sites scanned, so the counter stayed 0 whether or not the code ran. **Its evidence
+  row was the proof** -- `dns_spf_chain` is written whenever the walk executes, pass or fail. When a
+  rule's silence is a legitimate result, look for an artefact the engine writes unconditionally,
+  not for a counter that only moves when the rule fires.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
