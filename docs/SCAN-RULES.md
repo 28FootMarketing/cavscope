@@ -197,6 +197,28 @@ appears in the register on the next scan without any other change.
 | OWASP Secure Headers | 9 | one per response header rule |
 | SOC 2 (AICPA TSC) | 15 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
 
+### AVAIL-003: refused is not unreachable
+
+A homepage that answers **401, 403 or 429** raises `AVAIL-003`, not `AVAIL-001`. The server is
+running and declined the request -- commonly a WAF, CDN bot filter or rate limiter rejecting
+`MUSTER-Scanner/1.0`. A 404 homepage is genuinely broken and a 5xx is genuinely an outage, so both
+stay on `AVAIL-001`.
+
+This exists because a real prospect scan reported a live site as a critical outage and told the
+reader, in plain English, that "Visitors cannot load the site," with remediation pointing at DNS,
+hosting and TLS. Every clause was false. It is the mirror of issue #93: a confident claim about a
+page the engine never read.
+
+`AVAIL-003` keeps **critical** severity, which looks wrong and is not. Severity drives posture
+(critical 25, high 10, medium 4, low 1, off 100; green at 85), so filing a refused scan as low
+would score an unreadable site 99 and render it **green** -- a clean bill of health for a site
+MUSTER could not read. What changed is the claim, not the weight: the finding now says the scan
+produced no assessment. One request cannot distinguish bot protection from a 403 served to
+everyone, so the remediation answers both readings.
+
+DNS-derived rules are unaffected by a refusal and still run: SPF, DMARC, CAA and MTA-STS do not
+depend on the web server.
+
 ### Held pending the engine deploy
 
 `SEC-014` (Subresource Integrity), `SEC-015` (CAA) and `EMAIL-008` (MTA-STS) exist in

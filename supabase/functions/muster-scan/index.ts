@@ -26,7 +26,12 @@ import { detectClientRendered, stripTags } from "./html.ts";
 // Migration 20260916210100 holds those three rules inactive until a scan is
 // confirmed reporting 1.2.0. That precondition is now unreachable and should be
 // read as "1.3.0 or later"; see that migration's header before activating.
-const ENGINE_VERSION = "http-native-1.3.0";
+//
+// 1.4.0 adds AVAIL-003: a homepage that answers 401, 403 or 429 is now reported
+// as "could not be assessed" rather than as an outage. Rule output changed, so
+// the minor moves -- and the value to move it from is the one on main, not the
+// one this branch started at.
+const ENGINE_VERSION = "http-native-1.4.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -258,7 +263,23 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     headers: primary.headers, excerpt: headerList(primary.headers) + (primary.setCookies.length ? "\nset-cookie: " + primary.setCookies.join("\nset-cookie: ") : ""), byte_length: null }, headerList(primary.headers));
 
   const reachable = primary.status !== null && primary.status < 400 && !primary.error;
-  if (!reachable) {
+  // 401, 403 and 429 mean the server answered and declined us. That is a
+  // different fact from "nobody can reach this", and reporting it as an outage
+  // is a claim about a page the engine never read -- the same failure as issue
+  // #93, pointed the other way. A 404 homepage is genuinely broken and a 5xx is
+  // genuinely an outage, so both stay on AVAIL-001.
+  //
+  // One request cannot distinguish bot protection from a 403 served to
+  // everyone, so AVAIL-003 does not guess: it reports what happened and its
+  // remediation covers both readings. It keeps critical severity on purpose --
+  // see migration 20260917071020 (muster_065) -- because a lighter weight would
+  // score an unreadable site 99/100 green.
+  const refused = !primary.error && (primary.status === 401 || primary.status === 403 || primary.status === 429);
+  if (refused) {
+    add({ rule_id: "AVAIL-003", severity: "critical", title: "Site could not be assessed: the scanner was refused",
+      detail: `The homepage returned HTTP ${primary.status} after ${chain.hops.length} hop(s). The server answered, so it is running, but it declined this request -- commonly a WAF, CDN bot filter or rate limiter rejecting the MUSTER-Scanner user agent. No markup, headers or cookies were read, so every HTTP-derived rule produced nothing for this site and its score reflects an unassessed target rather than a clean one. DNS-derived checks are independent of the web server and still ran.`,
+      location: "homepage", confidence: "high", evidence_keys: ["primary", "chain"] });
+  } else if (!reachable) {
     add({ rule_id: "AVAIL-001", severity: "critical", title: "Site unreachable or returning an error",
       detail: primary.error ? `Request failed: ${primary.error}` : `Homepage returned HTTP ${primary.status} after ${chain.hops.length} hop(s).`,
       location: "homepage", confidence: "high", evidence_keys: ["primary", "chain"] });

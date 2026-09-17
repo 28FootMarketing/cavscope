@@ -142,10 +142,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
   `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
   `customer.subscription.deleted` is unhandled, so a cancelled customer prices in until their plan
-  is changed by hand. Four nav sections (Workspaces, AI Readiness, Domain Monitor, Reports) render
+  is changed by hand. Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
   an explicit "not instrumented" panel naming what would have to exist first, because the schema
   cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
-  table. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
+  table. **Reports stopped being one of them on 2026-09-17**, backed by
+  `muster_admin_sitreps()` and `muster_admin_sitrep()` (migration `20260917070953`): an index
+  across every tenant, and the report body fetched only for the one opened, because `content_md`
+  is a few KB each. The markdown is rendered **verbatim in a `<pre>`, never parsed** -- so the
+  console cannot disagree with what the tenant reads at `/sitrep`, and so a hand-rolled renderer
+  over report content does not become an injection bug in the page that reports on other people's
+  security. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
   view, which still backs `muster_admin_overview()` and owns the write actions (plan changes,
   impersonation, incident triage). `app.html`'s super admin hero links across to it.
   **One exception, added 2026-09-17: the Audit Queue section can start a scan.** Everything else
@@ -171,6 +177,11 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   **Its form fields are held in state, not only in the DOM.** `render()` replaces the whole page
   and the panel re-renders on every status update, so a value living only in a node would be
   blanked mid-scan with the URL you typed still being scanned.
+  **And it links to the report.** A scan writes a SITREP about a second after it finishes, and for
+  a day it wrote one that nothing in the product pointed at -- an audit was run, the Reports
+  section was a stub, and the report sat unread in `muster.sitreps`. The runner now resolves the
+  SITREP **by `scan_id`**, not by taking the newest row, because two audits started close together
+  would otherwise each link to whichever finished last.
 - `signin.html` derives its redirect target as `window.location.origin + '/app'` rather than
   hardcoding a host, so it is same-origin on whichever app host served it. It must stay **absolute**:
   it is passed to `signInWithOtp` as `emailRedirectTo`, which Supabase requires to be a full URL —
