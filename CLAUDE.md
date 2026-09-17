@@ -335,6 +335,18 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   six false, with bodies of 124 to 270 characters against roughly 4,700 in the files. Nothing
   checked, so nobody knew. **`supabase/auth-email-templates/` is the source of truth and the
   dashboard is a cache of it** -- an apply overwrites anything edited there, deliberately.
+  **The seven security-notification emails are a separate family and all seven are switched off**
+  (`mailer_notifications_*_enabled` all `false`, read live 2026-09-17). Their templates are still
+  GoTrue stock at roughly 190 characters, and that is fine while they are off: writing templates for
+  mail that never sends is the same error as activating a rule its engine cannot emit. Check the
+  switch before the template -- `templates: report` prints both.
+  **One of the seven is a product decision, not a formatting one.**
+  `mailer_notifications_password_changed_enabled` is `false`, so changing a password sends the
+  account holder nothing. For most products that is a preference; for a vendor selling security
+  assurance it is a control a buyer may reasonably expect, and its absence is the kind of thing an
+  attacker uses after a credential stuffing win. Turning it on is an outward-facing change that
+  starts mailing real users, so it is the owner's call -- and it must ship WITH its template, or the
+  first one a customer receives is unbranded stock from a security company.
 - **Only the pages that complete a sign-in may consume an auth fragment.** `detectSessionInUrl`
   defaults to **true**, so a page that builds a Supabase client for any other reason will parse
   and consume the `#access_token=...` of any auth link that reaches it. Auth links are single

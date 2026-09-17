@@ -279,6 +279,16 @@ jobs:
                    | .key + " => " + (if (.value == null or .value == "") then "EMPTY"
                      elif (.value|type)=="string" and (.value|length) > 60 then "set (" + (.value|length|tostring) + " chars)"
                      else (.value|tostring) end)' /tmp/cfg.json
+            # Whether the security-notification emails are switched on at all.
+            # Their enable flags are not mailer_-prefixed, and writing templates
+            # for a path that never fires is the failure this repo keeps finding.
+            # Booleans and key names only -- never a value from any other key,
+            # because this response carries smtp_pass and provider secrets.
+            echo "--- notification switches ---"
+            jq -r 'to_entries
+                   | map(select((.key | test("notification")) and ((.value|type) == "boolean")))
+                   | sort_by(.key)[] | .key + " => " + (.value|tostring)' /tmp/cfg.json
+            echo "--- (none above means no boolean notification switch exists) ---"
             rm -f /tmp/cfg.json
             echo "::notice::Report only. Nothing was written."
             exit 0
