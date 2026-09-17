@@ -83,3 +83,79 @@ is both.
 That endpoint was dropped by `muster_026` and the token grants nothing on any system.
 It is left in place because this directory is a history, and editing history to look
 tidier is how a ledger stops being trustworthy. Do not reuse the value.
+
+## Post-apply verification notes go here, not into the migration file
+
+A migration file in this directory is a verbatim record of the statement Postgres
+recorded. Anything learned *after* applying — a verification run, a caveat, a thing
+that turned out to matter — cannot go into the file without breaking that, because the
+file would then claim to be the applied statement while no longer being it. It goes in
+this README instead, under the version it belongs to.
+
+This rule is written down because it was broken immediately. `20260915230805`
+(`muster_052`) carried eleven appended comment lines recording how it had been verified
+after the fact, which made the file 754 bytes longer than what ran. The note was worth
+keeping; putting it in the file was not. It is kept here:
+
+- **`20260915230805` — `muster_052_force_password_change_gate`.** Verified after
+  applying with `set_config('request.jwt.claims', ...)` inside a rolled-back
+  transaction, rather than by changing a real account:
+  - *flagged* → `current_user_id` null, `is_super_admin` false, `org_role` null,
+    `is_org_member` false, `can_write_org` false, `onboarding_caller` 0 rows;
+    `muster_onboarding_status` / `muster_my_workspace` / `muster_ensure_user` raise
+    `42501 password_change_required`; `muster_admin_overview` `42501 forbidden`;
+    `muster_admin_impersonate_status` `42501`.
+  - *unflagged* → the same account resolves to user id 4, `super_admin`, full write.
+  - *service* → predicate false.
+  - *public* → `muster_plans` and `muster_public_pricing` still answer, as they must.
+
+## `055`–`057` call themselves `052`–`054` inside, and that cannot be fixed
+
+`20260916022827`, `20260916022923` and `20260916023009` were written and applied on one
+branch while `20260915230805` was being written on another. Both branches took the next
+free sequence number, so `muster_052` was claimed twice.
+
+`20260915230805` keeps it. It is earlier by version, and it is the one the **live
+database** agrees with: the comment on `muster.password_change_required()` reads
+"see migration muster_052 header", so the catalog itself points there. The other three
+are renumbered `055`–`057`, which restores unique, chronological numbering.
+
+What is *not* changed is their contents. All three open with a `-- muster_05N:` line and
+refer to each other by the old numbers, and those lines are part of the statement
+Postgres recorded. Correcting them would make the files disagree with the ledger, which
+is the one thing a file here may never do — so the stale self-references stay.
+**The filename is authoritative; a `muster_05N` mentioned inside one of these three is
+off by three.** The version prefix is the real ordering and always was.
+
+The sequence numbers are a reading aid, not an identifier. Nothing keys on them:
+`supabase_migrations.schema_migrations` keys on the version, and so does the CLI.
+
+## How to check this directory against the ledger
+
+Neither the numbering collision above nor the two-byte edits were caught by anything;
+both were found by hand. They are now checkable:
+
+```
+npm run migrations:check -- --sql                    # print the dump query
+npm run migrations:check -- --ledger ledger.json     # compare
+```
+
+Run the query against `hjowfnzpomzxazmzywxw` with whatever holds credentials — the
+Supabase MCP, `psql`, the dashboard SQL editor — and save the JSON array it returns.
+The tool takes no connection string and opens no socket, so it cannot leak one. It
+reports four things and exits non-zero on any:
+
+| | |
+|---|---|
+| **diverged** | the file claims to be the applied statement and is not. The database is right. If the dump carried `statement`, it prints the first differing line. |
+| **applied with no file** | ran against the database, not recorded here — usually a branch that has not merged. Check before writing a new file; two files for one version is worse than none. |
+| **forward reference** | a file for a version the ledger has never seen. This is what left sixteen of them on the old shared project. |
+| **local problems** | duplicate versions, duplicate or out-of-order sequence numbers, malformed filenames. |
+
+A file matches when its md5 equals the statement's, or equals it with one trailing
+newline appended — the documented difference for files that end in a newline.
+
+The local problems need no database, so `tests/migrations/ledger.test.ts` runs them in
+CI on every push. The `muster_052` collision would have failed there the moment it
+existed. Gaps in the sequence are deliberately **not** reported: a gap means a branch
+has not merged yet, and a check that fails on ordinary in-flight work gets switched off.

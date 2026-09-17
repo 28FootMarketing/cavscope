@@ -182,6 +182,88 @@ keyboard traps and live ARIA state are **not** assessed today.
 Only `critical` and `high` open an alert (`muster.notification_outbox` accepts `risk_opened` at
 those two severities only — see [`EMAIL-INVENTORY.md`](EMAIL-INVENTORY.md)).
 
+## Framework mapping
+
+`scan_rules.framework_refs` is what every finding, SITREP and control-register row cites.
+`muster.controls` is a pure projection of it (`muster.sync_controls`), so a mapping added here
+appears in the register on the next scan without any other change.
+
+| Framework | Rules | What it covers here |
+|---|---|---|
+| NIST CSF 2.0 | 24 | `PR.DS-01/02`, `PR.PS-01`, `PR.IR-04`, `DE.CM-01`, `GV.SC-04`, `ID.RA-08` |
+| NIST CSF 1.1 | 24 | kept for buyers mid-transition; every value is a withdrawn identifier |
+| NIST SP 800-53 Rev. 5 | 26 | `SC-8`, `SC-18`, `SC-23`, `CM-6`, `CM-7`, `AC-4`, `SI-8`, `PT-4/5`, `SR-3` |
+| OWASP Top 10:2025 | 14 | `A02:2025` misconfiguration, `A03:2025` supply chain, `A07:2025` auth |
+| OWASP Secure Headers | 9 | one per response header rule |
+| SOC 2 (AICPA TSC) | 15 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
+
+### Held pending the engine deploy
+
+`SEC-014` (Subresource Integrity), `SEC-015` (CAA) and `EMAIL-008` (MTA-STS) exist in
+`muster.scan_rules` but are **inactive**, and must stay inactive until `muster-scan` is running
+engine version `http-native-1.2.0` or later. The reason is not tidiness. `rule_control_refs()`
+projects every *active* rule into the control register, and `sync_controls()` scores a reference
+`met` when a scanned website has no open findings against it. A rule the engine never evaluates has
+no findings by construction, so an active-but-unevaluated rule renders as a **met control** -- a
+report saying a site was checked for SRI and passed, when it was never checked. That is a fabricated
+assurance, which is the worst thing a compliance product can emit.
+
+Two things to know before reaching for that statement.
+
+**`1.2.0` was never deployed.** It was the version at #103, which added these three rules, but the
+engine on production is still `http-native-1.1.1` -- confirmed against `muster.scans`, where every
+one of the last 25 completed scans reports it. `1.2.0` was then superseded in the repo by `1.3.0`
+(issues #93 and #94), so the first deployed engine that carries SRI, CAA and MTA-STS will be
+`1.3.0`. "Or later" above is doing real work; do not read the literal `1.2.0` out of migration
+`20260916210100`'s header and wait for a version that will never be served.
+
+**The deploy is blocked, silently.** `.github/workflows/deploy-functions.yml` skips rather than
+fails when `SUPABASE_ACCESS_TOKEN` is unset, and that secret is unset -- its one run to date, on
+#103's merge, skipped both deploy steps and reported success. So nothing will announce that these
+rules are still parked. Set the secret, merge anything under `supabase/functions/`, then confirm
+the version on a fresh scan.
+
+Activation is one statement, after confirming the deployed engine version on a fresh scan:
+
+```sql
+update muster.scan_rules set active = true, updated_at = now()
+ where rule_id in ('SEC-014','SEC-015','EMAIL-008');
+```
+
+`SEC-014` is the rule worth understanding before it goes live. It **excludes** tag managers,
+analytics, chat widgets and payment scripts, because those files are meant to change and pinning a
+hash breaks them on the vendor's next deploy. "Add SRI to Google Tag Manager" is advice that takes a
+site down. The finding says how many scripts it excluded and points at CSP and vendor review for
+those, rather than pretending they are fine or inventing a defect nobody can fix. That exclusion is
+pinned by `tests/scan/hardening.test.ts`, which treats it as the most important case in the file.
+
+Three things about this that matter when a client asks:
+
+**A mapping is not a test.** Citing `A02:2025` says the finding belongs to that category. It does
+not say MUSTER tests the category. The engine is HTTP-native with no browser and no authenticated
+crawl, so injection, broken access control and authentication are out of reach by construction and
+always will be under this architecture. The register states the same limit on every row.
+
+**The CSF 2.0 pass was a correction, not an addition.** Every `NIST_CSF` value was a CSF 1.1
+identifier, and 2.0 withdrew all of them. `TP-001` cited `ID.SC-2`, which no longer exists anywhere
+in IDENTIFY: supply chain became `GV.SC` under the new GOVERN function. A prospect's GRC team
+working in 2.0 could not have reconciled it.
+
+**None of this is a SOC 2 opinion.** A SOC 2 report is issued by a licensed CPA firm after an
+examination. What MUSTER produces is continuous, timestamped, independently collected evidence a
+client hands to that firm, plus readiness signal between audits. Route the attestation question to
+the client's auditor.
+
+**Not mapped, deliberately:** OWASP ASVS. ASVS 5.0 renumbered against 4.0 and the current chapter
+identifiers were not verifiable when this pass was made. Guessing control identifiers in a
+compliance product is the one unrecoverable mistake, so ASVS waits for someone with the document
+open.
+
+Frameworks live in `muster.frameworks` (key, label), which `controls.framework` references by
+foreign key. Adding one is an insert there, not a constraint edit. Before 2026-09-16 the set was a
+hardcoded `CHECK` plus a `varchar(16)` column, and the AI-governance rules broke the whole register
+for an hour by introducing a 30-character key.
+
 ## What the engine does not check
 
 Worth being able to say out loud, because a prospect will ask:
@@ -191,6 +273,14 @@ Worth being able to say out loud, because a prospect will ask:
   no computed styles.
 - **No authenticated crawl.** Only what an anonymous visitor sees.
 - **One page by default.** `website_scan_settings.max_pages` defaults to 1.
-- **No DKIM, BIMI or MTA-STS check.** SPF and DMARC are covered by the `EMAIL-*` family above;
-  DKIM cannot be checked without knowing the selector, and BIMI and MTA-STS are not assessed.
-- **No TLS certificate inspection.** Expiry, chain and cipher suite are not assessed.
+- **No DKIM or BIMI check.** SPF and DMARC are covered by the `EMAIL-*` family above; DKIM cannot
+  be checked without knowing the selector, and BIMI is not assessed. **MTA-STS is now covered** by
+  `EMAIL-008`.
+- **No TLS certificate inspection.** Expiry, chain and cipher suite are not assessed, and this is a
+  runtime limit rather than an oversight: the edge runtime's `Deno.connectTls()` exposes only the
+  negotiated ALPN protocol in `TlsHandshakeInfo`, with no access to the peer certificate. Reading
+  expiry from Certificate Transparency logs instead was considered and rejected -- CT shows what was
+  *issued*, not what the server is *serving*, so "your certificate expires in five days" could be
+  said of a certificate that was replaced a month ago. A wrong expiry warning on a compliance report
+  is worse than no expiry warning. It needs either a browser engine or a helper that can complete a
+  TLS handshake and read the chain.

@@ -219,7 +219,7 @@ Details that are load-bearing:
 
 | Visibility | Reachable by | Today |
 |---|---|---|
-| `public` | any agent key with `read` | `docs/SCAN-RULES.md` |
+| `public` | any agent key with `read` | `docs/SCAN-RULES.md`, `docs/GLOSSARY.md` |
 | `internal` | a **platform-scoped** key (`organization_id` null) that also carries `admin` | everything else |
 
 An org-scoped key with the `admin` scope is an admin of **one organization**. That does not make

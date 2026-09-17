@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { dmarcCandidates, evaluateEmailAuth, mailDomain } from "./email-auth.ts";
+import { caaNames, evaluateCaa, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
 import { detectClientRendered, stripTags } from "./html.ts";
 
 // MUSTER scan engine, phase 1: HTTP-native checks.
@@ -11,11 +12,21 @@ import { detectClientRendered, stripTags } from "./html.ts";
 //   { "scan_id": 123 }            run one queued scan
 //   { "mode": "due", "limit": 3 } claim due websites and stale queued scans, run each
 
-// 1.2.0, not 1.1.2: this changes what the engine reports, not just how. Client-
+// 1.3.0, not 1.2.1, and not 1.2.0 as this branch originally said. Client-
 // rendered pages now downgrade content findings as they were always meant to
-// (issue #93), and origin-file probes follow the target's port (issue #94).
-// A finding's severity is only comparable across scans on the same version.
-const ENGINE_VERSION = "http-native-1.2.0";
+// (issue #93), and origin-file probes follow the target's port (issue #94):
+// both change what the engine reports, not just how.
+//
+// The bump is to 1.3.0 because 1.2.0 was taken while this branch was open, by
+// SEC-014/SEC-015/EMAIL-008 (#103) -- a different rule set entirely. Landing
+// this as 1.2.0 too would have put two materially different engines behind one
+// version string, which is the exact thing the version exists to prevent: a
+// finding's severity is only comparable across scans on the same version.
+//
+// Migration 20260916210100 holds those three rules inactive until a scan is
+// confirmed reporting 1.2.0. That precondition is now unreachable and should be
+// read as "1.3.0 or later"; see that migration's header before activating.
+const ENGINE_VERSION = "http-native-1.3.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -200,6 +211,32 @@ async function resolveMx(name: string): Promise<string[]> {
   } catch { return []; }
 }
 
+// CAA is DNS type 257. Same failover as resolveTxt and for the same reason: a
+// single resolver being unreachable must not become "no CAA is published",
+// which is a finding about certificate issuance manufactured from an outage.
+async function resolveCaa(name: string): Promise<{ records: string[]; failed: boolean }> {
+  for (const base of DOH_ENDPOINTS) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(`${base}?name=${encodeURIComponent(name)}&type=CAA`, {
+        headers: { accept: "application/dns-json" }, signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const body = await res.json();
+      // NXDOMAIN is an answer -- the name does not exist, so it has no CAA.
+      if (body?.Status !== 0 && body?.Status !== 3) continue;
+      const records = (body?.Answer ?? [])
+        .filter((a: { type?: number }) => a?.type === 257)
+        .map((a: { data?: string }) => String(a?.data ?? "").trim())
+        .filter(Boolean);
+      return { records, failed: false };
+    } catch { /* try the next resolver */ }
+  }
+  return { records: [], failed: true };
+}
+
 async function runScan(job: { scan_id: number; website_id: number; target_url: string; website_name: string }) {
   const evidence: Evidence[] = [];
   const findings: Finding[] = [];
@@ -379,6 +416,12 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
       await snip("scripts", `External script hosts (${extHosts.length}):`, extHosts.map((hn) => hn + "  <- " + external.filter((u) => u.hostname.toLowerCase() === hn).map((u) => u.pathname).slice(0, 3).join(", ")));
       add({ rule_id: "TP-001", severity: "info", title: "External script inventory", detail: `${external.length} external script(s) from ${extHosts.length} host(s): ${extHosts.slice(0, 15).join(", ")}${extHosts.length > 15 ? ", ..." : ""}.`, location: "<script src>", confidence: "high", evidence_keys: ["scripts"] });
       const trackers = [...new Set(TRACKER_HOSTS.filter(([re]) => external.some((u) => re.test(u.href)) || re.test(html)).map(([, n]) => n))];
+      // SEC-014 reads the same scripts TP-001 inventoried, but off the whole tag
+      // rather than the src, because integrity and crossorigin live there.
+      for (const f of evaluateSubresourceIntegrity({
+        scripts: extractScripts(html, finalUrl, host),
+        evidenceKey: "scripts",
+      })) add(f);
       if (trackers.length) add({ rule_id: "PRIV-002", severity: "low", title: "Third-party trackers loaded before consent could be verified", detail: `Detected: ${trackers.join(", ")}. The HTTP engine cannot see whether a consent banner gates these tags; verify in the browser engine or manually.`, location: "<script src>", confidence: "medium", evidence_keys: ["scripts"] });
     }
     if (isHttps) {
@@ -488,6 +531,50 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     for (const f of evaluateEmailAuth({
       host: mailHost, spfTxt: spf.txt, dmarc, mx,
       resolverFailed: spf.failed || dmarcFailed,
+    })) add(f);
+
+    // SEC-015: CAA, walked the way a certificate authority walks it -- nearest
+    // name first, stopping at the registrable domain. dmarcCandidates already
+    // encodes the public-suffix stop, so the apex is read off its last entry
+    // rather than re-deriving a suffix list here and letting the two drift.
+    const apex = (dmarcCandidates(mailHost).at(-1) ?? `_dmarc.${domain}`).replace(/^_dmarc\./, "");
+    const caaAnswers: Array<{ name: string; records: string[] }> = [];
+    let caaFailed = false;
+    for (const name of caaNames(mailHost, apex)) {
+      const r = await resolveCaa(name);
+      if (r.failed) { caaFailed = true; break; }
+      caaAnswers.push({ name, records: r.records });
+      // A CA stops at the first name with a CAA set, so this does too.
+      if (r.records.length > 0) break;
+    }
+    await ev({ key: "dns_caa", kind: "dns_caa", url: `dns:${mailHost}?type=CAA`, http_status: null, content_type: null,
+      response_ms: null, headers: null,
+      excerpt: caaFailed ? "resolver unavailable" : (caaAnswers.map((a) => `${a.name}: ${a.records.join(" | ") || "(none)"}`).join("\n") || "(no names queried)"),
+      byte_length: null }, caaAnswers.map((a) => a.records.join("|")).join("\n"));
+    for (const f of evaluateCaa({ host: mailHost, answers: caaAnswers, resolverFailed: caaFailed, evidenceKey: "dns_caa" })) add(f);
+
+    // EMAIL-008: MTA-STS. The policy file is only fetched when the TXT record
+    // claims one exists, so a domain with no record costs one lookup and no
+    // request to a host that will not answer.
+    const stsTxt = await resolveTxt(`_mta-sts.${domain}`);
+    let stsPolicy: string | null = null;
+    let stsPolicyStatus: number | null = null;
+    if (!stsTxt.failed && stsTxt.txt.some((t) => /^v=STSv1\s*;/i.test(t.trim()))) {
+      const pol = await fetchOnce(`https://mta-sts.${domain}/.well-known/mta-sts.txt`, "GET");
+      stsPolicyStatus = pol.status;
+      if (pol.status === 200 && /version\s*:\s*STSv1/i.test(pol.body)) stsPolicy = pol.body;
+    }
+    await ev({ key: "mta_sts", kind: "dns_txt", url: `dns:_mta-sts.${domain}?type=TXT`, http_status: stsPolicyStatus, content_type: null,
+      response_ms: null, headers: null,
+      excerpt: stsTxt.failed ? "resolver unavailable" : [
+        stsTxt.txt.join("\n") || "(no TXT records)",
+        stsPolicyStatus === null ? "" : `policy fetch: HTTP ${stsPolicyStatus}`,
+        stsPolicy ? `\n${stsPolicy.slice(0, 1000)}` : "",
+      ].filter(Boolean).join("\n"),
+      byte_length: null }, stsTxt.txt.join("\n") + (stsPolicy ?? ""));
+    for (const f of evaluateMtaSts({
+      domain, txt: stsTxt.txt, policy: stsPolicy, mx,
+      resolverFailed: stsTxt.failed, evidenceKey: "mta_sts",
     })) add(f);
   }
 
