@@ -507,6 +507,10 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `acct_1PUDj1JijfcmbDDB`: both Payment Links carry `tier` and `stage` metadata, the
   `checkout.session.completed` endpoint points at the new project, and `STRIPE_WEBHOOK_SECRET` and
   `RESEND_API_KEY` are both set — each proven by observed behaviour, not by reading a checklist.
-  Do not repeat "Stripe is outstanding" from an older note. What IS outstanding: GoTrue SMTP,
-  templates and rate limit on the new project, and `customer.subscription.deleted`, which nothing
-  consumes.
+  Do not repeat "Stripe is outstanding" from an older note. **GoTrue SMTP is not outstanding
+  either** -- that claim was stale and was disproved on 2026-09-17 by reading the live auth
+  config: custom SMTP is configured and sends as `noreply@mail.muster.partners`. It mattered,
+  because it changes what an undelivered auth email means: on the built-in sender a missing
+  email is an unremarkable rate limit, on configured SMTP it is a real delivery fault worth
+  chasing. What IS outstanding: the six auth email templates and the rate limit on the new
+  project, and `customer.subscription.deleted`, which nothing consumes.
