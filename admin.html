@@ -312,6 +312,44 @@
     }
     .link-more:hover { text-decoration: underline; }
 
+    /* Audit runner. This page was read-only until 2026-09-17 and had no form
+     * controls at all, so these are the first. Kept deliberately plain: the
+     * runner is two inputs and two buttons, and anything more would be a second
+     * design language inside one console. */
+    .runner { display: flex; flex-direction: column; gap: 16px; }
+    .runner-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .runner-row > .grow { flex: 1 1 260px; min-width: 0; }
+    .field label {
+      display: block; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 5px;
+    }
+    .field input[type="text"], .field select {
+      width: 100%; box-sizing: border-box; padding: 9px 11px; font-size: 13px;
+      font-family: var(--font-sans); color: var(--text);
+      background: var(--surface); border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+    }
+    .field input[type="text"]:focus-visible, .field select:focus-visible, .btn:focus-visible {
+      outline: 2px solid var(--teal); outline-offset: 1px;
+    }
+    .field input[type="text"]::placeholder { color: var(--text-dim); }
+    .btn {
+      padding: 9px 16px; font-size: 12.5px; font-weight: 600; font-family: var(--font-sans);
+      color: #04121a; background: var(--teal); border: 1px solid var(--teal);
+      border-radius: var(--radius-md); cursor: pointer; white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn.warn { color: #1a1204; background: var(--amber); border-color: var(--amber); }
+    .btn:disabled { opacity: 0.5; cursor: progress; }
+    .runner-msg { font-size: 12.5px; line-height: 1.5; }
+    .runner-msg.ok { color: var(--teal); }
+    .runner-msg.warn { color: var(--amber); }
+    .runner-msg.bad { color: var(--rose); }
+    .runner-msg.busy { color: var(--text-muted); }
+    .runner-note {
+      font-size: 12px; color: var(--text-dim); line-height: 1.55;
+      border-left: 2px solid var(--surface-border-strong); padding-left: 11px;
+    }
     .empty { color: var(--text-dim); font-size: 12.5px; padding: 18px 0; text-align: center; }
     .empty.good { color: var(--emerald); }
 
@@ -1159,9 +1197,225 @@
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No users match.</div>');
   }
 
+  // ---- audit runner -------------------------------------------------------
+  //
+  // This is the one place the console writes. Everything else on the page comes
+  // from a single read, muster_admin_console(), and that split was deliberate:
+  // app.html's superadmin view owned the actions. Running an audit is the one
+  // action worth having here anyway, because this is the page you are already on
+  // when you notice a site needs one, and sending someone to a different host to
+  // press a button is how a console stops being used.
+  //
+  // Neither call is trusted from here. muster_admin_run_url and
+  // muster_request_scan are both SECURITY DEFINER and check
+  // muster.is_super_admin() / muster.can_write_org() themselves, so a hand-made
+  // call from a browser console gets 42501 exactly as it would without this
+  // panel. Nothing below is a permission check; it is a form.
+  //
+  // THE ONE THING THAT MATTERS HERE: the RPC returns as soon as the scan is
+  // QUEUED, not when it has run. do_request_scan fires the engine through
+  // net.http_post, which pg_net hands to a background worker before returning,
+  // so the engine starts a few hundred milliseconds later. Reading the result
+  // immediately shows a queued scan with no findings, which is exactly what "the
+  // audit did not populate" turned out to be in app.html. So every path here
+  // polls to a terminal status before it reports anything.
+  //
+  // url and siteId live here rather than only in the DOM because render() replaces
+  // the whole page. A field that existed only as a node would be blanked on the
+  // first status update, mid-scan, with the URL you typed still being scanned.
+  const run = { busy: false, kind: '', msg: '', url: '', siteId: '' };
+
+  const RUN_POLL_MS = 900;
+  const RUN_POLL_TRIES = 20; // ~18s. A normal scan finishes in about one.
+
+  function setRun(kind, msg, busy) {
+    run.kind = kind;
+    run.msg = msg;
+    run.busy = !!busy;
+    render();
+  }
+
+  function auditRunner() {
+    const sites = (DATA.websites || []).filter((w) => inOrg(w.organization_id));
+    // Keep state and what is on screen in agreement. A browser shows the first
+    // option as selected whether or not anything set it, so without this the
+    // dropdown would name a site while run.siteId was still empty and the button
+    // would answer "pick a site" about the site you were looking at. Also covers
+    // the org filter changing the list out from under a stale selection.
+    if (!sites.some((w) => String(w.id) === String(run.siteId))) {
+      run.siteId = sites.length ? String(sites[0].id) : '';
+    }
+    const d = run.busy ? ' disabled' : '';
+    return `<div class="runner">
+      <div class="runner-row">
+        <div class="field grow">
+          <label for="runUrl">Scan any URL</label>
+          <input type="text" id="runUrl" placeholder="https://prospect-site.com" value="${escapeHtml(run.url)}"${d}
+                 data-tooltip="Runs a real scan on the live engine against any address. The site is parked in the internal sandbox organization, never in a customer's risk register, so this is safe to point at a prospect.">
+        </div>
+        <button class="btn" type="button" id="runUrlBtn"${d}
+                data-tooltip="Queues the scan and waits for the engine to finish, then shows what it found. Usually about a second.">
+          ${run.busy && run.kind === 'url' ? 'Scanning…' : 'Run scan'}
+        </button>
+      </div>
+
+      <div class="runner-row">
+        <div class="field grow">
+          <label for="runSite">Re-audit a registered site</label>
+          <select id="runSite"${d}
+                  data-tooltip="A site already on the platform. This one writes to that customer's real risk register and moves their posture score, so it asks before it runs.">
+            ${sites.length
+              ? sites.map((w) => `<option value="${w.id}"${String(w.id) === String(run.siteId) ? ' selected' : ''}>${escapeHtml(w.organization)} — ${escapeHtml(w.name)}</option>`).join('')
+              : '<option value="" disabled>No sites match the current filter</option>'}
+          </select>
+        </div>
+        <button class="btn warn" type="button" id="runSiteBtn"${sites.length ? d : ' disabled'}
+                data-tooltip="Re-runs the engine against this site now, outside its schedule. Findings that are fixed will close and new ones will open, so the customer's score can move either way.">
+          ${run.busy && run.kind === 'site' ? 'Scanning…' : 'Re-audit'}
+        </button>
+      </div>
+
+      ${run.msg ? `<div class="runner-msg ${run.kind === 'error' ? 'bad' : run.busy ? 'busy' : 'ok'}">${run.msg}</div>` : ''}
+
+      <div class="runner-note" data-tooltip="Why the button waits instead of returning immediately.">
+        A scan is queued first and run by the engine a moment later, so this waits for it
+        to finish before reporting. If it is still going after ${RUN_POLL_TRIES} checks the
+        panel says so and stops watching; the scan itself carries on and will appear in the
+        table below.
+      </div>
+    </div>`;
+  }
+
+  // Polls one website's scan list until the scan we started reaches a terminal
+  // status. Uses muster_scans rather than re-reading the whole console payload:
+  // it is one website's rows, and is_org_member() is true for a super admin on
+  // every org, so this is reachable here for any tenant.
+  async function awaitScan(websiteId, scanId) {
+    for (let i = 0; i < RUN_POLL_TRIES; i++) {
+      await new Promise((r) => setTimeout(r, RUN_POLL_MS));
+      const { data, error } = await sb.rpc('muster_scans', { p_website_id: websiteId, p_limit: 5 });
+      if (error) return { status: 'unknown', error };
+      const rows = Array.isArray(data) ? data : (data && data.scans) || [];
+      const hit = rows.find((r) => Number(r.id) === Number(scanId)) || rows[0];
+      if (hit && (hit.status === 'complete' || hit.status === 'failed')) return { status: hit.status, scan: hit };
+    }
+    return { status: 'timeout' };
+  }
+
+  // Reloads the console payload so the tables and tiles reflect the new scan,
+  // then re-renders. Failing here is not the same as the scan failing, and the
+  // message says which.
+  async function refreshAfterScan() {
+    const { data, error } = await sb.rpc('muster_admin_console');
+    if (error) return false;
+    DATA = data;
+    return true;
+  }
+
+  function scanOutcome(websiteId, result) {
+    const site = (DATA.websites || []).find((w) => Number(w.id) === Number(websiteId));
+    const where = site ? `${site.name}` : 'the site';
+    if (result.status === 'complete') {
+      const open = site ? site.open_findings : null;
+      const score = site ? site.score : null;
+      return ['done', `Scan complete on ${escapeHtml(where)}.`
+        + (score != null ? ` Posture ${score}/100` : '')
+        + (open != null ? `, ${open} open finding${open === 1 ? '' : 's'}.` : '.')
+        + ' The table below is refreshed.'];
+    }
+    if (result.status === 'failed') {
+      return ['error', `The engine could not complete the scan on ${escapeHtml(where)}.`
+        + ' A failed scan produces no findings, so the previous score still stands.'
+        + ' Check the queue and incidents under System Health.'];
+    }
+    if (result.status === 'timeout') {
+      return ['done', `Scan queued on ${escapeHtml(where)} and still running after`
+        + ` ${RUN_POLL_TRIES} checks. It will appear in the table below when it lands.`];
+    }
+    return ['error', 'The scan was queued, but its status could not be read back.'];
+  }
+
+  // 42501 arrives for two genuinely different reasons and the difference is the
+  // whole message: either you are not a super admin, or the flag that gates this
+  // capability is off. Guessing between them sends someone hunting the wrong bug.
+  function runnerError(error, context) {
+    const msg = String((error && error.message) || error || '');
+    if (/manual scans are disabled/i.test(msg)) {
+      return 'Manual scans are switched off for that organization. The manual_scans'
+        + ' feature flag gates it — set a per-org override under Settings, or turn the'
+        + ' default back on, then try again.';
+    }
+    if (/ad-hoc URL scanner is switched off/i.test(msg)) {
+      return 'The ad-hoc URL scanner is switched off platform-wide. Its kill switch is'
+        + ' admin_url_scanner, under Settings.';
+    }
+    if (/forbidden/i.test(msg) || /42501/.test(msg) || /permission denied/i.test(msg)) {
+      return 'The database refused that (42501). This console does not grant anything on'
+        + ' its own — the RPC checks super admin itself.';
+    }
+    return `${context}: ${escapeHtml(msg || 'unknown error')}`;
+  }
+
+  async function runUrlScan() {
+    const url = (run.url || '').trim();
+    if (!url) { setRun('error', 'Enter a URL to scan.', false); return; }
+    run.kind = 'url';
+    setRun('url', `Queueing a scan of ${escapeHtml(url)}…`, true);
+    try {
+      const { data, error } = await sb.rpc('muster_admin_run_url', { p_url: url });
+      if (error) throw error;
+      const websiteId = data && data.website_id;
+      const scanId = data && data.first_scan && data.first_scan.scan_id;
+      setRun('url', `Queued. Waiting for the engine to finish ${escapeHtml(url)}…`, true);
+      const result = websiteId ? await awaitScan(websiteId, scanId) : { status: 'unknown' };
+      await refreshAfterScan();
+      const [kind, msg] = scanOutcome(websiteId, result);
+      if (kind !== 'error') run.url = '';
+      run.kind = kind === 'error' ? 'error' : 'url';
+      setRun(run.kind, msg, false);
+    } catch (err) {
+      setRun('error', runnerError(err, 'Could not queue the scan'), false);
+    }
+  }
+
+  async function runSiteScan() {
+    const websiteId = run.siteId ? Number(run.siteId) : null;
+    if (!websiteId) { setRun('error', 'Pick a site to re-audit.', false); return; }
+    const site = (DATA.websites || []).find((w) => Number(w.id) === websiteId);
+    const label = site ? `${site.name} (${site.organization})` : `site #${websiteId}`;
+    // This one writes to a customer's register, so it asks. The ad-hoc scanner
+    // above does not, because the sandbox org is not anyone's data.
+    if (!window.confirm(`Re-audit ${label} now?\n\nThis runs the live engine against `
+      + `${site ? site.url : 'the site'} outside its schedule and writes to that `
+      + `organization's risk register. Findings can open and close, so their posture `
+      + `score may change.`)) return;
+    run.kind = 'site';
+    setRun('site', `Queueing a scan of ${escapeHtml(label)}…`, true);
+    try {
+      const { data, error } = await sb.rpc('muster_request_scan', { p_website_id: websiteId });
+      if (error) throw error;
+      const scanId = data && (data.scan_id || (data.first_scan && data.first_scan.scan_id));
+      if (data && data.deduplicated) {
+        setRun('site', `A scan of ${escapeHtml(label)} was already in flight, so this did not start a second one. Waiting for it…`, true);
+      } else {
+        setRun('site', `Queued. Waiting for the engine to finish ${escapeHtml(label)}…`, true);
+      }
+      const result = await awaitScan(websiteId, scanId);
+      await refreshAfterScan();
+      const [kind, msg] = scanOutcome(websiteId, result);
+      run.kind = kind === 'error' ? 'error' : 'site';
+      setRun(run.kind, msg, false);
+    } catch (err) {
+      setRun('error', runnerError(err, 'Could not queue the scan'), false);
+    }
+  }
+
   function renderAuditQueue() {
     const sys = DATA.system || {}, q = sys.queue || {}, a = (DATA.kpi || {}).assessments || {};
-    return head('Audit Queue', 'Scans the engine has run, newest first, plus what is waiting on it now.') +
+    return head('Audit Queue', 'Run an audit, then watch it land. Below that, every scan the engine has run.') +
+      panel('Run an audit', 'Against any URL, or against a site already on the platform', auditRunner(), {
+        tip: 'Both buttons call the live engine. The first parks its target in the internal sandbox organization; the second writes to a real customer register, and says so before it runs.',
+      }) +
       `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
         ${panel('Recent scans', 'Most recent runs across every organization', recentScans(50))}
         ${panel('Queue depth', 'Live engine state', `<div class="rows">
@@ -1530,19 +1784,33 @@
   document.addEventListener('click', (e) => {
     const nav = e.target.closest && e.target.closest('[data-section]');
     if (nav) { e.preventDefault(); go(nav.getAttribute('data-section')); return; }
-    if (e.target.closest && e.target.closest('#bell')) { go('overview'); }
+    if (e.target.closest && e.target.closest('#bell')) { go('overview'); return; }
+    // The runner re-renders while it waits, so these are matched by id through
+    // delegation rather than bound to the nodes -- the node you clicked is gone
+    // by the time the scan finishes.
+    if (e.target.closest && e.target.closest('#runUrlBtn')) { if (!run.busy) runUrlScan(); return; }
+    if (e.target.closest && e.target.closest('#runSiteBtn')) { if (!run.busy) runSiteScan(); }
   });
 
   document.addEventListener('input', (e) => {
     if (e.target.id === 'search') { query = e.target.value.trim().toLowerCase(); render(); }
+    // No render() here: this only records what was typed, and re-rendering on
+    // every keystroke would move the caret to the end of the field.
+    if (e.target.id === 'runUrl') { run.url = e.target.value; }
   });
 
   document.addEventListener('change', (e) => {
     if (e.target.id === 'orgFilter') { orgFilter = e.target.value; render(); }
     if (e.target.id === 'rangeFilter') { rangeDays = Number(e.target.value); render(); }
+    if (e.target.id === 'runSite') { run.siteId = e.target.value; }
   });
 
   document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'runUrl' && e.key === 'Enter') {
+      e.preventDefault();
+      if (!run.busy) runUrlScan();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       const s = document.getElementById('search');

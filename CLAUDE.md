@@ -147,7 +147,30 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
   table. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
   view, which still backs `muster_admin_overview()` and owns the write actions (plan changes,
-  impersonation, URL runner, incident triage). `app.html`'s super admin hero links across to it.
+  impersonation, incident triage). `app.html`'s super admin hero links across to it.
+  **One exception, added 2026-09-17: the Audit Queue section can start a scan.** Everything else
+  on the page is still a single read. Running an audit earned its place here because this is the
+  page you are already on when you notice a site needs one, and sending someone to another host to
+  press a button is how a console stops being used. It adds **no RPC**: the ad-hoc field calls
+  `muster_admin_run_url` (super admin, flag `admin_url_scanner`, target parked in the sandbox org)
+  and the site dropdown calls `muster_request_scan` (flag `manual_scans` for that org). Both are
+  `SECURITY DEFINER` and check the caller themselves, so the panel is a form, not a gate --
+  `muster.org_role()` returns `super_admin` for every org, which is why a super admin can re-audit
+  a tenant site they are not a member of. Re-auditing a real customer site prompts first, because
+  it writes to their register and can move their posture score; the sandbox scan does not, because
+  that org is nobody's data. `tests/ui/audit-runner.test.ts` pins both of those, and the two
+  failure modes below.
+  **A scan is queued, not finished, when the RPC returns.** `do_request_scan` fires the engine
+  through `net.http_post`, which pg_net hands to a background worker before returning, so the
+  engine starts a few hundred milliseconds later. Reading the result immediately shows a queued
+  scan with no findings, which is exactly what "the audit did not populate" turned out to be in
+  `app.html`. Both paths poll `muster_scans` to a terminal status, with a bounded number of tries
+  so a hung engine does not spin forever, and a `failed` scan is reported as failed rather than
+  done -- it produces no findings, so the site keeps its previous score, and calling that complete
+  would claim a check that never ran.
+  **Its form fields are held in state, not only in the DOM.** `render()` replaces the whole page
+  and the panel re-renders on every status update, so a value living only in a node would be
+  blanked mid-scan with the URL you typed still being scanned.
 - `signin.html` derives its redirect target as `window.location.origin + '/app'` rather than
   hardcoding a host, so it is same-origin on whichever app host served it. It must stay **absolute**:
   it is passed to `signInWithOtp` as `emailRedirectTo`, which Supabase requires to be a full URL —
