@@ -2,7 +2,7 @@
 #
 # Why this exists: until 2026-09-16 every edge function in this project was
 # deployed by pasting its source through a chat tool. That works for a 7 KB
-# watchdog and stops working at muster-scan, which is 38 KB across three files --
+# watchdog and stops working at muster-scan, which is 67 KB across four files --
 # large enough that the paste itself becomes the risk, and a silent transcription
 # slip ships a broken scanner to production with no diff to review. The fix is
 # not a more careful paste. It is that the artifact deployed should be the commit
