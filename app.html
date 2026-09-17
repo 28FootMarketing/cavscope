@@ -5888,6 +5888,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           </div>` : ''}`;
 
         this.renderAgentsPanel();
+        this.renderLlmPanel().catch(e => this.fail(e));
       },
       renderAgentsPanel() {
         const o = this.org; if (!o) return;
@@ -5965,6 +5966,106 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             </form>
             <div id="liveKeyOut" hidden></div>
           </div>`;
+      },
+      // The tenant's own LLM. muster.org_llm_config has held the endpoint, model
+      // and a Vault-stored key since migration 069, muster_set_llm_config has
+      // been callable since 070, and muster-agent has read it since 071 -- and
+      // nothing in the workspace ever set one, so the table stayed empty and
+      // every narrative fell to the deterministic generator. This is that form.
+      //
+      // Fetched on demand rather than carried in the workspace payload: it is
+      // one row, read rarely, and adding it to the payload would put a tenant's
+      // provider metadata in every workspace load for every member.
+      async renderLlmPanel() {
+        const o = this.org; if (!o) return;
+        const el = this.panel('liveLlmPanel', 'superadmin');
+        let cfg;
+        try {
+          cfg = await this.rpc('muster_llm_config', { p_organization_id: o.id });
+        } catch (err) {
+          el.innerHTML = `<div class="panel-head"><div><h3>AI narrative</h3><p class="live-muted">Could not read this workspace's model configuration: ${escapeHtml(err.message || String(err))}</p></div></div>`;
+          return;
+        }
+        // Only an executive or a super admin may write it; everyone else sees
+        // the state read-only rather than a form that would raise 42501.
+        const canEdit = (o.role === 'executive') || !!(this.ws && this.ws.is_super_admin);
+        const on = !!cfg.configured;
+        const err = cfg.last_error ? String(cfg.last_error) : '';
+
+        el.innerHTML = `
+          <div class="panel-head">
+            <div>
+              <h3>AI narrative &middot; your own model ${on ? '<span class="pill pill-low">configured</span>' : '<span class="pill pill-pending">not configured</span>'}</h3>
+              <p>MUSTER writes your SITREP narrative through <em>your</em> provider account, with <em>your</em> key and model. Findings are not sent anywhere else.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            ${on ? `
+              <div class="table-header grid-live-members" style="grid-template-columns: 1fr 1fr 1fr;">
+                <span>Endpoint</span><span>Model</span><span>Key</span>
+              </div>
+              <div class="list">
+                <div class="table-row grid-live-members" style="grid-template-columns: 1fr 1fr 1fr;">
+                  <div class="live-muted" data-tooltip="The OpenAI-compatible base URL MUSTER posts to.">${escapeHtml(cfg.base_url)}</div>
+                  <div class="live-muted" data-tooltip="The model name sent with every request.">${escapeHtml(cfg.model)}</div>
+                  <div class="live-muted" data-tooltip="Only the last four characters are ever stored in readable form. The key itself is held in Supabase Vault and is never returned to this page.">&bull;&bull;&bull;&bull;${escapeHtml(cfg.key_hint || '')}</div>
+                </div>
+              </div>
+              <p class="live-muted" style="margin-top:12px;" data-tooltip="The last time MUSTER successfully reached this endpoint, and the last failure if there has been one.">
+                ${cfg.last_ok_at ? `Last succeeded ${String(cfg.last_ok_at).slice(0, 16).replace('T', ' ')} UTC.` : 'Not used yet.'}
+                ${err ? `<br><span style="color:var(--rose);">Last error ${cfg.last_error_at ? String(cfg.last_error_at).slice(0, 16).replace('T', ' ') + ' UTC' : ''}: ${escapeHtml(err)}</span>` : ''}
+              </p>
+            ` : `
+              <p class="live-muted" data-tooltip="Not configured is a working state, not a fault. It means nothing from this workspace is sent to any language model.">
+                No model is configured, so narratives come from MUSTER's deterministic generator and <strong>nothing from this workspace reaches a language model</strong>. That is a safe default, not an error.
+              </p>
+            `}
+            ${canEdit ? `
+            <form onsubmit="Live.saveLlm(event)" style="display:grid; grid-template-columns: 1.6fr 1.2fr 1.4fr auto; gap:8px; align-items:end; margin-top:16px;">
+              <div class="form-group" style="margin:0;">
+                <label data-tooltip="An OpenAI-compatible base URL. Must be https on a public host -- loopback and private addresses are refused, so a key cannot be posted to something inside your network.">Endpoint</label>
+                <input name="base_url" required data-tooltip="Must be https on a public host. Loopback and private addresses are refused, so your key cannot be posted somewhere inside your own network." placeholder="https://openrouter.ai/api/v1" value="${on ? escapeHtml(cfg.base_url) : ''}">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label data-tooltip="The model id exactly as your provider names it.">Model</label>
+                <input name="model" required maxlength="160" data-tooltip="Sent verbatim to your provider, so it has to match their spelling exactly." placeholder="anthropic/claude-opus-5" value="${on ? escapeHtml(cfg.model) : ''}">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label data-tooltip="Stored in Supabase Vault and never shown again. Saving a new key replaces the old one and clears any previous error.">API key${on ? ' (replace)' : ''}</label>
+                <input name="api_key" type="password" required minlength="8" data-tooltip="Goes straight into Supabase Vault. It is never returned to this page and never appears in a report or an error message." placeholder="${on ? 'enter a new key to rotate' : 'sk-...'}" autocomplete="off">
+              </div>
+              <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:11.5px;" data-tooltip="Saves the endpoint, model and key for this workspace. Takes effect on the next narrative.">${on ? 'Update' : 'Save'}</button>
+            </form>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+              <input id="llmLabel" maxlength="80" placeholder="Label, optional -- e.g. Acme OpenRouter" value="${on ? escapeHtml(cfg.label || '') : ''}" style="flex:1 1 260px;" data-tooltip="A name for your own reference. Shown here only.">
+              ${on ? `<button class="btn-ghost" style="padding:6px 12px;font-size:11px;" onclick="Live.clearLlm()" data-tooltip="Deletes the key from Vault and this configuration. Narratives fall back to the deterministic generator; nothing else changes.">Remove</button>` : ''}
+            </div>
+            ` : `<p class="live-muted" style="margin-top:14px;" data-tooltip="Changing the provider account a workspace bills against is an executive-level action.">Only an executive on this workspace can change this.</p>`}
+          </div>`;
+      },
+      async saveLlm(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        const labelEl = document.getElementById('llmLabel');
+        try {
+          await this.rpc('muster_set_llm_config', {
+            p_organization_id: this.org.id,
+            p_base_url: f.get('base_url'),
+            p_model: f.get('model'),
+            p_api_key: f.get('api_key'),
+            p_label: labelEl ? labelEl.value : null,
+          });
+          showToast('Model saved. The next narrative will use it.');
+          await this.renderLlmPanel();
+        } catch (err) { this.fail(err); }
+      },
+      async clearLlm() {
+        if (!confirm('Remove this workspace\'s model configuration? Narratives will fall back to the deterministic generator.')) return;
+        try {
+          await this.rpc('muster_clear_llm_config', { p_organization_id: this.org.id });
+          showToast('Model configuration removed.');
+          await this.renderLlmPanel();
+        } catch (err) { this.fail(err); }
       },
       async createKey(e) {
         e.preventDefault();

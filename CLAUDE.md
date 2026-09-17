@@ -448,7 +448,18 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   unknown top-level parameters, so sending it to a tenant's own OpenAI account would have failed
   every call and been reported to them as a bad key; and everything written to `last_error` goes
   through `redactSecret()`, because `muster_llm_config` returns `last_error` to a browser. Full
-  table of who may call what is in `docs/BACKEND.md`. No workspace UI sets a config yet.
+  table of who may call what is in `docs/BACKEND.md`.
+  **The workspace sets one as of 2026-09-17.** `Live.renderLlmPanel()` in `app.html` renders it in
+  the same view that already holds team, API keys and alert preferences, because this is tenant
+  self-service rather than a platform control. Three things about it are deliberate. It reads
+  `muster_llm_config` **on demand rather than from the workspace payload** -- one row, read rarely,
+  and putting a tenant's provider metadata into every workspace load for every member buys nothing.
+  It shows the form only to an executive or a super admin, matching
+  `muster_set_llm_config`'s own gate, so a viewer sees the state instead of a form that would raise
+  `42501`. And **"not configured" is rendered as a working state, not a fault** -- it means nothing
+  from that workspace reaches a language model, which is the honest description and the safe
+  default. The key is write-only from the browser: only `key_hint`, the last four characters, ever
+  comes back.
 - **Edge functions deploy from CI, not from a paste.** `.github/workflows/deploy-functions.yml`
   runs `supabase functions deploy` on merge to main for anything under `supabase/functions/`. It
   skips, rather than failing, until the **`MUSTER_SUPABASE_ACCESS_TOKEN`** repository secret is
