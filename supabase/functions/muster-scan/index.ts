@@ -6,6 +6,7 @@ import {
 } from "./email-auth.ts";
 import { caaNames, evaluateCaa, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
 import { detectClientRendered, stripTags } from "./html.ts";
+import { responseRejectedByClient } from "./availability.ts";
 
 // MUSTER scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -40,7 +41,13 @@ import { detectClientRendered, stripTags } from "./html.ts";
 // discovers rather than names it was given, so it is bounded three ways -- a
 // visited set against include cycles, a node cap against a deep tree, and an
 // early stop once the count is past the limit and the answer cannot change.
-const ENGINE_VERSION = "http-native-1.5.0";
+//
+// 1.6.0 adds AVAIL-004: a response the HTTP client received and refused to parse
+// is no longer reported as an outage. hpsd.k12.pa.us answered `invalid HTTP
+// header parsed` over HTTPS while serving 200 to a lenient client and to this
+// engine's own plain-HTTP probe in the same scan, and AVAIL-001 called that
+// "Visitors cannot load the site."
+const ENGINE_VERSION = "http-native-1.6.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -284,9 +291,18 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   // see migration 20260917071020 (muster_065) -- because a lighter weight would
   // score an unreadable site 99/100 green.
   const refused = !primary.error && (primary.status === 401 || primary.status === 403 || primary.status === 429);
+  // A response that arrived and failed parsing is a third thing again: the
+  // server answered, so "unreachable" is false, and it did not decline us, so
+  // "refused" is false too. See availability.ts for why the match is positive
+  // evidence that a server answered rather than a guess.
+  const unparsable = !refused && responseRejectedByClient(primary.error);
   if (refused) {
     add({ rule_id: "AVAIL-003", severity: "critical", title: "Site could not be assessed: the scanner was refused",
       detail: `The homepage returned HTTP ${primary.status} after ${chain.hops.length} hop(s). The server answered, so it is running, but it declined this request -- commonly a WAF, CDN bot filter or rate limiter rejecting the MUSTER-Scanner user agent. No markup, headers or cookies were read, so every HTTP-derived rule produced nothing for this site and its score reflects an unassessed target rather than a clean one. DNS-derived checks are independent of the web server and still ran.`,
+      location: "homepage", confidence: "high", evidence_keys: ["primary", "chain"] });
+  } else if (unparsable) {
+    add({ rule_id: "AVAIL-004", severity: "critical", title: "Site could not be assessed: the response was not valid HTTP",
+      detail: `The server answered, but the response could not be parsed as HTTP and the request was abandoned: ${primary.error}. Response bytes were received and then rejected during parsing, which is not an outage -- the host is running, and a lenient client such as a browser may load the page normally. It is also not nothing: strict HTTP clients, monitoring agents, proxies, security scanners and API integrations built on the same parsers fail the same way, and the fault is in what the origin emits rather than in who asks. No markup, headers or cookies were read, so every HTTP-derived rule produced nothing for this site and its score reflects an unassessed target rather than a clean one. DNS-derived checks are independent of the web server and still ran.`,
       location: "homepage", confidence: "high", evidence_keys: ["primary", "chain"] });
   } else if (!reachable) {
     add({ rule_id: "AVAIL-001", severity: "critical", title: "Site unreachable or returning an error",
