@@ -1,7 +1,6 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **48 rules, 47 active** (`EMAIL-009`
-is held pending its engine deploy), all
+Every defect code the engine can raise, by audit area. **48 rules, all active**, all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -46,7 +45,7 @@ the codes it raises. It writes nothing and produces no SITREP; see
 ## Security — 15 rules
 
 Nine more rules (`EMAIL-001`..`EMAIL-009`) also carry `category = security`; they are listed under
-[Email authentication](#email-authentication--9-rules-8-active) below, so the `security` category totals 23.
+[Email authentication](#email-authentication--9-rules) below, so the `security` category totals 23.
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
@@ -70,7 +69,7 @@ Nine more rules (`EMAIL-001`..`EMAIL-009`) also carry `category = security`; the
 governs certificate issuance for the web host, so it is walked from the scanned host upward the way
 a certificate authority walks it, not from the `www.`-stripped mail domain.
 
-## Email authentication — 9 rules (8 active)
+## Email authentication — 9 rules
 
 Category `security`. These are the only rules that read DNS rather than HTTP: the engine resolves
 TXT and MX over DNS-over-HTTPS (Google primary, Cloudflare fallback) and judges the answers. A
@@ -91,7 +90,7 @@ inherits its parent's policy.
 | `EMAIL-006` | low | DMARC has no reporting address (no `rua=`) | RFC 7489, NIST DE.CM-1 |
 | `EMAIL-007` | high | Multiple DMARC records | RFC 7489 §6.6.3, NIST PR.DS-2 |
 | `EMAIL-008` | low | No MTA-STS policy | RFC 8461, NIST PR.DS-02, 800-53 SC-8 |
-| `EMAIL-009` | high | SPF exceeds the DNS lookup limit **(held inactive)** | RFC 7208 §4.6.4, SOC 2 CC6.7, NIST PR.DS-02, 800-53 SC-8 |
+| `EMAIL-009` | high | SPF exceeds the DNS lookup limit | RFC 7208 §4.6.4, SOC 2 CC6.7, NIST PR.DS-02, 800-53 SC-8 |
 
 `EMAIL-003` and `EMAIL-007` are high, not medium, and that is deliberate. Both RFCs say a name with
 more than one record is a permanent error, so receivers apply none of them. The exposure is
