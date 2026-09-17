@@ -197,6 +197,28 @@ appears in the register on the next scan without any other change.
 | OWASP Secure Headers | 9 | one per response header rule |
 | SOC 2 (AICPA TSC) | 15 | `CC2.3`, `CC6.1`, `CC6.6`, `CC6.7`, `CC9.2`, `A1.2`, `P1.1`, `P2.1` |
 
+### AVAIL-003: refused is not unreachable
+
+A homepage that answers **401, 403 or 429** raises `AVAIL-003`, not `AVAIL-001`. The server is
+running and declined the request -- commonly a WAF, CDN bot filter or rate limiter rejecting
+`MUSTER-Scanner/1.0`. A 404 homepage is genuinely broken and a 5xx is genuinely an outage, so both
+stay on `AVAIL-001`.
+
+This exists because a real prospect scan reported a live site as a critical outage and told the
+reader, in plain English, that "Visitors cannot load the site," with remediation pointing at DNS,
+hosting and TLS. Every clause was false. It is the mirror of issue #93: a confident claim about a
+page the engine never read.
+
+`AVAIL-003` keeps **critical** severity, which looks wrong and is not. Severity drives posture
+(critical 25, high 10, medium 4, low 1, off 100; green at 85), so filing a refused scan as low
+would score an unreadable site 99 and render it **green** -- a clean bill of health for a site
+MUSTER could not read. What changed is the claim, not the weight: the finding now says the scan
+produced no assessment. One request cannot distinguish bot protection from a 403 served to
+everyone, so the remediation answers both readings.
+
+DNS-derived rules are unaffected by a refusal and still run: SPF, DMARC, CAA and MTA-STS do not
+depend on the web server.
+
 ### Held pending the engine deploy
 
 `SEC-014` (Subresource Integrity), `SEC-015` (CAA) and `EMAIL-008` (MTA-STS) exist in
@@ -222,6 +244,13 @@ fails when `SUPABASE_ACCESS_TOKEN` is unset, and that secret is unset -- its one
 #103's merge, skipped both deploy steps and reported success. So nothing will announce that these
 rules are still parked. Set the secret, merge anything under `supabase/functions/`, then confirm
 the version on a fresh scan.
+
+**The hold is enforced at ingest, not only in the control register.** Migration
+`20260917061404` makes `muster.engine_ingest` drop findings whose rule is inactive. Before it, the
+flag governed `rule_control_refs()` only, and the engine -- which does not know which rules are
+active -- would have written `SEC-014`, `SEC-015` and `EMAIL-008` findings into live registers the
+moment it deployed. A scan reports how many it dropped as `skipped_inactive` in its summary, so an
+engine running ahead of its schema is visible rather than silent.
 
 Activation is one statement, after confirming the deployed engine version on a fresh scan:
 

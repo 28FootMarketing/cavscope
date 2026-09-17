@@ -142,10 +142,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
   `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
   `customer.subscription.deleted` is unhandled, so a cancelled customer prices in until their plan
-  is changed by hand. Four nav sections (Workspaces, AI Readiness, Domain Monitor, Reports) render
+  is changed by hand. Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
   an explicit "not instrumented" panel naming what would have to exist first, because the schema
   cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
-  table. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
+  table. **Reports stopped being one of them on 2026-09-17**, backed by
+  `muster_admin_sitreps()` and `muster_admin_sitrep()` (migration `20260917070953`): an index
+  across every tenant, and the report body fetched only for the one opened, because `content_md`
+  is a few KB each. The markdown is rendered **verbatim in a `<pre>`, never parsed** -- so the
+  console cannot disagree with what the tenant reads at `/sitrep`, and so a hand-rolled renderer
+  over report content does not become an injection bug in the page that reports on other people's
+  security. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
   view, which still backs `muster_admin_overview()` and owns the write actions (plan changes,
   impersonation, incident triage). `app.html`'s super admin hero links across to it.
   **One exception, added 2026-09-17: the Audit Queue section can start a scan.** Everything else
@@ -171,6 +177,11 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   **Its form fields are held in state, not only in the DOM.** `render()` replaces the whole page
   and the panel re-renders on every status update, so a value living only in a node would be
   blanked mid-scan with the URL you typed still being scanned.
+  **And it links to the report.** A scan writes a SITREP about a second after it finishes, and for
+  a day it wrote one that nothing in the product pointed at -- an audit was run, the Reports
+  section was a stub, and the report sat unread in `muster.sitreps`. The runner now resolves the
+  SITREP **by `scan_id`**, not by taking the newest row, because two audits started close together
+  would otherwise each link to whichever finished last.
 - `signin.html` derives its redirect target as `window.location.origin + '/app'` rather than
   hardcoding a host, so it is same-origin on whichever app host served it. It must stay **absolute**:
   it is passed to `signInWithOtp` as `emailRedirectTo`, which Supabase requires to be a full URL —
@@ -370,10 +381,24 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   CPA firm's examination. MUSTER produces evidence for one and readiness signal between them; route
   the attestation question to the client's auditor. Full table and the deliberate ASVS omission are
   in `docs/SCAN-RULES.md`.
-- **A scan rule stays inactive until the engine that emits it is deployed.** Not tidiness: an
+- **A scan rule stays inactive until the engine that emits it is deployed, and `active = false`
+  now blocks findings as well as controls.** Not tidiness: an
   active rule the engine never evaluates has no findings by construction, and `sync_controls()`
   scores a reference with no open findings as **met** -- so the register reports a check that was
-  never run as passed. `SEC-014`, `SEC-015` and `EMAIL-008` are held inactive by migration
+  never run as passed.
+  Until migration `20260917061404` the flag only governed half of that. `rule_control_refs()`
+  reads `active`, so the control register was genuinely protected -- but `muster.engine_ingest`
+  inserted every finding the engine sent, and `findings.rule_id` is a foreign key to
+  `scan_rules(rule_id)`, which an inactive row satisfies perfectly well. The engine has no idea
+  which rules are active; it emits everything it evaluates. So the first deploy carrying
+  `SEC-014`/`SEC-015`/`EMAIL-008` would have put them straight into every tenant's register,
+  scoring against posture, with `autotriage()` opening a risk for `SEC-014` at medium -- while
+  `scan_rules.active`, the one place you would look to confirm they had not shipped, still said
+  false. Ingest now drops findings whose rule is inactive and reports the count as
+  `skipped_inactive` in the scan summary, so a rule the engine is ahead of is visible rather than
+  silent. Deactivating a rule therefore also retires its open findings, which is reversible:
+  reactivate, rescan, and they reopen against the same fingerprint. Evidence is never gated, only
+  findings, so activating later does not lose the artefacts already collected. `SEC-014`, `SEC-015` and `EMAIL-008` are held inactive by migration
   `20260916210100` for exactly this reason; the activation statement is in its header and in
   `docs/SCAN-RULES.md`. Same rule as feature-flag `enforcement`: never declare a thing enabled
   before the code reading it exists.

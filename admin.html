@@ -775,7 +775,7 @@
     { id: 'ai-readiness',      icon: '◈', label: 'AI Readiness',       tip: 'Sold on the landing page; no readiness assessment tables exist in this schema yet.', stub: true },
     { id: 'compliance',        icon: '▥', label: 'Compliance',         tip: 'Control effectiveness across every scanned site, plus the jurisdictions behind it.' },
     { id: 'domain-monitor',    icon: '◎', label: 'Domain Monitor',     tip: 'Continuous DNS, WHOIS and certificate watching. Not instrumented in this schema.', stub: true },
-    { id: 'reports',           icon: '▧', label: 'Reports',            tip: 'SITREP generation is live, but this console does not index them yet.', stub: true },
+    { id: 'reports',           icon: '▧', label: 'Reports',            tip: 'Every SITREP this platform has generated, across every tenant, with the report itself.' },
     { id: 'billing',           icon: '◱', label: 'Billing',            tip: 'Plan-implied revenue, the live pricing stage and which tiers are visible on the site.' },
     { id: 'integrations',      icon: '⚯', label: 'Integrations',       tip: 'Stripe grants and Resend delivery — what this platform actually observes about its integrations.' },
     { id: 'system-health',     icon: '◬', label: 'System Health',      tip: 'Cron schedules with last successful run, scan queue depth, open watchdog incidents.' },
@@ -790,6 +790,7 @@
       case 'users': return (DATA.users || []).length;
       case 'website-assurance': return (DATA.websites || []).length;
       case 'audit-queue': return (DATA.recent_scans || []).length;
+      case 'reports': return SITREPS && !SITREPS.error ? SITREPS.length : null;
       case 'system-health': return ((DATA.system || {}).incidents || {}).open;
       case 'settings': return (DATA.flags || []).length;
       default: return null;
@@ -1197,6 +1198,112 @@
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No users match.</div>');
   }
 
+  // ---- reports -------------------------------------------------------------
+  //
+  // This section was a stub until 2026-09-17, and its own text named the gap:
+  // muster.sitreps holds real reports, tenants read them at /sitrep, and the
+  // console had no cross-tenant index. Then the Audit Queue learned to start a
+  // scan, a scan writes a SITREP about a second later, and someone ran one and
+  // had nowhere to read the result. Generating a deliverable and not showing it
+  // is the same class of failure as a switch that changes nothing.
+  //
+  // Loaded on demand rather than in muster_admin_console(): the index is its own
+  // RPC and the markdown is a second one, so opening the section does not pull
+  // every report's prose to render a list.
+  let SITREPS = null;      // index, or null until first load
+  let sitrepOpen = null;   // the full report being read, or null
+  let sitrepBusy = false;
+
+  async function loadSitreps(force) {
+    if (SITREPS && !force) return;
+    const { data, error } = await sb.rpc('muster_admin_sitreps', { p_limit: 200 });
+    if (error) throw error;
+    SITREPS = data || [];
+  }
+
+  async function openSitrep(id) {
+    if (sitrepBusy) return;
+    sitrepBusy = true;
+    render();
+    try {
+      const { data, error } = await sb.rpc('muster_admin_sitrep', { p_id: id });
+      if (error) throw error;
+      sitrepOpen = data;
+    } catch (e) {
+      sitrepOpen = { error: String((e && e.message) || e) };
+    } finally {
+      sitrepBusy = false;
+      render();
+    }
+  }
+
+  function closeSitrep() { sitrepOpen = null; render(); }
+
+  // The SITREP is generated as markdown by Postgres, and it is deliberately
+  // rendered here as preformatted text rather than parsed into HTML. Two
+  // reasons: it is the exact artefact the tenant reads, so showing it verbatim
+  // means the console cannot disagree with /sitrep; and a half-written markdown
+  // renderer over content that includes a findings table is a way to introduce
+  // an injection bug into a page whose whole job is reporting on other people's
+  // security.
+  function sitrepBody(r) {
+    if (r.error) return `<div class="empty">Could not load that report: ${escapeHtml(r.error)}</div>`;
+    return `<div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+        <button class="btn" type="button" id="sitrepBack" data-tooltip="Back to the list of every report this platform has generated.">← All reports</button>
+        <div><small class="muted" style="display:block;">Posture at generation</small><span class="score ${escapeHtml(r.posture_band || band(r.posture_score))}">${num(r.posture_score)}</span></div>
+        <div data-tooltip="deterministic-v1 is written by a template in Postgres from the findings. An LLM generator means prose a model wrote under citation checks -- worth knowing before quoting it to a client."><small class="muted" style="display:block;">Generator</small><b>${escapeHtml(r.generator || 'unknown')}</b></div>
+        <div data-tooltip="The engine build that produced the scan behind this report. Findings are only comparable across scans on the same version."><small class="muted" style="display:block;">Engine</small><b>${escapeHtml(r.engine_version || 'unknown')}</b></div>
+        <div><small class="muted" style="display:block;">Generated</small><b data-tooltip="${escapeHtml(stamp(r.generated_at))}">${escapeHtml(ago(r.generated_at))}</b></div>
+      </div>
+      <pre style="white-space:pre-wrap; word-break:break-word; font-family:var(--font-mono); font-size:12px; line-height:1.65; color:var(--text-muted); background:var(--surface); border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:16px; margin:0; max-height:70vh; overflow:auto;"
+           data-tooltip="The report exactly as stored, and exactly as the tenant reads it at /sitrep. Every claim in it cites a finding [F] or an evidence row [E].">${escapeHtml(r.content_md || '(this report has no markdown body)')}</pre>`;
+  }
+
+  function renderReports() {
+    if (!SITREPS) {
+      // First paint of the section. The fetch is kicked off here rather than in
+      // load(), so a console that never opens Reports never pays for it.
+      loadSitreps().then(render).catch((e) => { SITREPS = { error: String((e && e.message) || e) }; render(); });
+      return head('Reports', 'Every SITREP this platform has generated, newest first.') +
+        panel('Reports', 'Loading', '<div class="empty">Reading the report index…</div>');
+    }
+    if (SITREPS.error) {
+      return head('Reports', 'Every SITREP this platform has generated, newest first.') +
+        panel('Reports', 'Could not load', `<div class="empty">${escapeHtml(SITREPS.error)}</div>`);
+    }
+    if (sitrepOpen) {
+      const r = sitrepOpen;
+      return head(`SITREP: ${r.website || 'report'}`, `${r.organization || ''}${r.is_admin_sandbox ? ' · internal sandbox, not a customer' : ''}`) +
+        panel(r.headline || 'Report', r.url || '', sitrepBody(r));
+    }
+
+    const rows = (SITREPS || []).filter((r) =>
+      inOrg(r.organization_id) && matches(r.website, r.url, r.organization, r.headline));
+
+    return head('Reports', 'Every SITREP this platform has generated, newest first. A scan writes one about a second after it finishes.') +
+      panel('Generated SITREPs', `${rows.length} shown`, rows.length ? `<table class="tbl">
+        <thead><tr>
+          <th>Report</th>
+          <th>Organization</th>
+          <th data-tooltip="Posture at the moment this report was generated. The site's score now may differ -- a later scan does not rewrite an old report.">Posture</th>
+          <th data-tooltip="deterministic-v1 is written by a template from the findings. An LLM generator means model-written prose under citation checks.">Generator</th>
+          <th data-tooltip="The engine build behind the scan. Findings are only comparable across scans on the same version.">Engine</th>
+          <th data-tooltip="How many finding and evidence citations the report carries. Every claim in a SITREP cites one.">Cites</th>
+          <th>Generated</th>
+        </tr></thead>
+        <tbody>${rows.map((r) => `<tr class="rowlink" data-sitrep="${r.id}" style="cursor:pointer;"
+              data-tooltip="Open this report exactly as stored, and exactly as the tenant reads it.">
+          <td><b>${escapeHtml(r.website || '')}</b><br><small class="muted">${escapeHtml(r.headline || r.url || '')}</small></td>
+          <td class="muted">${escapeHtml(r.organization || '')}${r.is_admin_sandbox ? ' <span class="pill medium">sandbox</span>' : ''}</td>
+          <td><span class="score ${escapeHtml(r.posture_band || band(r.posture_score))}">${num(r.posture_score)}</span></td>
+          <td class="muted">${escapeHtml(r.generator || '')}</td>
+          <td class="muted">${escapeHtml(r.engine_version || '—')}</td>
+          <td class="num muted">${num(r.citations)}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(r.generated_at))}">${escapeHtml(ago(r.generated_at))}</td>
+        </tr>`).join('')}</tbody></table>`
+        : '<div class="empty">No reports match. A SITREP is written after every completed scan.</div>');
+  }
+
   // ---- audit runner -------------------------------------------------------
   //
   // This is the one place the console writes. Everything else on the page comes
@@ -1302,6 +1409,21 @@
     return { status: 'timeout' };
   }
 
+  // The SITREP is written by the engine immediately after ingest, so by the time
+  // awaitScan has seen a terminal status it exists. Looked up by scan_id rather
+  // than assumed to be the newest row, because two audits started close together
+  // would otherwise each link to whichever finished last.
+  async function sitrepForScan(scanId) {
+    if (!scanId) return null;
+    try {
+      const { data, error } = await sb.rpc('muster_admin_sitreps', { p_limit: 50 });
+      if (error) return null;
+      SITREPS = data || [];
+      const hit = (data || []).find((r) => Number(r.scan_id) === Number(scanId));
+      return hit ? hit.id : null;
+    } catch { return null; }
+  }
+
   // Reloads the console payload so the tables and tiles reflect the new scan,
   // then re-renders. Failing here is not the same as the scan failing, and the
   // message says which.
@@ -1312,16 +1434,24 @@
     return true;
   }
 
-  function scanOutcome(websiteId, result) {
+  function scanOutcome(websiteId, result, sitrepId) {
     const site = (DATA.websites || []).find((w) => Number(w.id) === Number(websiteId));
     const where = site ? `${site.name}` : 'the site';
     if (result.status === 'complete') {
       const open = site ? site.open_findings : null;
       const score = site ? site.score : null;
+      // A scan writes a SITREP about a second after it finishes, and until
+      // 2026-09-17 nothing here said so -- someone ran an audit, went looking
+      // for the report and found the Reports section stubbed out. The link is
+      // the point of the whole panel: an audit you cannot read is not an audit.
+      const link = sitrepId
+        ? ` <a href="#reports" data-sitrep="${sitrepId}" style="color:var(--teal); font-weight:600;"
+             data-tooltip="Opens the SITREP this scan generated -- the same report the tenant reads at /sitrep.">Read the report →</a>`
+        : ' No SITREP was written for this scan, which is unexpected for a completed one; check System Health.';
       return ['done', `Scan complete on ${escapeHtml(where)}.`
         + (score != null ? ` Posture ${score}/100` : '')
         + (open != null ? `, ${open} open finding${open === 1 ? '' : 's'}.` : '.')
-        + ' The table below is refreshed.'];
+        + link];
     }
     if (result.status === 'failed') {
       return ['error', `The engine could not complete the scan on ${escapeHtml(where)}.`
@@ -1369,7 +1499,8 @@
       setRun('url', `Queued. Waiting for the engine to finish ${escapeHtml(url)}…`, true);
       const result = websiteId ? await awaitScan(websiteId, scanId) : { status: 'unknown' };
       await refreshAfterScan();
-      const [kind, msg] = scanOutcome(websiteId, result);
+      const sid = await sitrepForScan((result.scan && result.scan.id) || scanId);
+      const [kind, msg] = scanOutcome(websiteId, result, sid);
       if (kind !== 'error') run.url = '';
       run.kind = kind === 'error' ? 'error' : 'url';
       setRun(run.kind, msg, false);
@@ -1402,7 +1533,8 @@
       }
       const result = await awaitScan(websiteId, scanId);
       await refreshAfterScan();
-      const [kind, msg] = scanOutcome(websiteId, result);
+      const sid = await sitrepForScan((result.scan && result.scan.id) || scanId);
+      const [kind, msg] = scanOutcome(websiteId, result, sid);
       run.kind = kind === 'error' ? 'error' : 'site';
       setRun(run.kind, msg, false);
     } catch (err) {
@@ -1628,15 +1760,6 @@
         registered site — that is under <strong>Website Assurance</strong>.`,
       go: 'website-assurance',
     },
-    reports: {
-      title: 'Reports',
-      sub: 'SITREP generation is live; this console does not index them.',
-      body: `<code>muster.sitreps</code> holds real generated SITREPs, and tenants read them at
-        <code>/sitrep</code> — a signed-in, tenant-scoped viewer that uses the same auth session and the same RLS as the
-        workspace. What is missing here is a platform-wide index across tenants, which needs its own RPC. The static
-        reference SITREP covering every finding category lives at <code>/sitrep/sample</code>.`,
-      go: null,
-    },
   };
 
   function renderStub(id) {
@@ -1659,6 +1782,7 @@
     integrations: renderIntegrations,
     'system-health': renderSystemHealth,
     settings: renderSettings,
+    reports: renderReports,
   };
 
   function render() {
@@ -1789,7 +1913,17 @@
     // delegation rather than bound to the nodes -- the node you clicked is gone
     // by the time the scan finishes.
     if (e.target.closest && e.target.closest('#runUrlBtn')) { if (!run.busy) runUrlScan(); return; }
-    if (e.target.closest && e.target.closest('#runSiteBtn')) { if (!run.busy) runSiteScan(); }
+    if (e.target.closest && e.target.closest('#runSiteBtn')) { if (!run.busy) runSiteScan(); return; }
+    if (e.target.closest && e.target.closest('#sitrepBack')) { closeSitrep(); return; }
+    // The runner's "read the report" link, and any row in the Reports table.
+    const rep = e.target.closest && e.target.closest('[data-sitrep]');
+    if (rep) {
+      const id = Number(rep.getAttribute('data-sitrep'));
+      // Coming from the Audit Queue, land on Reports so the back button has
+      // somewhere to go and the reader can see the report in context.
+      if (section !== 'reports') { sitrepOpen = null; go('reports'); }
+      loadSitreps(true).then(() => openSitrep(id)).catch(() => openSitrep(id));
+    }
   });
 
   document.addEventListener('input', (e) => {
