@@ -10,12 +10,31 @@
 #
 # SETUP, one time, before this can run:
 #   1. Generate a Supabase access token: https://supabase.com/dashboard/account/tokens
-#   2. Add it as the repository secret SUPABASE_ACCESS_TOKEN
+#   2. Add it as the repository secret MUSTER_SUPABASE_ACCESS_TOKEN
 #      (Settings -> Secrets and variables -> Actions -> New repository secret)
+#      The name is prefixed because this account's secrets span several brands.
+#      It must be on the ACTIONS tab of THIS repository. A secret defined at the
+#      organization level without this repo in its access list, or under an
+#      environment, or on the Dependabot or Codespaces tab, reaches this job as
+#      an empty string with no error -- indistinguishable from never having been
+#      created. Verified 2026-09-17 by dispatch: neither name was visible here.
+#      The unprefixed SUPABASE_ACCESS_TOKEN is also accepted, and the guard says
+#      which one it used.
 #
 # Until that secret exists the job is skipped, not failed: a missing secret must
 # not turn main red, and a red main is how the last outage went unnoticed for
 # five merges.
+#
+# THE FAILURE THIS FILE ALREADY HAD. From 2026-09-16 to 2026-09-17 this workflow
+# read `secrets.SUPABASE_ACCESS_TOKEN` while the secret was actually named
+# MUSTER_SUPABASE_ACCESS_TOKEN. GitHub does not error on an undefined secret; it
+# substitutes an empty string. So the guard took the skip path on all four runs,
+# each reported success, and three scan rules sat inactive for three weeks
+# waiting for a deploy that a green checkmark said had been considered. The
+# lesson is not "check the name harder". It is that a skip must be as visible as
+# a failure, which is what the job summary below is for, and that a configured
+# token must be proven to authenticate rather than assumed -- which is what the
+# verify step does, before anything is deployed.
 #
 # What this does NOT do: apply migrations. `supabase db push` against production
 # from CI is a bigger decision than this file should make on its own -- migrations
@@ -30,10 +49,20 @@ on:
     paths:
       # Unlike the test workflow, a paths filter is correct here: this job has a
       # side effect on production, and it should not fire for a README change.
+      #
+      # Note this file is in its own filter, so a change to the workflow deploys
+      # every function. That is deliberate -- a change to how deploys work should
+      # be proven by a deploy -- but it means editing this file is never a
+      # documentation-only change. Check what is undeployed before merging one.
       - 'supabase/functions/**'
       - 'supabase/config.toml'
       - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: 'Prove the token authenticates and deploy nothing'
+        type: boolean
+        default: false
 
 concurrency:
   # Two deploys of the same function racing would leave whichever finished last,
@@ -50,13 +79,36 @@ jobs:
       - id: guard
         name: Check the deploy secret is configured
         env:
-          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PREFIXED: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN }}
+          PLAIN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::SUPABASE_ACCESS_TOKEN is not set; skipping deploy. See the header of this workflow for setup."
-          else
+          # Both names are accepted, and the one used is named in the log. This
+          # is not indecision about which is correct -- MUSTER_SUPABASE_ACCESS_TOKEN
+          # is -- it is that a rename must never again silently produce a green
+          # skip. Accepting both removes the failure; reporting which removes the
+          # ambiguity that would otherwise replace it.
+          if [ -n "$PREFIXED" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "name=MUSTER_SUPABASE_ACCESS_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "Using MUSTER_SUPABASE_ACCESS_TOKEN"
+          elif [ -n "$PLAIN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "name=SUPABASE_ACCESS_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "::notice::Using the unprefixed SUPABASE_ACCESS_TOKEN. MUSTER_SUPABASE_ACCESS_TOKEN is the intended name."
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No deploy token is visible to this repository; NOTHING WAS DEPLOYED. Checked MUSTER_SUPABASE_ACCESS_TOKEN and SUPABASE_ACCESS_TOKEN."
+            {
+              echo "### Deploy skipped -- nothing was deployed"
+              echo ""
+              echo "Neither \`MUSTER_SUPABASE_ACCESS_TOKEN\` nor \`SUPABASE_ACCESS_TOKEN\` is visible to this"
+              echo "repository's Actions, so **no function was deployed**."
+              echo ""
+              echo "This job is green because a missing secret must not turn \`main\` red -- not because"
+              echo "anything shipped. A secret that exists but is defined at the organization level, in an"
+              echo "environment, or under the Dependabot or Codespaces tab reaches this job as an empty"
+              echo "string with no error, and looks exactly like this."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - if: steps.guard.outputs.configured == 'true'
@@ -64,16 +116,46 @@ jobs:
         with:
           version: latest
 
-      - if: steps.guard.outputs.configured == 'true'
-        name: Deploy edge functions
+      - id: verify
+        if: steps.guard.outputs.configured == 'true'
+        name: Prove the token authenticates
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          # project_id in supabase/config.toml is the deploy target, so the
-          # linked project and the migrations directory cannot disagree.
           PROJECT_REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          echo "ref=$PROJECT_REF" >> "$GITHUB_OUTPUT"
+          # A read, before any write. An expired or wrong-account token fails
+          # here with nothing half-deployed behind it. The listing carries
+          # project names and refs, never a credential.
+          if ! supabase projects list | grep -q "$PROJECT_REF"; then
+            echo "::error::The token authenticated but $PROJECT_REF is not among its projects. Wrong account?"
+            exit 1
+          fi
+          echo "Token authenticates and can see $PROJECT_REF"
+
+      - if: steps.guard.outputs.configured == 'true' && inputs.verify_only
+        name: Report verify-only and stop
+        run: |
+          {
+            echo "### Verify only -- nothing deployed"
+            echo ""
+            echo "\`${{ steps.guard.outputs.name }}\` authenticates and can see \`${{ steps.verify.outputs.ref }}\`."
+            echo "No function was deployed, because this run was dispatched with \`verify_only\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - if: steps.guard.outputs.configured == 'true' && !inputs.verify_only
+        name: Deploy edge functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ steps.verify.outputs.ref }}
+        run: |
+          set -euo pipefail
           echo "Deploying to $PROJECT_REF"
+          {
+            echo "### Deployed to \`$PROJECT_REF\`"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
           # Each function is deployed by name so a new directory has to be added
           # here deliberately, and verify_jwt comes from config.toml rather than
           # from a flag that could drift from what the repo declares.
@@ -85,4 +167,5 @@ jobs:
             echo "::group::$name"
             supabase functions deploy "$name" --project-ref "$PROJECT_REF"
             echo "::endgroup::"
+            echo "- \`$name\`" >> "$GITHUB_STEP_SUMMARY"
           done
