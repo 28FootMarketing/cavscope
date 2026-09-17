@@ -1,7 +1,7 @@
 # MUSTER backend (phase 1)
 
 Product: MUSTER, by 28 Foot Systems. Target host: muster.28footsystems.com.
-Data plane: shared Supabase project `mgtmqucaldkaxvxglguw`, schema `muster`, plus `public.muster_*` RPC shims.
+Data plane: Supabase project `hjowfnzpomzxazmzywxw`, schema `muster`, plus `public.muster_*` RPC shims. (The shared 28FS project `mgtmqucaldkaxvxglguw` ran MUSTER until 2026-09-08 and runs none of it now; see `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.)
 Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 
 ## What phase 1 delivers
@@ -140,7 +140,7 @@ Errors use SQLSTATE `42501` (forbidden, PostgREST 403), `22023` (bad input), `P0
 
 ## Agent gateway
 
-`https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-agent`
+`https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-agent`
 
 - `GET` returns the tool catalog (no auth).
 - MCP: POST JSON-RPC 2.0 (`initialize`, `tools/list`, `tools/call`, `ping`) with header `x-muster-api-key`.
@@ -148,15 +148,83 @@ Errors use SQLSTATE `42501` (forbidden, PostgREST 403), `22023` (bad input), `P0
 
 Tools: `list_websites`, `website_overview`, `list_findings`, `get_evidence`, `latest_sitrep`, `get_sitrep`, `compliance_posture`, `jurisdiction_advisory`, `ai_narrative` (read); `request_scan` (scan); `update_finding_status`, `promote_finding_to_risk` (write).
 
-`ai_narrative` is the one tool that isn't a straight SQL read: `public.muster_engine_agent_call` does the auth/org check and (if `muster.has_flag(org, 'ai_narrative')` passes) returns model context -- org/website name, posture score/band, and up to 15 open findings with their evidence ids -- and `muster-agent/index.ts` sends that to OpenRouter (`MUSTER_OPENROUTER_API_KEY` edge function secret, falling back to the project-wide `OPENROUTER_API_KEY`, model `OPENROUTER_MODEL` env override, defaults to `anthropic/claude-sonnet-5`, confirmed live against OpenRouter's own catalog) with a versioned system prompt (`muster-agent/prompt.ts`) instructing it to cite only finding/evidence ids it was given, with reasoning explicitly disabled (a short structured task; adaptive thinking would only eat the token budget) and the tool catalog attached in OpenAI function shape, validating the parsed shape (`headline`, `narrative`, `citations[]`, `confidence`), and cross-checking every citation against the finding/evidence ids the model was actually given -- any token not in the input is moved to `unverified_citations` and forces `confidence: low`, so a hallucinated reference can never pass as a verifiable one. `audience` is validated in SQL against its enum (`board`/`plain`/`technical`), not just advertised in the schema, so nothing free-form reaches the prompt. This is ephemeral -- the result is not persisted to `muster.sitreps` (see Phase 2). `ai_narrative` (`muster.feature_flags`) is **live**: `kill_switch = false`, `default_enabled = true`, `plan_minimum = pro` (verified against the table 2026-09-07, not from this document). `MUSTER_OPENROUTER_API_KEY` is set. Confirmed end to end on a real org: 7 citations, zero `unverified_citations`.
+`ai_narrative` is the one tool that isn't a straight SQL read: `public.muster_engine_agent_call` does the auth/org check and (if `muster.has_flag(org, 'ai_narrative')` passes) returns model context -- org/website name, posture score/band, and up to 15 open findings with their evidence ids -- and `muster-agent/index.ts` sends that to **the tenant's own LLM** (see *Tenant-supplied LLM* below -- as of migration 071 this path no longer uses a MUSTER credential at all, and an organization with nothing configured gets no narrative rather than ours) with a versioned system prompt (`muster-agent/prompt.ts`) instructing it to cite only finding/evidence ids it was given, with reasoning explicitly disabled where the provider understands that flag (a short structured task; adaptive thinking would only eat the token budget -- but it is an OpenRouter extension, see below) and the tool catalog attached in OpenAI function shape, validating the parsed shape (`headline`, `narrative`, `citations[]`, `confidence`), and cross-checking every citation against the finding/evidence ids the model was actually given -- any token not in the input is moved to `unverified_citations` and forces `confidence: low`, so a hallucinated reference can never pass as a verifiable one. `audience` is validated in SQL against its enum (`board`/`plain`/`technical`), not just advertised in the schema, so nothing free-form reaches the prompt. This is ephemeral -- the result is not persisted to `muster.sitreps` (see Phase 2). `ai_narrative` (`muster.feature_flags`) is **live**: `kill_switch = false`, `default_enabled = true`, `plan_minimum = pro` (verified against the table 2026-09-07, not from this document). `MUSTER_OPENROUTER_API_KEY` is set (embeddings only now). The 7-citation, zero-`unverified_citations` end-to-end run on a real org was against MUSTER's OpenRouter key, before 071 moved this path onto tenant credentials; it is evidence about the prompt and the citation check, not about the credential plumbing that replaced it.
 
 OpenRouter's `/chat/completions` is OpenAI-shaped, not Anthropic-shaped. Tools go as `{type:"function", function:{name, description, parameters}}`; the reply carries `choices[0].message.tool_calls` and `finish_reason`, and `message.content` is a string (null on a pure tool turn). Tool results go back as their own `role:"tool"` messages keyed by `tool_call_id`. Reading `stop_reason` and treating `content` as Anthropic typed blocks produced an empty `finalText` on every call, which then failed `JSON.parse` -- fixed 2026-09-07, do not reintroduce Anthropic message shapes here.
 
 Claude Desktop / Claude Code config:
 
 ```json
-{ "mcpServers": { "muster": { "url": "https://mgtmqucaldkaxvxglguw.supabase.co/functions/v1/muster-agent", "headers": { "x-muster-api-key": "mk_..." } } } }
+{ "mcpServers": { "muster": { "url": "https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/muster-agent", "headers": { "x-muster-api-key": "mk_..." } } } }
 ```
+
+### Tenant-supplied LLM (BYO)
+
+Migrations `069`/`070`/`071`, wired into `muster-agent` the same day. One row per organization in
+`muster.org_llm_config`: an OpenAI-shaped `base_url`, a `model`, and a key in **Vault** (the table
+holds a `secret_id` and the last four characters, never the key).
+
+**Scope, decided deliberately.** The `ai_narrative` tool and the agent loop. **Not embeddings** --
+`finding_embeddings`, `evidence_embeddings` and the doc chunks are all pinned to `vector(1536)`, so a
+tenant model with different dimensions breaks retrieval outright and one with the same dimensions
+silently poisons it. Re-embedding a tenant's corpus is an operation, not a setting. Say that to a
+client rather than glossing it. Embeddings therefore still run on `MUSTER_OPENROUTER_API_KEY`, and a
+tenant's *query text* still reaches MUSTER's embedding provider; only the narrative does not.
+
+**No silent fallback, in either direction.** An organization with no row gets **no LLM** -- the call
+fails with a message naming who can configure one, and that tenant stays on the deterministic SITREP
+generator that produced all 42 reports in this database. Falling back to MUSTER's account would
+defeat the entire feature, so `runAgentLoop` cannot reach `openRouterKey()` at all and
+`tests/agent/llm.test.ts` asserts the single remaining call site is `embedText`.
+
+**The tenant is resolved from the website, not from the API key.** `muster_engine_agent_call` scopes
+`ai_narrative` by `muster.website_org(website_id)` and only refuses when the key *is* org-scoped and
+the orgs differ -- so a platform-scoped key (`organization_id` null) may narrate any tenant's site.
+Keying the credential off the API key would have found no config there, and the natural-looking fix
+would have sent that tenant's findings to MUSTER's provider through the one feature built to stop
+exactly that, with nothing failing. `public.muster_engine_llm_config_for_website(website_id)` does
+the mapping in SQL, so the edge function never names an organization and cannot ask for the wrong
+tenant's key.
+
+**Reading the config: two functions, on purpose.**
+
+| Function | Returns the key? | Callable by |
+| --- | --- | --- |
+| `public.muster_llm_config(org)` | No -- four-character hint | `authenticated` (org member) |
+| `public.muster_set_llm_config(org, url, model, key, label)` | No | `authenticated` (org executive or super admin) |
+| `public.muster_clear_llm_config(org)` | No -- also deletes the Vault secret | `authenticated` (org executive or super admin) |
+| `public.muster_engine_llm_config(org)` | **Yes** | `service_role` only |
+| `public.muster_engine_llm_config_for_website(website)` | **Yes** | `service_role` only |
+| `public.muster_engine_record_llm_result(org, ok, error)` | n/a | `service_role` only |
+
+The three engine functions are revoked from `anon` **and** `authenticated` by name, per the standing
+rule: Supabase's default privileges grant EXECUTE on every new `public` function to both roles and
+`revoke ... from public` does not undo it. Getting that wrong here does not leak a scan result, it
+leaks a customer's API key.
+
+**A tenant-supplied URL is an SSRF vector** -- an edge function fetches it carrying a bearer token.
+`muster.is_valid_llm_endpoint()` refuses anything but absolute https to a public host: loopback,
+RFC 1918, RFC 6598 CGNAT, IPv6 ULA and `169.254.0.0/16` (where cloud instance metadata lives) are
+refused by literal. It is a `CHECK` constraint **and** an RPC validation **and**, since the wiring,
+`isSafeLlmEndpoint()` in `muster-agent/llm.ts`, which re-checks at call time -- a guard enforced only
+on the write path is enforced at the wrong end. The two copies are kept in step by a parity test.
+
+**`reasoning: {enabled: false}` is an OpenRouter extension** and is sent only to OpenRouter. OpenAI
+and Azure reject an unrecognised top-level parameter with a 400, so the body that always worked
+against the platform key would have failed every call against a tenant's own OpenAI account -- and
+been reported to them as a bad key.
+
+**Failures are recorded and shown.** `muster_engine_record_llm_result` writes `last_ok_at` /
+`last_error` / `last_error_at`, which `muster_llm_config` returns, so an expired or revoked tenant
+key is visible rather than degrading to silence. A model that returns prose instead of JSON is
+recorded the same way as a transport failure, because to the operator both mean "my model did not
+produce a narrative". Everything written there goes through `redactSecret()` first: a provider that
+quotes the presented credential in its 401 body would otherwise put a live key on a page, through
+the one feature built to keep keys off pages.
+
+**Still outstanding:** no workspace UI sets a config yet, so today it is set by an org executive
+calling `muster_set_llm_config` (or by a super admin). Nothing in a browser can reach the key either
+way.
 
 ## Scan engine
 

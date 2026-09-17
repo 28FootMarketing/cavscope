@@ -16,6 +16,12 @@
 // call one, and excluding them keeps a failure attributable to the prompt rather
 // than to a tool detour. That is a real difference from production, and it is
 // the one place this suite is not testing the shipped code path end to end.
+//
+// Since migration 071 there is a second: production sends this prompt to the
+// TENANT's endpoint and model, not to OpenRouter on MUSTER's key. That does not
+// change what this measures -- the prompt is the same string either way -- but
+// a result here is evidence about the prompt on the model you passed, not about
+// whatever model a given customer has configured.
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
