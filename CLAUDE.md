@@ -370,10 +370,24 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   CPA firm's examination. MUSTER produces evidence for one and readiness signal between them; route
   the attestation question to the client's auditor. Full table and the deliberate ASVS omission are
   in `docs/SCAN-RULES.md`.
-- **A scan rule stays inactive until the engine that emits it is deployed.** Not tidiness: an
+- **A scan rule stays inactive until the engine that emits it is deployed, and `active = false`
+  now blocks findings as well as controls.** Not tidiness: an
   active rule the engine never evaluates has no findings by construction, and `sync_controls()`
   scores a reference with no open findings as **met** -- so the register reports a check that was
-  never run as passed. `SEC-014`, `SEC-015` and `EMAIL-008` are held inactive by migration
+  never run as passed.
+  Until migration `20260917061404` the flag only governed half of that. `rule_control_refs()`
+  reads `active`, so the control register was genuinely protected -- but `muster.engine_ingest`
+  inserted every finding the engine sent, and `findings.rule_id` is a foreign key to
+  `scan_rules(rule_id)`, which an inactive row satisfies perfectly well. The engine has no idea
+  which rules are active; it emits everything it evaluates. So the first deploy carrying
+  `SEC-014`/`SEC-015`/`EMAIL-008` would have put them straight into every tenant's register,
+  scoring against posture, with `autotriage()` opening a risk for `SEC-014` at medium -- while
+  `scan_rules.active`, the one place you would look to confirm they had not shipped, still said
+  false. Ingest now drops findings whose rule is inactive and reports the count as
+  `skipped_inactive` in the scan summary, so a rule the engine is ahead of is visible rather than
+  silent. Deactivating a rule therefore also retires its open findings, which is reversible:
+  reactivate, rescan, and they reopen against the same fingerprint. Evidence is never gated, only
+  findings, so activating later does not lose the artefacts already collected. `SEC-014`, `SEC-015` and `EMAIL-008` are held inactive by migration
   `20260916210100` for exactly this reason; the activation statement is in its header and in
   `docs/SCAN-RULES.md`. Same rule as feature-flag `enforcement`: never declare a thing enabled
   before the code reading it exists.

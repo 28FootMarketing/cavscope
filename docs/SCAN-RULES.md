@@ -223,6 +223,13 @@ fails when `SUPABASE_ACCESS_TOKEN` is unset, and that secret is unset -- its one
 rules are still parked. Set the secret, merge anything under `supabase/functions/`, then confirm
 the version on a fresh scan.
 
+**The hold is enforced at ingest, not only in the control register.** Migration
+`20260917061404` makes `muster.engine_ingest` drop findings whose rule is inactive. Before it, the
+flag governed `rule_control_refs()` only, and the engine -- which does not know which rules are
+active -- would have written `SEC-014`, `SEC-015` and `EMAIL-008` findings into live registers the
+moment it deployed. A scan reports how many it dropped as `skipped_inactive` in its summary, so an
+engine running ahead of its schema is visible rather than silent.
+
 Activation is one statement, after confirming the deployed engine version on a fresh scan:
 
 ```sql
