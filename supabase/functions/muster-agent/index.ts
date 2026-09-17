@@ -7,6 +7,16 @@ import {
   verifyNarrativeCitations,
   type NarrativeContext,
 } from "./narrative.ts";
+import {
+  buildChatBody,
+  buildChatHeaders,
+  chatCompletionsUrl,
+  isOpenRouter,
+  LlmNotConfiguredError,
+  readLlmConfig,
+  summariseLlmError,
+  type TenantLlm,
+} from "./llm.ts";
 
 // MUSTER agent gateway. Makes every workspace usable by an AI agent or AI employee.
 //
@@ -20,17 +30,30 @@ import {
 // for ai_narrative below -- its context (findings, evidence ids, the org's ai_narrative flag check)
 // comes from that same RPC. Only the model call itself happens here, since Postgres can't make it.
 //
-// ai_narrative and the search_* tools require an OpenRouter key. Set MUSTER's own:
-//   supabase secrets set MUSTER_OPENROUTER_API_KEY=...   (the key named "muster-agent")
-// Falls back to the project-wide OPENROUTER_API_KEY when that is unset.
-// Model defaults to OPENROUTER_MODEL if set, else anthropic/claude-sonnet-5 (confirmed live on
-// OpenRouter's catalog) -- override via that env var to point at a different Claude version.
+// TWO DIFFERENT CREDENTIALS, and the split is the whole of the BYO-LLM feature.
+//
+//   ai_narrative and the agent loop  ->  the TENANT's endpoint, model and key, from
+//     muster.org_llm_config via muster_engine_llm_config_for_website(). A tenant with no
+//     configuration gets NO llm: the call fails with an actionable message and that
+//     organization stays on the deterministic SITREP generator. There is deliberately no
+//     fallback to MUSTER's key, because the point of the feature is that their findings do
+//     not reach our inference account. A broken tenant key is a visible error, never a
+//     silent redirect. See migrations 069/070/071 and docs/BACKEND.md.
+//
+//   search_* embeddings  ->  MUSTER's own key, always. finding_embeddings, doc_chunks and
+//     chunk embeddings are pinned to vector(1536); a tenant model with other dimensions
+//     breaks retrieval and one with the same dimensions silently poisons it. Re-embedding a
+//     corpus is an operation, not a setting. Say that to a client rather than glossing it.
+//     Set MUSTER's own:
+//       supabase secrets set MUSTER_OPENROUTER_API_KEY=...   (the key named "muster-agent")
+//     Falls back to the project-wide OPENROUTER_API_KEY when that is unset.
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const PROTOCOL_VERSION = "2025-06-18";
-const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-sonnet-5";
 
-// MUSTER's own OpenRouter credential. Edge function secrets are project-wide, and
+// MUSTER's own OpenRouter credential. EMBEDDINGS ONLY -- see the header. Nothing
+// model-facing on the narrative or agent-loop path may read this.
+// Edge function secrets are project-wide, and
 // this Supabase project is shared across every 28FS brand, so OPENROUTER_API_KEY is
 // one value that CORA, AIVA, ROS, BRD, GFFH and s28 all draw against -- a spend cap
 // hit by any one of them takes MUSTER down too (it did, 2026-09-06). Prefer a
@@ -55,6 +78,14 @@ function pgStatus(msg: string): number {
   if (/not found/i.test(msg)) return 404;
   if (/required|must be|invalid|unknown tool/i.test(msg)) return 400;
   return 500;
+}
+
+// A tenant with no LLM configured is not a server fault, and 500 would send an
+// integrator looking for one. 409: the request is well formed and cannot be
+// served until something about this organization changes.
+function httpStatusFor(e: unknown): number {
+  if (e instanceof LlmNotConfiguredError) return 409;
+  return pgStatus(String((e as Error).message ?? e));
 }
 
 // Behind Supabase's edge proxy req.url arrives as http://, so url.protocol and
@@ -455,9 +486,32 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
   return await callToolRaw(ctx, name, args);
 }
 
-async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: string, maxSteps = 5): Promise<{ messages: Array<Record<string, unknown>>; finalText: string }> {
-  const apiKey = openRouterKey();
-  if (!apiKey) throw new Error("agent loop requires MUSTER_OPENROUTER_API_KEY (or OPENROUTER_API_KEY)");
+// Resolve the LLM of the organization that OWNS the website being narrated --
+// not the organization on the API key. Those differ: a platform-scoped key
+// (organization_id null) may narrate any site, and running that through
+// MUSTER's own account would send a tenant's findings to our inference provider
+// through the one path built to stop exactly that. SQL maps website -> org ->
+// vault, so this function never names an org id and cannot ask for the wrong
+// tenant's credential.
+async function resolveTenantLlm(websiteId: unknown, websiteLabel: string): Promise<TenantLlm> {
+  const { data, error } = await db.rpc("muster_engine_llm_config_for_website", { p_website_id: websiteId });
+  if (error) throw new Error(error.message);
+  return readLlmConfig(data, websiteLabel);
+}
+
+// Best effort by design: a tenant whose key just worked must still get their
+// narrative if this bookkeeping write fails.
+async function recordLlmResult(organizationId: number, ok: boolean, error?: string): Promise<void> {
+  try {
+    await db.rpc("muster_engine_record_llm_result", { p_organization_id: organizationId, p_ok: ok, p_error: error ?? null });
+  } catch { /* ignore */ }
+}
+
+async function runAgentLoop(ctx: unknown, llm: TenantLlm, systemPrompt: string, userPrompt: string, maxSteps = 5): Promise<{ messages: Array<Record<string, unknown>>; finalText: string }> {
+  // Endpoint shaping, the OpenRouter-only body extension and error redaction
+  // live in ./llm.ts so tests/agent exercises them; only the fetch is here.
+  const endpoint = chatCompletionsUrl(llm.base_url);
+  const openRouter = isOpenRouter(llm.base_url);
 
   // OpenRouter's /chat/completions is OpenAI-shaped. Tools go as
   // {type:"function", function:{name, description, parameters}}, NOT Anthropic's
@@ -481,33 +535,29 @@ async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: stri
   for (let step = 0; step < maxSteps; step++) {
     let res: Response;
     try {
-      res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "authorization": `Bearer ${apiKey}`,
-          "http-referer": "https://muster.partners",
-          "x-title": "MUSTER AI agent loop",
-        },
-        body: JSON.stringify({
-          model: OPENROUTER_MODEL,
-          max_tokens: 2000,
-          temperature: 0.3,
-          reasoning: { enabled: false },
+        headers: buildChatHeaders(llm.api_key, openRouter, "MUSTER AI agent loop"),
+        body: JSON.stringify(buildChatBody({
+          model: llm.model,
+          systemPrompt,
+          messages,
           tools: openaiTools,
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
-        }),
+          openRouter,
+        })),
         signal: AbortSignal.timeout(20000),
       });
     } catch (e) {
-      throw new Error(`agent loop call failed to reach OpenRouter: ${(e as Error).message ?? e}`);
+      // The endpoint is named, because "could not reach the provider" is
+      // unanswerable to an operator who configured a URL we then never echo.
+      throw new Error(`agent loop could not reach ${endpoint}: ${(e as Error).message ?? e}`);
     }
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`agent loop call failed (${res.status}): ${detail.slice(0, 300)}`);
+      // Redacted: a provider that quotes the presented credential in its 401
+      // body would otherwise put a live key into last_error, which
+      // muster_llm_config returns to a browser.
+      throw new Error(`agent loop call failed (${summariseLlmError({ status: res.status, detail: detail.slice(0, 300), apiKey: llm.api_key })})`);
     }
 
     const payload = await res.json();
@@ -567,20 +617,39 @@ async function runAgentLoop(ctx: unknown, systemPrompt: string, userPrompt: stri
 }
 
 async function generateAiNarrative(ctx: unknown, context: Record<string, unknown>) {
-  const userPrompt = buildNarrativeUserPrompt(context as NarrativeContext);
-  const { finalText } = await runAgentLoop(ctx, AI_NARRATIVE_SYSTEM_PROMPT, userPrompt, 5);
+  const label = context.website_url ? `${context.website_name} (${context.website_url})` : `website ${context.website_id}`;
+  // Throws LlmNotConfiguredError when this tenant has no endpoint, which is a
+  // normal state and not a fault: they stay on the deterministic generator.
+  // Nothing below runs, so no MUSTER credential is anywhere on this path.
+  const llm = await resolveTenantLlm(context.website_id, label);
 
-  // Parsing and citation verification are in ./narrative.ts so the eval suite
-  // (evals/ai-narrative) exercises this exact code rather than a copy that
-  // drifts. Everything model-facing stays here; everything checkable is there.
-  const parsed = parseNarrativeResponse(finalText);
-  const verified = verifyNarrativeCitations(context as NarrativeContext, parsed);
+  let verified;
+  try {
+    const { finalText } = await runAgentLoop(ctx, llm, AI_NARRATIVE_SYSTEM_PROMPT, buildNarrativeUserPrompt(context as NarrativeContext), 5);
+
+    // Parsing and citation verification are in ./narrative.ts so the eval suite
+    // (evals/ai-narrative) exercises this exact code rather than a copy that
+    // drifts. Everything model-facing stays here; everything checkable is there.
+    const parsed = parseNarrativeResponse(finalText);
+    verified = verifyNarrativeCitations(context as NarrativeContext, parsed);
+  } catch (e) {
+    // A parse failure is recorded alongside a transport failure on purpose. To
+    // the operator reading last_error both mean "my model did not produce a
+    // narrative", and recording only the transport half would leave a model
+    // that returns prose instead of JSON looking perfectly healthy forever.
+    await recordLlmResult(llm.organization_id, false, summariseLlmError({ message: String((e as Error).message ?? e), apiKey: llm.api_key }));
+    throw e;
+  }
+  await recordLlmResult(llm.organization_id, true);
 
   return {
     website_id: context.website_id,
     audience: context.audience,
     ...verified,
-    model: OPENROUTER_MODEL,
+    // The tenant's model, named in the output. A board-facing narrative should
+    // say which model wrote it, and after this change that is no longer a
+    // constant.
+    model: llm.model,
     generated_at: new Date().toISOString(),
   };
 }
@@ -653,7 +722,6 @@ Deno.serve(async (req: Request) => {
     const result = await callTool(ctx, tool, (body.args ?? {}) as Record<string, unknown>);
     return json({ ok: true, tool, agent: (ctx as { agent_name: string }).agent_name, result });
   } catch (e) {
-    const msg = String((e as Error).message ?? e);
-    return json({ ok: false, tool, error: msg }, pgStatus(msg));
+    return json({ ok: false, tool, error: String((e as Error).message ?? e) }, httpStatusFor(e));
   }
 });

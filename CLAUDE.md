@@ -402,6 +402,27 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `20260916210100` for exactly this reason; the activation statement is in its header and in
   `docs/SCAN-RULES.md`. Same rule as feature-flag `enforcement`: never declare a thing enabled
   before the code reading it exists.
+- **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
+  `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
+  Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
+  loop. **Embeddings are excluded on purpose** -- three tables pin `vector(1536)`, so a tenant model
+  with other dimensions breaks retrieval and one with the same dimensions silently poisons it; they
+  stay on `MUSTER_OPENROUTER_API_KEY`, which is now that key's only remaining use.
+  **There is no fallback.** An org with no row gets no LLM and stays on the deterministic generator;
+  `runAgentLoop` cannot reach `openRouterKey()`, and `tests/agent/llm.test.ts` asserts the one call
+  site left is `embedText`. The reason the lookup is keyed on `website_id` rather than the caller's
+  org: `muster_engine_agent_call` only refuses a cross-org narrative when the key *is* org-scoped, so
+  a platform key (`organization_id` null) may narrate any tenant's site -- keying off the key would
+  have found no config there, and falling back to MUSTER's account would have sent that tenant's
+  findings to our provider through the one feature built to stop it, with nothing failing.
+  `muster_engine_llm_config_for_website()` does the mapping in SQL so the edge function never names
+  an org. Three things that look like polish and are not: the SSRF guard is re-checked at call time
+  in `llm.ts` as well as by the `CHECK` constraint, because a guard only on the write path is at the
+  wrong end; `reasoning: {enabled:false}` is an OpenRouter extension and OpenAI returns 400 on
+  unknown top-level parameters, so sending it to a tenant's own OpenAI account would have failed
+  every call and been reported to them as a bad key; and everything written to `last_error` goes
+  through `redactSecret()`, because `muster_llm_config` returns `last_error` to a browser. Full
+  table of who may call what is in `docs/BACKEND.md`. No workspace UI sets a config yet.
 - **Edge functions deploy from CI, not from a paste.** `.github/workflows/deploy-functions.yml`
   runs `supabase functions deploy` on merge to main for anything under `supabase/functions/`. It
   skips with a notice, rather than failing, until the `SUPABASE_ACCESS_TOKEN` repository secret is
