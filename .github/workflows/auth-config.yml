@@ -317,14 +317,22 @@ jobs:
 
           FAIL=0
           while read -r flow file subject; do
-            WANT_SHA=$(sha256sum "$DIR/$file" | cut -c1-12)
+            # Both sides are normalised the same way before hashing. Command
+            # substitution strips trailing newlines from the readback, so hashing
+            # the file straight off disk compares a trailing newline against its
+            # absence and reports all six as mismatched -- which it did on the
+            # first run of this step. Normalise once, here, rather than relaxing
+            # the comparison: the point of the check is to catch a real
+            # difference, and a check loosened until it passes catches nothing.
+            WANT=$(cat "$DIR/$file")
             GOT=$(jq -r --arg k "mailer_templates_${flow}_content" '.[$k] // ""' /tmp/after.json)
+            WANT_SHA=$(printf '%s' "$WANT" | sha256sum | cut -c1-12)
             GOT_SHA=$(printf '%s' "$GOT" | sha256sum | cut -c1-12)
             GOT_SUBJ=$(jq -r --arg k "mailer_subjects_${flow}" '.[$k] // ""' /tmp/after.json)
             WANT_SUBJ=$(jq -r --arg f "$flow" '.[] | select(.flow==$f) | .subject' $DIR/manifest.json)
             if [ "$WANT_SHA" = "$GOT_SHA" ] && [ "$WANT_SUBJ" = "$GOT_SUBJ" ]; then OK="yes"; else OK="**NO**"; FAIL=1; fi
             echo "| \`$flow\` | \`$GOT_SUBJ\` | \`$GOT_SHA\` | $OK |" >> "$GITHUB_STEP_SUMMARY"
-            echo "$flow: content $WANT_SHA vs $GOT_SHA, subject match=$([ "$WANT_SUBJ" = "$GOT_SUBJ" ] && echo yes || echo NO)"
+            echo "$flow: want ${#WANT} chars/$WANT_SHA, got ${#GOT} chars/$GOT_SHA, subject match=$([ "$WANT_SUBJ" = "$GOT_SUBJ" ] && echo yes || echo NO)"
           done < <(jq -r '.[] | "\(.flow) \(.file) \(.subject)"' $DIR/manifest.json)
 
           rm -f /tmp/cfg.json /tmp/after.json /tmp/payload.json /tmp/subjects.json /tmp/contents.json /tmp/one.json
