@@ -298,12 +298,26 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   host that must be rejected. It returns booleans and redacted origins only -- never a token,
   link or password. `rotate_password` defaults to false and can only ever target the pinned QA
   sentinel account. Invocation and the 2026-09-09 results are in `docs/EMAIL.md`. Outstanding
-  after that run: **Site URL on `hjowfnzpomzxazmzywxw` must be on the app host** -- the chosen
-  value is `https://app.muster.partners` (see `docs/EMAIL.md` for why the root rather than
-  `/app`). **It was believed changed on 2026-09-13 and it is not: on 2026-09-15 a real magiclink
-  again landed on `https://www.muster.partners/` with live tokens in the fragment.** That is a
-  dashboard setting; nothing in this repo can change it, and nothing in this repo can verify it
-  either except `muster-auth-smoke` plus an actual link. Do not mark it done from a note. Also outstanding: none of the six auth email
+  after that run: **Site URL on `hjowfnzpomzxazmzywxw` is `https://app.muster.partners` as of
+  2026-09-17** (see `docs/EMAIL.md` for why the root rather than `/app`). It was wrong for the
+  project's whole life, believed changed on 2026-09-13 and was not -- on 2026-09-15 a real
+  magiclink again landed on `https://www.muster.partners/` with live tokens in the fragment.
+  The API confirmed it still read `https://www.muster.partners/` on 2026-09-17 at 13:54 UTC,
+  which is what two weeks of trusting a note bought.
+  **It is no longer a dashboard setting.** `.github/workflows/auth-config.yml` applies it from
+  the commit through the Management API and fails the job if the readback disagrees; dispatch it
+  with `apply` unchecked for a read-only report of what is live. Two independent runs confirmed
+  the new value, and the second one -- a separate process doing its own `GET` -- is why this
+  paragraph is allowed to say it changed.
+  **What is proven and what is not:** the *value* is set, read back twice. The *flow* is not
+  tested. Nobody has sent a magic link and followed it since the change. `muster-auth-smoke` is
+  what closes that gap and it has not been run against the new value, so do not write "magic
+  links work" anywhere until it has. Setting a field and delivering a working link are different
+  claims and this file has already conflated them once.
+  The workflow deliberately leaves `uri_allow_list` alone (`PATCH` is partial). That list is
+  correct and was verified byte-identical either side of the change: it carries
+  `app.muster.partners/app`, `/reset` and `/**`, the `28footsystems` equivalents, and the
+  onboarding landings. Also outstanding: none of the six auth email
   templates have been pasted from `supabase/auth-email-templates/` -- bodies and subjects are
   still GoTrue stock.
 - **Only the pages that complete a sign-in may consume an auth fragment.** `detectSessionInUrl`
