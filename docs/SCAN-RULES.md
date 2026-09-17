@@ -1,6 +1,7 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **47 rules, all active**, all
+Every defect code the engine can raise, by audit area. **48 rules, 47 active** (`EMAIL-009`
+is held pending its engine deploy), all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -44,8 +45,8 @@ the codes it raises. It writes nothing and produces no SITREP; see
 
 ## Security — 15 rules
 
-Eight more rules (`EMAIL-001`..`EMAIL-008`) also carry `category = security`; they are listed under
-[Email authentication](#email-authentication--8-rules) below, so the `security` category totals 23.
+Nine more rules (`EMAIL-001`..`EMAIL-009`) also carry `category = security`; they are listed under
+[Email authentication](#email-authentication--9-rules-8-active) below, so the `security` category totals 23.
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
@@ -69,7 +70,7 @@ Eight more rules (`EMAIL-001`..`EMAIL-008`) also carry `category = security`; th
 governs certificate issuance for the web host, so it is walked from the scanned host upward the way
 a certificate authority walks it, not from the `www.`-stripped mail domain.
 
-## Email authentication — 8 rules
+## Email authentication — 9 rules (8 active)
 
 Category `security`. These are the only rules that read DNS rather than HTTP: the engine resolves
 TXT and MX over DNS-over-HTTPS (Google primary, Cloudflare fallback) and judges the answers. A
@@ -90,6 +91,7 @@ inherits its parent's policy.
 | `EMAIL-006` | low | DMARC has no reporting address (no `rua=`) | RFC 7489, NIST DE.CM-1 |
 | `EMAIL-007` | high | Multiple DMARC records | RFC 7489 §6.6.3, NIST PR.DS-2 |
 | `EMAIL-008` | low | No MTA-STS policy | RFC 8461, NIST PR.DS-02, 800-53 SC-8 |
+| `EMAIL-009` | high | SPF exceeds the DNS lookup limit **(held inactive)** | RFC 7208 §4.6.4, SOC 2 CC6.7, NIST PR.DS-02, 800-53 SC-8 |
 
 `EMAIL-003` and `EMAIL-007` are high, not medium, and that is deliberate. Both RFCs say a name with
 more than one record is a permanent error, so receivers apply none of them. The exposure is
@@ -109,6 +111,29 @@ be crying wolf on a majority of correctly configured domains.
 the selector is chosen by whatever sends the mail. Selectors cannot be enumerated from outside, so
 "no DKIM" would be a guess, and probing common selectors would report false defects against
 correctly configured domains.
+
+**`EMAIL-009` is the only rule that resolves names it discovers**, and the only one whose answer
+is not in the record it reads. RFC 7208 §4.6.4 caps SPF at 10 DNS-querying terms -- `include`, `a`,
+`mx`, `ptr`, `exists` and the `redirect` modifier; `ip4`, `ip6` and `all` are free, and `exp` is
+exempt. Past the cap a receiver returns `permerror`, which most treat exactly as they treat no SPF
+at all.
+
+It is **high** for the same reason `EMAIL-003` is: the exposure is identical to publishing nothing.
+And it is the most common way SPF fails in practice precisely because it is invisible -- a domain
+can list three vendors and be over the limit because one of them nests four includes of its own.
+Nothing bounces, nothing reports, and the record reads perfectly.
+
+Two properties worth knowing before quoting a count. The walk is **bounded three ways**: a visited
+set against an include cycle, a node cap against a deep tree turning one scan into hundreds of
+queries, and an early stop once the count is past the limit, where no further lookup can change the
+answer. And **an incomplete walk never produces a pass**: if a nested include could not be resolved
+the count is a floor, reported as `13+` rather than `13`, and the rule stays silent unless it is
+already over. Reporting "under the limit" from a partial walk would be the same error as calling a
+resolver outage a missing record.
+
+It is also silent when the domain publishes zero or more than one SPF record. Receivers never get
+as far as counting in either case (`EMAIL-001`, `EMAIL-003`), so a lookup total would describe an
+evaluation that does not happen.
 
 **`EMAIL-008` is silent on a domain with no MX record**, and that silence is a result, not a gap.
 MTA-STS tells a *sending* server how to reach yours over TLS; a domain that accepts no mail has

@@ -67,8 +67,13 @@ test("the finding states it is not an assessment, and does not diagnose", () => 
 });
 
 test("the engine version moved, because rule output changed", () => {
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.4\.0";/);
+  // Pinned on purpose. ENGINE_VERSION is only ever compared to itself, so
+  // nothing fails when it does not move -- this test is the thing that fails.
+  // 1.5.0 adds EMAIL-009; AVAIL-003's own line is asserted below so the
+  // changelog cannot lose an entry as versions accumulate.
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.5\.0";/);
   assert.match(engine, /1\.4\.0 adds AVAIL-003/);
+  assert.match(engine, /1\.5\.0 adds EMAIL-009/);
 });
 
 test("the rule shipped inactive and was activated in a separate migration", () => {
