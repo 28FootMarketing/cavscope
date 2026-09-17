@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   evaluateEmailAuth, mailDomain, dmarcCandidates,
   spfRecords, spfAllQualifier, parseDmarc, dmarcRecords,
+  spfLookupTerms, evaluateSpfLookups, SPF_MAX_LOOKUPS,
 } from "../../supabase/functions/muster-scan/email-auth.ts";
 
 const ids = (fs: { rule_id: string }[]) => fs.map((f) => f.rule_id).sort();
@@ -190,4 +191,97 @@ test("every finding names the domain and cites evidence", () => {
     assert.equal(x.location, "DNS: acme.test");
     assert.equal(x.confidence, "high");
   }
+});
+
+// --- EMAIL-009: SPF DNS lookup limit ----------------------------------------
+//
+// Most of these guard the direction that costs credibility: a record that is
+// fine must never be reported as broken, and a walk that could not finish must
+// never be reported as passing.
+
+test("spfLookupTerms counts only the terms that cost a DNS lookup", () => {
+  const terms = spfLookupTerms(
+    "v=spf1 ip4:192.0.2.0/24 ip6:2001:db8::/32 include:_spf.google.com a mx ~all",
+  );
+  assert.deepEqual(terms.map((t) => t.kind), ["include", "a", "mx"]);
+  assert.equal(terms[0].target, "_spf.google.com");
+});
+
+test("spfLookupTerms treats redirect= as a lookup and exp= as not one", () => {
+  const terms = spfLookupTerms("v=spf1 exp=why.example.com redirect=_spf.example.net");
+  assert.deepEqual(terms.map((t) => t.kind), ["redirect"]);
+  assert.equal(terms[0].target, "_spf.example.net");
+});
+
+test("spfLookupTerms counts a and mx with or without a domain or CIDR", () => {
+  const terms = spfLookupTerms("v=spf1 a:mail.example.com mx:example.org a/24 mx -all");
+  assert.deepEqual(terms.map((t) => t.kind), ["a", "mx", "a", "mx"]);
+});
+
+test("spfLookupTerms ignores the qualifier prefix", () => {
+  const terms = spfLookupTerms("v=spf1 -include:a.example ~include:b.example ?a +mx");
+  assert.deepEqual(terms.map((t) => t.kind), ["include", "include", "a", "mx"]);
+});
+
+test("EMAIL-009 is silent at exactly the limit, which is legal", () => {
+  const f = evaluateSpfLookups({
+    host: "example.com",
+    traversal: { count: SPF_MAX_LOOKUPS, chain: ["example.com"], incomplete: false },
+  });
+  assert.equal(f.length, 0);
+});
+
+test("EMAIL-009 fires one over the limit", () => {
+  const f = evaluateSpfLookups({
+    host: "example.com",
+    traversal: { count: SPF_MAX_LOOKUPS + 1, chain: ["example.com"], incomplete: false },
+  });
+  assert.equal(f.length, 1);
+  assert.equal(f[0].rule_id, "EMAIL-009");
+  assert.equal(f[0].severity, "high");
+  assert.match(f[0].detail, /11 DNS lookups/);
+});
+
+test("EMAIL-009 is silent when the resolver failed, so an outage is never a finding", () => {
+  const f = evaluateSpfLookups({
+    host: "example.com",
+    traversal: { count: 40, chain: ["example.com"], incomplete: true },
+    resolverFailed: true,
+  });
+  assert.equal(f.length, 0);
+});
+
+test("EMAIL-009 does not fire from a partial walk that is still under the limit", () => {
+  // The count is a floor when a nested include could not be read. Saying
+  // "under the limit" from an incomplete walk would be asserting a pass that
+  // was never measured.
+  const f = evaluateSpfLookups({
+    host: "example.com",
+    traversal: { count: 6, chain: ["example.com", "a.example"], incomplete: true },
+  });
+  assert.equal(f.length, 0);
+});
+
+test("EMAIL-009 still fires on a partial walk once already over, and marks the count a floor", () => {
+  const f = evaluateSpfLookups({
+    host: "example.com",
+    traversal: { count: 14, chain: ["example.com", "a.example"], incomplete: true },
+  });
+  assert.equal(f.length, 1);
+  assert.match(f[0].detail, /14\+ DNS lookups/);
+});
+
+test("EMAIL-009 names the included senders, because the count is not visible from the apex record", () => {
+  const f = evaluateSpfLookups({
+    host: "www.example.com",
+    traversal: {
+      count: 13,
+      chain: ["example.com", "_spf.google.com", "servers.mcsv.net", "spf.protection.outlook.com"],
+      incomplete: false,
+    },
+  });
+  assert.match(f[0].detail, /_spf\.google\.com/);
+  assert.match(f[0].detail, /servers\.mcsv\.net/);
+  // www is stripped: mail authentication belongs to the organizational domain.
+  assert.equal(f[0].location, "DNS: example.com");
 });

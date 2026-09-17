@@ -235,3 +235,105 @@ export function evaluateEmailAuth(input: EmailAuthInput): EmailAuthFinding[] {
 
   return findings;
 }
+
+// --- EMAIL-009: the SPF DNS lookup limit -------------------------------------
+//
+// RFC 7208 4.6.4 caps SPF evaluation at 10 DNS-querying terms. Go over and the
+// receiver returns permerror, which most treat exactly as it treats no SPF at
+// all -- so the domain has a long, careful, correct-looking record that protects
+// nothing.
+//
+// This is the most common way SPF fails in practice and the least visible. A
+// record reads fine, every vendor in it is legitimate, and the domain is
+// unprotected because one of those vendors nests four includes of its own. The
+// count is not in the record; it is only visible by walking it.
+//
+// Terms that cost a lookup: include, a, mx, ptr, exists, and the redirect
+// modifier. ip4, ip6 and all cost nothing. exp is excluded -- RFC 7208 exempts
+// it from the limit, and counting it would overstate.
+
+export const SPF_MAX_LOOKUPS = 10;
+
+export type SpfLookupTerm = {
+  kind: "include" | "redirect" | "a" | "mx" | "ptr" | "exists";
+  /** The name to resolve for include/redirect. Null for terms that do not nest. */
+  target: string | null;
+};
+
+/**
+ * The DNS-querying terms in one SPF record, in order. Pure: it reports what the
+ * record asks for, and the caller decides how far to walk it.
+ */
+export function spfLookupTerms(record: string): SpfLookupTerm[] {
+  const out: SpfLookupTerm[] = [];
+  for (const raw of String(record || "").split(/\s+/)) {
+    const term = raw.trim();
+    if (!term || /^v=spf1$/i.test(term)) continue;
+
+    // redirect= is a modifier, so it carries no qualifier and is matched first.
+    const redirect = /^redirect=(.+)$/i.exec(term);
+    if (redirect) { out.push({ kind: "redirect", target: redirect[1].toLowerCase() }); continue; }
+    if (/^exp=/i.test(term)) continue;
+
+    const bare = term.replace(/^[+\-~?]/, "");
+    const inc = /^include:(.+)$/i.exec(bare);
+    if (inc) { out.push({ kind: "include", target: inc[1].toLowerCase() }); continue; }
+    const exists = /^exists:(.+)$/i.exec(bare);
+    if (exists) { out.push({ kind: "exists", target: null }); continue; }
+    // a, mx and ptr each count whether or not they carry a domain or a CIDR.
+    if (/^a([:/]|$)/i.test(bare)) { out.push({ kind: "a", target: null }); continue; }
+    if (/^mx([:/]|$)/i.test(bare)) { out.push({ kind: "mx", target: null }); continue; }
+    if (/^ptr(:|$)/i.test(bare)) { out.push({ kind: "ptr", target: null }); continue; }
+  }
+  return out;
+}
+
+export type SpfTraversal = {
+  /** DNS-querying terms counted across the whole tree. */
+  count: number;
+  /** Names whose SPF record was read, apex first, for the evidence row. */
+  chain: string[];
+  /** True when a nested include could not be resolved, so `count` is a floor. */
+  incomplete: boolean;
+};
+
+/**
+ * EMAIL-009. Fires only when the walked count is already over the limit, which
+ * is a fact about the record rather than a projection.
+ *
+ * An incomplete walk never fires. If a nested include failed to resolve, the
+ * count is a lower bound, and reporting "you are under the limit" from a partial
+ * walk would be the same class of error as calling a resolver outage a missing
+ * record -- the mistake the rest of this module exists to avoid.
+ */
+export function evaluateSpfLookups(input: {
+  host: string;
+  traversal: SpfTraversal;
+  resolverFailed?: boolean;
+}): EmailAuthFinding[] {
+  if (input.resolverFailed) return [];
+  const { count, chain, incomplete } = input.traversal;
+  if (count <= SPF_MAX_LOOKUPS) return [];
+  // Over the limit is over the limit whether or not the walk finished: an
+  // incomplete walk can only have undercounted.
+  const domain = mailDomain(input.host);
+  const nested = chain.length > 1 ? chain.slice(1) : [];
+  return [{
+    rule_id: "EMAIL-009",
+    severity: "high",
+    title: "SPF exceeds the DNS lookup limit",
+    detail:
+      `Evaluating ${domain}'s SPF record requires ${count}${incomplete ? "+" : ""} DNS lookups. ` +
+      `RFC 7208 allows 10, and a receiver that hits the limit returns permerror -- which most treat ` +
+      `the same as no SPF at all, so this record protects nothing despite reading correctly. ` +
+      (nested.length
+        ? `The count is spread across included senders (${nested.slice(0, 6).join(", ")}${nested.length > 6 ? `, and ${nested.length - 6} more` : ""}), ` +
+          `so it is not visible from your own record alone. `
+        : "") +
+      `Fix by removing senders you no longer use, replacing an include with the specific ip4/ip6 ranges ` +
+      `it resolves to, or consolidating vendors. Verify after each change: this fails silently, with no bounce and no report.`,
+    location: `DNS: ${domain}`,
+    confidence: "high",
+    evidence_keys: ["dns_spf", "dns_spf_chain"],
+  }];
+}

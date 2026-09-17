@@ -1,6 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { dmarcCandidates, evaluateEmailAuth, mailDomain } from "./email-auth.ts";
+import {
+  dmarcCandidates, evaluateEmailAuth, mailDomain,
+  spfRecords, spfLookupTerms, evaluateSpfLookups, SPF_MAX_LOOKUPS,
+} from "./email-auth.ts";
 import { caaNames, evaluateCaa, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
 import { detectClientRendered, stripTags } from "./html.ts";
 
@@ -31,7 +34,13 @@ import { detectClientRendered, stripTags } from "./html.ts";
 // as "could not be assessed" rather than as an outage. Rule output changed, so
 // the minor moves -- and the value to move it from is the one on main, not the
 // one this branch started at.
-const ENGINE_VERSION = "http-native-1.4.0";
+//
+// 1.5.0 adds EMAIL-009: SPF is now walked and its DNS-querying terms counted
+// against RFC 7208's limit of 10. This is the first rule that resolves names it
+// discovers rather than names it was given, so it is bounded three ways -- a
+// visited set against include cycles, a node cap against a deep tree, and an
+// early stop once the count is past the limit and the answer cannot change.
+const ENGINE_VERSION = "http-native-1.5.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -553,6 +562,62 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
       host: mailHost, spfTxt: spf.txt, dmarc, mx,
       resolverFailed: spf.failed || dmarcFailed,
     })) add(f);
+
+    // EMAIL-009: walk the SPF tree and count DNS-querying terms.
+    //
+    // This is the only email rule that cannot be answered from one lookup. The
+    // count is not in the record -- a three-term record can be over the limit
+    // because a vendor's include nests four of its own -- so it only exists by
+    // walking, which is exactly why operators cannot see it and it stays broken.
+    if (!spf.failed) {
+      const MAX_NODES = 24;
+      const seen = new Set<string>([domain]);
+      const chain: string[] = [domain];
+      let count = 0;
+      let incomplete = false;
+
+      // Only a single apex record is walkable. Zero is EMAIL-001 and more than
+      // one is EMAIL-003; in both cases receivers never get as far as counting,
+      // so a lookup total would describe an evaluation that does not happen.
+      const apexRecords = spfRecords(spf.txt);
+      let frontier: string[] = apexRecords.length === 1 ? [apexRecords[0]] : [];
+
+      while (frontier.length > 0 && count <= SPF_MAX_LOOKUPS) {
+        const next: string[] = [];
+        for (const record of frontier) {
+          for (const term of spfLookupTerms(record)) {
+            count++;
+            if (!term.target || seen.has(term.target)) continue;
+            // Three bounds, each for a different failure: the visited set stops
+            // an include cycle, MAX_NODES stops a deep tree turning one scan
+            // into hundreds of queries, and the limit check stops work whose
+            // answer cannot change -- already over is already over.
+            if (seen.size >= MAX_NODES || count > SPF_MAX_LOOKUPS) { incomplete = true; continue; }
+            seen.add(term.target);
+            const nested = await resolveTxt(term.target);
+            if (nested.failed) { incomplete = true; continue; }
+            const recs = spfRecords(nested.txt);
+            if (recs.length === 1) { chain.push(term.target); next.push(recs[0]); }
+            else if (recs.length > 1) { incomplete = true; }
+            // Zero records is a void lookup: it cost a query, already counted,
+            // and contributes no further terms.
+          }
+        }
+        frontier = next;
+      }
+
+      if (apexRecords.length === 1) {
+        await ev({ key: "dns_spf_chain", kind: "dns_txt", url: `dns:${domain}?type=TXT&walk=spf`,
+          http_status: null, content_type: null, response_ms: null, headers: null,
+          excerpt: `${count}${incomplete ? "+" : ""} of ${SPF_MAX_LOOKUPS} DNS lookups\n` +
+            `walked: ${chain.join(" -> ")}` + (incomplete ? "\nwalk incomplete: the count is a floor" : ""),
+          byte_length: null }, chain.join("\n"));
+
+        for (const f of evaluateSpfLookups({
+          host: mailHost, traversal: { count, chain, incomplete },
+        })) add(f);
+      }
+    }
 
     // SEC-015: CAA, walked the way a certificate authority walks it -- nearest
     // name first, stopping at the registrable domain. dmarcCandidates already
