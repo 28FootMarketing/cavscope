@@ -225,6 +225,35 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   in a dedicated internal sandbox org (`organizations.is_admin_sandbox`), never in a real tenant's risk
   register. This is separate from the guided onboarding flow above and from `sitrep-sample.html` — three
   different tools for three different jobs, not competing demos.
+- **`tools/local-scan/` is a fourth way to get findings, and the only one that writes nothing.**
+  `npm run scan:local -- https://example.com` runs the real engine's rule code against a URL with no
+  database, no service-role key and no tenant, then prints the findings and a posture score and exits
+  non-zero on any `critical` or `high`. Use it for triage, for CI, or from a machine with no keys; use
+  the admin console's "Run a URL scan" when the result should be recorded. It is an **adapter** over
+  `supabase/functions/muster-scan/index.ts` — it reads that file and strips the Supabase client, the two
+  `muster_engine_*` RPCs and `Deno.serve()`, asserting each cut — so there is still exactly one copy of
+  the 38 rules. The one thing duplicated is the posture weights, copied from
+  `20260907223344_muster_012_helper_functions_sql.sql` into `tools/local-scan/score.mjs`; change one and
+  you must change the other. `tests/scan/local-scan.test.ts` pins the adapter and scans a local server
+  end to end.
+- **Rule logic that can be pure belongs in a sibling module with tests, not inline in `runScan()`.**
+  `supabase/functions/muster-scan/html.ts` is that module today: `stripTags`, `stripToBodyText` and
+  `detectClientRendered`, pinned by `tests/scan/html.test.ts`, alongside `email-auth.ts` and its own
+  tests. The client-rendered check lived inline until 2026-09-15 and shipped a defect nothing could
+  catch: it measured "visible text" that still included the `<title>` and the tail of any comment whose
+  prose contained a `>` (because `stripTags`'s `<[^>]*>` ends at that first `>`). A Vite SPA shell whose
+  real body was `<div id="root"></div>` measured 411 characters against the 200 threshold, so the engine
+  called it server-rendered and reported `PRIV-001` at **medium severity and medium confidence with no
+  caveat** on a page it had never read. That is the same class of failure as telling a client they are
+  covered when they are not, pointed the other way. Issues #93 and #94; engine `http-native-1.3.0`.
+  **`ENGINE_VERSION` moves whenever rule output changes**, because a finding's severity is only
+  comparable across scans on the same version. **Read the current value on `main` before picking the
+  next one, not the value your branch started from.** This change was written as `1.2.0` and had to
+  become `1.3.0` on merge: `SEC-014`/`SEC-015`/`EMAIL-008` (#103) took `1.2.0` while the branch was
+  open, and two long-lived branches each bumping the minor from the same base is the ordinary case,
+  not a freak one. Landing both as `1.2.0` would have put two materially different rule sets behind
+  one version string, which is precisely what the version exists to prevent -- and nothing would have
+  failed, because the string is only ever compared to itself.
 - **Security headers come from `middleware.js`, on every response.** `SECURITY_HEADERS` (CSP,
   X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) is applied through `secureRewrite()`
   and `secureNext()`; there is deliberately no bare `rewrite()` or `next()` left in the file, so a new

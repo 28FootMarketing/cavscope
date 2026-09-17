@@ -34,6 +34,12 @@ across a crawl or silently under-report it.
 
 `tools/code-book/` renders this whole catalog, scope column included, as a client-ready PDF.
 
+`tools/local-scan/` runs this same rule set from a terminal against any URL, with no database and
+no key — `npm run scan:local -- https://example.com`. It is an adapter over
+`supabase/functions/muster-scan/index.ts`, not a second copy of the rules, so the codes below are
+the codes it raises. It writes nothing and produces no SITREP; see
+[`tools/local-scan/README.md`](../tools/local-scan/README.md).
+
 ---
 
 ## Security — 13 rules
@@ -201,6 +207,21 @@ projects every *active* rule into the control register, and `sync_controls()` sc
 no findings by construction, so an active-but-unevaluated rule renders as a **met control** -- a
 report saying a site was checked for SRI and passed, when it was never checked. That is a fabricated
 assurance, which is the worst thing a compliance product can emit.
+
+Two things to know before reaching for that statement.
+
+**`1.2.0` was never deployed.** It was the version at #103, which added these three rules, but the
+engine on production is still `http-native-1.1.1` -- confirmed against `muster.scans`, where every
+one of the last 25 completed scans reports it. `1.2.0` was then superseded in the repo by `1.3.0`
+(issues #93 and #94), so the first deployed engine that carries SRI, CAA and MTA-STS will be
+`1.3.0`. "Or later" above is doing real work; do not read the literal `1.2.0` out of migration
+`20260916210100`'s header and wait for a version that will never be served.
+
+**The deploy is blocked, silently.** `.github/workflows/deploy-functions.yml` skips rather than
+fails when `SUPABASE_ACCESS_TOKEN` is unset, and that secret is unset -- its one run to date, on
+#103's merge, skipped both deploy steps and reported success. So nothing will announce that these
+rules are still parked. Set the secret, merge anything under `supabase/functions/`, then confirm
+the version on a fresh scan.
 
 Activation is one statement, after confirming the deployed engine version on a fresh scan:
 
