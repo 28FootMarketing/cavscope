@@ -1,0 +1,145 @@
+# Apply and verify the Supabase Auth configuration that cannot live in a migration.
+#
+# WHY THIS IS A WORKFLOW AND NOT A NOTE IN A README.
+#
+# Site URL on hjowfnzpomzxazmzywxw has to be https://app.muster.partners. It has
+# been wrong since the project was created, it was believed corrected on
+# 2026-09-13, and on 2026-09-15 a real magiclink again landed on
+# https://www.muster.partners/ with live access and refresh tokens sitting in the
+# URL fragment. The landing page now forwards such a fragment to the app host,
+# but that is a mitigation for the defect, not the fix -- and a mitigation that
+# hides a defect is how the defect survives.
+#
+# Auth config is not schema, so no migration can carry it, and it does not move
+# between Supabase projects: it is set per project, by hand, in a dashboard.
+# Anything set by hand and verified by memory drifts. So it is set here instead,
+# from the commit, with the value read back from the API afterwards and the job
+# failed if the readback disagrees. A green run is evidence; a note is not.
+#
+# This deliberately does NOT touch uri_allow_list. PATCH is partial, so sending
+# only site_url leaves the redirect allowlist alone -- and that list is load
+# bearing (/app, /reset and the onboarding landings all have to be on it, or
+# GoTrue silently substitutes Site URL and the link goes to the wrong place).
+# The run prints the allowlist so a human can eyeball it, and changes nothing.
+#
+# Run it: Actions -> auth-config -> Run workflow. Leave `apply` unchecked for a
+# read-only report of what is set today; check it to write the value.
+name: auth-config
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Site URL to set on the Supabase project'
+        type: string
+        default: 'https://app.muster.partners'
+      apply:
+        description: 'Write the value. Unchecked = report what is set today and change nothing.'
+        type: boolean
+        default: false
+
+concurrency:
+  group: auth-config
+  cancel-in-progress: false
+
+jobs:
+  auth-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: guard
+        name: Check the management token is configured
+        env:
+          PREFIXED: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN }}
+          PLAIN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$PREFIXED" ] || [ -n "$PLAIN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::error::No Supabase management token is visible to this repository. Nothing was read or written."
+            exit 1
+          fi
+
+      - name: Read, apply, verify
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          WANT: ${{ inputs.site_url }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+          echo "Project: $REF"
+
+          # Only ever print site_url and the allowlist. Never the response body,
+          # which carries provider secrets and SMTP credentials.
+          get_site() {
+            curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" | jq -r '.site_url // "(unset)"'
+          }
+          get_list() {
+            curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" | jq -r '.uri_allow_list // "(unset)"'
+          }
+
+          BEFORE=$(get_site)
+          ALLOW=$(get_list)
+          echo "site_url before : $BEFORE"
+          echo "uri_allow_list  : $ALLOW"
+
+          {
+            echo "### Supabase Auth config -- \`$REF\`"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| site_url before | \`$BEFORE\` |"
+            echo "| requested | \`$WANT\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$APPLY" != "true" ]; then
+            echo "::notice::Read-only run. site_url is '$BEFORE'. Nothing was written."
+            {
+              echo "| result | **read-only, nothing written** |"
+              echo ""
+              echo "Redirect allowlist, unchanged by this job:"
+              echo ""
+              echo "\`\`\`"
+              echo "$ALLOW"
+              echo "\`\`\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Partial update. Only site_url is sent, so every other auth setting --
+          # the redirect allowlist included -- is left exactly as it is.
+          curl -sS -f -X PATCH "$API" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$(jq -nc --arg u "$WANT" '{site_url:$u}')" > /dev/null
+
+          AFTER=$(get_site)
+          echo "site_url after  : $AFTER"
+
+          if [ "$AFTER" != "$WANT" ]; then
+            echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'. Site URL is NOT set."
+            {
+              echo "| site_url after | \`$AFTER\` |"
+              echo "| result | **FAILED -- readback disagrees, value not applied** |"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          AFTER_ALLOW=$(get_list)
+          {
+            echo "| site_url after | \`$AFTER\` |"
+            echo "| result | **applied and verified by readback** |"
+            echo ""
+            echo "Redirect allowlist, untouched by this job:"
+            echo ""
+            echo "\`\`\`"
+            echo "$AFTER_ALLOW"
+            echo "\`\`\`"
+            echo ""
+            echo "A magic link still has to be sent and followed to call this done end to end."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::site_url is now $AFTER, confirmed by readback."
