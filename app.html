@@ -5582,7 +5582,24 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.setSync(`Live · ${o.name} · ${o.plan} plan`);
         this.renderTopbar();
         this.renderLivePanels();
-        if (this.ws.is_super_admin) this.loadAdmin().catch(e => this.fail(e));
+        if (this.ws.is_super_admin) {
+          // A super admin signing in lands on platform administration, not on
+          // one tenant's overview. The magic link drops them at /app -- same
+          // origin, which is what keeps the session valid -- and #overview is
+          // what the markup marks active, so without this they arrive in a
+          // tenant workspace and have to go hunting for the crown.
+          //
+          // Done here rather than in signin.html on purpose. Routing by role at
+          // sign-in would mean an extra RPC before every redirect, for every
+          // user, to branch for the handful who are super admins. This method
+          // already has the answer in this.ws.is_super_admin.
+          //
+          // Safe against the flag system: `superadmin` is deliberately absent
+          // from navFlagMap, so unlike every gated view it can never be hidden
+          // underneath this redirect.
+          showView('superadmin');
+          this.loadAdmin().catch(e => this.fail(e));
+        }
       },
       // ---------- flags decide what the workspace shows ----------
       //
