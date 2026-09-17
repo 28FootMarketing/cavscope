@@ -99,14 +99,23 @@ is the same minus that step, for the two jobs where a user must not enter into i
 paths running as `service_role` with no user at all, and the console asking what org 17
 resolves to, where the answer must not change depending on which super admin is looking.
 
-Four flags are wired as of migration `20260916022923`, all defaulting on:
-`scheduled_scans` (the due-scan CTE in `muster.engine_claim`; `next_run_at` is not bumped
-for a gated website, so switching it back on resumes rather than having skipped windows),
+**As of 2026-09-17 there are 35 flags: 25 wired, 10 enforced nowhere.** Read that from
+`muster.feature_flags`, not from here -- this paragraph said "four are wired" until the count
+was checked, by which point it was 25, and the registry had grown from 22 keys to 35. The
+`enforcement` column is the answer; a number written in prose is a snapshot that rots.
+
+The four wired first, by migration `20260916022923`, are still the ones whose behaviour is worth
+knowing: `scheduled_scans` (the due-scan CTE in `muster.engine_claim`; `next_run_at` is not
+bumped for a gated website, so switching it back on resumes rather than having skipped windows),
 `email_alerts` (`muster_engine_claim_alerts` — the gate is on the **claim**, so off holds
 already-queued alerts as `pending` rather than dropping them), `support_impersonation` and
-`admin_url_scanner`. Ten remain unwired on purpose; each row carries a `wiring_note`
-saying why and what would wire it. `commercial_use_enabled` can never be wired — it is a
-licence term, not a code path, and must not be presented as a control.
+`admin_url_scanner`.
+
+Each of the ten unwired rows carries a `wiring_note` saying why and what would wire it.
+`commercial_use_enabled` can never be wired — it is a licence term, not a code path, and must
+not be presented as a control. **One of the ten is a commercial problem rather than a deferred
+feature:** `client_management_enabled` is sold on the Partner tier and its own note says the
+client-org creation path does not check it, so a lower tier gets it free.
 
 Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
 missing from the workspace payload leaves the nav item visible. These flags gate
@@ -490,7 +499,8 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   filter, so merging any edit to it deploys every function. Check what is currently undeployed
   first -- a function whose source has sat on main unreleased will ship the moment that merge
   lands. Before this, every function in the project was deployed by pasting its source through a chat
-  tool, which is fine at 7 KB and stops being fine at `muster-scan`'s 38 KB across three files: the
+  tool, which is fine at 7 KB and stops being fine at `muster-scan`'s **67 KB across four files** (it
+  was 38 KB across three when this was written, which is its own argument): the
   paste becomes the risk, and a silent transcription slip ships a broken scanner with no diff to
   review. Migrations are deliberately **not** in that workflow -- their files are named after the
   version `apply_migration` assigned, which a `db push` would not reproduce.
