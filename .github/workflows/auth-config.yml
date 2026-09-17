@@ -37,6 +37,14 @@ on:
         description: 'Write the value. Unchecked = report what is set today and change nothing.'
         type: boolean
         default: false
+      send_test_link:
+        description: 'Send a real magic link to test_email. Sent WITHOUT redirect_to, so Site URL is what is under test.'
+        type: boolean
+        default: false
+      test_email:
+        description: 'Address to send the test magic link to. Must already be a user; no account is created.'
+        type: string
+        default: ''
 
 concurrency:
   group: auth-config
@@ -143,3 +151,82 @@ jobs:
             echo "A magic link still has to be sent and followed to call this done end to end."
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::site_url is now $AFTER, confirmed by readback."
+
+      # Sending a link is a separate job from setting the field, deliberately.
+      # Setting Site URL and delivering a working link are different claims, and
+      # this repo has already conflated them once -- a note said the redirect was
+      # handled while real magiclinks kept landing on the marketing site.
+      - name: Report mail transport, then send a real magic link
+        if: inputs.send_test_link
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          TO: ${{ inputs.test_email }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TO" ]; then
+            echo "::error::send_test_link was checked but test_email is empty. Nothing was sent."
+            exit 1
+          fi
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+
+          # Whether custom SMTP is configured decides how to read a missing email.
+          # No custom SMTP means GoTrue's built-in sender, which is heavily rate
+          # limited and is not a delivery path to rely on -- an email that never
+          # arrives then says nothing about Site URL, which is what we are testing.
+          CFG=$(curl -sS -f -H "Authorization: Bearer $TOKEN" \
+                "https://api.supabase.com/v1/projects/$REF/config/auth")
+          SMTP_HOST=$(jq -r 'if (.smtp_host // "") == "" then "not configured" else "configured" end' <<<"$CFG")
+          SMTP_FROM=$(jq -r '.smtp_admin_email // "(none)"' <<<"$CFG")
+          SITE=$(jq -r '.site_url // "(unset)"' <<<"$CFG")
+          unset CFG   # carries smtp_pass and provider secrets; never echoed, never kept
+          echo "site_url    : $SITE"
+          echo "custom SMTP : $SMTP_HOST"
+          echo "sender      : $SMTP_FROM"
+
+          # The publishable key ships in page source by design, so it is read
+          # from the page rather than stored as a secret -- one source, no drift.
+          ANON=$(grep -oE 'sb_publishable_[A-Za-z0-9_-]+' signin.html | head -1)
+          if [ -z "$ANON" ]; then
+            echo "::error::Could not find the publishable key in signin.html."
+            exit 1
+          fi
+
+          # No redirect_to on purpose: GoTrue then falls back to Site URL, which
+          # is precisely the setting under test. Passing a redirect would test the
+          # parameter instead and prove nothing about the default.
+          # create_user:false so a typo cannot silently mint an account.
+          CODE=$(curl -sS -o /tmp/otp.json -w '%{http_code}' \
+            -X POST "https://$REF.supabase.co/auth/v1/otp" \
+            -H "apikey: $ANON" -H "Content-Type: application/json" \
+            --data "$(jq -nc --arg e "$TO" '{email:$e, create_user:false}')")
+          echo "POST /auth/v1/otp -> $CODE"
+
+          {
+            echo "### Magic link test"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| site_url in effect | \`$SITE\` |"
+            echo "| custom SMTP | **$SMTP_HOST** |"
+            echo "| sender | \`$SMTP_FROM\` |"
+            echo "| POST /auth/v1/otp | \`$CODE\` |"
+            echo "| redirect_to sent | **none, on purpose** -- the link should follow site_url |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$CODE" != "200" ]; then
+            echo "::error::GoTrue refused the request ($CODE). No link was sent."
+            jq -r '.msg // .error_description // .error // "no message"' /tmp/otp.json 2>/dev/null || true
+            echo "GoTrue rejected the request. No link was sent." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          {
+            echo "**A 200 means GoTrue accepted the request. It does not mean the email arrived.**"
+            echo "Check the inbox, then click the link and read the host it lands on:"
+            echo ""
+            echo "- lands on \`app.muster.partners\` -- Site URL is fixed and the flow works"
+            echo "- lands on \`www.muster.partners\` -- the setting did not take effect"
+            echo "- never arrives -- a mail transport problem, not a Site URL problem"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::GoTrue accepted the request ($CODE). Delivery is not confirmed by this; check the inbox."
