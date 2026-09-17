@@ -431,8 +431,34 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   table of who may call what is in `docs/BACKEND.md`. No workspace UI sets a config yet.
 - **Edge functions deploy from CI, not from a paste.** `.github/workflows/deploy-functions.yml`
   runs `supabase functions deploy` on merge to main for anything under `supabase/functions/`. It
-  skips with a notice, rather than failing, until the `SUPABASE_ACCESS_TOKEN` repository secret is
-  set. Before this, every function in the project was deployed by pasting its source through a chat
+  skips, rather than failing, until the **`MUSTER_SUPABASE_ACCESS_TOKEN`** repository secret is
+  set -- prefixed, because this account's secrets span several brands. The guard accepts the
+  unprefixed `SUPABASE_ACCESS_TOKEN` too and names which one it used, so a rename can no longer
+  produce a silent green skip. **As of 2026-09-17 neither name is visible to this repository**,
+  proven by dispatch rather than inferred: a probe printing only whether each candidate was
+  non-empty came back empty for both secret forms and both variable forms. A secret defined at the
+  organization level without this repo in its access list, scoped to an environment, or added on
+  the Dependabot or Codespaces tab arrives as an empty string with no error, which is
+  indistinguishable from never having been created. It must be on the **Actions** tab of **this**
+  repository. **And it is not a Supabase secret.** This stack has two stores called "secrets" on
+  opposite sides of the deploy: `supabase secrets set` writes env into the *deployed edge function
+  runtime*, GitHub Actions secrets are env for the *CI job*. The token is consumed by the job,
+  before any function exists to read it, so a copy in Supabase cannot reach it -- which is what the
+  2026-09-17 investigation turned out to be, after the name had already been corrected. A Supabase
+  access token also does not belong there on its own merits: it is a management-plane credential
+  that can deploy and modify the project, and storing it as a function secret hands it to all
+  twelve deployed functions, none of which need it. The original defect was narrower and worth remembering: the file read
+  `SUPABASE_ACCESS_TOKEN` while the secret carried the prefix, so the guard took the skip path on
+  all four runs, each reported success, and three rules sat inactive for three weeks behind a green
+  checkmark. Two things now stop a repeat: the skip writes a `::warning::` and a job summary saying **nothing was
+  deployed**, so it is as visible as a failure; and a configured token is **proven by a read**
+  (`supabase projects list`, asserting `config.toml`'s `project_id` is among them) before anything
+  is written, so a wrong-account or expired token fails with nothing half-deployed. Dispatch it
+  with `verify_only` to check the credential and deploy nothing.
+  **Editing this workflow is never a documentation-only change**: the file is in its own `paths`
+  filter, so merging any edit to it deploys every function. Check what is currently undeployed
+  first -- a function whose source has sat on main unreleased will ship the moment that merge
+  lands. Before this, every function in the project was deployed by pasting its source through a chat
   tool, which is fine at 7 KB and stops being fine at `muster-scan`'s 38 KB across three files: the
   paste becomes the risk, and a silent transcription slip ships a broken scanner with no diff to
   review. Migrations are deliberately **not** in that workflow -- their files are named after the
