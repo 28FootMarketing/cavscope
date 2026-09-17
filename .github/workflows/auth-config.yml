@@ -45,6 +45,11 @@ on:
         description: 'Address to send the test magic link to. Must already be a user; no account is created.'
         type: string
         default: ''
+      templates:
+        description: 'Auth email templates: report what is live, or apply the six files from the repo.'
+        type: choice
+        options: ['skip', 'report', 'apply']
+        default: 'skip'
 
 concurrency:
   group: auth-config
@@ -230,3 +235,109 @@ jobs:
             echo "- never arrives -- a mail transport problem, not a Site URL problem"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::GoTrue accepted the request ($CODE). Delivery is not confirmed by this; check the inbox."
+
+      # The six GoTrue templates. Until 2026-09-17 these were six files in the
+      # repo and six stock templates in production, with a README saying to
+      # paste them across. Nothing checked that anyone had, and nobody had -- so
+      # a paying customer's first contact with MUSTER was an unbranded "Confirm
+      # your signup" from a security vendor.
+      #
+      # Subjects and flow names live in manifest.json rather than being parsed
+      # out of the README's table, so the data a machine reads is the data a
+      # human edits.
+      - name: Auth email templates
+        if: inputs.templates != 'skip'
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          MODE: ${{ inputs.templates }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+          DIR=supabase/auth-email-templates
+
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/cfg.json
+
+          if [ "$MODE" = "report" ]; then
+            # Names come from the live API, not from a guess. Content is printed
+            # as a length only: these are not secrets, but a 5KB HTML dump per
+            # template makes the useful signal unreadable.
+            echo "### Auth email templates as they are live now" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| key | state |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+            jq -r 'to_entries
+                   | map(select(.key | startswith("mailer_")))
+                   | sort_by(.key)[]
+                   | "| `\(.key)` | " +
+                     (if (.value == null or .value == "") then "**empty (GoTrue stock)**"
+                      elif (.value | type) == "string" and (.value | length) > 60
+                        then "set, \(.value | length) chars"
+                      else "`\(.value | tostring)`" end) + " |"' /tmp/cfg.json \
+              >> "$GITHUB_STEP_SUMMARY"
+            jq -r 'to_entries | map(select(.key | startswith("mailer_"))) | sort_by(.key)[]
+                   | .key + " => " + (if (.value == null or .value == "") then "EMPTY"
+                     elif (.value|type)=="string" and (.value|length) > 60 then "set (" + (.value|length|tostring) + " chars)"
+                     else (.value|tostring) end)' /tmp/cfg.json
+            rm -f /tmp/cfg.json
+            echo "::notice::Report only. Nothing was written."
+            exit 0
+          fi
+
+          # --- apply ---
+          # Payload is built from the files, so the repo is the source of truth
+          # and a template edited only in the dashboard is overwritten, which is
+          # the intended direction.
+          jq -n --slurpfile m $DIR/manifest.json \
+            '$m[0] | map({ ("mailer_subjects_" + .flow): .subject }) | add' > /tmp/subjects.json
+          echo '{}' > /tmp/contents.json
+          while read -r flow file; do
+            jq -n --rawfile c "$DIR/$file" --arg k "mailer_templates_${flow}_content" \
+              '{($k): $c}' > /tmp/one.json
+            jq -s '.[0] * .[1]' /tmp/contents.json /tmp/one.json > /tmp/merged.json
+            mv /tmp/merged.json /tmp/contents.json
+          done < <(jq -r '.[] | "\(.flow) \(.file)"' $DIR/manifest.json)
+          jq -s '.[0] * .[1]' /tmp/subjects.json /tmp/contents.json > /tmp/payload.json
+          echo "Applying $(jq 'keys | length' /tmp/payload.json) fields"
+
+          curl -sS -f -X PATCH "$API" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            --data @/tmp/payload.json > /dev/null
+
+          # Readback per template, compared by sha256 of the content. A wrong
+          # field name PATCHes cleanly and changes nothing, so "the API returned
+          # 200" is not evidence here -- only the comparison is.
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/after.json
+          {
+            echo "### Auth email templates applied"
+            echo ""
+            echo "| flow | subject | content | verified |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          FAIL=0
+          while read -r flow file subject; do
+            # Both sides are normalised the same way before hashing. Command
+            # substitution strips trailing newlines from the readback, so hashing
+            # the file straight off disk compares a trailing newline against its
+            # absence and reports all six as mismatched -- which it did on the
+            # first run of this step. Normalise once, here, rather than relaxing
+            # the comparison: the point of the check is to catch a real
+            # difference, and a check loosened until it passes catches nothing.
+            WANT=$(cat "$DIR/$file")
+            GOT=$(jq -r --arg k "mailer_templates_${flow}_content" '.[$k] // ""' /tmp/after.json)
+            WANT_SHA=$(printf '%s' "$WANT" | sha256sum | cut -c1-12)
+            GOT_SHA=$(printf '%s' "$GOT" | sha256sum | cut -c1-12)
+            GOT_SUBJ=$(jq -r --arg k "mailer_subjects_${flow}" '.[$k] // ""' /tmp/after.json)
+            WANT_SUBJ=$(jq -r --arg f "$flow" '.[] | select(.flow==$f) | .subject' $DIR/manifest.json)
+            if [ "$WANT_SHA" = "$GOT_SHA" ] && [ "$WANT_SUBJ" = "$GOT_SUBJ" ]; then OK="yes"; else OK="**NO**"; FAIL=1; fi
+            echo "| \`$flow\` | \`$GOT_SUBJ\` | \`$GOT_SHA\` | $OK |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$flow: want ${#WANT} chars/$WANT_SHA, got ${#GOT} chars/$GOT_SHA, subject match=$([ "$WANT_SUBJ" = "$GOT_SUBJ" ] && echo yes || echo NO)"
+          done < <(jq -r '.[] | "\(.flow) \(.file) \(.subject)"' $DIR/manifest.json)
+
+          rm -f /tmp/cfg.json /tmp/after.json /tmp/payload.json /tmp/subjects.json /tmp/contents.json /tmp/one.json
+          if [ "$FAIL" = "1" ]; then
+            echo "::error::At least one template did not read back matching the repo. Not applied as intended."
+            exit 1
+          fi
+          echo "::notice::All six templates and subjects applied and verified by readback."

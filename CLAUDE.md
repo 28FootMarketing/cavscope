@@ -317,9 +317,15 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   The workflow deliberately leaves `uri_allow_list` alone (`PATCH` is partial). That list is
   correct and was verified byte-identical either side of the change: it carries
   `app.muster.partners/app`, `/reset` and `/**`, the `28footsystems` equivalents, and the
-  onboarding landings. Also outstanding: none of the six auth email
-  templates have been pasted from `supabase/auth-email-templates/` -- bodies and subjects are
-  still GoTrue stock.
+  onboarding landings. **The six auth email templates are applied and verified as of
+  2026-09-17**, by `.github/workflows/auth-config.yml` with `templates: apply` -- it PATCHes all
+  six subjects and bodies through the Management API, re-reads, and compares each body's sha256
+  against the repo file plus each subject exactly, failing the job on any disagreement. Run it
+  with `templates: report` for a read-only listing of what is live. They had sat in the repo
+  since 2026-09-08 while production served stock: `mailer_templates_custom_contents` reported all
+  six false, with bodies of 124 to 270 characters against roughly 4,700 in the files. Nothing
+  checked, so nobody knew. **`supabase/auth-email-templates/` is the source of truth and the
+  dashboard is a cache of it** -- an apply overwrites anything edited there, deliberately.
 - **Only the pages that complete a sign-in may consume an auth fragment.** `detectSessionInUrl`
   defaults to **true**, so a page that builds a Supabase client for any other reason will parse
   and consume the `#access_token=...` of any auth link that reaches it. Auth links are single
