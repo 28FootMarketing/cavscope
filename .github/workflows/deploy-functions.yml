@@ -21,6 +21,19 @@
 #      The unprefixed SUPABASE_ACCESS_TOKEN is also accepted, and the guard says
 #      which one it used.
 #
+#      NOT Supabase secrets. This stack has two stores called "secrets" and they
+#      are on opposite sides of the deploy. `supabase secrets set` writes
+#      environment variables into the DEPLOYED EDGE FUNCTION RUNTIME; GitHub
+#      Actions secrets are environment for the CI JOB. This token is consumed by
+#      the job, before any function exists to read it, so a copy in Supabase
+#      cannot reach it. That was the real cause of the 2026-09-17 investigation,
+#      after the secret name had already been corrected.
+#
+#      A Supabase access token also does not BELONG in Supabase secrets: it is a
+#      management-plane credential that can deploy and modify the project, and
+#      storing it there hands it as an env var to every deployed function, none
+#      of which need it. Remove it from there rather than leaving both copies.
+#
 # Until that secret exists the job is skipped, not failed: a missing secret must
 # not turn main red, and a red main is how the last outage went unnoticed for
 # five merges.

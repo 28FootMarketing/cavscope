@@ -440,7 +440,14 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   organization level without this repo in its access list, scoped to an environment, or added on
   the Dependabot or Codespaces tab arrives as an empty string with no error, which is
   indistinguishable from never having been created. It must be on the **Actions** tab of **this**
-  repository. The original defect was narrower and worth remembering: the file read
+  repository. **And it is not a Supabase secret.** This stack has two stores called "secrets" on
+  opposite sides of the deploy: `supabase secrets set` writes env into the *deployed edge function
+  runtime*, GitHub Actions secrets are env for the *CI job*. The token is consumed by the job,
+  before any function exists to read it, so a copy in Supabase cannot reach it -- which is what the
+  2026-09-17 investigation turned out to be, after the name had already been corrected. A Supabase
+  access token also does not belong there on its own merits: it is a management-plane credential
+  that can deploy and modify the project, and storing it as a function secret hands it to all
+  twelve deployed functions, none of which need it. The original defect was narrower and worth remembering: the file read
   `SUPABASE_ACCESS_TOKEN` while the secret carried the prefix, so the guard took the skip path on
   all four runs, each reported success, and three rules sat inactive for three weeks behind a green
   checkmark. Two things now stop a repeat: the skip writes a `::warning::` and a job summary saying **nothing was
