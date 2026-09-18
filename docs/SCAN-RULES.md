@@ -1,6 +1,6 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **49 rules, 48 active**, all
+Every defect code the engine can raise, by audit area. **49 rules, all active**, all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -147,7 +147,7 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `AVAIL-001` | **critical** | Site unreachable or returning an error | SOC 2 A1.2, NIST DE.CM-1 |
 | `AVAIL-002` | medium | Slow first response | NIST PR.DS-4 |
 | `AVAIL-003` | **critical** | Site could not be assessed: the scanner was refused | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
-| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP — *held inactive, see below* | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
+| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
 
 ## Accessibility — 7 rules
 
@@ -314,9 +314,18 @@ visitors cannot load the site, and it says outright that the scan produced no as
 stays **critical** for `AVAIL-003`'s reason: a lighter weight would score an unreadable site 99 and
 render it green.
 
-**Held inactive** by migration `20260917174318` until engine `http-native-1.6.0` is deployed and
-observed — the standing rule that a rule waits for its engine. The version in that header is a
-floor, not an equality.
+Held inactive by migration `20260917174318`, **activated by `20260918053307`** once the engine was
+observed — the standing rule that a rule waits for its engine. Two numbers from scan 63 are the
+proof, and only one of them is load-bearing: `engine_version: http-native-1.6.0` proves nothing on
+its own, because the string is only ever compared to itself. `skipped_inactive: 1` is the evidence —
+the deployed engine emitted an `AVAIL-004` finding and `engine_ingest` refused it, which cannot
+happen unless the deployed code carries the rule. The version in the header is a floor, not an
+equality.
+
+That scan also shows why the score is not the story. With the false `AVAIL-001` resolved and
+`AVAIL-004` still held, `hpsd.k12.pa.us` scored **78 amber** — its best number of the day, on a scan
+that read no markup, headers or cookies. Activation put it back to **53 red**. The number is
+identical to what the bug produced; what changed is that it is now true.
 
 ### Held for the engine deploy, activated 2026-09-17
 

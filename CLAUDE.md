@@ -463,7 +463,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   about a page the engine never read. It has now happened twice on real prospect scans, six hours
   apart, through two different doors. `AVAIL-003` (migration `20260917071020`) took the first --
   a homepage answering **401, 403 or 429**, which means the server answered and declined us,
-  usually a WAF or bot filter. `AVAIL-004` (`20260917174318`, engine `http-native-1.6.0`) takes
+  usually a WAF or bot filter. `AVAIL-004` (`20260917174318`, activated by `20260918053307`, engine `http-native-1.6.0`) takes
   the second -- a response that **arrives and fails HTTP parsing**, which `hpsd.k12.pa.us` did
   with `invalid HTTP header parsed` while serving 200 to a lenient client and to this engine's own
   plain-HTTP probe *inside the same scan*, so the report called the site unreachable and described
@@ -479,6 +479,15 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   raises those errors *after* response bytes arrive, while DNS, connect and TLS failures produce
   different messages -- so a match is evidence a server answered, not a guess; a marker naming a
   connect or TLS phase would break the premise, and a test asserts none does.
+  **The activation is also the first time this project's CI actually deployed anything.** Every
+  earlier run took the skip path; the `deploy-functions` run on #120 ran its token-proving read and
+  spent 37 seconds in `supabase functions deploy`, and scan 63 came back on `http-native-1.6.0` with
+  `skipped_inactive: 1` -- the engine emitting a held rule and ingest refusing it, which is the only
+  one of those two numbers that proves anything. Scan 63 is also the cleanest illustration of why
+  posture is not the product: with the false `AVAIL-001` resolved and `AVAIL-004` still held,
+  `hpsd.k12.pa.us` scored **78 amber**, its best number of the day, on a scan that read no markup,
+  headers or cookies at all. Activation put it back to 53 red. Same number the bug produced, and now
+  it is true.
   And **one test owns the `ENGINE_VERSION` equality pin** -- the newest rule's, today
   `tests/scan/availability.test.ts`. `tests/scan/avail-refused.test.ts` was pinning the exact value
   too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
