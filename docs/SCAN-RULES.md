@@ -1,6 +1,6 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **48 rules, all active**, all
+Every defect code the engine can raise, by audit area. **49 rules, 48 active**, all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -140,13 +140,14 @@ nothing for it to govern, so demanding a policy would be inventing a defect. The
 `dns_mx` and `_mta-sts` lookups as evidence either way, because in a report a rule that passed and a
 rule that never ran look identical, and only the evidence rows tell them apart.
 
-## Availability — 3 rules
+## Availability — 4 rules
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
 | `AVAIL-001` | **critical** | Site unreachable or returning an error | SOC 2 A1.2, NIST DE.CM-1 |
 | `AVAIL-002` | medium | Slow first response | NIST PR.DS-4 |
 | `AVAIL-003` | **critical** | Site could not be assessed: the scanner was refused | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
+| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP — *held inactive, see below* | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
 
 ## Accessibility — 7 rules
 
@@ -231,7 +232,7 @@ keyboard traps and live ARIA state are **not** assessed today.
 
 | Severity | Count | Codes |
 |---|---|---|
-| critical | 3 | `AVAIL-001`, `AVAIL-003`, `SEC-013` |
+| critical | 4 | `AVAIL-001`, `AVAIL-003`, `AVAIL-004`, `SEC-013` |
 | high | 8 | `ai-admt-policy-silent`, `EMAIL-001`–`004`, `EMAIL-007`, `SEC-001`, `SEC-010` |
 | medium | 17 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `ai-chatbot-present-undisclosed`, `ai-vendor-undisclosed`, `AVAIL-002`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011`, `SEC-014` |
 | low | 14 | `A11Y-005`, `ai-generated-content-undisclosed`, `EMAIL-006`, `EMAIL-008`, `GOV-001`, `GOV-002`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012`, `SEC-015` |
@@ -282,6 +283,40 @@ everyone, so the remediation answers both readings.
 
 DNS-derived rules are unaffected by a refusal and still run: SPF, DMARC, CAA and MTA-STS do not
 depend on the web server.
+
+### AVAIL-004: unparseable is not unreachable either
+
+A response that **arrives and fails HTTP parsing** raises `AVAIL-004`, not `AVAIL-001`. The server
+answered; our client refused what it sent and abandoned the request with no status, headers or body.
+
+Found the same day `AVAIL-003` shipped, on the same kind of scan. `hpsd.k12.pa.us` came back as
+
+```
+client error (SendRequest): invalid HTTP header parsed
+```
+
+and was reported as a critical outage — while the site served HTTP 200 with an 83 KB body to a
+lenient client in the same minute, and while the engine's own plain-HTTP probe got 200 from that
+host **inside the same scan** and raised `SEC-001` about its redirect behaviour. The report said
+the site was down and described its redirects in the same breath. Reproduced byte-identically on
+rescan, so it is a property of the origin's response rather than a blip.
+
+The classification is not a guess. `hyper` raises these errors only after response bytes have
+begun arriving; DNS, connect and TLS failures produce different messages because they happen
+before any response exists. So a match is positive evidence that a server answered. The marker
+list in `supabase/functions/muster-scan/availability.ts` is deliberately tight and anything
+unrecognised stays on `AVAIL-001` — misclassifying in that direction would hide a real outage,
+which is worse than the defect this fixes.
+
+What the finding claims is narrow: bytes arrived and failed parsing, and other strict parsers —
+monitors, proxies, integrations, other scanners — will fail the same way. It does **not** claim
+visitors cannot load the site, and it says outright that the scan produced no assessment. Severity
+stays **critical** for `AVAIL-003`'s reason: a lighter weight would score an unreadable site 99 and
+render it green.
+
+**Held inactive** by migration `20260917174318` until engine `http-native-1.6.0` is deployed and
+observed — the standing rule that a rule waits for its engine. The version in that header is a
+floor, not an equality.
 
 ### Held for the engine deploy, activated 2026-09-17
 

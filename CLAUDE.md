@@ -456,6 +456,34 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   row was the proof** -- `dns_spf_chain` is written whenever the walk executes, pass or fail. When a
   rule's silence is a legitimate result, look for an artefact the engine writes unconditionally,
   not for a counter that only moves when the rule fires.
+- **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
+  *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
+  with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,
+  every clause of that is false, and it is the worst thing this product can do: a confident claim
+  about a page the engine never read. It has now happened twice on real prospect scans, six hours
+  apart, through two different doors. `AVAIL-003` (migration `20260917071020`) took the first --
+  a homepage answering **401, 403 or 429**, which means the server answered and declined us,
+  usually a WAF or bot filter. `AVAIL-004` (`20260917174318`, engine `http-native-1.6.0`) takes
+  the second -- a response that **arrives and fails HTTP parsing**, which `hpsd.k12.pa.us` did
+  with `invalid HTTP header parsed` while serving 200 to a lenient client and to this engine's own
+  plain-HTTP probe *inside the same scan*, so the report called the site unreachable and described
+  its redirects in the same breath.
+  Three things generalise. **Both keep `critical` severity** -- weights are critical 25, high 10,
+  medium 4, low 1, from 100, green at 85, so filing an unreadable scan as low scores it 99 and
+  renders it GREEN, which is absence-of-findings-as-a-pass, the thing migration 062 exists to
+  prevent. What changed is the claim, not the weight, and each finding says outright that the scan
+  is an unassessed target rather than a clean one. **The classifier only ever errs toward
+  `AVAIL-001`**: `responseRejectedByClient` in `supabase/functions/muster-scan/availability.ts`
+  matches a tight list of parse-phase errors and anything unrecognised stays an outage, because
+  hiding a real outage is worse than the defect being fixed. That list is only sound because hyper
+  raises those errors *after* response bytes arrive, while DNS, connect and TLS failures produce
+  different messages -- so a match is evidence a server answered, not a guess; a marker naming a
+  connect or TLS phase would break the premise, and a test asserts none does.
+  And **one test owns the `ENGINE_VERSION` equality pin** -- the newest rule's, today
+  `tests/scan/availability.test.ts`. `tests/scan/avail-refused.test.ts` was pinning the exact value
+  too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
+  line. If every rule's test pinned the value, one bump would edit all of them and the pressure
+  would be to loosen the check rather than move it.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent

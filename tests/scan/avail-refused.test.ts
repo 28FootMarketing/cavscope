@@ -66,12 +66,20 @@ test("the finding states it is not an assessment, and does not diagnose", () => 
   assert.doesNotMatch(block, /Visitors cannot load/);
 });
 
-test("the engine version moved, because rule output changed", () => {
-  // Pinned on purpose. ENGINE_VERSION is only ever compared to itself, so
-  // nothing fails when it does not move -- this test is the thing that fails.
-  // 1.5.0 adds EMAIL-009; AVAIL-003's own line is asserted below so the
-  // changelog cannot lose an entry as versions accumulate.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.5\.0";/);
+test("the engine version is past the one this rule shipped in", () => {
+  // A floor, not an equality. ENGINE_VERSION is only ever compared to itself,
+  // so nothing in the product fails when it does not move -- a test has to be
+  // the thing that fails. But the newest rule's test owns that equality pin
+  // (today tests/scan/availability.test.ts, on 1.6.0); if every rule's test
+  // pinned the exact value too, one bump would edit all of them and the
+  // pressure would be to loosen the check rather than update it.
+  //
+  // So each rule pins only what its own change established: that the minor had
+  // moved past where it started, and that its changelog line is still there.
+  const m = engine.match(/const ENGINE_VERSION = "http-native-(\d+)\.(\d+)\.(\d+)";/);
+  assert.ok(m, "ENGINE_VERSION is not in the expected http-native-x.y.z form");
+  const [major, minor] = [Number(m[1]), Number(m[2])];
+  assert.ok(major > 1 || (major === 1 && minor >= 4), `AVAIL-003 shipped in 1.4.0; found ${m[0]}`);
   assert.match(engine, /1\.4\.0 adds AVAIL-003/);
   assert.match(engine, /1\.5\.0 adds EMAIL-009/);
 });
