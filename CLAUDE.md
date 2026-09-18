@@ -493,6 +493,44 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
   line. If every rule's test pinned the value, one bump would edit all of them and the pressure
   would be to loosen the check rather than move it.
+- **The SITREP is a document, and it is judged as one.** `muster.generate_sitrep`
+  (latest definition wins; migrations are append-only, so find it by scanning rather
+  than by filename -- `tests/sitrep/report-contract.test.ts` does exactly that).
+  Four defects were found on 2026-09-18 by reading the report as a borough manager
+  would rather than as a function that returns a row, and all four are the same
+  family as the rest of this file.
+  **It stated a count it did not render.** The finding loop carried `limit 12` from
+  migration `013`, so SITREP 55 said "14 open findings: ... 3 informational" and
+  rendered 12 with one informational; `GOV-003` and `GOV-004` were absent and nothing
+  said so. Nothing could catch it, because the count and the list came from different
+  queries and were never compared. The cap is now `c_max_findings` at 50 and the
+  report says "Showing N of M"; when the cap binds, a claim names what it is not
+  showing. Trimming is fine. Trimming silently is the defect.
+  **Its header collapsed once the file travelled.** Organization / Target / Scan were
+  three lines joined by single newlines, which every CommonMark renderer folds into
+  one paragraph. Nothing in the product exposed it -- `admin.html` wraps `content_md`
+  in a `<pre>` and `sitrep.html` never reads `content_md` at all -- so it only bit
+  when the `.md` left the building, which is the only thing a `.md` is for. When a
+  format is only rendered by your own `<pre>`, you are not testing the format.
+  **The markdown and the viewer were different documents.** `sitrep.html` renders four
+  sections; the markdown rendered three, omitting Top Findings. This file justifies
+  the console's verbatim `<pre>` on the grounds that it "cannot disagree with what the
+  tenant reads at /sitrep" -- it did, and in the worse direction: the console reader
+  saw less. Both render findings now. **If you add a section to one, add it to both.**
+  **And it never stated its own scope.** `docs/SCAN-RULES.md` has always been careful
+  that a framework mapping is a citation and not a test, and that the engine has no
+  browser and no authenticated crawl -- while the one document a customer actually
+  reads said none of it. `## What This Scan Did Not Check` now ships in every report,
+  including the line that a clean result is evidence these checks passed on a date and
+  not a statement that the site is secure. For a product whose whole case is not
+  overclaiming, having the scope boundary anywhere except the deliverable was the
+  largest gap in it.
+  **Still unrendered, deliberately:** `muster.q_sitrep_jurisdiction` runs on every
+  generation and its output is stored in `sections.jurisdiction` -- 13 laws for
+  website 11, 6 needing attention, scoped to US-PA, carrying its own counsel
+  disclaimer -- and **nothing renders it**, not the markdown and not the viewer. That
+  is the most sellable content in the payload sitting dark. It is a product decision
+  rather than a rendering bug, so it was left alone rather than shipped unasked.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
