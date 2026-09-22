@@ -1,4 +1,4 @@
-"""Render muster.sitreps row 16 as a PDF.
+"""Render one muster.sitreps row (exported by export.sql) as a PDF.
 
 Faithful rendering only: every number, claim, finding and hash comes from the
 stored SITREP. Nothing is composed here that the engine did not produce.
@@ -169,10 +169,20 @@ A(t)
 A(Spacer(1, 14))
 
 # ---------------------------------------------------------------- open findings
+# The intro is derived from the findings, not written for one report: it once
+# read "Both are informational" and printed that above fourteen findings.
+open_sevs = [f["severity"] for f in D["top_findings"]]
+if open_sevs and all(s == "info" for s in open_sevs):
+    open_note = ("All are informational. MUSTER reports inventory and policy positions at this level: "
+                 "they describe a state of affairs, not a defect to remediate.")
+elif open_sevs:
+    open_note = ("Most severe first. Informational items describe a state of affairs rather than a defect; "
+                 "a finding marked low confidence should be confirmed before it is acted on.")
+else:
+    open_note = "No findings are open on this scan."
 open_intro = [
     Paragraph(f'Open findings ({len(D["top_findings"])})', S["h2"]),
-    Paragraph("Both are informational. MUSTER reports inventory and policy positions at this level: "
-              "they describe a state of affairs, not a defect to remediate.", S["bodydim"]),
+    Paragraph(open_note, S["bodydim"]),
     Spacer(1, 7),
 ]
 pending_intro = True
@@ -223,34 +233,36 @@ for p in D["plain_english"]:
 A(Spacer(1, 10))
 
 # ---------------------------------------------------------------- remediation record
-A(Paragraph(f'Resolved this cycle ({len(D["resolved"])})', S["h2"]))
-A(Paragraph("Each of these was open on an earlier scan of this site and is no longer reported. "
-            "Resolution is decided by the engine on a later scan, not asserted by hand.", S["bodydim"]))
-A(Spacer(1, 7))
+# A first scan has resolved nothing, and an empty table reads as a rendering fault.
+if D["resolved"]:
+    A(Paragraph(f'Resolved this cycle ({len(D["resolved"])})', S["h2"]))
+    A(Paragraph("Each of these was open on an earlier scan of this site and is no longer reported. "
+                "Resolution is decided by the engine on a later scan, not asserted by hand.", S["bodydim"]))
+    A(Spacer(1, 7))
 
-rows = [[Paragraph("CODE", S["cellhead"]), Paragraph("SEV", S["cellhead"]),
-         Paragraph("FINDING", S["cellhead"]), Paragraph("WHERE", S["cellhead"]),
-         Paragraph("SCANS", S["cellhead"]), Paragraph("MAPS TO", S["cellhead"])]]
-for r in D["resolved"]:
-    rows.append([
-        Paragraph(f'<font face="Courier-Bold" size="7.6">{r["rule_id"]}</font>', S["cell"]),
-        Paragraph('<font color="%s" size="7.6"><b>%s</b></font>' % (sevhex(r["severity"]), r["severity"].upper()), S["cell"]),
-        Paragraph(esc(r["title"]), S["cell"]),
-        Paragraph(f'<font face="Courier" size="7">{esc(r["location"])}</font>', S["cell"]),
-        Paragraph(f'<font size="7.6">{r["first_seen_scan_id"]}&#8211;{r["last_seen_scan_id"]}</font>', S["cell"]),
-        Paragraph('<font size="7">%s</font>' % esc(frameworks(r["framework_refs"])), S["cell"]),
-    ])
-t = Table(rows, colWidths=[20*mm, 17*mm, 40*mm, 25*mm, 15*mm, 41*mm], repeatRows=1)
-t.setStyle(TableStyle([
-    ("BACKGROUND", (0,0), (-1,0), INK),
-    ("VALIGN", (0,0), (-1,-1), "TOP"),
-    ("LINEBELOW", (0,0), (-1,-1), 0.4, RULE),
-    ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f7f9fc")]),
-    ("TOPPADDING", (0,0), (-1,-1), 4.5), ("BOTTOMPADDING", (0,0), (-1,-1), 4.5),
-    ("LEFTPADDING", (0,0), (-1,-1), 5), ("RIGHTPADDING", (0,0), (-1,-1), 5),
-]))
-A(t)
-A(Spacer(1, 14))
+    rows = [[Paragraph("CODE", S["cellhead"]), Paragraph("SEV", S["cellhead"]),
+             Paragraph("FINDING", S["cellhead"]), Paragraph("WHERE", S["cellhead"]),
+             Paragraph("SCANS", S["cellhead"]), Paragraph("MAPS TO", S["cellhead"])]]
+    for r in D["resolved"]:
+        rows.append([
+            Paragraph(f'<font face="Courier-Bold" size="7.6">{r["rule_id"]}</font>', S["cell"]),
+            Paragraph('<font color="%s" size="7.6"><b>%s</b></font>' % (sevhex(r["severity"]), r["severity"].upper()), S["cell"]),
+            Paragraph(esc(r["title"]), S["cell"]),
+            Paragraph(f'<font face="Courier" size="7">{esc(r["location"])}</font>', S["cell"]),
+            Paragraph(f'<font size="7.6">{r["first_seen_scan_id"]}&#8211;{r["last_seen_scan_id"]}</font>', S["cell"]),
+            Paragraph('<font size="7">%s</font>' % esc(frameworks(r["framework_refs"])), S["cell"]),
+        ])
+    t = Table(rows, colWidths=[20*mm, 17*mm, 40*mm, 25*mm, 15*mm, 41*mm], repeatRows=1)
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), INK),
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+        ("LINEBELOW", (0,0), (-1,-1), 0.4, RULE),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f7f9fc")]),
+        ("TOPPADDING", (0,0), (-1,-1), 4.5), ("BOTTOMPADDING", (0,0), (-1,-1), 4.5),
+        ("LEFTPADDING", (0,0), (-1,-1), 5), ("RIGHTPADDING", (0,0), (-1,-1), 5),
+    ]))
+    A(t)
+    A(Spacer(1, 14))
 
 # ---------------------------------------------------------------- trend
 A(Paragraph("Posture over this engagement", S["h2"]))
@@ -313,7 +325,8 @@ A(Spacer(1, 4))
 A(Paragraph(
     "This assessment is HTTP-native and DNS-native: response headers, parsed HTML, "
     "<font face='Courier' size='8'>robots.txt</font>, the sitemap, "
-    "<font face='Courier' size='8'>/.well-known/security.txt</font>, and public SPF, DMARC and MX records. "
+    "<font face='Courier' size='8'>/.well-known/security.txt</font>, and public SPF, DMARC, MX, CAA and "
+    "MTA-STS records. "
     "It renders no JavaScript and runs no browser, so contrast ratios, focus order, keyboard traps and live "
     "ARIA state are <b>not</b> assessed. It is unauthenticated and covers the homepage only. "
     "TLS certificate chain and cipher suite are not inspected. DKIM is not checked, because a DKIM selector "
