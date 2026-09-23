@@ -179,6 +179,22 @@
 
     .overflow-x { overflow-x: auto; }
 
+    .scope-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; color: var(--text-muted); font-size: 13.5px; }
+    .law-lede { color: var(--text-muted); font-size: 13.5px; max-width: 72ch; margin: 0 0 6px; }
+    .law-disclaimer { color: var(--text); font-size: 13.5px; font-weight: 600; margin: 0 0 10px; }
+    .law-group { margin-top: 22px; }
+    .law-group h3 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 8px; }
+    .law-group-note { color: var(--text-dim); font-size: 12.5px; margin: 0 0 10px; max-width: 72ch; }
+    .law { padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+    .law:last-child { border-bottom: none; }
+    .law-name { color: var(--text); font-weight: 600; font-size: 14px; }
+    .law-where { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); margin-left: 6px; }
+    .law-summary { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+    .law-meta { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+    .law-open { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--text-muted); }
+    .law-open li { margin-top: 3px; }
+    .law a { color: var(--teal); }
+
     .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
     .empty-state h2 { font-family: var(--font-serif); color: var(--text); margin-bottom: 8px; }
 
@@ -404,6 +420,7 @@
     const plain = (s.plain_english || {}).items || [];
     const findings = s.top_findings || [];
     const evidence = s.evidence_index || [];
+    const scope = (s.scope_note || {}).items || [];
     const score = sitrep.posture_score;
     const band = sitrep.posture_band;
     const color = bandColor(band);
@@ -439,6 +456,14 @@
         </div>
       </section>
 
+      ${scope.length ? `
+      <section class="block">
+        <h2 data-tooltip="The limits of this scan, stated up front: what it cannot see, so a clean result is not read as more than it is.">What This Scan Did Not Check</h2>
+        <ul class="scope-list">
+          ${scope.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
+        </ul>
+      </section>` : ''}
+
       ${plain.length ? `
       <section class="block">
         <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h2>
@@ -465,6 +490,8 @@
         </div>
       </section>` : ''}
 
+      ${renderJurisdiction(s.jurisdiction)}
+
       ${evidence.length ? `
       <section class="block">
         <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites.">Evidence Index</h2>
@@ -490,6 +517,82 @@
       </footer>
     `;
   }
+
+  // Laws and Standards. Mirrors muster.sitrep_jurisdiction_md (migration 082) and
+  // reads the same stored `assessment` on each law, so the viewer and the markdown
+  // cannot bucket a law differently. It never derives a verdict from `status`
+  // itself: `clear` on a law with no mapped check means "never looked", and only
+  // the SQL side decides that.
+  function renderJurisdiction(j) {
+    if (!j) return '';
+    const head = '<h2 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice.">Laws and Standards</h2>';
+    if (j.available === false) {
+      return `<section class="block">${head}<p class="law-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
+    }
+    const laws = Array.isArray(j.laws) ? j.laws : [];
+    if (!laws.length) {
+      return `<section class="block">${head}<p class="law-lede">No laws are recorded for this location.</p></section>`;
+    }
+    // Reports generated before migration 082 carry the raw payload with no
+    // assessment. Guessing one here is exactly the defect 082 fixed, so say so.
+    if (laws.some(l => !l.assessment)) {
+      return `<section class="block">${head}<p class="law-lede">This report was generated before laws were assessed against its checks. The report from the next scan of this site lists them.</p></section>`;
+    }
+    const names = {};
+    (j.jurisdictions || []).forEach(x => { names[x.code] = x.name; });
+    const place = (j.jurisdictions || []).filter(x => x.kind === 'region' || x.kind === 'country')
+      .sort((a, b) => (a.kind === 'region' ? 0 : 1) - (b.kind === 'region' ? 0 : 1)).map(x => x.name).join(', ');
+    const where = l => escapeHtml(names[l.jurisdiction_code] || l.jurisdiction_code || '');
+    const safeLink = url => /^https:\/\//i.test(url || '')
+      ? ` · <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The official text or guidance this entry is summarized from. Opens in a new tab.">Reference</a>` : '';
+    const applies = l => `<span data-tooltip="Whether this applies depends on facts the scan cannot see. Confirm with counsel.">Applies when:</span> ${escapeHtml(l.applies_when || 'not stated')}`;
+    const byName = (a, b) => String(a.short_name || '').localeCompare(String(b.short_name || ''));
+
+    const open = laws.filter(l => l.assessment === 'open_findings')
+      .sort((a, b) => ((b.status === 'exposed') - (a.status === 'exposed')) || byName(a, b));
+    const none = laws.filter(l => l.assessment === 'no_open_findings').sort(byName);
+    const na = laws.filter(l => l.assessment === 'not_assessed').sort(byName);
+
+    const openHtml = open.length ? `
+      <div class="law-group">
+        <h3 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached.">Open findings touch these (${open.length})</h3>
+        ${open.map(l => `<div class="law">
+          <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
+          <div class="law-summary">${escapeHtml(l.summary || '')}</div>
+          <div class="law-meta">${applies(l)}${safeLink(l.reference_url)}</div>
+          <ul class="law-open">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span> <span class="cite" data-tooltip="The open finding this entry is cited to.">[F${escapeHtml(String(f.finding_id))}]</span></li>`).join('')}</ul>
+        </div>`).join('')}
+      </div>` : '';
+
+    const noneHtml = none.length ? `
+      <div class="law-group">
+        <h3 data-tooltip="Every check MUSTER maps to these passed on this date. That is evidence about those checks, not a determination of compliance.">No open findings on the mapped checks (${none.length})</h3>
+        <p class="law-group-note">The checks MUSTER maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>
+        ${none.map(l => `<div class="law">
+          <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
+          <div class="law-meta"><span data-tooltip="The MUSTER checks mapped to this entry.">Checks:</span> <span class="mono-cell">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}</div>
+        </div>`).join('')}
+      </div>` : '';
+
+    const naHtml = na.length ? `
+      <div class="law-group">
+        <h3 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do.">Not assessed by this scan (${na.length})</h3>
+        <p class="law-group-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so laws whose checks depend on it are listed here rather than as passed.' : ''}</p>
+        ${na.map(l => `<div class="law">
+          <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
+          <div class="law-meta">${l.not_assessed_reason === 'no_mapped_check' ? 'No MUSTER check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}</div>
+        </div>`).join('')}
+      </div>` : '';
+
+    return `
+      <section class="block">
+        ${head}
+        <p class="law-disclaimer" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one.">${escapeHtml(j.disclaimer || 'Informational only. This is not legal advice. Confirm applicability with counsel.')}</p>
+        <p class="law-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}. These are laws and standards commonly relevant to an organization in this location. Whether each one applies depends on facts this scan cannot see, such as who the site serves and what it collects, so each is shown with the condition under which it applies. A finding listed against a law means a check mapped to it is open. It is not a finding that the law was breached.</p>
+        ${openHtml}${noneHtml}${naHtml}
+      </section>`;
+  }
+  // end renderJurisdiction
 
   function citeBadge(claim) {
     const fs = (claim.finding_ids || []).map(id => `F${id}`);
