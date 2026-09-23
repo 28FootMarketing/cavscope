@@ -70,7 +70,7 @@ test("the engine version is past the one this rule shipped in", () => {
   // A floor, not an equality. ENGINE_VERSION is only ever compared to itself,
   // so nothing in the product fails when it does not move -- a test has to be
   // the thing that fails. But the newest rule's test owns that equality pin
-  // (today tests/scan/availability.test.ts, on 1.6.0); if every rule's test
+  // (today tests/scan/aio.test.ts, on 1.8.0); if every rule's test
   // pinned the exact value too, one bump would edit all of them and the
   // pressure would be to loosen the check rather than update it.
   //

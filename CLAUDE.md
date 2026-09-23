@@ -494,6 +494,20 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   row was the proof** -- `dns_spf_chain` is written whenever the walk executes, pass or fail. When a
   rule's silence is a legitimate result, look for an artefact the engine writes unconditionally,
   not for a counter that only moves when the rule fires.
+- **The AIO / GEO audit view is wired to the engine, as of 2026-09-23.** Before that, "Run AIO
+  Audit" printed a scripted terminal ("llms.txt -> HTTP 404", "Schema.org Organization found",
+  "empty `<div id=root>` shell") for **every domain, signed in or not**, the live index was the
+  site's security posture relabelled, and the llms.txt and structured-data pillars had no rule
+  behind them. Now a live workspace's button calls `muster_request_scan` on its registered website,
+  polls to a terminal status, and reports each check; the sample walkthrough labels every scripted
+  line `[SAMPLE]`. The pillars are nine checks over nine rules, three of them new (`GOV-006`
+  llms.txt, `GOV-007` JSON-LD, `GOV-008` client-rendered homepage; engine `http-native-1.8.0`,
+  added inactive by `20260923042421`). **A check with no finding is a pass only if its rule could
+  have fired**: active per `public.muster_rule_status` (`20260923042540`), a scan on an engine at or
+  past the rule's floor, and a homepage the engine actually read. Otherwise it is "not assessed" and
+  excluded from the index -- the same absence-of-findings-is-not-a-pass rule as everywhere else.
+  Citability is never scored; no provider publishes how it picks citations. Pinned by
+  `tests/ui/aio-view.test.ts` and `tests/scan/aio.test.ts`; table in `docs/SCAN-RULES.md`.
 - **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
   *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
   with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,
@@ -527,7 +541,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   headers or cookies at all. Activation put it back to 53 red. Same number the bug produced, and now
   it is true.
   And **one test owns the `ENGINE_VERSION` equality pin** -- the newest rule's, today
-  `tests/scan/login.test.ts` (it was `availability.test.ts` until AUTH-* took `1.7.0`). `tests/scan/avail-refused.test.ts` was pinning the exact value
+  `tests/scan/aio.test.ts` (it was `login.test.ts` from `1.7.0`, and `availability.test.ts` before that). `tests/scan/avail-refused.test.ts` was pinning the exact value
   too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
   line. If every rule's test pinned the value, one bump would edit all of them and the pressure
   would be to loosen the check rather than move it.

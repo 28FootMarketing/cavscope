@@ -8,8 +8,8 @@
 // if the client ran it, or scoring a homepage login form twice. Most of what
 // follows guards that direction.
 //
-// This file also owns the ENGINE_VERSION equality pin (CLAUDE.md: the newest
-// rule's test owns it); availability.test.ts now asserts a floor.
+// The ENGINE_VERSION equality pin moved to tests/scan/aio.test.ts with 1.8.0
+// (CLAUDE.md: the newest rule's test owns it); this file asserts a floor.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -314,9 +314,12 @@ test("the engine's login section only follows chains, which are GET", () => {
   assert.match(section, /key: "login_discovery", kind: "http_probe"/);
 });
 
-test("the engine version moved with the rule set", () => {
-  // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.7\.1";/);
+test("the engine version is past the one AUTH-* shipped in", () => {
+  // A floor, not an equality: the pin belongs to the newest rule's test.
+  const m = engine.match(/const ENGINE_VERSION = "http-native-(\d+)\.(\d+)\.(\d+)";/);
+  assert.ok(m, "ENGINE_VERSION is not in the expected http-native-x.y.z form");
+  const [major, minor] = [Number(m[1]), Number(m[2])];
+  assert.ok(major > 1 || (major === 1 && minor >= 7), `AUTH-* shipped in 1.7.0; found ${m[0]}`);
   assert.match(engine, /1\.7\.0 adds AUTH-001\.\.005/);
   assert.match(engine, /1\.7\.1 stops AUTH-003 reporting wordpress_test_cookie/);
 });

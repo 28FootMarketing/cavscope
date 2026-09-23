@@ -6,6 +6,7 @@ import {
 } from "./email-auth.ts";
 import { caaNames, evaluateCaa, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
 import { detectClientRendered, stripTags } from "./html.ts";
+import { assessLlmsTxt, summarizeJsonLd } from "./aio.ts";
 import { responseRejectedByClient } from "./availability.ts";
 import {
   ADMIN_PROBES, MAX_LOGIN_PAGES, evaluateAdminProbes, evaluateLoginPage, findLoginLinks,
@@ -64,7 +65,13 @@ import {
 // on every WordPress login page for a cookie that carries nothing. A patch
 // rather than a minor: one rule stops emitting one false case, and no rule is
 // added. It still moves, because rule output changed.
-const ENGINE_VERSION = "http-native-1.7.1";
+//
+// 1.8.0 adds GOV-006 (no llms.txt), GOV-007 (no readable JSON-LD) and GOV-008
+// (homepage rendered by script, so non-JS crawlers get the shell). They back the
+// workspace's AIO view, whose llms.txt and structured-data pillars had nothing
+// behind them. The engine now requests /llms.txt, and writes llms_txt and jsonld
+// evidence on every scan whatever the verdict, which is the proof of deploy.
+const ENGINE_VERSION = "http-native-1.8.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -516,6 +523,26 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     // Governance / AIO
     if (!/<meta\b[^>]*name\s*=\s*["']description["']/i.test(html)) add({ rule_id: "GOV-003", severity: "info", title: "Meta description missing", detail: "No <meta name=\"description\"> on the homepage.", location: "<head>", confidence: "high", evidence_keys: ["primary"] });
     if (!/<link\b[^>]*rel\s*=\s*["']canonical["']/i.test(html)) add({ rule_id: "GOV-005", severity: "info", title: "Canonical link missing", detail: "No <link rel=\"canonical\"> on the homepage.", location: "<head>", confidence: "high", evidence_keys: ["primary"] });
+    // GOV-007: structured data. The summary is written as evidence on every HTML
+    // scan, pass or fail, so a scan on this engine is provable even where the rule
+    // is silent -- the same role dns_spf_chain plays for EMAIL-009.
+    const ld = summarizeJsonLd(html);
+    const ldText = `JSON-LD blocks: ${ld.blocks}; parsed: ${ld.parsed}; types: ${ld.types.length ? ld.types.join(", ") : "none"}`;
+    await ev({ key: "jsonld", kind: "html_excerpt", url: finalUrl, http_status: primary.status, content_type: primary.contentType, response_ms: null, headers: null, excerpt: ldText, byte_length: ldText.length }, ldText);
+    if (ld.parsed === 0) {
+      add({ rule_id: "GOV-007", severity: "info", title: "No readable structured data (JSON-LD)",
+        detail: (ld.blocks ? `${ld.blocks} application/ld+json block(s) on the homepage, none of which parse as JSON, so no crawler can read them.` : "The served homepage has no application/ld+json block, so nothing states machine-readably what organization, product or service the site represents.") + csrNote,
+        location: "<script type=\"application/ld+json\">", confidence: csrConf("high"), evidence_keys: ["jsonld", "primary"] });
+    }
+    // GOV-008: the page an AI crawler receives. GPTBot, ClaudeBot and PerplexityBot
+    // read the served HTML and do not run the site's JavaScript, so a client-rendered
+    // homepage reaches them as an empty shell. Medium confidence because
+    // detectClientRendered is a text-length heuristic, not a render comparison.
+    if (clientRendered) {
+      add({ rule_id: "GOV-008", severity: "low", title: "Homepage content is rendered by script, not served",
+        detail: "The served homepage carries almost no readable text and loads script, so its content is built in the browser. Crawlers that do not execute JavaScript, which includes the main AI crawlers, receive the empty shell rather than the page a visitor sees.",
+        location: "<body>", confidence: "medium", evidence_keys: ["primary"] });
+    }
     void snippets;
   }
 
@@ -553,6 +580,13 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     const sitemapOk = sitemap.status === 200 && /<(urlset|sitemapindex)\b/i.test(sitemap.body.slice(0, 4000));
     await ev({ key: "sitemap", kind: "sitemap", url: sitemapUrl, http_status: sitemap.status, content_type: sitemap.contentType, response_ms: sitemap.ms, headers: null, excerpt: sitemap.body.slice(0, 2000), byte_length: sitemap.bytes }, sitemap.body.slice(0, 20000) || String(sitemap.status));
     if (!sitemapOk) add({ rule_id: "GOV-002", severity: "low", title: "XML sitemap not found", detail: `${sitemapUrl} returned HTTP ${sitemap.status ?? "error"}${sitemap.status === 200 ? " but the body is not a sitemap" : ""}.`, location: sitemapUrl, confidence: "high", evidence_keys: ["sitemap"] });
+
+    // GOV-006: /llms.txt. Evidence is written on every reachable scan whatever the
+    // verdict, which is what proves a deployed engine ran this code.
+    const llms = await fetchOnce(`${origin}/llms.txt`, "GET");
+    const llmsVerdict = assessLlmsTxt(llms);
+    await ev({ key: "llms_txt", kind: "http_probe", url: `${origin}/llms.txt`, http_status: llms.status, content_type: llms.contentType, response_ms: llms.ms, headers: null, excerpt: llms.body.slice(0, 4000) || llmsVerdict.reason, byte_length: llms.bytes }, llms.body || String(llms.status));
+    if (!llmsVerdict.ok) add({ rule_id: "GOV-006", severity: "info", title: "No llms.txt file", detail: `GET /llms.txt: ${llmsVerdict.reason}.`, location: "/llms.txt", confidence: "high", evidence_keys: ["llms_txt"] });
 
     const sec = await fetchOnce(`${origin}/.well-known/security.txt`, "GET");
     const secOk = sec.status === 200 && /^\s*contact\s*:/im.test(sec.body);
