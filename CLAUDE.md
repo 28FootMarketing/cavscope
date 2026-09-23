@@ -212,7 +212,11 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   would claim a check that never ran.
   **Its form fields are held in state, not only in the DOM.** `render()` replaces the whole page
   and the panel re-renders on every status update, so a value living only in a node would be
-  blanked mid-scan with the URL you typed still being scanned.
+  blanked mid-scan with the URL you typed still being scanned. The same holds for every form on the
+  page: the support form keeps `impForm`, and the flag override and new-flag forms keep `drafts`,
+  dropped only after a save succeeds so a refused one (a duplicate key) comes back as typed. Those
+  two lived in the DOM alone until 2026-09-23 and a search keystroke emptied them. A new form here
+  gets the same treatment or it has the same bug.
   **And it links to the report.** A scan writes a SITREP about a second after it finishes, and for
   a day it wrote one that nothing in the product pointed at -- an audit was run, the Reports
   section was a stub, and the report sat unread in `muster.sitreps`. The runner now resolves the
