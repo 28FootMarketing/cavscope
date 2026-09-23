@@ -136,13 +136,13 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   splitting `signin.html` and `app.html` across hosts makes sign-in appear to succeed and then the
   workspace loads signed-out. A host serves both or neither. `app.muster.28footsystems.com` still
   serves the same pair for links already in the wild.
-- **`admin.html` is the standalone Super Admin Console, at `app.muster.partners/admin`.** It is on the
+- **`admin.html` is the Super Admin Console, the only one, at `app.muster.partners/admin`.** It is on the
   app hosts, not a console host of its own, for exactly the reason `signin.html` and `app.html` are
   served together: a Supabase session is stored per-origin, so a console anywhere else loads
   signed-out for someone who just signed in. It builds a client with `detectSessionInUrl: false` --
   it never completes a sign-in, it requires one that already happened here -- and bounces to `/` when
-  there is no session. **It holds no role check of its own, deliberately.** Everything it renders
-  comes from one RPC, `public.muster_admin_console()` (migration `20260916023416`), which is
+  there is no session. **It holds no role check of its own, deliberately.** Its backbone is
+  one RPC, `public.muster_admin_console()` (migration `20260916023416`), which is
   `SECURITY DEFINER`, gated on `muster.is_super_admin()`, and raises `42501` for anyone else; the
   page recognises that error and shows a "not a super admin" gate. Grants match every other
   `muster_admin_*` RPC -- `authenticated` only, `anon` revoked by name.
@@ -160,11 +160,38 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   is a few KB each. The markdown is rendered **verbatim in a `<pre>`, never parsed** -- so the
   console cannot disagree with what the tenant reads at `/sitrep`, and so a hand-rolled renderer
   over report content does not become an injection bug in the page that reports on other people's
-  security. This console is *additional to*, not a replacement for, `app.html`'s in-app `superadmin`
-  view, which still backs `muster_admin_overview()` and owns the write actions (plan changes,
-  impersonation, incident triage). `app.html`'s super admin hero links across to it.
-  **One exception, added 2026-09-17: the Audit Queue section can start a scan.** Everything else
-  on the page is still a single read. Running an audit earned its place here because this is the
+  security.
+  **It is the only super admin console, as of 2026-09-23.** Until then `app.html` carried a second
+  one, a `superadmin` view that owned every write (plans, roles, incident triage, pricing stage and
+  tier visibility, the flag registry, support impersonation, an ad-hoc URL runner) while this page
+  owned reports and the audit runner. Two consoles over different RPCs disagreed in ways nobody had
+  checked: that view's "platform-wide" white-label switch changed only local page state, its demo
+  copy advertised a Puppeteer/Playwright crawler the engine has never had, and this page read a
+  missing pricing `visible` key as "shown" while `index.html` correctly showed Partner alone. Every
+  one of those writes now lives here, as a form over the same `SECURITY DEFINER` RPC, and
+  `tests/ui/one-admin-console.test.ts` fails if `app.html` calls a `muster_admin_*` RPC again --
+  **except `muster_admin_tenant`**, because entering a tenant's workspace is `app.html`'s job. This
+  page links to it as `/app#tenant=<id>`.
+  **What `app.html` does with a super admin now.** Its old view is `teamSettings` ("Team &
+  Settings"): team, invitations, API keys, report branding and the tenant's own LLM, which is
+  everything a tenant manages for itself and nothing platform-wide. A super admin sees a
+  "Platform Console" nav link and topbar button, both shipped `hidden` and shown only once
+  `muster_my_workspace` says `is_super_admin`. A super admin arriving at `/app` with **no fragment**
+  is sent here, once per page load; `#tenant=<id>` opens that tenant, and any other fragment keeps
+  them in the app -- which is why this page's "MUSTER" link is `/app#overview`, not `/app`, or it
+  would bounce straight back.
+  **Beyond the console payload it makes five side reads** (`SIDE_READS`): the flag registry,
+  impersonation status and log, `muster_admin_platform_extras()` (platform agents and the
+  jurisdiction review queue -- built in migration 068 for this page and never wired until now), and
+  `muster_admin_overview()`, kept **only** for its `incidents` list, because triage needs incident
+  ids and the console payload reduces them to counts. Each settles on its own: one failing blanks its
+  own panel and says so, never the page. After every write the page re-reads, on failure too, so a
+  select or switch the database refused snaps back to what is true. Changes that reach someone other
+  than the person clicking -- a tenant's plan, a user's role, the public pricing stage, a flag's
+  default, a kill switch, revoking an override, deleting a flag -- confirm first; a focused `<select>`
+  fires `change` on an arrow key in some browsers, so an unconfirmed one is a keypress from a write.
+  **The Audit Queue could start a scan first, from 2026-09-17**, while the rest of the page was
+  still a single read. Running an audit earned its place here because this is the
   page you are already on when you notice a site needs one, and sending someone to another host to
   press a button is how a console stops being used. It adds **no RPC**: the ad-hoc field calls
   `muster_admin_run_url` (super admin, flag `admin_url_scanner`, target parked in the sandbox org)
@@ -185,7 +212,11 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   would claim a check that never ran.
   **Its form fields are held in state, not only in the DOM.** `render()` replaces the whole page
   and the panel re-renders on every status update, so a value living only in a node would be
-  blanked mid-scan with the URL you typed still being scanned.
+  blanked mid-scan with the URL you typed still being scanned. The same holds for every form on the
+  page: the support form keeps `impForm`, and the flag override and new-flag forms keep `drafts`,
+  dropped only after a save succeeds so a refused one (a duplicate key) comes back as typed. Those
+  two lived in the DOM alone until 2026-09-23 and a search keystroke emptied them. A new form here
+  gets the same treatment or it has the same bug.
   **And it links to the report.** A scan writes a SITREP about a second after it finishes, and for
   a day it wrote one that nothing in the product pointed at -- an audit was run, the Reports
   section was a stub, and the report sat unread in `muster.sitreps`. The runner now resolves the
@@ -318,11 +349,18 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   with `apply` unchecked for a read-only report of what is live. Two independent runs confirmed
   the new value, and the second one -- a separate process doing its own `GET` -- is why this
   paragraph is allowed to say it changed.
-  **What is proven and what is not:** the *value* is set, read back twice. The *flow* is not
-  tested. Nobody has sent a magic link and followed it since the change. `muster-auth-smoke` is
-  what closes that gap and it has not been run against the new value, so do not write "magic
-  links work" anywhere until it has. Setting a field and delivering a working link are different
-  claims and this file has already conflated them once.
+  **What is proven and what is not:** the *value* is set, read back twice. **And the fallback is
+  proven**: `muster-auth-smoke` ran against it on 2026-09-23 02:54 UTC, all six read-only steps
+  green, and its `allowlist:control` probe -- the one step that exercises Site URL, because it asks
+  for a host that must be refused -- fell back to `https://app.muster.partners/` where the
+  2026-09-09 run fell back to `www`. A minted recovery link landed on `app.muster.partners/reset`
+  with a live recovery session. Three things that run did not cover, and none may be claimed from
+  it: the password leg (`rotate_password` was false; set → sign-in last passed 2026-09-09), a real
+  **magic** link (the function mints recovery links; same allowlist and fallback, but not followed),
+  and delivery (nothing is sent). So write "recovery links land on the app host", not "magic links
+  work", until someone has sent a magic link and followed it. Details in `docs/EMAIL.md`. Setting a
+  field and delivering a working link are different claims and this file has already conflated them
+  once.
   The workflow deliberately leaves `uri_allow_list` alone (`PATCH` is partial). That list is
   correct and was verified byte-identical either side of the change: it carries
   `app.muster.partners/app`, `/reset` and `/**`, the `28footsystems` equivalents, and the
