@@ -192,7 +192,7 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `AVAIL-001` | **critical** | Site unreachable or returning an error | SOC 2 A1.2, NIST DE.CM-1 |
 | `AVAIL-002` | medium | Slow first response | NIST PR.DS-4 |
 | `AVAIL-003` | **critical** | Site could not be assessed: the scanner was refused | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
-| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP — *activated 2026-09-18 by `20260918053307`, whose file is not yet in this repo* | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
+| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP — *activated 2026-09-18 by `20260918053307`* | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
 
 ## Accessibility — 7 rules
 
