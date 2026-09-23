@@ -1,10 +1,19 @@
 // SEC-019: TRACE/TRACK HTTP method enabled.
 //
-// STUB -- not wired into index.ts. Wiring this in means index.ts sending an
-// HTTP TRACE request to the homepage URL carrying a unique, per-scan marker
-// header, then handing the response here. See supabase/migrations/
-// 20260923190000_muster_084_hardening_gap_rules_inactive.sql for the full
-// activation gate (ENGINE_VERSION past http-native-1.7.1, observed live).
+// NOT WIRED, AND NOT WIREABLE from this engine's transport. Confirmed
+// empirically against Deno 2.9.7: fetch(url, { method: "TRACE" }) throws
+// `TypeError: Method is forbidden` -- TRACE, TRACK and CONNECT are on the
+// WHATWG Fetch spec's own forbidden-method list, so no spec-compliant
+// fetch() implementation can send one, in any runtime. index.ts's
+// ENGINE_VERSION comment for 1.8.0 covers why a raw-socket fallback is not
+// an answer either: this engine's egress is fetch()-only (the same reason
+// DNS goes over DNS-over-HTTPS instead of Deno.resolveDns), and that has
+// not been shown to be false inside the deployed function specifically.
+//
+// Kept, rather than deleted, for the same reason a held-inactive
+// scan_rules row is kept: the logic below is correct and worth having on
+// record if a future transport ever makes this reachable. Treat it as
+// retired, not merely unscheduled, until someone does that work.
 //
 // WHY A MARKER, NOT JUST STATUS 200
 //

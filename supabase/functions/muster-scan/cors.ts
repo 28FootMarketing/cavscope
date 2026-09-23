@@ -1,10 +1,10 @@
 // SEC-017: CORS misconfiguration that allows credentialed cross-origin reads.
 //
-// STUB -- not wired into index.ts. See supabase/migrations/
+// Wired into index.ts as section 3b as of ENGINE_VERSION http-native-1.8.0.
+// The scan_rules row stays inactive until a scan reports that version live
+// -- see supabase/migrations/
 // 20260923190000_muster_084_hardening_gap_rules_inactive.sql for the
-// activation gate: index.ts has to send the probe request below, ingest the
-// response headers, and ENGINE_VERSION has to move past http-native-1.7.1
-// and be observed live before this may be set active.
+// activation step; do not flip `active` before then.
 //
 // WHAT THE PROBE IS
 //

@@ -11,6 +11,9 @@ import {
   ADMIN_PROBES, MAX_LOGIN_PAGES, evaluateAdminProbes, evaluateLoginPage, findLoginLinks,
   cookieName, frameable, hasPasswordField, isSameSite, passwordForms, probeHit, type ProbeResult,
 } from "./login.ts";
+import { EXPOSURE_PROBES, evaluateExposure, exposureHit, type ExposureProbeResult } from "./exposure.ts";
+import { PROBE_ORIGIN, evaluateCors } from "./cors.ts";
+import { evaluateCspQuality } from "./csp.ts";
 
 // MUSTER scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -64,7 +67,40 @@ import {
 // on every WordPress login page for a cookie that carries nothing. A patch
 // rather than a minor: one rule stops emitting one false case, and no rule is
 // added. It still moves, because rule output changed.
-const ENGINE_VERSION = "http-native-1.7.1";
+//
+// 1.8.0 adds three rules from supabase/migrations/
+// 20260923190000_muster_084_hardening_gap_rules_inactive.sql -- SEC-016
+// (sensitive file/path exposure, judged by content signature the same way
+// AUTH-004/005 judge an admin console), SEC-017 (CORS that reflects an
+// untrusted Origin with Access-Control-Allow-Credentials: true, probed with a
+// sentinel Origin on the .invalid TLD so any trust of it is definitionally not
+// a real allowlist entry), and SEC-018 (a CSP present but weakened by
+// unsafe-inline/unsafe-eval/a bare wildcard script source, which SEC-004
+// cannot see because it only checks presence).
+//
+// Do NOT activate the migration's rows the moment this deploys. Same
+// precondition as every rule before it: wait for a scan to report
+// http-native-1.8.0 or later in muster.scans.engine_version, then activate in
+// a separate migration.
+//
+// SEC-019 (TRACE/TRACK enabled) is in that migration too, inactive, with NO
+// activation path from this engine. fetch() throws `TypeError: Method is
+// forbidden` for TRACE, TRACK and CONNECT -- confirmed against Deno 2.9.7,
+// and it is the WHATWG Fetch spec's own forbidden-method list, not a Deno
+// quirk, so no runtime with a spec-compliant fetch() can send one. The one
+// way around it is a raw TCP/TLS socket instead of fetch(), and this file's
+// own DNS section above already establishes why that is not available here:
+// DNS goes over DoH "because the edge runtime does not expose a resolver, and
+// [...] an HTTPS call is subject to the same egress rules as everything else
+// here" -- i.e. fetch() is the only egress this runtime grants, not a Deno
+// CLI default that merely went unused. (Headers are a different story: Deno's
+// fetch does NOT restrict Origin/Host/Cookie the way a browser would -- there
+// is no page origin to protect in a server runtime -- which is what makes
+// SEC-017's Origin-reflection probe above possible at all.) Until someone
+// confirms Deno.connect works inside the deployed muster-scan function
+// specifically -- not just in the Deno CLI -- SEC-019 has no engine and
+// should be treated as retired, not merely unscheduled.
+const ENGINE_VERSION = "http-native-1.8.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -123,13 +159,20 @@ async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function fetchOnce(url: string, method: "GET" | "HEAD" = "GET", timeoutMs = TIMEOUT_MS): Promise<Fetched> {
+async function fetchOnce(url: string, method: "GET" | "HEAD" = "GET", timeoutMs = TIMEOUT_MS, extraHeaders: Record<string, string> = {}): Promise<Fetched> {
   const started = Date.now();
   const out: Fetched = { ok: false, status: null, headers: {}, setCookies: [], body: "", bytes: 0, ms: 0, error: null, contentType: null, url };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { method, redirect: "manual", signal: ctrl.signal, headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml,*/*;q=0.8" } });
+    // extraHeaders exists for SEC-017's CORS probe (an Origin header the
+    // caller controls). Deno's fetch does not enforce the browser
+    // forbidden-header-name list -- confirmed empirically against Deno
+    // 2.9.7: setting origin/host/cookie here reaches the network layer the
+    // same as any other header, because there is no page origin to protect
+    // in a server runtime. Only HTTP *methods* are restricted (see
+    // ENGINE_VERSION's 1.8.0 note on why that kills SEC-019).
+    const res = await fetch(url, { method, redirect: "manual", signal: ctrl.signal, headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml,*/*;q=0.8", ...extraHeaders } });
     out.status = res.status;
     out.ok = res.ok;
     res.headers.forEach((v, k) => { if (k.toLowerCase() !== "set-cookie") out.headers[k.toLowerCase()] = v; });
@@ -375,6 +418,11 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     }
     const csp = h["content-security-policy"];
     if (!csp) add({ rule_id: "SEC-004", severity: "medium", title: "Missing Content-Security-Policy", detail: "No Content-Security-Policy header was returned with the homepage.", location: "response headers", confidence: "high", evidence_keys: ["headers"] });
+    // SEC-018 reuses the same "headers" evidence SEC-004 already recorded and
+    // returns nothing when csp is absent -- that case belongs to SEC-004
+    // alone, and scoring both would be the same double-count AUTH-*/SEC-005/
+    // SEC-011 already guard against in login.ts.
+    for (const f of evaluateCspQuality({ csp: csp ?? null, evidenceKey: "headers" })) add(f);
     const xfo = h["x-frame-options"];
     if (!xfo && !(csp && /frame-ancestors/i.test(csp))) add({ rule_id: "SEC-005", severity: "medium", title: "Clickjacking protection missing", detail: "Neither X-Frame-Options nor a CSP frame-ancestors directive is present.", location: "response headers", confidence: "high", evidence_keys: ["headers"] });
     if (!/nosniff/i.test(h["x-content-type-options"] ?? "")) add({ rule_id: "SEC-006", severity: "low", title: "Missing X-Content-Type-Options", detail: "X-Content-Type-Options: nosniff is not set.", location: "response headers", confidence: "high", evidence_keys: ["headers"] });
@@ -388,6 +436,26 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
         detail: badCookies.map((c) => c.split(";")[0].split("=")[0] + ": missing " + [!/;\s*secure/i.test(c) && "Secure", !/;\s*httponly/i.test(c) && "HttpOnly", !/;\s*samesite=/i.test(c) && "SameSite"].filter(Boolean).join(", ")).join(" | ").slice(0, 1500),
         location: "set-cookie", confidence: "high", evidence_keys: ["headers"] });
     }
+  }
+
+  // 3b. CORS (SEC-017): one extra HEAD to the homepage carrying an Origin no
+  // real site could have allowlisted -- cors.ts's PROBE_ORIGIN sits on the
+  // .invalid TLD, reserved by RFC 2606 to never resolve and never be
+  // assigned, so any server that trusts it is trusting a domain that cannot
+  // exist. HEAD rather than GET: the check only reads response headers, and
+  // this is a second request against a site the homepage fetch already read.
+  // See cors.ts for why only exact reflection combined with
+  // Access-Control-Allow-Credentials: true is flagged -- a bare wildcard or
+  // reflection without credentials is not exploitable and is not reported.
+  if (reachable) {
+    const corsProbe = await fetchOnce(finalUrl, "HEAD", TIMEOUT_MS, { origin: PROBE_ORIGIN });
+    const allowOrigin = corsProbe.headers["access-control-allow-origin"] ?? null;
+    const allowCredentials = (corsProbe.headers["access-control-allow-credentials"] ?? "").trim().toLowerCase() === "true";
+    await ev({ key: "cors_probe", kind: "http_probe", url: finalUrl, http_status: corsProbe.status, content_type: null, response_ms: corsProbe.ms,
+      headers: corsProbe.headers,
+      excerpt: `Origin sent: ${PROBE_ORIGIN}\nAccess-Control-Allow-Origin: ${allowOrigin ?? "(absent)"}\nAccess-Control-Allow-Credentials: ${allowCredentials}`,
+      byte_length: null }, `${allowOrigin ?? ""}|${allowCredentials}`);
+    for (const f of evaluateCors({ result: { probedOrigin: PROBE_ORIGIN, allowOrigin, allowCredentials }, evidenceKey: "cors_probe" })) add(f);
   }
 
   // 4. HTML content rules
@@ -647,6 +715,30 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
       for (const f of evaluateLoginPage({ url: pg.url, headers: pg.res.headers, setCookies: pg.res.setCookies, html: pg.res.body, evidenceKey: key, homepage })) add(f);
     }
     for (const f of evaluateAdminProbes({ results: probeResults, evidenceKey: "login_discovery" })) add(f);
+
+    // 5c. Sensitive file/path exposure (SEC-016). Same probe discipline as the
+    // admin-console probes just above and the same reason: a plain GET,
+    // judged on the body matching that path's own content signature, never on
+    // status code alone, so a catch-all 404 or SPA shell answering every path
+    // with 200 is never accused of leaking its .git directory. Shares this
+    // block's origin/onSite/dropHash and timeout/hop budget rather than
+    // opening a second reachable-host guard.
+    const exposed = await Promise.all(EXPOSURE_PROBES.map((p) => followChain(origin + p.path, LOGIN_HOPS, LOGIN_TIMEOUT_MS)));
+    const exposureResults: ExposureProbeResult[] = exposed.map((c, i) => ({
+      probe: EXPOSURE_PROBES[i],
+      finalUrl: onSite(c.finalUrl) ? dropHash(c.finalUrl) : null,
+      status: c.final.status,
+      body: c.final.body,
+    }));
+    const exposureDiscovery = exposureResults
+      .map((r) => `  ${r.probe.path} -> ${r.status ?? "error"}${r.finalUrl === null ? " (left the site)" : ""}${exposureHit(r) ? ` MATCHED (${r.probe.label})` : ""}`)
+      .join("\n");
+    // Written whether or not anything matched, the same reason login_discovery
+    // is: these rules are silent on most sites, so a finding count cannot
+    // prove the probes ran, but this evidence row can.
+    await ev({ key: "exposure_discovery", kind: "http_probe", url: origin + "/", http_status: null, content_type: null, response_ms: null,
+      headers: null, excerpt: `sensitive-path probes:\n${exposureDiscovery}`.slice(0, 8000), byte_length: null }, exposureDiscovery);
+    for (const f of evaluateExposure({ results: exposureResults, evidenceKey: "exposure_discovery" })) add(f);
   }
 
   // 6. Email authentication (EMAIL-*). Runs regardless of whether the site

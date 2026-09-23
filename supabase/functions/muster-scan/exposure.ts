@@ -1,11 +1,10 @@
 // SEC-016: sensitive file or directory exposure.
 //
-// STUB -- not wired into index.ts. See supabase/migrations/
-// 20260923190000_muster_084_hardening_gap_rules_inactive.sql for what has to
-// happen before SEC-016 may be set active: index.ts has to fetch each probe
-// path, hand the results in here, and ENGINE_VERSION has to move past
-// http-native-1.7.1 and be observed live. Read that migration's header
-// before touching this file's activation status.
+// Wired into index.ts's login-surface section (5c) as of ENGINE_VERSION
+// http-native-1.8.0. The scan_rules row stays inactive until a scan reports
+// that version live -- see supabase/migrations/
+// 20260923190000_muster_084_hardening_gap_rules_inactive.sql for the
+// activation step; do not flip `active` before then.
 //
 // Pure, like login.ts's admin-console probes, which this deliberately
 // mirrors: a plain GET, judged on the body matching that product's own

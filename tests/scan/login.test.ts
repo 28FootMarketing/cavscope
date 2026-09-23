@@ -316,7 +316,7 @@ test("the engine's login section only follows chains, which are GET", () => {
 
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.7\.1";/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.8\.0";/);
   assert.match(engine, /1\.7\.0 adds AUTH-001\.\.005/);
   assert.match(engine, /1\.7\.1 stops AUTH-003 reporting wordpress_test_cookie/);
 });
