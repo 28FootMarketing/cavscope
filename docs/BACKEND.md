@@ -308,7 +308,7 @@ delete from vault.secrets where name = 'muster_cron_secret';
 
 ## Dashboard wiring (v0.3.0)
 
-`index.html` now has two modes. Demo mode is the untouched sample data set and loads by default. Live mode activates when a Supabase Auth session exists (Sign in button in the topbar): the tenant store is swapped for the user's organizations from `muster_my_workspace`, every view is rebuilt from `muster_website_overview`, and live panels are injected for the SITREP (Board Reporting), plain-English items (Plain English PDF), jurisdiction obligations (Control Mapping), agents and API keys (Super Admin Console), and the super admin tenant, flag, and user console. "Show demo" swaps back to the sample data without signing out.
+`index.html` now has two modes. Demo mode is the untouched sample data set and loads by default. Live mode activates when a Supabase Auth session exists (Sign in button in the topbar): the tenant store is swapped for the user's organizations from `muster_my_workspace`, every view is rebuilt from `muster_website_overview`, and live panels are injected for the SITREP (Board Reporting), plain-English items (Plain English PDF), jurisdiction obligations (Control Mapping), agents, API keys, report branding and the tenant's own LLM (Team & Settings). Platform administration is not in this page: since 2026-09-23 every super admin control lives in `admin.html` at `/admin`, and `app.html` only links to it. "Show demo" swaps back to the sample data without signing out.
 
 Client config lives at the top of the `Live` object: project URL and the publishable key `sb_publishable_...` (public by design; RLS and RPC checks protect data).
 

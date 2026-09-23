@@ -1,5 +1,5 @@
 // Public pricing tier visibility on index.html, and the matching admin toggles
-// in app.html.
+// in admin.html (app.html's in-app console owned them until 2026-09-23).
 //
 //   node --experimental-strip-types --test tests/ui/pricing-visibility.test.ts
 //
@@ -91,14 +91,17 @@ test("index.html applyVisibility can show all three tiers", () => {
   assert.equal(countEl.textContent, "Three plans");
 });
 
-test("app.html Public Pricing panel defaults Partner on when visible is missing", () => {
-  const html = read("app.html");
+test("admin.html pricing panel defaults Partner on when visible is missing", () => {
+  // Reading a missing key as "shown" made the console claim all three tiers
+  // were live while index.html, correctly, showed Partner alone.
+  const html = read("admin.html");
   assert.match(html, /setPricingVisibility/);
   assert.match(html, /muster_admin_set_pricing_visibility/);
   assert.match(
     html,
     /pricing\.visible\s*\?\s*!!pricing\.visible\[t\.key\]\s*:\s*t\.key === 'muster_partner'/,
   );
+  assert.doesNotMatch(html, /visible\[t\.key\] !== false/);
 });
 
 test("migration seeds Partner-only visibility", () => {

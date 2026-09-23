@@ -1,12 +1,16 @@
-// Renders the super admin console's impersonation panel from app.html with mock
-// data and asserts what it produces.
+// Renders the super admin console's support-access (impersonation) panel from
+// admin.html with mock data and asserts what it produces.
 //
 //   node --experimental-strip-types --test tests/ui/impersonation-panel.test.ts
 //
-// The template is EXTRACTED FROM app.html rather than copied here, for the same
-// reason the ai_narrative eval imports narrative.ts: a test holding its own copy
-// of the markup passes forever while the page drifts away from it. If someone
-// edits the panel, these assertions run against the edit.
+// The template is EXTRACTED FROM admin.html rather than copied here, for the
+// same reason the ai_narrative eval imports narrative.ts: a test holding its own
+// copy of the markup passes forever while the page drifts away from it. If
+// someone edits the panel, these assertions run against the edit.
+//
+// It lived in app.html's in-app super admin view until 2026-09-23, when every
+// super admin control moved to admin.html; supportPanel() is kept a pure
+// function of its arguments there so this can run it.
 //
 // What this is for, above all, is escaping. Every field on this panel is
 // attacker-influenced -- a target's email, an admin's typed reason -- and it is
@@ -21,22 +25,23 @@ import { dirname, join } from "node:path";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const PANEL_START = '          <div class="panel" style="margin-bottom:24px; ${imp.active';
-const PANEL_END = '          <div class="panel" style="margin-bottom:24px;">\n            <div class="panel-head"><div><h3>Users (${users.length})';
+const FN_START = "  function supportPanel(imp, users, impLog, form, viewHtml) {";
+const FN_END = "  // ---- end support panel";
 
-function extractPanelTemplate(): string {
-  const html = readFileSync(join(repoRoot, "app.html"), "utf8");
-  const start = html.indexOf(PANEL_START);
-  const end = html.indexOf(PANEL_END);
-  assert.notEqual(start, -1, "impersonation panel not found in app.html -- did its markup change?");
-  assert.notEqual(end, -1, "users panel not found in app.html -- the extraction anchor moved");
+function extractPanelFunction(): string {
+  const html = readFileSync(join(repoRoot, "admin.html"), "utf8");
+  const start = html.indexOf(FN_START);
+  const end = html.indexOf(FN_END);
+  assert.notEqual(start, -1, "supportPanel() not found in admin.html -- did its signature change?");
+  assert.notEqual(end, -1, "end-of-panel marker not found in admin.html -- the extraction anchor moved");
   assert.ok(end > start, "panel anchors are out of order");
   return html.slice(start, end);
 }
 
-// app.html's own helper, reproduced only so the extracted template can run
+// admin.html's own helper, reproduced only so the extracted function can run
 // outside a browser. The assertions below check the template CALLS it, which is
-// the property that matters.
+// the property that matters. This copy deliberately leaves the apostrophe
+// alone, so a test cannot pass on escaping the page does not rely on.
 const escapeHtml = (t: unknown) =>
   String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -44,10 +49,9 @@ type Imp = Record<string, unknown>;
 type User = { id: number; email: string; role: string };
 type LogRow = Record<string, unknown>;
 
-function render(imp: Imp, users: User[], impLog: LogRow[]): string {
-  const tpl = extractPanelTemplate().replace(/this\.impLog/g, "self.impLog");
-  const fn = new Function("imp", "users", "escapeHtml", "self", "return `" + tpl + "`;");
-  return fn(imp, users, escapeHtml, { impLog }) as string;
+function render(imp: Imp, users: User[], impLog: LogRow[], form = { target: "", reason: "", minutes: "30" }, view: string | null = null): string {
+  const fn = new Function("escapeHtml", extractPanelFunction() + "\nreturn supportPanel;")(escapeHtml);
+  return fn(imp, users, impLog, form, view) as string;
 }
 
 const USERS: User[] = [
@@ -59,10 +63,10 @@ const XSS = '<img src=x onerror=alert(1)>';
 
 test("idle state offers the start form", () => {
   const h = render({ active: false }, USERS, []);
-  assert.ok(h.includes("Live.startImpersonation"), "no start form");
+  assert.ok(h.includes('data-act="imp-start"'), "no start form");
   assert.ok(h.includes("impReason"), "no reason field");
   assert.ok(h.includes("impMinutes"), "no duration field");
-  assert.ok(!h.includes("Live.endImpersonation"), "end button shown while idle");
+  assert.ok(!h.includes('data-act="imp-end"'), "end button shown while idle");
 });
 
 test("super admins are absent from the target list", () => {
@@ -79,9 +83,9 @@ test("active state shows the banner and hides the start form", () => {
     USERS, [],
   );
   assert.ok(h.includes("impCountdown"), "no countdown");
-  assert.ok(h.includes("Live.endImpersonation"), "no end button");
+  assert.ok(h.includes('data-act="imp-end"'), "no end button");
   assert.ok(h.includes("impView"), "no impersonated view host");
-  assert.ok(!h.includes("Live.startImpersonation"), "start form shown during an active session");
+  assert.ok(!h.includes('data-act="imp-start"'), "start form shown during an active session");
   assert.ok(h.includes("ticket 412"), "the reason is not displayed back to the admin");
 });
 
@@ -167,4 +171,24 @@ test("interactive elements carry tooltips, per the repo's standing rule", () => 
   assert.ok((idle.match(/data-tooltip/g) ?? []).length >= 4, "idle state is under-documented");
   // Banner, countdown, end button, view host.
   assert.ok((active.match(/data-tooltip/g) ?? []).length >= 4, "active state is under-documented");
+});
+
+test("a half-typed reason survives a re-render, because the page re-renders under it", () => {
+  // render() replaces the whole page on a search keystroke or a countdown
+  // expiry. The form reads its values back from state, not from the old node.
+  const h = render({ active: false }, USERS, [], { target: "7", reason: "ticket 412, missing SITREP", minutes: "60" });
+  assert.ok(h.includes('value="ticket 412, missing SITREP"'), "the typed reason was dropped");
+  assert.match(h, /<option value="7" selected>/);
+  assert.match(h, /<option value="60" selected>60 min<\/option>/);
+});
+
+test("a hostile typed reason cannot break out of the value attribute", () => {
+  const h = render({ active: false }, USERS, [], { target: "", reason: '"><img src=x onerror=alert(1)>', minutes: "30" });
+  assert.ok(!h.includes("<img"), "a tag was formed from the typed reason");
+});
+
+test("the target's view is rendered once it is fetched, and says loading until then", () => {
+  const imp = { active: true, target_email: "a@b.co", target_user_id: 7, reason: "r", seconds_remaining: 10 };
+  assert.ok(render(imp, USERS, []).includes("Loading what this user sees"));
+  assert.ok(render(imp, USERS, [], undefined, "<div class=\"imp-org\">Acme</div>").includes("imp-org"));
 });
