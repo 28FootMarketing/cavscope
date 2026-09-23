@@ -197,7 +197,7 @@
   <div class="topbar">
     <div class="topbar-inner">
       <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SAMPLE SITREP</small></div>
-      <div class="sample-banner" data-tooltip="Every finding, evidence row, and score on this page is fictional, built to show the full range of what a SITREP covers. It is not a real assessment of any organization.">⚠ ILLUSTRATIVE SAMPLE — NOT A REAL ASSESSMENT</div>
+      <div class="sample-banner" data-tooltip="Every finding, evidence row, and score on this page is fictional, built to show the full range of what a SITREP covers. It is not a real assessment of any organization." tabindex="0">⚠ ILLUSTRATIVE SAMPLE — NOT A REAL ASSESSMENT</div>
       <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this sample.">▣ Print / PDF</button>
     </div>
   </div>
@@ -372,7 +372,7 @@
     const es = (claim.evidence_ids || []).map(id => `E${id}`);
     const all = [...fs, ...es];
     if (!all.length) return '';
-    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to.">[${all.join('][')}]</span>`;
+    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to." tabindex="0">[${all.join('][')}]</span>`;
   }
 
   function render(sitrep) {
@@ -393,7 +393,7 @@
         <div class="report-meta">Organization: ${escapeHtml(sitrep.org_name)} · Target: ${escapeHtml(sitrep.website_url)} · Generated ${new Date(sitrep.generated_at).toLocaleString()}</div>
 
         <div class="score-row">
-          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer.">
+          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer." tabindex="0">
             <svg viewBox="0 0 96 96">
               <circle cx="48" cy="48" r="42" fill="none" stroke="#1f3358" stroke-width="8"></circle>
               <circle cx="48" cy="48" r="42" fill="none" stroke="${color}" stroke-width="8"
@@ -402,22 +402,22 @@
             <div class="gauge-value"><span class="num" style="color:${color}">${score}</span><span class="of100">/ 100</span></div>
           </div>
           <div>
-            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now.">● ${band.toUpperCase()} POSTURE</div>
+            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now." tabindex="0">● ${band.toUpperCase()} POSTURE</div>
             <div class="band-desc">${board.open} open findings across every area MUSTER checks: security, email authentication, availability, accessibility, privacy, governance, and third party.</div>
           </div>
         </div>
 
         <div class="severity-strip">
-          <div class="sev-tile critical" data-tooltip="Findings that need action immediately — active breach or outage risk."><span class="n">${board.critical}</span>Critical</div>
-          <div class="sev-tile high" data-tooltip="Serious findings that should be fixed this week."><span class="n">${board.high}</span>High</div>
-          <div class="sev-tile medium" data-tooltip="Real gaps worth fixing on a normal remediation timeline."><span class="n">${board.medium}</span>Medium</div>
-          <div class="sev-tile low" data-tooltip="Worth fixing, not urgent."><span class="n">${board.low}</span>Low</div>
-          <div class="sev-tile info" data-tooltip="Informational — a planning item, not a risk by itself."><span class="n">${board.info}</span>Info</div>
+          <div class="sev-tile critical" data-tooltip="Findings that need action immediately — active breach or outage risk." tabindex="0"><span class="n">${board.critical}</span>Critical</div>
+          <div class="sev-tile high" data-tooltip="Serious findings that should be fixed this week." tabindex="0"><span class="n">${board.high}</span>High</div>
+          <div class="sev-tile medium" data-tooltip="Real gaps worth fixing on a normal remediation timeline." tabindex="0"><span class="n">${board.medium}</span>Medium</div>
+          <div class="sev-tile low" data-tooltip="Worth fixing, not urgent." tabindex="0"><span class="n">${board.low}</span>Low</div>
+          <div class="sev-tile info" data-tooltip="Informational — a planning item, not a risk by itself." tabindex="0"><span class="n">${board.info}</span>Info</div>
         </div>
       </div>
 
       <section class="block">
-        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below.">Board Report</h2>
+        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below." tabindex="0">Board Report</h2>
         <p class="section-sub">${board.claims.length} claims, every one traceable to a finding [F] or evidence [E] id</p>
         <div class="claim-list">
           ${claims.map(c => `<div class="claim">${escapeHtml(c.text)}${citeBadge(c)}</div>`).join('')}
@@ -425,7 +425,7 @@
       </section>
 
       <section class="block">
-        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h2>
+        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each." tabindex="0">Plain English</h2>
         <p class="section-sub">${plain.length} items — one per finding</p>
         <div class="plain-list">
           ${plain.map(p => `<div class="plain-item">${escapeHtml(p.text)}</div>`).join('')}
@@ -433,7 +433,7 @@
       </section>
 
       <section class="block">
-        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity, spanning all six finding categories.">Top Findings</h2>
+        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity, spanning all six finding categories." tabindex="0">Top Findings</h2>
         <p class="section-sub">${findings.length} findings — accessibility, availability, governance, privacy, security, third-party</p>
         <div class="overflow-x">
           <table class="data-table">
@@ -441,7 +441,7 @@
             <tbody>
               ${findings.map(f => `<tr>
                 <td class="mono-cell">${f.rank}</td>
-                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding.">${escapeHtml(f.rule_id)}</td>
+                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding." tabindex="0">${escapeHtml(f.rule_id)}</td>
                 <td class="cat-chip">${escapeHtml(f.category.replace('_',' '))}</td>
                 <td>${escapeHtml(f.title)}<div style="color:var(--text-dim); font-size:11.5px; margin-top:3px;">${escapeHtml(f.detail)}</div><div style="color:var(--text-dim); font-size:11px; margin-top:2px;">${escapeHtml(f.location)}</div>${Object.keys(f.framework_refs||{}).length ? `<div class="fw-refs">${Object.entries(f.framework_refs).map(([k,v])=>`${k}: ${v}`).join(' · ')}</div>` : ''}</td>
                 <td><span class="sev-chip sev-${f.severity}">${f.severity}</span></td>
@@ -453,7 +453,7 @@
       </section>
 
       <section class="block">
-        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites.">Evidence Index</h2>
+        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites." tabindex="0">Evidence Index</h2>
         <p class="section-sub">${evidence.length} captured evidence rows</p>
         <div class="overflow-x">
           <table class="data-table">
@@ -465,14 +465,14 @@
                 <td style="word-break:break-all;">${escapeHtml(e.url)}</td>
                 <td class="mono-cell">${e.http_status}</td>
                 <td class="mono-cell">${new Date(e.captured_at).toLocaleString()}</td>
-                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture.">${escapeHtml(e.sha256.slice(0,12))}…</td>
+                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture." tabindex="0">${escapeHtml(e.sha256.slice(0,12))}…</td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </section>
 
-      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
+      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body." tabindex="0">
         MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
         <br>This document is a fictional composite sample built to demonstrate every finding category and severity level MUSTER can surface. It does not describe a real organization.
       </footer>

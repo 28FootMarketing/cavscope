@@ -236,7 +236,7 @@
 
     <div id="onboardingRoot" hidden>
       <div class="onboarding-grid">
-        <aside class="stepper" id="stepper" data-tooltip="Your progress. Each step unlocks only once the one before it is verified server-side — this isn't a checklist you can skip ahead on."></aside>
+        <aside class="stepper" id="stepper" data-tooltip="Your progress. Each step unlocks only once the one before it is verified server-side — this isn't a checklist you can skip ahead on." tabindex="0"></aside>
         <div class="step-panel" id="stepPanel"></div>
       </div>
     </div>
@@ -331,7 +331,7 @@
       const isCurrent = cur && cur.key === s.key;
       const status = done ? 'done' : (isCurrent ? 'current' : 'locked');
       const tip = done ? 'Completed.' : (isCurrent ? 'You are here.' : 'Locked until the earlier steps are complete.');
-      return `<div class="stepper-item stepper-${status}" data-tooltip="${escapeHtml(tip)}">
+      return `<div class="stepper-item stepper-${status}" data-tooltip="${escapeHtml(tip)}" tabindex="0">
         <span class="stepper-dot">${done ? '✓' : s.step_no}</span>
         <span class="stepper-label">${escapeHtml(s.title)}</span>
       </div>`;
@@ -424,7 +424,7 @@
       <div class="step-card">
         <h2>Step 3 of 7 — Verify you own the website</h2>
         <p class="step-desc">Paste this exact tag into the <code>&lt;head&gt;</code> of <strong>${escapeHtml(w.url || '')}</strong>, then click Verify. Scanning stays off until this passes.</p>
-        <div class="code-block" data-tooltip="Copy this tag exactly, including the quotes, into your site's <head>.">
+        <div class="code-block" data-tooltip="Copy this tag exactly, including the quotes, into your site's <head>." tabindex="0">
           <code id="verifyTag">${escapeHtml(tag)}</code>
           <button type="button" class="btn-ghost" onclick="copyVerifyTag()" data-tooltip="Copies the tag above to your clipboard.">⧉ Copy</button>
         </div>
@@ -558,7 +558,7 @@
       <div class="step-card">
         <h2>Step 6 of 7 — Run your first scan</h2>
         <p class="step-desc" id="scanStatus">Queuing your first scan…</p>
-        <div class="scan-pulse" data-tooltip="MUSTER is fetching and checking your site right now. This usually takes under two minutes."></div>
+        <div class="scan-pulse" data-tooltip="MUSTER is fetching and checking your site right now. This usually takes under two minutes." tabindex="0"></div>
       </div>`;
   }
   function clearScanPoll() {
@@ -611,7 +611,7 @@
             ${['critical', 'high', 'medium', 'low', 'info'].filter(s => bySev[s]).map(s => `<span class="sev-chip sev-${s}">${bySev[s]} ${s}</span>`).join('') || '<span class="sev-chip sev-low">0 open findings</span>'}
           </div>
           ${board && board.claims && board.claims.length ? `<div class="claim-list">${board.claims.slice(0, 5).map(c => `<div class="claim">${escapeHtml(c.text)}</div>`).join('')}</div>` : ''}
-          <p class="step-desc" style="margin-top:4px;" data-tooltip="One number from 0-100 summarizing exposure across all open findings. Higher is safer.">Posture score: <strong style="color:var(--text);">${sitrep.posture_score ?? '—'}/100</strong> (${escapeHtml(sitrep.posture_band || 'unknown')})</p>
+          <p class="step-desc" style="margin-top:4px;" data-tooltip="One number from 0-100 summarizing exposure across all open findings. Higher is safer." tabindex="0">Posture score: <strong style="color:var(--text);">${sitrep.posture_score ?? '—'}/100</strong> (${escapeHtml(sitrep.posture_band || 'unknown')})</p>
         ` : `<p class="step-desc">Scan complete — ${summary.new ?? 0} new finding(s), ${summary.resolved ?? 0} resolved. Your full report is generating; it will be in your workspace shortly.</p>`}
         <label class="ack-row"><input type="checkbox" id="ackBox"> I've read this SITREP</label>
         <div class="step-msg" id="sitrepMsg"></div>

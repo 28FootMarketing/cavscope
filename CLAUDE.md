@@ -18,6 +18,21 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   accessible (keyboard focus, Escape to dismiss, `aria-describedby`) delegated-event tooltip system with
   no external library.
 - Verify with `node --check` after editing (extract the inline `<script>` block first) before committing.
+- **A `data-tooltip` only reaches a keyboard or screen-reader user if the element it sits on is
+  focusable.** The engine shows on `focusin` as well as `mouseover`, but a plain `<span>`, `<div>`,
+  `<td>`, `<p>`, `<h2>`, `<aside>`, `<summary>` or `<footer>` is not part of the tab order on its
+  own, so tabbing through the page skips straight over it. An end-to-end keyboard sweep on
+  2026-09-23 found 148 such elements across every page except `signin.html` — a defect nothing
+  caught because every existing test read the source for the attribute's presence, not for whether
+  the tag carrying it could ever receive focus, and because a page like `admin.html` never
+  render-completes without a live Supabase client, so a browser-only check that only inspects the
+  DOM after load never sees the template-generated rows that carried most of them. **A new
+  `data-tooltip` on a non-interactive tag needs `tabindex="0"`** unless the element is genuinely
+  `disabled` (correctly out of the tab order regardless) or it is a `<label for="...">` — there,
+  move the tooltip onto the labelled control itself (see `signin.html`'s inputs, or `sitrep.html`'s
+  `authEmail`/`authPassword` fields after the fix) rather than adding a redundant tab stop right
+  before it. `tests/ui/tooltip-reachability.test.ts` pins this by scanning every page's raw source,
+  including inside template-literal-generated rows, for exactly that shape.
 
 ## Right-click is suppressed on every page, and it is not a security control
 

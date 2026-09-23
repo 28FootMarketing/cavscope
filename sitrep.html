@@ -247,10 +247,10 @@
       <h1>SITREP Viewer</h1>
       <p>Sign in with your MUSTER account to view your organization's situation reports on screen.</p>
       <form class="auth-form" id="authForm" onsubmit="return submitAuth(event)">
-        <label for="authEmail" data-tooltip="The email address your MUSTER account uses.">Email</label>
-        <input type="email" id="authEmail" placeholder="you@company.com" required>
-        <label for="authPassword" data-tooltip="Optional — leave blank to receive a one-time magic sign-in link instead.">Password (optional)</label>
-        <input type="password" id="authPassword" placeholder="Leave blank for a magic link">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" placeholder="you@company.com" required data-tooltip="The email address your MUSTER account uses.">
+        <label for="authPassword">Password (optional)</label>
+        <input type="password" id="authPassword" placeholder="Leave blank for a magic link" data-tooltip="Optional — leave blank to receive a one-time magic sign-in link instead.">
         <div class="auth-actions">
           <button type="submit" class="btn-primary" data-tooltip="Sign in with a password, or send a magic link if the password field is empty.">Sign In →</button>
         </div>
@@ -431,10 +431,10 @@
       <div class="report-head">
         <p class="eyebrow">SITREP · ${escapeHtml((sitrep.generator || 'deterministic').toUpperCase())}</p>
         <h1>${escapeHtml(sitrep.headline || 'Situation Report')}</h1>
-        <div class="report-meta" data-tooltip="When this SITREP was generated, from which scan.">Generated ${sitrep.generated_at ? new Date(sitrep.generated_at).toLocaleString() : '—'} · Scan #${escapeHtml(String(sitrep.scan_id || '—'))}</div>
+        <div class="report-meta" data-tooltip="When this SITREP was generated, from which scan." tabindex="0">Generated ${sitrep.generated_at ? new Date(sitrep.generated_at).toLocaleString() : '—'} · Scan #${escapeHtml(String(sitrep.scan_id || '—'))}</div>
 
         <div class="score-row">
-          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer.">
+          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer." tabindex="0">
             <svg viewBox="0 0 96 96">
               <circle cx="48" cy="48" r="42" fill="none" stroke="#1f3358" stroke-width="8"></circle>
               <circle cx="48" cy="48" r="42" fill="none" stroke="${color}" stroke-width="8"
@@ -443,14 +443,14 @@
             <div class="gauge-value"><span class="num" style="color:${color}">${escapeHtml(String(score ?? '—'))}</span><span class="of100">/ 100</span></div>
           </div>
           <div>
-            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now.">● ${escapeHtml(String(band || 'unknown').toUpperCase())} POSTURE</div>
+            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now." tabindex="0">● ${escapeHtml(String(band || 'unknown').toUpperCase())} POSTURE</div>
             <div class="band-desc">${(board.open || 0)} open findings — ${board.critical || 0} critical, ${board.high || 0} high, ${board.medium || 0} medium, ${board.low || 0} low, ${(board.info || 0)} informational.</div>
           </div>
         </div>
       </div>
 
       <section class="block">
-        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below.">Board Report</h2>
+        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below." tabindex="0">Board Report</h2>
         <div class="claim-list">
           ${claims.map(c => `<div class="claim">${escapeHtml(c.text)}${citeBadge(c)}</div>`).join('') || '<p style="color:var(--text-dim);">No claims recorded for this scan.</p>'}
         </div>
@@ -458,7 +458,7 @@
 
       ${scope.length ? `
       <section class="block">
-        <h2 data-tooltip="The limits of this scan, stated up front: what it cannot see, so a clean result is not read as more than it is.">What This Scan Did Not Check</h2>
+        <h2 data-tooltip="The limits of this scan, stated up front: what it cannot see, so a clean result is not read as more than it is." tabindex="0">What This Scan Did Not Check</h2>
         <ul class="scope-list">
           ${scope.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
         </ul>
@@ -466,7 +466,7 @@
 
       ${plain.length ? `
       <section class="block">
-        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h2>
+        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each." tabindex="0">Plain English</h2>
         <div class="plain-list">
           ${plain.map(p => `<div class="plain-item">${escapeHtml(p.text)}</div>`).join('')}
         </div>
@@ -474,13 +474,13 @@
 
       ${findings.length ? `
       <section class="block">
-        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity.">Top Findings</h2>
+        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity." tabindex="0">Top Findings</h2>
         <div class="overflow-x">
           <table class="data-table">
             <thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Remediation</th></tr></thead>
             <tbody>
               ${findings.map(f => `<tr>
-                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding.">${escapeHtml(f.rule_id || '')}</td>
+                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding." tabindex="0">${escapeHtml(f.rule_id || '')}</td>
                 <td>${escapeHtml(f.title || '')}<div style="color:var(--text-dim); font-size:11.5px; margin-top:3px;">${escapeHtml(f.detail || '')}</div></td>
                 <td><span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></td>
                 <td style="color:var(--text-muted);">${escapeHtml(f.remediation || '')}</td>
@@ -494,7 +494,7 @@
 
       ${evidence.length ? `
       <section class="block">
-        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites.">Evidence Index</h2>
+        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites." tabindex="0">Evidence Index</h2>
         <div class="overflow-x">
           <table class="data-table">
             <thead><tr><th>Kind</th><th>URL</th><th>HTTP</th><th>Captured</th><th>SHA-256</th></tr></thead>
@@ -504,16 +504,16 @@
                 <td style="word-break:break-all;">${escapeHtml(e.url || '')}</td>
                 <td class="mono-cell">${escapeHtml(String(e.http_status ?? ''))}</td>
                 <td class="mono-cell">${e.captured_at ? new Date(e.captured_at).toLocaleString() : ''}</td>
-                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture.">${escapeHtml((e.sha256 || '').slice(0, 12))}…</td>
+                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture." tabindex="0">${escapeHtml((e.sha256 || '').slice(0, 12))}…</td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </section>` : ''}
 
-      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
+      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body." tabindex="0">
         MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
-        ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation.">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
+        ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation." tabindex="0">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
       </footer>
     `;
   }
@@ -525,7 +525,7 @@
   // the SQL side decides that.
   function renderJurisdiction(j) {
     if (!j) return '';
-    const head = '<h2 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice.">Laws and Standards</h2>';
+    const head = '<h2 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice." tabindex="0">Laws and Standards</h2>';
     if (j.available === false) {
       return `<section class="block">${head}<p class="law-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
     }
@@ -545,7 +545,7 @@
     const where = l => escapeHtml(names[l.jurisdiction_code] || l.jurisdiction_code || '');
     const safeLink = url => /^https:\/\//i.test(url || '')
       ? ` · <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The official text or guidance this entry is summarized from. Opens in a new tab.">Reference</a>` : '';
-    const applies = l => `<span data-tooltip="Whether this applies depends on facts the scan cannot see. Confirm with counsel.">Applies when:</span> ${escapeHtml(l.applies_when || 'not stated')}`;
+    const applies = l => `<span data-tooltip="Whether this applies depends on facts the scan cannot see. Confirm with counsel." tabindex="0">Applies when:</span> ${escapeHtml(l.applies_when || 'not stated')}`;
     const byName = (a, b) => String(a.short_name || '').localeCompare(String(b.short_name || ''));
 
     const open = laws.filter(l => l.assessment === 'open_findings')
@@ -555,28 +555,28 @@
 
     const openHtml = open.length ? `
       <div class="law-group">
-        <h3 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached.">Open findings touch these (${open.length})</h3>
+        <h3 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached." tabindex="0">Open findings touch these (${open.length})</h3>
         ${open.map(l => `<div class="law">
           <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
           <div class="law-summary">${escapeHtml(l.summary || '')}</div>
           <div class="law-meta">${applies(l)}${safeLink(l.reference_url)}</div>
-          <ul class="law-open">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span> <span class="cite" data-tooltip="The open finding this entry is cited to.">[F${escapeHtml(String(f.finding_id))}]</span></li>`).join('')}</ul>
+          <ul class="law-open">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span> <span class="cite" data-tooltip="The open finding this entry is cited to." tabindex="0">[F${escapeHtml(String(f.finding_id))}]</span></li>`).join('')}</ul>
         </div>`).join('')}
       </div>` : '';
 
     const noneHtml = none.length ? `
       <div class="law-group">
-        <h3 data-tooltip="Every check MUSTER maps to these passed on this date. That is evidence about those checks, not a determination of compliance.">No open findings on the mapped checks (${none.length})</h3>
+        <h3 data-tooltip="Every check MUSTER maps to these passed on this date. That is evidence about those checks, not a determination of compliance." tabindex="0">No open findings on the mapped checks (${none.length})</h3>
         <p class="law-group-note">The checks MUSTER maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>
         ${none.map(l => `<div class="law">
           <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
-          <div class="law-meta"><span data-tooltip="The MUSTER checks mapped to this entry.">Checks:</span> <span class="mono-cell">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}</div>
+          <div class="law-meta"><span data-tooltip="The MUSTER checks mapped to this entry." tabindex="0">Checks:</span> <span class="mono-cell">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}</div>
         </div>`).join('')}
       </div>` : '';
 
     const naHtml = na.length ? `
       <div class="law-group">
-        <h3 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do.">Not assessed by this scan (${na.length})</h3>
+        <h3 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do." tabindex="0">Not assessed by this scan (${na.length})</h3>
         <p class="law-group-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so laws whose checks depend on it are listed here rather than as passed.' : ''}</p>
         ${na.map(l => `<div class="law">
           <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
@@ -587,7 +587,7 @@
     return `
       <section class="block">
         ${head}
-        <p class="law-disclaimer" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one.">${escapeHtml(j.disclaimer || 'Informational only. This is not legal advice. Confirm applicability with counsel.')}</p>
+        <p class="law-disclaimer" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one." tabindex="0">${escapeHtml(j.disclaimer || 'Informational only. This is not legal advice. Confirm applicability with counsel.')}</p>
         <p class="law-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}. These are laws and standards commonly relevant to an organization in this location. Whether each one applies depends on facts this scan cannot see, such as who the site serves and what it collects, so each is shown with the condition under which it applies. A finding listed against a law means a check mapped to it is open. It is not a finding that the law was breached.</p>
         ${openHtml}${noneHtml}${naHtml}
       </section>`;
@@ -599,7 +599,7 @@
     const es = (claim.evidence_ids || []).map(id => `E${id}`);
     const all = [...fs, ...es];
     if (!all.length) return '';
-    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to — nothing here is asserted without a source.">[${all.join('][')}]</span>`;
+    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to — nothing here is asserted without a source." tabindex="0">[${all.join('][')}]</span>`;
   }
 
   function escapeHtml(str) {
