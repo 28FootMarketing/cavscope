@@ -579,9 +579,15 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   here**, and never add a law to the "no open findings" bucket that has no mapped rule.
   `sitrep.html` also gained the scope note ("What This Scan Did Not Check") in the same change;
   it had been in the markdown since `077` and missing from the viewer, which is the rule above
-  broken in the other direction. The law catalogue itself has rough edges this exposes: the
-  AI-governance rows' `applies_when` reads "Covers: media", and BPINA's reference URL ends in a
-  stray period. Those are catalogue data, not rendering, and are left for whoever owns it.
+  broken in the other direction. Rendering it exposed two catalogue defects, repaired by
+  `20260923044416` (`muster_083`): all 83 AI-governance rows carried `applies_when` as a raw tag
+  list ("Covers: highrisk, companion, text, media"), now one plain sentence each saying the law
+  applies **only if** the organization uses AI in that way; and BPINA's reference URL ended in a
+  stray period. The four tags are defined nowhere in the repo, so their meaning was read off the
+  laws carrying them and the mapping is in that migration's header. **`text` is the loose one**:
+  it also tags algorithmic-pricing laws, so it is rendered as broad public-facing AI use rather
+  than "generates text". A new catalogue row must be written as a sentence -- the migration
+  asserts no `Covers:` value survives, but nothing stops one being inserted later.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
