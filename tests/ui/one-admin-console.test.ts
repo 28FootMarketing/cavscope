@@ -168,3 +168,29 @@ test("side reads fail per panel, not per page", () => {
   assert.match(side, /\.then\(\(r\) => r, \(err\) => \(\{ error: err \}\)\)/);
   for (const k of ["registry", "imp", "impLog", "overview", "platform"]) assert.match(side, new RegExp(`\\b${k}: \\['muster_admin_`));
 });
+
+test("the flag forms keep what was typed across a re-render, and across a refused save", () => {
+  // render() replaces the page on a search keystroke, a filter change, a save
+  // and a countdown expiry. These forms held their values only in the DOM until
+  // 2026-09-23, so any of those blanked them, and a refused create (a duplicate
+  // key) came back empty.
+  const reg = admin.slice(admin.indexOf("const drafts = {};"), admin.indexOf("// Surfaces the design calls for"));
+  for (const field of ["reason", "expires"]) assert.match(reg, new RegExp(`name="${field}"[^>]*value="\\$\\{escapeHtml\\(od\\.${field} \\|\\| ''\\)\\}"`), `override ${field} must render from its draft`);
+  for (const field of ["key", "name", "description"]) assert.match(reg, new RegExp(`name="${field}"[^>]*value="\\$\\{escapeHtml\\(cd\\.${field} \\|\\| ''\\)\\}"`), `new-flag ${field} must render from its draft`);
+  assert.match(reg, /selectedIf\(od\.org, t\.id\)/);
+  assert.match(reg, /selectedIf\(cd\.scope, sc\)/);
+  assert.match(reg, /name="default_enabled" aria-label="Default on"\$\{cd\.default_enabled \? ' checked' : ''\}/);
+  assert.match(reg, /data-flag="__new"\$\{openFlags\.has\('__new'\) \? ' open' : ''\}/);
+
+  // A draft is dropped only when its save succeeded; write() returns null on a refusal.
+  const writes = admin.slice(admin.indexOf("async function addFlagOverride("), admin.indexOf("async function deleteFlag("));
+  assert.match(writes, /if \(saved\) \{ delete drafts\['override:' \+ key\]; render\(\); \}/);
+  assert.match(writes, /if \(saved\) \{ delete drafts\.create; render\(\); \}/);
+
+  // Recording a keystroke must not re-render, which would move the caret.
+  const rec = admin.slice(admin.indexOf("function recordDraft(el) {"), admin.indexOf("// `toggle` does not bubble"));
+  assert.ok(rec.length > 0, "recordDraft not found");
+  assert.doesNotMatch(rec, /render\(\)/);
+  const events = admin.slice(admin.indexOf("// ---- events"), admin.indexOf("// Right-click context menu suppression"));
+  assert.equal((events.match(/recordDraft\(e\.target\);/g) || []).length, 2, "record from both input and change");
+});

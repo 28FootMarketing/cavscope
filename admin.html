@@ -2139,6 +2139,24 @@
   // that snapped shut after you added an override to it would hide the result.
   const openFlags = new Set();
 
+  // What has been typed into the override and new-flag forms, keyed by form:
+  // `override:<flag key>` or `create`. Same reason as the runner's `run` and the
+  // support form's `impForm`: render() replaces the page on every search
+  // keystroke, org-filter change, save and countdown expiry, and a value that
+  // lived only in its node was blanked mid-form. A refused create was the worst
+  // case: the database said no (a duplicate key, say), the page re-read, and the
+  // whole form came back empty. A draft is dropped only after its save succeeds.
+  const drafts = {};
+
+  function draftKey(form) {
+    const act = form.getAttribute('data-act');
+    if (act === 'override-add') return 'override:' + form.getAttribute('data-key');
+    if (act === 'flag-create') return 'create';
+    return null;
+  }
+
+  function selectedIf(cur, value) { return String(cur) === String(value) ? ' selected' : ''; }
+
   function flagRegistry(reg) {
     const sum = reg.summary || {}, plans = reg.plans || [];
     const flags = (reg.flags || []).filter((f) => matches(f.key, f.name, f.category, f.surface, f.description));
@@ -2153,6 +2171,7 @@
       const ovs = f.overrides || [];
       const liveOvs = ovs.filter((o) => !o.expired);
       const key = escapeHtml(f.key);
+      const od = drafts['override:' + f.key] || {};
       return `
         <div class="flag-row${wired ? '' : ' unwired'}">
           <div>
@@ -2205,23 +2224,23 @@
                 <div class="field">
                   <label>Organization</label>
                   <select name="org" required aria-label="Organization" data-tooltip="Which tenant this exception applies to. An override beats both the plan gate and the default, in either direction.">
-                    ${orgs.map((t) => `<option value="${Number(t.id)}">${escapeHtml(t.name)}${t.is_admin_sandbox ? ' (sandbox)' : ''}</option>`).join('') || '<option value="" disabled>No tenants</option>'}
+                    ${orgs.map((t) => `<option value="${Number(t.id)}"${selectedIf(od.org, t.id)}>${escapeHtml(t.name)}${t.is_admin_sandbox ? ' (sandbox)' : ''}</option>`).join('') || '<option value="" disabled>No tenants</option>'}
                   </select>
                 </div>
                 <div class="field">
                   <label>State</label>
                   <select name="enabled" aria-label="Override state" data-tooltip="On grants the feature to an org that would not otherwise have it. Off takes it away from one that would.">
-                    <option value="true">on</option><option value="false">off</option>
+                    <option value="true"${selectedIf(od.enabled, 'true')}>on</option><option value="false"${selectedIf(od.enabled, 'false')}>off</option>
                   </select>
                 </div>
                 <div class="field">
                   <label>Reason</label>
-                  <input type="text" name="reason" required minlength="8" aria-label="Reason for the override" placeholder="e.g. pilot for the Q4 renewal, agreed with sales"
+                  <input type="text" name="reason" required minlength="8" aria-label="Reason for the override" value="${escapeHtml(od.reason || '')}" placeholder="e.g. pilot for the Q4 renewal, agreed with sales"
                          data-tooltip="Required. An override with no stated reason is indistinguishable from a mistake six months later.">
                 </div>
                 <div class="field">
                   <label>Expires</label>
-                  <input type="date" name="expires" aria-label="Override expiry date" data-tooltip="Optional. An override with an expiry cleans itself up; one without stays until someone revokes it by hand.">
+                  <input type="date" name="expires" aria-label="Override expiry date" value="${escapeHtml(od.expires || '')}" data-tooltip="Optional. An override with an expiry cleans itself up; one without stays until someone revokes it by hand.">
                 </div>
                 <button class="btn sm" type="submit" data-tooltip="Saves the exception. It takes effect on this org's next request -- no deploy, no restart.">Add override</button>
               </form>
@@ -2242,6 +2261,7 @@
         ${inCat.map(row).join('')}`;
     }).join('');
 
+    const cd = drafts.create || {};
     return panel(`Feature flags (${num(sum.total)})`, 'Every flag in the platform, what reads it, what each plan resolves to, and every exception.', `
       <div class="stat-row">
         <div data-tooltip="Flags that some code actually reads, so their switches take effect."><small>Enforced</small><strong style="color:var(--emerald);">${num(sum.wired)}</strong></div>
@@ -2256,41 +2276,41 @@
         Each row says why. They are kept because they are real product commitments, not because they work.
       </div>` : ''}
       ${groups || '<div class="empty">No flags match.</div>'}
-      <details class="flag-new" style="margin-top:16px; border-top:1px solid var(--surface-border); padding-top:14px;">
+      <details class="flag-new" data-flag="__new"${openFlags.has('__new') ? ' open' : ''} style="margin-top:16px; border-top:1px solid var(--surface-border); padding-top:14px;">
         <summary data-tooltip="Creates a flag row. It will be marked read by nothing until code is written that reads the key -- creating it here does not gate anything on its own.">▸ New flag</summary>
         <form data-act="flag-create" class="form-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:12px;">
           <div class="field">
             <label>Key</label>
-            <input type="text" name="key" required aria-label="Flag key" pattern="[a-z][a-z0-9_]{2,47}" placeholder="lower_snake_case"
+            <input type="text" name="key" required aria-label="Flag key" value="${escapeHtml(cd.key || '')}" pattern="[a-z][a-z0-9_]{2,47}" placeholder="lower_snake_case"
                    data-tooltip="What the code will read. lower_snake_case, 3 to 48 characters. It cannot be renamed afterwards without a migration.">
           </div>
           <div class="field">
             <label>Name</label>
-            <input type="text" name="name" required aria-label="Flag name" placeholder="Human-readable name" data-tooltip="What this appears as in the console.">
+            <input type="text" name="name" required aria-label="Flag name" value="${escapeHtml(cd.name || '')}" placeholder="Human-readable name" data-tooltip="What this appears as in the console.">
           </div>
           <div class="field">
             <label>Category</label>
             <select name="category" aria-label="Flag category" data-tooltip="Which group this flag is filed under above.">
-              ${FLAG_CATEGORIES.map(([c, t]) => `<option value="${c}">${escapeHtml(t)}</option>`).join('')}
+              ${FLAG_CATEGORIES.map(([c, t]) => `<option value="${c}"${selectedIf(cd.category, c)}>${escapeHtml(t)}</option>`).join('')}
             </select>
           </div>
           <div class="field" style="grid-column:1 / -1;">
             <label>Description</label>
-            <input type="text" name="description" required minlength="10" aria-label="Flag description" placeholder="What this gates, written for whoever finds the switch next"
+            <input type="text" name="description" required minlength="10" aria-label="Flag description" value="${escapeHtml(cd.description || '')}" placeholder="What this gates, written for whoever finds the switch next"
                    data-tooltip="Required. This is what the next person reads before deciding whether it is safe to flip.">
           </div>
           <div class="field">
             <label>Scope</label>
             <select name="scope" aria-label="Flag scope" data-tooltip="Organization is the usual choice. Platform means it is not per-tenant at all.">
-              <option value="organization">organization</option><option value="platform">platform</option><option value="user">user</option>
+              ${['organization', 'platform', 'user'].map((sc) => `<option value="${sc}"${selectedIf(cd.scope, sc)}>${sc}</option>`).join('')}
             </select>
           </div>
           <div class="field">
             <label>Plan gate</label>
-            <select name="plan" aria-label="Plan gate" data-tooltip="Lowest plan that gets it. Leave unset for no plan gate.">${planOpts(null)}</select>
+            <select name="plan" aria-label="Plan gate" data-tooltip="Lowest plan that gets it. Leave unset for no plan gate.">${planOpts(cd.plan || null)}</select>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <label class="switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships."><input type="checkbox" name="default_enabled" aria-label="Default on"><span class="slider"></span></label>
+            <label class="switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships."><input type="checkbox" name="default_enabled" aria-label="Default on"${cd.default_enabled ? ' checked' : ''}><span class="slider"></span></label>
             <button class="btn sm" type="submit" data-tooltip="Creates the flag, marked read by nothing until code reads the key.">Create flag</button>
           </div>
         </form>
@@ -2584,13 +2604,14 @@
   async function addFlagOverride(form) {
     const f = new FormData(form);
     const key = form.dataset.key;
-    await write('muster_admin_set_flag', {
+    const saved = await write('muster_admin_set_flag', {
       p_key: key,
       p_enabled: f.get('enabled') === 'true',
       p_organization_id: Number(f.get('org')),
       p_reason: f.get('reason'),
       p_expires_at: f.get('expires') ? new Date(f.get('expires') + 'T23:59:59Z').toISOString() : null,
     }, `Override saved on ${key}.`);
+    if (saved) { delete drafts['override:' + key]; render(); }
   }
 
   async function clearFlagOverride(btn) {
@@ -2601,12 +2622,13 @@
 
   async function createFlag(form) {
     const f = new FormData(form);
-    await write('muster_admin_create_flag', {
+    const saved = await write('muster_admin_create_flag', {
       p_key: f.get('key'), p_name: f.get('name'), p_description: f.get('description'),
       p_scope: f.get('scope'), p_category: f.get('category'),
       p_default_enabled: f.get('default_enabled') === 'on',
       p_plan_minimum: f.get('plan') || null,
     }, (r) => `${r.key || f.get('key')} created. Nothing reads it yet, so the console marks it read by nothing.`);
+    if (saved) { delete drafts.create; render(); }
   }
 
   async function deleteFlag(btn) {
@@ -2748,7 +2770,18 @@
     // every keystroke would move the caret to the end of the field.
     if (e.target.id === 'runUrl') { run.url = e.target.value; }
     if (e.target.id === 'impReason') { impForm.reason = e.target.value; }
+    recordDraft(e.target);
   });
+
+  // Records a flag-form field into its draft. Called from both `input` (typing)
+  // and `change` (selects, the date picker, the checkbox); never re-renders.
+  function recordDraft(el) {
+    const form = el && el.form;
+    if (!form || !el.name) return;
+    const k = draftKey(form);
+    if (!k) return;
+    (drafts[k] = drafts[k] || {})[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+  }
 
   // `toggle` does not bubble, so this listens in the capture phase.
   document.addEventListener('toggle', (e) => {
@@ -2773,6 +2806,7 @@
     if (e.target.id === 'rangeFilter') { rangeDays = Number(e.target.value); render(); }
     if (e.target.id === 'runSite') { run.siteId = e.target.value; }
     if (e.target.id === 'impTarget') { impForm.target = e.target.value; }
+    recordDraft(e.target);
     if (e.target.id === 'impMinutes') { impForm.minutes = e.target.value; }
     switch (e.target.getAttribute && e.target.getAttribute('data-act')) {
       case 'plan': setPlan(e.target); break;
