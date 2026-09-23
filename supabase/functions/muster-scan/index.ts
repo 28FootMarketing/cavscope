@@ -57,7 +57,14 @@ import {
 // five default admin paths, judging only pages whose served HTML contains a
 // password field. It still signs in to nothing and submits nothing; see
 // login.ts for what it deliberately leaves alone.
-const ENGINE_VERSION = "http-native-1.7.0";
+//
+// 1.7.1 stops AUTH-003 reporting wordpress_test_cookie. It holds the constant
+// "WP Cookie check" and never becomes a session, but it was AUTH-003's first
+// live firing (hanoverymca.org, scan 86), which would have put a medium finding
+// on every WordPress login page for a cookie that carries nothing. A patch
+// rather than a minor: one rule stops emitting one false case, and no rule is
+// added. It still moves, because rule output changed.
+const ENGINE_VERSION = "http-native-1.7.1";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
