@@ -705,7 +705,7 @@
 
     <nav class="nav" id="nav" aria-label="Super admin sections"></nav>
 
-    <div class="rail-promo" data-tooltip="MUSTER's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it.">
+    <div class="rail-promo" data-tooltip="MUSTER's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it." tabindex="0">
       <h4>Build a more<br>assured internet.</h4>
       <p>AI readiness. Real protection. Measurable trust.</p>
     </div>
@@ -972,7 +972,7 @@
     ];
 
     return `<div class="kpis">${tiles.map((t) => `
-      <div class="card kpi" data-tooltip="${escapeHtml(t.tip)}">
+      <div class="card kpi" data-tooltip="${escapeHtml(t.tip)}" tabindex="0">
         <div class="kpi-ico ${t.cls}" aria-hidden="true">${t.icon}</div>
         <div class="kpi-body">
           <div class="kpi-label">${escapeHtml(t.label)}</div>
@@ -1024,7 +1024,7 @@
       }).join('');
       const label = `${d.day}: ${d.total} scan${d.total === 1 ? '' : 's'}` +
         (d.failed ? ` (${d.failed} failed)` : '');
-      return `<g data-tooltip="${escapeHtml(label)}"><rect x="${(padL + i * slot).toFixed(1)}" y="${padT}" width="${slot.toFixed(1)}" height="${plotH}" fill="transparent"></rect>${stack}</g>`;
+      return `<g data-tooltip="${escapeHtml(label)}" tabindex="0"><rect x="${(padL + i * slot).toFixed(1)}" y="${padT}" width="${slot.toFixed(1)}" height="${plotH}" fill="transparent"></rect>${stack}</g>`;
     }).join('');
 
     const ticks = series.map((d, i) => {
@@ -1044,7 +1044,7 @@
         ${gridlines.join('')}${bars}${ticks}
       </svg>
       <div class="legend">
-        ${bands.map((b) => `<span data-tooltip="${escapeHtml(b.label === 'Scheduled' ? 'Scans the pg_cron schedule started, with no human involved.' : b.label === 'Manual' ? 'Scans a person started from the workspace or the admin URL runner.' : 'Scans started by an agent API key or by onboarding.')}"><i style="background:${b.colour}"></i>${escapeHtml(b.label)}</span>`).join('')}
+        ${bands.map((b) => `<span data-tooltip="${escapeHtml(b.label === 'Scheduled' ? 'Scans the pg_cron schedule started, with no human involved.' : b.label === 'Manual' ? 'Scans a person started from the workspace or the admin URL runner.' : 'Scans started by an agent API key or by onboarding.')}" tabindex="0"><i style="background:${b.colour}"></i>${escapeHtml(b.label)}</span>`).join('')}
         <span style="margin-left:auto; color: var(--text-dim);">${num(total)} scans in ${rangeDays} days</span>
       </div>`;
   }
@@ -1058,10 +1058,10 @@
       <div class="risk">
         <span class="pill ${escapeHtml(r.severity)}">${escapeHtml(r.severity)}</span>
         <div class="risk-main">
-          <b data-tooltip="${escapeHtml(r.rule_id ? 'Rule ' + r.rule_id + ' — open on ' + (r.website || 'this organization') : 'Open finding')}">${escapeHtml(r.title)}</b>
+          <b data-tooltip="${escapeHtml(r.rule_id ? 'Rule ' + r.rule_id + ' — open on ' + (r.website || 'this organization') : 'Open finding')}" tabindex="0">${escapeHtml(r.title)}</b>
           <small>${escapeHtml(r.organization)}${r.website ? ' · ' + escapeHtml(r.website) : ''}</small>
         </div>
-        <span class="risk-when" data-tooltip="Last confirmed by a scan at ${escapeHtml(stamp(r.last_seen_at))}. First seen ${escapeHtml(stamp(r.first_seen_at))}.">${escapeHtml(ago(r.last_seen_at))}</span>
+        <span class="risk-when" data-tooltip="Last confirmed by a scan at ${escapeHtml(stamp(r.last_seen_at))}. First seen ${escapeHtml(stamp(r.first_seen_at))}." tabindex="0">${escapeHtml(ago(r.last_seen_at))}</span>
       </div>`).join('')}</div>`;
   }
 
@@ -1089,7 +1089,7 @@
     }).join('');
 
     return `<div class="health">
-      <div class="donut" data-tooltip="An organization is banded by its WORST site, not its average — a portfolio is only as assured as the weakest thing in it.">
+      <div class="donut" data-tooltip="An organization is banded by its WORST site, not its average — a portfolio is only as assured as the weakest thing in it." tabindex="0">
         <svg width="142" height="142" viewBox="0 0 142 142" role="img" aria-label="Organization health by band">
           <circle cx="71" cy="71" r="56" fill="none" stroke="var(--surface-raised)" stroke-width="17"></circle>
           ${arcs}
@@ -1097,7 +1097,7 @@
         <div class="donut-mid"><b>${num(total)}</b><small>Organizations</small></div>
       </div>
       <div class="health-key">
-        ${slices.map((s) => `<div data-tooltip="${escapeHtml(s.tip)}">
+        ${slices.map((s) => `<div data-tooltip="${escapeHtml(s.tip)}" tabindex="0">
           <i style="background:${s.colour}"></i>${escapeHtml(s.label)}
           <b>${num(s.n)}</b><span class="pct">(${Math.round((s.n / total) * 100)}%)</span>
         </div>`).join('')}
@@ -1112,12 +1112,12 @@
     if (!rows.length) return `<div class="empty">No scans match.</div>`;
     return `<table class="tbl">
       <thead><tr>
-        <th data-tooltip="The tenant the scan ran for.">Organization</th>
-        <th data-tooltip="The registered site, or the raw URL for an ad-hoc admin run.">Website</th>
-        <th data-tooltip="What started it: the cron schedule, a person, or an agent key.">Trigger</th>
-        <th data-tooltip="Engine status for this scan. 'failed' means the engine could not complete it, so it produced no findings.">Status</th>
-        <th data-tooltip="The site's posture score right now: 100 minus the weighted severity of everything still open on it.">Score</th>
-        <th data-tooltip="When the scan finished.">Last Scan</th>
+        <th data-tooltip="The tenant the scan ran for." tabindex="0">Organization</th>
+        <th data-tooltip="The registered site, or the raw URL for an ad-hoc admin run." tabindex="0">Website</th>
+        <th data-tooltip="What started it: the cron schedule, a person, or an agent key." tabindex="0">Trigger</th>
+        <th data-tooltip="Engine status for this scan. 'failed' means the engine could not complete it, so it produced no findings." tabindex="0">Status</th>
+        <th data-tooltip="The site's posture score right now: 100 minus the weighted severity of everything still open on it." tabindex="0">Score</th>
+        <th data-tooltip="When the scan finished." tabindex="0">Last Scan</th>
       </tr></thead>
       <tbody>${rows.map((r) => `<tr>
         <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(r.organization))}</span>${escapeHtml(r.organization)}</span></td>
@@ -1129,7 +1129,7 @@
               ? '<span class="pill critical">failed</span>'
               : `<span class="pill medium">${escapeHtml(r.status)}</span>`}</td>
         <td>${r.score == null ? '<span class="muted">—</span>' : `<span class="score ${band(r.score)}">${r.score}</span>`}</td>
-        <td class="muted num" data-tooltip="${escapeHtml(stamp(r.at))}">${escapeHtml(ago(r.at))}</td>
+        <td class="muted num" data-tooltip="${escapeHtml(stamp(r.at))}" tabindex="0">${escapeHtml(ago(r.at))}</td>
       </tr>`).join('')}</tbody>
     </table>`;
   }
@@ -1180,7 +1180,7 @@
     ];
 
     return `<div class="rows">${rows.map((r) => `
-      <div class="status" data-tooltip="${escapeHtml(r.tip)}">
+      <div class="status" data-tooltip="${escapeHtml(r.tip)}" tabindex="0">
         <span class="dot ${r.state}" aria-hidden="true"></span>
         <span class="status-name">${escapeHtml(r.name)}</span>
         <span class="status-val">${escapeHtml(r.val)}</span>
@@ -1192,7 +1192,7 @@
     if (!items.length) return `<div class="empty good">Nothing queued. Every derived check is clear.</div>`;
     const glyph = { critical: '!', high: '▲', medium: '◆', low: '·' };
     return `<div class="rows">${items.map((a) => `
-      <div class="action" data-tooltip="${escapeHtml(a.detail)}">
+      <div class="action" data-tooltip="${escapeHtml(a.detail)}" tabindex="0">
         <span class="action-ico ${escapeHtml(a.severity)}" aria-hidden="true">${glyph[a.severity] || '·'}</span>
         <div class="action-main">
           <b>${num(a.count)} · ${escapeHtml(a.title)}</b>
@@ -1206,7 +1206,7 @@
     return `<section class="card panel"${o.id ? ` id="${o.id}"` : ''}>
       <div class="panel-head">
         <div>
-          <h3${o.tip ? ` data-tooltip="${escapeHtml(o.tip)}"` : ''}>${escapeHtml(title)}${o.badge ? `<span class="badge">${escapeHtml(String(o.badge))}</span>` : ''}</h3>
+          <h3${o.tip ? ` data-tooltip="${escapeHtml(o.tip)}"` : ''} tabindex="0">${escapeHtml(title)}${o.badge ? `<span class="badge">${escapeHtml(String(o.badge))}</span>` : ''}</h3>
           ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}
         </div>
         ${o.more ? `<button class="link-more" type="button" data-section="${o.more}" data-tooltip="${escapeHtml(o.moreTip || '')}">View all →</button>` : ''}
@@ -1282,22 +1282,22 @@
       panel('Tenant roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>Organization</th>
-          <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag. The small label beside it is the commercial stage it is priced at.">Plan</th>
-          <th data-tooltip="Members with a seat, and registered websites.">Members / Sites</th>
-          <th data-tooltip="Open critical and high findings across all of this tenant's sites.">Open Risk</th>
-          <th data-tooltip="The posture score of this tenant's WORST site — a portfolio is only as assured as its weakest thing.">Worst Score</th>
-          <th data-tooltip="When any site in this organization last finished a scan.">Last Scan</th>
-          <th data-tooltip="Opens the tenant's own workspace in the app.">Workspace</th>
+          <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag. The small label beside it is the commercial stage it is priced at." tabindex="0">Plan</th>
+          <th data-tooltip="Members with a seat, and registered websites." tabindex="0">Members / Sites</th>
+          <th data-tooltip="Open critical and high findings across all of this tenant's sites." tabindex="0">Open Risk</th>
+          <th data-tooltip="The posture score of this tenant's WORST site — a portfolio is only as assured as its weakest thing." tabindex="0">Worst Score</th>
+          <th data-tooltip="When any site in this organization last finished a scan." tabindex="0">Last Scan</th>
+          <th data-tooltip="Opens the tenant's own workspace in the app." tabindex="0">Workspace</th>
         </tr></thead>
         <tbody>${rows.map((o) => `<tr>
           <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(o.name))}</span>
-            <span><b>${escapeHtml(o.name)}</b>${o.is_admin_sandbox ? ' <span class="pill medium" data-tooltip="The internal organization ad-hoc URL scans are parked in. Nobody\'s data; not counted as a tenant.">sandbox</span>' : ''}
+            <span><b>${escapeHtml(o.name)}</b>${o.is_admin_sandbox ? ' <span class="pill medium" data-tooltip="The internal organization ad-hoc URL scans are parked in. Nobody\'s data; not counted as a tenant." tabindex="0">sandbox</span>' : ''}
             <br><small class="muted">${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${escapeHtml(o.onboarding_status)}</small></span></span></td>
           <td>${planSelect(o)} <small class="muted">${escapeHtml(o.stage || '')}</small></td>
           <td class="muted num">${num(o.members)} / ${num(o.websites)}</td>
           <td>${o.open_critical ? `<span class="pill critical">${o.open_critical} critical</span> ` : ''}${o.open_high ? `<span class="pill high">${o.open_high} high</span>` : (!o.open_critical ? '<span class="muted">clear</span>' : '')}</td>
           <td>${o.worst_score == null ? '<span class="muted">—</span>' : `<span class="score ${band(o.worst_score)}">${o.worst_score}</span>`}</td>
-          <td class="muted num" data-tooltip="${escapeHtml(stamp(o.last_scan_at))}">${escapeHtml(ago(o.last_scan_at))}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(o.last_scan_at))}" tabindex="0">${escapeHtml(ago(o.last_scan_at))}</td>
           <td><a class="link-more" href="/app#tenant=${Number(o.id)}"
                  data-tooltip="Opens ${escapeHtml(o.name)}'s workspace in the app, using your own super admin access. To see exactly what one of its users sees, use Support Access instead.">Open ↗</a></td>
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No organizations match.</div>');
@@ -1312,10 +1312,10 @@
       panel('User roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>User</th>
-          <th data-tooltip="Platform role. super_admin is what opens this console; everything else is scoped by RLS to the organizations the user belongs to.">Role</th>
-          <th data-tooltip="Organizations this user has a seat in.">Memberships</th>
-          <th data-tooltip="How the account signs in.">Login</th>
-          <th data-tooltip="Last recorded sign-in.">Last Seen</th>
+          <th data-tooltip="Platform role. super_admin is what opens this console; everything else is scoped by RLS to the organizations the user belongs to." tabindex="0">Role</th>
+          <th data-tooltip="Organizations this user has a seat in." tabindex="0">Memberships</th>
+          <th data-tooltip="How the account signs in." tabindex="0">Login</th>
+          <th data-tooltip="Last recorded sign-in." tabindex="0">Last Seen</th>
         </tr></thead>
         <tbody>${rows.map((u) => `<tr>
           <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(u.name || u.email))}</span>
@@ -1327,7 +1327,7 @@
             </select></td>
           <td class="muted num">${num(u.memberships)}</td>
           <td class="muted">${escapeHtml(u.login_method || '—')}</td>
-          <td class="muted num" data-tooltip="${escapeHtml(stamp(u.last_signed_in))}">${escapeHtml(ago(u.last_signed_in))}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(u.last_signed_in))}" tabindex="0">${escapeHtml(ago(u.last_signed_in))}</td>
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No users match.</div>');
   }
 
@@ -1384,12 +1384,12 @@
     return `<div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
         <button class="btn" type="button" id="sitrepBack" data-tooltip="Back to the list of every report this platform has generated.">← All reports</button>
         <div><small class="muted" style="display:block;">Posture at generation</small><span class="score ${escapeHtml(r.posture_band || band(r.posture_score))}">${num(r.posture_score)}</span></div>
-        <div data-tooltip="deterministic-v1 is written by a template in Postgres from the findings. An LLM generator means prose a model wrote under citation checks -- worth knowing before quoting it to a client."><small class="muted" style="display:block;">Generator</small><b>${escapeHtml(r.generator || 'unknown')}</b></div>
-        <div data-tooltip="The engine build that produced the scan behind this report. Findings are only comparable across scans on the same version."><small class="muted" style="display:block;">Engine</small><b>${escapeHtml(r.engine_version || 'unknown')}</b></div>
-        <div><small class="muted" style="display:block;">Generated</small><b data-tooltip="${escapeHtml(stamp(r.generated_at))}">${escapeHtml(ago(r.generated_at))}</b></div>
+        <div data-tooltip="deterministic-v1 is written by a template in Postgres from the findings. An LLM generator means prose a model wrote under citation checks -- worth knowing before quoting it to a client." tabindex="0"><small class="muted" style="display:block;">Generator</small><b>${escapeHtml(r.generator || 'unknown')}</b></div>
+        <div data-tooltip="The engine build that produced the scan behind this report. Findings are only comparable across scans on the same version." tabindex="0"><small class="muted" style="display:block;">Engine</small><b>${escapeHtml(r.engine_version || 'unknown')}</b></div>
+        <div><small class="muted" style="display:block;">Generated</small><b data-tooltip="${escapeHtml(stamp(r.generated_at))}" tabindex="0">${escapeHtml(ago(r.generated_at))}</b></div>
       </div>
       <pre style="white-space:pre-wrap; word-break:break-word; font-family:var(--font-mono); font-size:12px; line-height:1.65; color:var(--text-muted); background:var(--surface); border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:16px; margin:0; max-height:70vh; overflow:auto;"
-           data-tooltip="The report exactly as stored, and exactly as the tenant reads it at /sitrep. Every claim in it cites a finding [F] or an evidence row [E].">${escapeHtml(r.content_md || '(this report has no markdown body)')}</pre>`;
+           data-tooltip="The report exactly as stored, and exactly as the tenant reads it at /sitrep. Every claim in it cites a finding [F] or an evidence row [E]." tabindex="0">${escapeHtml(r.content_md || '(this report has no markdown body)')}</pre>`;
   }
 
   function renderReports() {
@@ -1418,21 +1418,21 @@
         <thead><tr>
           <th>Report</th>
           <th>Organization</th>
-          <th data-tooltip="Posture at the moment this report was generated. The site's score now may differ -- a later scan does not rewrite an old report.">Posture</th>
-          <th data-tooltip="deterministic-v1 is written by a template from the findings. An LLM generator means model-written prose under citation checks.">Generator</th>
-          <th data-tooltip="The engine build behind the scan. Findings are only comparable across scans on the same version.">Engine</th>
-          <th data-tooltip="How many finding and evidence citations the report carries. Every claim in a SITREP cites one.">Cites</th>
+          <th data-tooltip="Posture at the moment this report was generated. The site's score now may differ -- a later scan does not rewrite an old report." tabindex="0">Posture</th>
+          <th data-tooltip="deterministic-v1 is written by a template from the findings. An LLM generator means model-written prose under citation checks." tabindex="0">Generator</th>
+          <th data-tooltip="The engine build behind the scan. Findings are only comparable across scans on the same version." tabindex="0">Engine</th>
+          <th data-tooltip="How many finding and evidence citations the report carries. Every claim in a SITREP cites one." tabindex="0">Cites</th>
           <th>Generated</th>
         </tr></thead>
         <tbody>${rows.map((r) => `<tr class="rowlink" data-sitrep="${r.id}" style="cursor:pointer;"
-              data-tooltip="Open this report exactly as stored, and exactly as the tenant reads it.">
+              data-tooltip="Open this report exactly as stored, and exactly as the tenant reads it." tabindex="0">
           <td><b>${escapeHtml(r.website || '')}</b><br><small class="muted">${escapeHtml(r.headline || r.url || '')}</small></td>
           <td class="muted">${escapeHtml(r.organization || '')}${r.is_admin_sandbox ? ' <span class="pill medium">sandbox</span>' : ''}</td>
           <td><span class="score ${escapeHtml(r.posture_band || band(r.posture_score))}">${num(r.posture_score)}</span></td>
           <td class="muted">${escapeHtml(r.generator || '')}</td>
           <td class="muted">${escapeHtml(r.engine_version || '—')}</td>
           <td class="num muted">${num(r.citations)}</td>
-          <td class="muted num" data-tooltip="${escapeHtml(stamp(r.generated_at))}">${escapeHtml(ago(r.generated_at))}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(r.generated_at))}" tabindex="0">${escapeHtml(ago(r.generated_at))}</td>
         </tr>`).join('')}</tbody></table>`
         : '<div class="empty">No reports match. A SITREP is written after every completed scan.</div>');
   }
@@ -1517,7 +1517,7 @@
 
       ${run.msg ? `<div class="runner-msg ${run.kind === 'error' ? 'bad' : run.busy ? 'busy' : 'ok'}">${run.msg}</div>` : ''}
 
-      <div class="runner-note" data-tooltip="Why the button waits instead of returning immediately.">
+      <div class="runner-note" data-tooltip="Why the button waits instead of returning immediately." tabindex="0">
         A scan is queued first and run by the engine a moment later, so this waits for it
         to finish before reporting. If it is still going after ${RUN_POLL_TRIES} checks the
         panel says so and stops watching; the scan itself carries on and will appear in the
@@ -1684,11 +1684,11 @@
       `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
         ${panel('Recent scans', 'Most recent runs across every organization', recentScans(50))}
         ${panel('Queue depth', 'Live engine state', `<div class="rows">
-          <div class="status" data-tooltip="Waiting for the next muster-scan-due tick to pick them up."><span class="dot ${q.queued > 20 ? 'warn' : 'ok'}"></span><span class="status-name">Queued</span><span class="status-val">${num(q.queued)}</span></div>
-          <div class="status" data-tooltip="Currently executing on the engine."><span class="dot ok"></span><span class="status-name">Running</span><span class="status-val">${num(q.running)}</span></div>
-          <div class="status" data-tooltip="Completed successfully in the last 24 hours."><span class="dot ok"></span><span class="status-name">Completed (24h)</span><span class="status-val">${num(a.complete_24h)}</span></div>
-          <div class="status" data-tooltip="Failed in the last 24 hours. A failed scan produces no findings, so a site that only fails silently keeps its old score."><span class="dot ${a.failed_24h ? 'bad' : 'ok'}"></span><span class="status-name">Failed (24h)</span><span class="status-val">${num(a.failed_24h)}</span></div>
-          <div class="status" data-tooltip="Completed in the last 7 days."><span class="dot ok"></span><span class="status-name">Completed (7d)</span><span class="status-val">${num(a.complete_7d)}</span></div>
+          <div class="status" data-tooltip="Waiting for the next muster-scan-due tick to pick them up." tabindex="0"><span class="dot ${q.queued > 20 ? 'warn' : 'ok'}"></span><span class="status-name">Queued</span><span class="status-val">${num(q.queued)}</span></div>
+          <div class="status" data-tooltip="Currently executing on the engine." tabindex="0"><span class="dot ok"></span><span class="status-name">Running</span><span class="status-val">${num(q.running)}</span></div>
+          <div class="status" data-tooltip="Completed successfully in the last 24 hours." tabindex="0"><span class="dot ok"></span><span class="status-name">Completed (24h)</span><span class="status-val">${num(a.complete_24h)}</span></div>
+          <div class="status" data-tooltip="Failed in the last 24 hours. A failed scan produces no findings, so a site that only fails silently keeps its old score." tabindex="0"><span class="dot ${a.failed_24h ? 'bad' : 'ok'}"></span><span class="status-name">Failed (24h)</span><span class="status-val">${num(a.failed_24h)}</span></div>
+          <div class="status" data-tooltip="Completed in the last 7 days." tabindex="0"><span class="dot ok"></span><span class="status-name">Completed (7d)</span><span class="status-val">${num(a.complete_7d)}</span></div>
         </div>`)}
       </div>`;
   }
@@ -1700,11 +1700,11 @@
         <thead><tr>
           <th>Website</th>
           <th>Organization</th>
-          <th data-tooltip="Production, staging or development. Environment changes which rules are expected to apply.">Env</th>
-          <th data-tooltip="100 minus the weighted severity of everything still open on the site.">Score</th>
-          <th data-tooltip="Open or reopened findings of any severity.">Open</th>
-          <th data-tooltip="Ownership proof. Until a site is verified, the deeper checks stay off.">Verified</th>
-          <th data-tooltip="Last completed scan.">Last Scan</th>
+          <th data-tooltip="Production, staging or development. Environment changes which rules are expected to apply." tabindex="0">Env</th>
+          <th data-tooltip="100 minus the weighted severity of everything still open on the site." tabindex="0">Score</th>
+          <th data-tooltip="Open or reopened findings of any severity." tabindex="0">Open</th>
+          <th data-tooltip="Ownership proof. Until a site is verified, the deeper checks stay off." tabindex="0">Verified</th>
+          <th data-tooltip="Last completed scan." tabindex="0">Last Scan</th>
         </tr></thead>
         <tbody>${rows.map((w) => `<tr>
           <td><b>${escapeHtml(w.name)}</b><br><small class="muted">${escapeHtml(w.url)}</small></td>
@@ -1713,7 +1713,7 @@
           <td><span class="score ${band(w.score)}">${w.score}</span></td>
           <td class="num ${w.open_findings ? '' : 'muted'}">${num(w.open_findings)}</td>
           <td>${w.verified_at ? '<span class="pill ok">verified</span>' : '<span class="pill high">unverified</span>'}</td>
-          <td class="muted num" data-tooltip="${escapeHtml(stamp(w.last_scan_at))}">${escapeHtml(ago(w.last_scan_at))}</td>
+          <td class="muted num" data-tooltip="${escapeHtml(stamp(w.last_scan_at))}" tabindex="0">${escapeHtml(ago(w.last_scan_at))}</td>
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No websites match.</div>');
   }
 
@@ -1721,7 +1721,7 @@
     const c = (DATA.kpi || {}).compliance || {};
     const total = c.total || 0;
     const bar = (label, n, colour, tip) => `
-      <div class="status" data-tooltip="${escapeHtml(tip)}">
+      <div class="status" data-tooltip="${escapeHtml(tip)}" tabindex="0">
         <span class="dot" style="background:${colour}"></span>
         <span class="status-name">${escapeHtml(label)}</span>
         <span class="status-val">${num(n)}${total ? ` · ${Math.round((n / total) * 100)}%` : ''}</span>
@@ -1753,8 +1753,8 @@
     return panel('Jurisdictions due for review', `${rows.length} not reviewed by a person in 180 days`, rows.length ? `<table class="tbl">
       <thead><tr>
         <th>Jurisdiction</th>
-        <th data-tooltip="How many law rows the advisory holds for this jurisdiction. Each one is a claim a tenant reads.">Law Rows</th>
-        <th data-tooltip="When a person last checked these rows against the current law. Never means nobody ever has.">Last Reviewed</th>
+        <th data-tooltip="How many law rows the advisory holds for this jurisdiction. Each one is a claim a tenant reads." tabindex="0">Law Rows</th>
+        <th data-tooltip="When a person last checked these rows against the current law. Never means nobody ever has." tabindex="0">Last Reviewed</th>
       </tr></thead>
       <tbody>${rows.map((j) => `<tr>
         <td><b>${escapeHtml(j.name)}</b> <small class="muted">${escapeHtml(j.code)}</small></td>
@@ -1816,19 +1816,19 @@
           <table class="tbl">
           <thead><tr>
             <th>Tier</th>
-            <th data-tooltip="Monthly list price at the current commercial stage.">Price</th>
-            <th data-tooltip="Whether this tier renders on the public pricing grid. Hidden tiers still exist and can still be sold by hand. Partner stays on the page even if every switch is off.">On the site</th>
+            <th data-tooltip="Monthly list price at the current commercial stage." tabindex="0">Price</th>
+            <th data-tooltip="Whether this tier renders on the public pricing grid. Hidden tiers still exist and can still be sold by hand. Partner stays on the page even if every switch is off." tabindex="0">On the site</th>
           </tr></thead>
           <tbody>${tiers.map((t) => `<tr>
             <td><b>${escapeHtml(t.name)}</b>${t.note ? `<br><small class="muted">${escapeHtml(t.note)}</small>` : ''}</td>
             <td class="num">${t.price != null ? money(t.price) : '<span class="muted">contact</span>'}</td>
-            <td><label class="switch" data-tooltip="${escapeHtml(t.visible ? `Shown on the public pricing page. Switch off to hide the ${t.name} card.` : `Hidden on the public pricing page. Switch on to show the ${t.name} card.`)}">
+            <td><label class="switch" data-tooltip="${escapeHtml(t.visible ? `Shown on the public pricing page. Switch off to hide the ${t.name} card.` : `Hidden on the public pricing page. Switch on to show the ${t.name} card.`)}" tabindex="0">
                 <input type="checkbox" data-act="tier-visible" data-tier="${escapeHtml(t.key)}" data-name="${escapeHtml(t.name)}"${t.visible ? ' checked' : ''} aria-label="Show ${escapeHtml(t.name)} on the public pricing page"><span class="slider"></span></label>
               <small class="muted">${t.visible ? 'shown' : 'hidden'}</small></td>
           </tr>`).join('')}</tbody></table>
           <div class="status" style="margin-top:14px;" data-tooltip="${escapeHtml(paused
             ? 'Self-serve checkout is paused, so the landing page and signin.html point at sales instead of a Stripe link. New accounts are provisioned by hand.'
-            : 'Self-serve checkout is live: the Stripe Payment Links are reachable from the pricing grid, and muster-stripe-webhook records the grant.')}">
+            : 'Self-serve checkout is live: the Stripe Payment Links are reachable from the pricing grid, and muster-stripe-webhook records the grant.')}" tabindex="0">
             <span class="dot ${paused ? 'warn' : 'ok'}"></span>
             <span class="status-name">Self-serve checkout</span>
             <span class="status-val">${paused ? 'paused — sales-led' : 'live'}</span>
@@ -1841,10 +1841,10 @@
     return head('Integrations', 'What this platform can observe about its own outbound dependencies. Each row is inferred from real rows, not from a health endpoint.') +
       `<div class="row b" style="grid-template-columns: 1fr 1fr;">
         ${panel('Observed state', 'Inferred from live tables', `<div class="rows">
-          <div class="status" data-tooltip="Signature-verified and gated on payment_status. Cancellation is not handled: nothing consumes customer.subscription.deleted."><span class="dot ok"></span><span class="status-name">Stripe — checkout.session.completed</span><span class="status-val">handled</span></div>
-          <div class="status" data-tooltip="No consumer exists for this event, so a cancelled customer keeps their plan until it is changed by hand. This is a known gap, not a transient failure."><span class="dot bad"></span><span class="status-name">Stripe — subscription.deleted</span><span class="status-val">not handled</span></div>
-          <div class="status" data-tooltip="Application email: muster-alert-dispatch calls Resend's REST API directly for critical-finding alerts."><span class="dot ${al.dead_letter ? 'bad' : 'ok'}"></span><span class="status-name">Resend — alert dispatch</span><span class="status-val">${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter</span></div>
-          <div class="status" data-tooltip="Magic link, invite, recovery and email-change are sent by Supabase Auth (GoTrue), which relays through Resend as its SMTP provider. That path is configured in the Supabase dashboard, not in this codebase, and this console cannot observe it."><span class="dot warn"></span><span class="status-name">Supabase Auth email</span><span class="status-val">not observable here</span></div>
+          <div class="status" data-tooltip="Signature-verified and gated on payment_status. Cancellation is not handled: nothing consumes customer.subscription.deleted." tabindex="0"><span class="dot ok"></span><span class="status-name">Stripe — checkout.session.completed</span><span class="status-val">handled</span></div>
+          <div class="status" data-tooltip="No consumer exists for this event, so a cancelled customer keeps their plan until it is changed by hand. This is a known gap, not a transient failure." tabindex="0"><span class="dot bad"></span><span class="status-name">Stripe — subscription.deleted</span><span class="status-val">not handled</span></div>
+          <div class="status" data-tooltip="Application email: muster-alert-dispatch calls Resend's REST API directly for critical-finding alerts." tabindex="0"><span class="dot ${al.dead_letter ? 'bad' : 'ok'}"></span><span class="status-name">Resend — alert dispatch</span><span class="status-val">${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter</span></div>
+          <div class="status" data-tooltip="Magic link, invite, recovery and email-change are sent by Supabase Auth (GoTrue), which relays through Resend as its SMTP provider. That path is configured in the Supabase dashboard, not in this codebase, and this console cannot observe it." tabindex="0"><span class="dot warn"></span><span class="status-name">Supabase Auth email</span><span class="status-val">not observable here</span></div>
         </div>`)}
         ${panel('Why two email paths', 'They are not the same system', `<div class="notice">
           <b>Auth email and application email never share a template.</b>
@@ -1865,9 +1865,9 @@
     return panel('Platform agents', `${agents.length} not scoped to any tenant`, agents.length ? `<table class="tbl">
       <thead><tr>
         <th>Agent</th>
-        <th data-tooltip="Key prefix only. The full key is never stored and cannot be shown.">Key</th>
-        <th data-tooltip="What the key is allowed to call.">Scopes</th>
-        <th data-tooltip="Last time the key authenticated a request, or whether it is revoked.">State</th>
+        <th data-tooltip="Key prefix only. The full key is never stored and cannot be shown." tabindex="0">Key</th>
+        <th data-tooltip="What the key is allowed to call." tabindex="0">Scopes</th>
+        <th data-tooltip="Last time the key authenticated a request, or whether it is revoked." tabindex="0">State</th>
       </tr></thead>
       <tbody>${agents.map((a) => {
         const keys = a.keys && a.keys.length ? a.keys : [null];
@@ -1876,7 +1876,7 @@
           <td class="num muted">${k ? escapeHtml(k.key_prefix) + '…' : 'no keys'}</td>
           <td class="muted">${k ? escapeHtml((k.scopes || []).join(', ')) : '—'}</td>
           <td>${!k ? '<span class="muted">—</span>' : k.revoked_at ? '<span class="pill medium">revoked</span>'
-            : k.last_used_at ? `<span class="muted num" data-tooltip="${escapeHtml(stamp(k.last_used_at))}">used ${escapeHtml(ago(k.last_used_at))}</span>`
+            : k.last_used_at ? `<span class="muted num" data-tooltip="${escapeHtml(stamp(k.last_used_at))}" tabindex="0">used ${escapeHtml(ago(k.last_used_at))}</span>`
             : '<span class="muted">never used</span>'}</td>
         </tr>`).join('');
       }).join('')}</tbody></table>` : '<div class="empty">No platform-level agents.</div>', {
@@ -1892,17 +1892,17 @@
         ${panel('Scheduled jobs', `${cron.length} muster-* pg_cron job${cron.length === 1 ? '' : 's'}`, cron.length ? `<table class="tbl">
           <thead><tr>
             <th>Job</th>
-            <th data-tooltip="The pg_cron schedule, in UTC.">Schedule</th>
-            <th data-tooltip="Whether the schedule is enabled at all.">Active</th>
-            <th data-tooltip="Status of the most recent run, successful or not.">Last Run</th>
-            <th data-tooltip="The last run that actually succeeded. This, not the active flag, is what proves the job is working.">Last Success</th>
+            <th data-tooltip="The pg_cron schedule, in UTC." tabindex="0">Schedule</th>
+            <th data-tooltip="Whether the schedule is enabled at all." tabindex="0">Active</th>
+            <th data-tooltip="Status of the most recent run, successful or not." tabindex="0">Last Run</th>
+            <th data-tooltip="The last run that actually succeeded. This, not the active flag, is what proves the job is working." tabindex="0">Last Success</th>
           </tr></thead>
           <tbody>${cron.map((j) => `<tr>
             <td><b>${escapeHtml(j.jobname)}</b></td>
             <td class="num muted">${escapeHtml(j.schedule)}</td>
             <td>${j.active ? '<span class="pill ok">on</span>' : '<span class="pill critical">off</span>'}</td>
             <td>${j.last_status === 'succeeded' ? '<span class="pill ok">succeeded</span>' : j.last_status ? `<span class="pill critical">${escapeHtml(j.last_status)}</span>` : '<span class="muted">never run</span>'}</td>
-            <td class="muted num" data-tooltip="${escapeHtml(stamp(j.last_success_at))}">${escapeHtml(ago(j.last_success_at))}</td>
+            <td class="muted num" data-tooltip="${escapeHtml(stamp(j.last_success_at))}" tabindex="0">${escapeHtml(ago(j.last_success_at))}</td>
           </tr>`).join('')}</tbody></table>` : '<div class="empty">No muster-* cron jobs are scheduled. Nothing is running on a timer.</div>')}
         ${panel('Platform status', 'Live', systemStatus())}
       </div>` + incidentsPanel();
@@ -1920,11 +1920,11 @@
     const rows = ((EXTRA.overview || {}).incidents || []).filter((i) => matches(i.affected_operation, i.source, i.severity, i.status));
     return panel('Open incidents', `${rows.length} open · raised by muster-watchdog`, rows.length ? `<table class="tbl">
       <thead><tr>
-        <th data-tooltip="Critical needs a person now; warning needs one soon.">Severity</th>
+        <th data-tooltip="Critical needs a person now; warning needs one soon." tabindex="0">Severity</th>
         <th>Operation</th>
-        <th data-tooltip="First and most recent time the watchdog saw this condition, in UTC.">First / Last Seen</th>
-        <th data-tooltip="Where the incident is in triage.">Status</th>
-        <th data-tooltip="Move this incident through triage.">Triage</th>
+        <th data-tooltip="First and most recent time the watchdog saw this condition, in UTC." tabindex="0">First / Last Seen</th>
+        <th data-tooltip="Where the incident is in triage." tabindex="0">Status</th>
+        <th data-tooltip="Move this incident through triage." tabindex="0">Triage</th>
       </tr></thead>
       <tbody>${rows.map((i) => `<tr>
         <td><span class="pill ${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></td>
@@ -1968,18 +1968,18 @@
   function supportPanel(imp, users, impLog, form, viewHtml) {
     const eligible = users.filter((u) => u.role !== 'super_admin');
     const body = imp.active ? `
-      <div class="imp-banner" data-tooltip="An impersonation session is open. It ends by itself when the timer runs out, and the tenant can see it in their own activity feed.">
+      <div class="imp-banner" data-tooltip="An impersonation session is open. It ends by itself when the timer runs out, and the tenant can see it in their own activity feed." tabindex="0">
         <div>
           <div class="imp-eyebrow">Viewing as</div>
           <div class="imp-who">${escapeHtml(imp.target_email || ('user #' + imp.target_user_id))}</div>
           <div class="imp-why">Reason: ${escapeHtml(imp.reason || '')}</div>
         </div>
         <div style="text-align:right;">
-          <div id="impCountdown" class="imp-clock" data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero; nothing has to sweep it.">--:--</div>
+          <div id="impCountdown" class="imp-clock" data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero; nothing has to sweep it." tabindex="0">--:--</div>
           <button class="btn warn sm" type="button" data-act="imp-end" data-tooltip="Ends the session now. Access stops immediately, because authorisation is re-checked on every call rather than carried in a token.">End session</button>
         </div>
       </div>
-      <div id="impView" data-tooltip="What this user sees: their organizations, their sites, and their open finding counts. Reading this is itself recorded against the session.">${viewHtml || '<div class="empty">Loading what this user sees…</div>'}</div>
+      <div id="impView" data-tooltip="What this user sees: their organizations, their sites, and their open finding counts. Reading this is itself recorded against the session." tabindex="0">${viewHtml || '<div class="empty">Loading what this user sees…</div>'}</div>
     ` : `
       <form data-act="imp-start" class="form-grid" style="grid-template-columns:1.2fr 2fr 0.8fr auto;">
         <div class="field">
@@ -2003,7 +2003,7 @@
       </form>
     `;
     const log = impLog.length ? `
-      <table class="tbl" style="margin-top:18px;" data-tooltip="Every impersonation session ever opened, newest first. This log is append-only and cannot be edited from the application.">
+      <table class="tbl" style="margin-top:18px;" data-tooltip="Every impersonation session ever opened, newest first. This log is append-only and cannot be edited from the application." tabindex="0">
         <thead><tr><th>Admin</th><th>Target</th><th>Reason</th><th>Started (UTC)</th><th>Actions</th><th>Outcome</th></tr></thead>
         <tbody>${impLog.map((r) => `<tr>
           <td class="muted">${escapeHtml(r.admin_email || '')}</td>
@@ -2119,11 +2119,11 @@
     return panel('Feature flags (read-only)', `${flags.length} shown`, flags.length ? `<table class="tbl">
         <thead><tr>
           <th>Flag</th>
-          <th data-tooltip="What the flag governs.">Category</th>
-          <th data-tooltip="Whether it applies platform-wide, per organization, or per user.">Scope</th>
-          <th data-tooltip="The lowest plan that gets this by default.">Plan Gate</th>
-          <th data-tooltip="Where the flag is read and enforced. A flag with no enforcement is documentation, not a control.">Enforcement</th>
-          <th data-tooltip="A kill switch is checked at the point of use and turns the capability off immediately, everywhere.">Kill</th>
+          <th data-tooltip="What the flag governs." tabindex="0">Category</th>
+          <th data-tooltip="Whether it applies platform-wide, per organization, or per user." tabindex="0">Scope</th>
+          <th data-tooltip="The lowest plan that gets this by default." tabindex="0">Plan Gate</th>
+          <th data-tooltip="Where the flag is read and enforced. A flag with no enforcement is documentation, not a control." tabindex="0">Enforcement</th>
+          <th data-tooltip="A kill switch is checked at the point of use and turns the capability off immediately, everywhere." tabindex="0">Kill</th>
         </tr></thead>
         <tbody>${flags.map((f) => `<tr>
           <td><b>${escapeHtml(f.name || f.key)}</b><br><small class="muted num">${escapeHtml(f.key)}</small></td>
@@ -2182,28 +2182,28 @@
             ${escapeHtml(f.surface || f.description || '')}
             <div style="margin-top:4px;">
               ${wired
-                ? `<span class="pill low" data-tooltip="Something in the codebase reads this key, so the switches beside it take effect. Enforced in: ${escapeHtml(enf)}.">enforced in ${escapeHtml(enf)}</span>`
-                : `<span class="pill high" data-tooltip="No code reads this key. Moving these switches would change nothing, so they are disabled. Open the row for why, and what would wire it.">read by nothing</span>`}
-              ${f.kill_switch ? '<span class="pill critical" data-tooltip="The kill switch is on, so this flag resolves off for everyone regardless of defaults, plans and overrides.">killed</span>' : ''}
+                ? `<span class="pill low" data-tooltip="Something in the codebase reads this key, so the switches beside it take effect. Enforced in: ${escapeHtml(enf)}." tabindex="0">enforced in ${escapeHtml(enf)}</span>`
+                : `<span class="pill high" data-tooltip="No code reads this key. Moving these switches would change nothing, so they are disabled. Open the row for why, and what would wire it." tabindex="0">read by nothing</span>`}
+              ${f.kill_switch ? '<span class="pill critical" data-tooltip="The kill switch is on, so this flag resolves off for everyone regardless of defaults, plans and overrides." tabindex="0">killed</span>' : ''}
             </div>
           </div>
           <div>
             <select class="inline-select" data-act="flag-plan" data-key="${key}" aria-label="Plan gate for ${key}"
                     data-tooltip="The lowest plan that gets this flag. An org below it resolves off whatever the default says; a per-org override still beats the plan gate.">${planOpts(f.plan_minimum)}</select>
           </div>
-          <div><label class="switch" data-tooltip="${wired ? 'Default on/off for every org, before plan gates and overrides.' : 'Disabled: nothing reads this key, so this switch would be theatre.'}">
+          <div><label class="switch" data-tooltip="${wired ? 'Default on/off for every org, before plan gates and overrides.' : 'Disabled: nothing reads this key, so this switch would be theatre.'}" tabindex="0">
             <input type="checkbox" data-act="flag-default" data-key="${key}" aria-label="Default for ${key}"${f.default_enabled ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span></label></div>
-          <div><label class="switch" data-tooltip="${wired ? 'Forces this flag off for everyone, ignoring the default, the plan gate and every override. Asks before turning on.' : 'Disabled: nothing reads this key, so there is nothing to kill.'}">
+          <div><label class="switch" data-tooltip="${wired ? 'Forces this flag off for everyone, ignoring the default, the plan gate and every override. Asks before turning on.' : 'Disabled: nothing reads this key, so there is nothing to kill.'}" tabindex="0">
             <input type="checkbox" data-act="flag-kill" data-key="${key}" aria-label="Kill switch for ${key}"${f.kill_switch ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span></label></div>
-          <div class="muted" data-tooltip="How many organizations this flag currently resolves ON for, counting kill switch, overrides, plan gates and the default -- not what the default says.">
+          <div class="muted" data-tooltip="How many organizations this flag currently resolves ON for, counting kill switch, overrides, plan gates and the default -- not what the default says." tabindex="0">
             ${num(f.orgs_enabled)}/${num(sum.organizations)} orgs${liveOvs.length ? ` · <span style="color:var(--amber);">${liveOvs.length} override${liveOvs.length === 1 ? '' : 's'}</span>` : ''}
           </div>
           <details data-flag="${key}"${openFlags.has(f.key) ? ' open' : ''}>
-            <summary data-tooltip="Full description, per-plan resolution, every override on this flag, and the form to add one.">▸ detail, overrides and per-plan resolution</summary>
+            <summary data-tooltip="Full description, per-plan resolution, every override on this flag, and the form to add one." tabindex="0">▸ detail, overrides and per-plan resolution</summary>
             <div class="flag-detail">
               <p>${escapeHtml(f.description || '')}</p>
-              ${f.wiring_note ? `<p class="wiring" data-tooltip="Why this flag is read by nothing, and what would have to change for it to mean something.">${escapeHtml(f.wiring_note)}</p>` : ''}
-              <div class="by-plan" data-tooltip="What an org on each plan resolves to from the default and the plan gate alone. A per-org override beats this.">
+              ${f.wiring_note ? `<p class="wiring" data-tooltip="Why this flag is read by nothing, and what would have to change for it to mean something." tabindex="0">${escapeHtml(f.wiring_note)}</p>` : ''}
+              <div class="by-plan" data-tooltip="What an org on each plan resolves to from the default and the plan gate alone. A per-org override beats this." tabindex="0">
                 ${plans.map((p) => {
                   const on = !!(f.enabled_by_plan || {})[p.plan];
                   return `<span style="color:${on ? 'var(--emerald)' : 'var(--text-dim)'};">${on ? '●' : '○'} ${escapeHtml(p.plan)}</span>`;
@@ -2264,11 +2264,11 @@
     const cd = drafts.create || {};
     return panel(`Feature flags (${num(sum.total)})`, 'Every flag in the platform, what reads it, what each plan resolves to, and every exception.', `
       <div class="stat-row">
-        <div data-tooltip="Flags that some code actually reads, so their switches take effect."><small>Enforced</small><strong style="color:var(--emerald);">${num(sum.wired)}</strong></div>
-        <div data-tooltip="Flags nothing reads. Each one is either a feature that is not built or an entitlement recorded but not gated in code -- open the row for which."><small>Read by nothing</small><strong style="color:${unwired ? 'var(--amber)' : 'var(--text)'};">${num(unwired)}</strong></div>
-        <div data-tooltip="Flags forced off for everyone by their kill switch."><small>Killed</small><strong>${num(sum.kill_switched)}</strong></div>
-        <div data-tooltip="Live per-org and per-user exceptions across every flag. Expired ones are not counted."><small>Overrides</small><strong>${num(sum.overrides)}</strong></div>
-        <div data-tooltip="Organizations these flags resolve against."><small>Organizations</small><strong>${num(sum.organizations)}</strong></div>
+        <div data-tooltip="Flags that some code actually reads, so their switches take effect." tabindex="0"><small>Enforced</small><strong style="color:var(--emerald);">${num(sum.wired)}</strong></div>
+        <div data-tooltip="Flags nothing reads. Each one is either a feature that is not built or an entitlement recorded but not gated in code -- open the row for which." tabindex="0"><small>Read by nothing</small><strong style="color:${unwired ? 'var(--amber)' : 'var(--text)'};">${num(unwired)}</strong></div>
+        <div data-tooltip="Flags forced off for everyone by their kill switch." tabindex="0"><small>Killed</small><strong>${num(sum.kill_switched)}</strong></div>
+        <div data-tooltip="Live per-org and per-user exceptions across every flag. Expired ones are not counted." tabindex="0"><small>Overrides</small><strong>${num(sum.overrides)}</strong></div>
+        <div data-tooltip="Organizations these flags resolve against." tabindex="0"><small>Organizations</small><strong>${num(sum.organizations)}</strong></div>
       </div>
       ${unwired ? `<div class="warnbox" data-tooltip="These keys appear nowhere in the SQL, the pages or the edge functions. Their switches are disabled here so the console cannot report a control that does not exist.">
         <b>${num(unwired)} flag${unwired === 1 ? ' is' : 's are'} read by nothing:</b>
@@ -2277,7 +2277,7 @@
       </div>` : ''}
       ${groups || '<div class="empty">No flags match.</div>'}
       <details class="flag-new" data-flag="__new"${openFlags.has('__new') ? ' open' : ''} style="margin-top:16px; border-top:1px solid var(--surface-border); padding-top:14px;">
-        <summary data-tooltip="Creates a flag row. It will be marked read by nothing until code is written that reads the key -- creating it here does not gate anything on its own.">▸ New flag</summary>
+        <summary data-tooltip="Creates a flag row. It will be marked read by nothing until code is written that reads the key -- creating it here does not gate anything on its own." tabindex="0">▸ New flag</summary>
         <form data-act="flag-create" class="form-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:12px;">
           <div class="field">
             <label>Key</label>
@@ -2310,7 +2310,7 @@
             <select name="plan" aria-label="Plan gate" data-tooltip="Lowest plan that gets it. Leave unset for no plan gate.">${planOpts(cd.plan || null)}</select>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <label class="switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships."><input type="checkbox" name="default_enabled" aria-label="Default on"${cd.default_enabled ? ' checked' : ''}><span class="slider"></span></label>
+            <label class="switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships." tabindex="0"><input type="checkbox" name="default_enabled" aria-label="Default on"${cd.default_enabled ? ' checked' : ''}><span class="slider"></span></label>
             <button class="btn sm" type="submit" data-tooltip="Creates the flag, marked read by nothing until code reads the key.">Create flag</button>
           </div>
         </form>

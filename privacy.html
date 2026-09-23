@@ -176,16 +176,16 @@
 
   <header class="masthead">
     <a class="brand" href="/" data-tooltip="Back to the MUSTER home page.">MUSTER</a>
-    <div class="kicker" data-tooltip="Operated by After Today, LLC, doing business as 28 Foot Systems, in Hanover, Pennsylvania.">After Today, LLC — DBA 28 Foot Systems</div>
+    <div class="kicker" data-tooltip="Operated by After Today, LLC, doing business as 28 Foot Systems, in Hanover, Pennsylvania." tabindex="0">After Today, LLC — DBA 28 Foot Systems</div>
   </header>
 
   <h1>Privacy</h1>
-  <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does.">Last updated 8 September 2026</p>
+  <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does." tabindex="0">Last updated 8 September 2026</p>
 
   <p class="lead">This describes what MUSTER collects, who else it passes through, and why. It is written from what the software actually does, not from a template.</p>
 
   <div class="note">
-    <div class="note-title" data-tooltip="Read this before relying on this page for a compliance answer.">Scope of this page</div>
+    <div class="note-title" data-tooltip="Read this before relying on this page for a compliance answer." tabindex="0">Scope of this page</div>
     <p>This is a factual disclosure of current data practices. It is <strong>not</strong> a lawyer-reviewed privacy policy and it does not attempt to state your rights under GDPR, UK GDPR, CCPA or any other regime. If you need a contractual or regulatory answer — a DPA, a subprocessor list with contractual guarantees, a retention commitment, a data-subject request procedure — ask us and we will route it to counsel rather than answer it here.</p>
   </div>
 
@@ -196,9 +196,9 @@
     <table>
       <thead><tr><th>Who</th><th>Why your browser contacts them</th></tr></thead>
       <tbody>
-        <tr><td data-tooltip="Google Fonts serves the typefaces this page uses.">Google Fonts</td><td>The stylesheet and font files for the typefaces on this page.</td></tr>
-        <tr><td data-tooltip="jsDelivr is a public CDN. It serves the Supabase JavaScript client used to read live pricing.">jsDelivr</td><td>The Supabase JavaScript client bundle.</td></tr>
-        <tr><td data-tooltip="Vercel hosts and serves these pages, so it necessarily handles the request.">Vercel</td><td>Hosts and serves these pages. Standard server request logs.</td></tr>
+        <tr><td data-tooltip="Google Fonts serves the typefaces this page uses." tabindex="0">Google Fonts</td><td>The stylesheet and font files for the typefaces on this page.</td></tr>
+        <tr><td data-tooltip="jsDelivr is a public CDN. It serves the Supabase JavaScript client used to read live pricing." tabindex="0">jsDelivr</td><td>The Supabase JavaScript client bundle.</td></tr>
+        <tr><td data-tooltip="Vercel hosts and serves these pages, so it necessarily handles the request." tabindex="0">Vercel</td><td>Hosts and serves these pages. Standard server request logs.</td></tr>
       </tbody>
     </table>
   </div>
@@ -224,17 +224,17 @@
     <table>
       <thead><tr><th>Processor</th><th>What it handles</th></tr></thead>
       <tbody>
-        <tr><td data-tooltip="Supabase hosts the Postgres database, authentication, and the edge functions that run the scan engine.">Supabase</td><td>Database, authentication, and the scan engine. Findings, evidence and account records live here.</td></tr>
-        <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts.">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
-        <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours.">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
-        <tr><td data-tooltip="Vercel hosts the web pages.">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
-        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP.">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP.</td></tr>
+        <tr><td data-tooltip="Supabase hosts the Postgres database, authentication, and the edge functions that run the scan engine." tabindex="0">Supabase</td><td>Database, authentication, and the scan engine. Findings, evidence and account records live here.</td></tr>
+        <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts." tabindex="0">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
+        <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours." tabindex="0">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
+        <tr><td data-tooltip="Vercel hosts the web pages." tabindex="0">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
+        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP." tabindex="0">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP.</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="note">
-    <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure.">Worth stating plainly</div>
+    <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure." tabindex="0">Worth stating plainly</div>
     <p>Generating the narrative section of a SITREP sends the findings for that scan — rule identifiers, severities, page URLs and the evidence excerpts they cite — to a language model through OpenRouter. If that is unacceptable for a given engagement, say so and we will turn narrative generation off for your organization; every finding, score and SITREP is produced by the deterministic engine and stands without it.</p>
   </div>
 

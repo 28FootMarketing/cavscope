@@ -1680,7 +1680,7 @@
           <button class="btn-ghost" id="btnLiveDemo" hidden onclick="Live.showingDemo ? Live.showLive() : Live.showDemo()" data-tooltip="Switch between your live workspace and the sample data walkthrough.">◐ Show demo</button>
           <button class="btn-primary" id="btnLiveScan" hidden onclick="Live.requestScan()" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Queues a real scan of the active website and regenerates the SITREP.">⚡ Run scan</button>
           <button class="btn-ghost" id="btnLiveAuth" onclick="Live.openAuth()" data-tooltip="Sign in to a live workspace with real scans. Demo mode stays available.">🔐 Sign in</button>
-          <div class="status-pill" data-tooltip="Demo mode runs on sample data. Sign in to switch to a live workspace with real scans.">
+          <div class="status-pill" data-tooltip="Demo mode runs on sample data. Sign in to switch to a live workspace with real scans." tabindex="0">
             <i class="dot-live"></i>
             <span id="syncStatus">Demo workspace · sample data</span>
           </div>
@@ -1751,18 +1751,18 @@
               <div class="metric-value" style="color: var(--cyan);" id="subclientCount">3</div>
               <small style="color: var(--text-muted);">Active client web properties</small>
             </div>
-            <div class="card metric-card" data-tooltip="Average audit score across all your clients. 80 or higher is the benchmark.">
+            <div class="card metric-card" data-tooltip="Average audit score across all your clients. 80 or higher is the benchmark." tabindex="0">
               <label>Fleet Conformance Average</label>
               <div class="metric-value" style="color: var(--teal);" id="subclientAvgHealth">86%</div>
               <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
               <small class="score-asof" data-asof></small>
             </div>
-            <div class="card metric-card" data-tooltip="Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs.">
+            <div class="card metric-card" data-tooltip="Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs." tabindex="0">
               <label>Deliverables Generated</label>
               <div class="metric-value" style="color: var(--emerald);">12</div>
               <small style="color: var(--text-muted);">WCAG, AIO & Plain English Briefs</small>
             </div>
-            <div class="card metric-card" data-tooltip="When ON, agency clients see their own branding on reports instead of MUSTER's.">
+            <div class="card metric-card" data-tooltip="When ON, agency clients see their own branding on reports instead of MUSTER's." tabindex="0">
               <label>White-Label Status</label>
               <div class="metric-value" style="color: var(--amber); font-size: 22px; margin-top: 22px;" id="kpiWlStatus">Flag: OFF</div>
               <small style="color: var(--text-muted);">Set under Team &amp; Settings</small>
@@ -1810,7 +1810,7 @@
 
           <!-- Top Level Posture Metric Cards -->
           <div class="grid-4">
-            <div class="card metric-card" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue.">
+            <div class="card metric-card" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue." tabindex="0">
               <div class="metric-card-top">
                 <label>Risk Posture Score</label>
                 <div class="metric-icon-wrap">〽</div>
@@ -1818,7 +1818,7 @@
               <div class="metric-value">
                 <span id="kpiPostureScore">82</span>
                 <span class="denom">/ 100</span>
-                <span class="benchmark-badge benchmark-good" id="kpiPostureTier" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">80+ Good</span>
+                <span class="benchmark-badge benchmark-good" id="kpiPostureTier" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class." tabindex="0">80+ Good</span>
               </div>
               <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiPostureBar" style="width: 82%;"></div></div>
@@ -1832,7 +1832,7 @@
               </div>
             </div>
 
-            <div class="card metric-card" data-tooltip="Share of compliance rules you have confirmed are working, not just documented.">
+            <div class="card metric-card" data-tooltip="Share of compliance rules you have confirmed are working, not just documented." tabindex="0">
               <div class="metric-card-top">
                 <label>Control Coverage</label>
                 <div class="metric-icon-wrap">▣</div>
@@ -1853,7 +1853,7 @@
               </div>
             </div>
 
-            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
+            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved." tabindex="0">
               <div class="metric-card-top">
                 <label>Evidence Readiness</label>
                 <div class="metric-icon-wrap">⌑</div>
@@ -1874,7 +1874,7 @@
               </div>
             </div>
 
-            <div class="card metric-card" data-tooltip="Average completion across every open fix. Overdue items are flagged below.">
+            <div class="card metric-card" data-tooltip="Average completion across every open fix. Overdue items are flagged below." tabindex="0">
               <div class="metric-card-top">
                 <label>Remediation Progress</label>
                 <div class="metric-icon-wrap">◎</div>
@@ -1921,7 +1921,7 @@
                 <div style="margin-bottom: 18px; padding: 14px; border-radius: var(--radius-md); background: rgba(54, 226, 201, 0.08); border: 1px solid rgba(54, 226, 201, 0.25);">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span class="eyebrow" style="color: var(--teal);">Risk Appetite Tolerance</span>
-                    <span class="pill pill-approved" id="overviewAppetiteStatus" data-tooltip="Open risks are within the limits leadership approved in Governance.">Within Tolerance</span>
+                    <span class="pill pill-approved" id="overviewAppetiteStatus" data-tooltip="Open risks are within the limits leadership approved in Governance." tabindex="0">Within Tolerance</span>
                   </div>
                   <p style="font-size: 12.5px; color: #d0deef; line-height: 1.5;" id="overviewAppetiteSummary">Zero critical vulnerabilities allowed on public authenticated endpoints.</p>
                 </div>
@@ -1990,7 +1990,7 @@
                   <strong>Conformance Principle:</strong> Automated scanners evaluate ~30% of WCAG criteria; true conformance requires validating keyboard traps, dynamic focus return, screen reader announcements, and cognitive friction. We report technical conformance findings without asserting unvalidated legal guarantees.
                 </p>
               </div>
-              <span class="pill pill-approved" style="font-size: 11px;" data-tooltip="The mid-level accessibility standard most laws and contracts require.">Target: WCAG 2.2 AA</span>
+              <span class="pill pill-approved" style="font-size: 11px;" data-tooltip="The mid-level accessibility standard most laws and contracts require." tabindex="0">Target: WCAG 2.2 AA</span>
             </div>
           </div>
 
@@ -2002,7 +2002,7 @@
                 <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
                   <div style="font-size: 42px; font-weight: 800; color: #fff; font-family: var(--font-sans);" id="wcagOverallScore">84</div>
                   <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
-                  <span class="benchmark-badge benchmark-good" id="wcagOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">80+ Good · 90+ is Better</span>
+                  <span class="benchmark-badge benchmark-good" id="wcagOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class." tabindex="0">80+ Good · 90+ is Better</span>
                 </div>
                 <small class="score-asof" data-asof></small>
                 <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="wcagScoreSummary">
@@ -2169,7 +2169,7 @@
                   <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
                     <div style="font-size: 42px; font-weight: 800; color: #fff; font-family: var(--font-sans);" id="aioOverallScore">64</div>
                     <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
-                    <span class="benchmark-badge benchmark-good" id="aioOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.">64/100 · 80 is Good, 90+ is Better</span>
+                    <span class="benchmark-badge benchmark-good" id="aioOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class." tabindex="0">64/100 · 80 is Good, 90+ is Better</span>
                   </div>
                   <small class="score-asof" data-asof></small>
                   <p style="color: #cbd5e1; font-size: 13px; margin-top: 6px; max-width: 650px;" id="aioScoreSummary">
@@ -2289,7 +2289,7 @@
 
           <!-- Plain Scorecard Grid -->
           <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card metric-card" data-tooltip="Easy-to-understand safety score out of 100">
+            <div class="card metric-card" data-tooltip="Easy-to-understand safety score out of 100" tabindex="0">
               <label>Website Safety Grade</label>
               <div class="metric-value" style="color: var(--teal);" id="plainSafetyScore">82 / 100</div>
               <small class="score-asof" data-asof></small>
@@ -2298,7 +2298,7 @@
               </p>
             </div>
 
-            <div class="card metric-card" data-tooltip="Alignment with basic safety and privacy rules we reviewed">
+            <div class="card metric-card" data-tooltip="Alignment with basic safety and privacy rules we reviewed" tabindex="0">
               <label>Rule Following (Rules Met)</label>
               <div class="metric-value" style="color: var(--cyan);" id="plainRulesScore">80%</div>
               <small class="score-asof" data-asof></small>
@@ -2307,7 +2307,7 @@
               </p>
             </div>
 
-            <div class="card metric-card" data-tooltip="Real receipts proving your website is safe">
+            <div class="card metric-card" data-tooltip="Real receipts proving your website is safe" tabindex="0">
               <label>Proof & Receipts Ready</label>
               <div class="metric-value" style="color: var(--amber);" id="plainProofScore">75%</div>
               <small class="score-asof" data-asof></small>
@@ -2316,7 +2316,7 @@
               </p>
             </div>
 
-            <div class="card metric-card" data-tooltip="Percentage of website fixes finished so far">
+            <div class="card metric-card" data-tooltip="Percentage of website fixes finished so far" tabindex="0">
               <label>Fix-It Progress</label>
               <div class="metric-value" style="color: var(--purple);" id="plainFixProgress">65%</div>
               <small class="score-asof" data-asof></small>
@@ -2582,24 +2582,24 @@
 
           <!-- Executive Summary Metrics -->
           <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card metric-card" data-tooltip="Critical issues not yet fixed. Leadership's approved limit is zero.">
+            <div class="card metric-card" data-tooltip="Critical issues not yet fixed. Leadership's approved limit is zero." tabindex="0">
               <label>Open Critical Risks</label>
               <div class="metric-value" id="boardCritCount" style="color: var(--rose);">1</div>
               <small style="color: var(--text-muted);">Tolerance limit: 0</small>
             </div>
-            <div class="card metric-card" data-tooltip="Share of compliance rules confirmed to be working, not just documented.">
+            <div class="card metric-card" data-tooltip="Share of compliance rules confirmed to be working, not just documented." tabindex="0">
               <label>Control Assurance</label>
               <div class="metric-value" id="boardControlPct" style="color: var(--teal);">80%</div>
               <small style="color: var(--text-muted);">Assessed controls effective</small>
               <small class="score-asof" data-asof></small>
             </div>
-            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
+            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved." tabindex="0">
               <label>Evidence Readiness</label>
               <div class="metric-value" id="boardEvidencePct" style="color: var(--cyan);">75%</div>
               <small style="color: var(--text-muted);">Artifacts reviewed & approved</small>
               <small class="score-asof" data-asof></small>
             </div>
-            <div class="card metric-card" data-tooltip="Approved, time-limited departures from policy. Each has an owner and expiry date.">
+            <div class="card metric-card" data-tooltip="Approved, time-limited departures from policy. Each has an owner and expiry date." tabindex="0">
               <label>Active Exceptions</label>
               <div class="metric-value" id="boardExceptionCount" style="color: var(--amber);">1</div>
               <small style="color: var(--text-muted);">Time-bound & governed</small>
@@ -2735,12 +2735,12 @@
                 <h3>🏷️ Report Branding</h3>
                 <p>Put your agency's name, mark and disclaimer on SITREPs and client deliverables instead of MUSTER's.</p>
               </div>
-              <span class="pill pill-medium" id="lblFfState" data-tooltip="Whether this workspace is entitled to custom branding. In a live workspace this comes from your plan, not from a switch here.">Not enabled</span>
+              <span class="pill pill-medium" id="lblFfState" data-tooltip="Whether this workspace is entitled to custom branding. In a live workspace this comes from your plan, not from a switch here." tabindex="0">Not enabled</span>
             </div>
             <div class="panel-body" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
               <p id="brandingNote" style="color: var(--text-muted); font-size: 12.5px; line-height: 1.55; margin: 0; flex: 1; min-width: 240px;">Sample data: turn the preview on to see how agency branding changes the reports.</p>
               <div style="display: flex; gap: 12px; align-items: center;">
-                <label class="toggle-switch" id="ffWhiteLabelDemoSwitch" data-tooltip="Sample data only. Previews agency branding on the walkthrough reports. A live workspace takes this from its plan.">
+                <label class="toggle-switch" id="ffWhiteLabelDemoSwitch" data-tooltip="Sample data only. Previews agency branding on the walkthrough reports. A live workspace takes this from its plan." tabindex="0">
                   <input type="checkbox" id="ffWhiteLabelToggle" aria-label="Preview agency branding on sample data" onchange="toggleWhiteLabelFlag(this.checked)">
                   <span class="slider"></span>
                 </label>
@@ -3809,14 +3809,14 @@
             </div>
             <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--surface-border);">
               <h4 style="font-size: 13px; color: #fff; margin-bottom: 4px;">Your Pricing to Your Clients</h4>
-              <p style="font-size: 11.5px; color: var(--text-dim); margin-bottom: 14px;" data-tooltip="This is what you charge, not what 28 Foot Systems charges you for the platform. MUSTER stores it for your reference only and never processes this payment.">What you charge your own clients for access under your brand. 28 Foot Systems has no part in this — you set the price and collect it however you choose.</p>
+              <p style="font-size: 11.5px; color: var(--text-dim); margin-bottom: 14px;" data-tooltip="This is what you charge, not what 28 Foot Systems charges you for the platform. MUSTER stores it for your reference only and never processes this payment." tabindex="0">What you charge your own clients for access under your brand. 28 Foot Systems has no part in this — you set the price and collect it however you choose.</p>
               <div class="form-row">
                 <div class="form-group">
-                  <label data-tooltip="The amount you bill each client. Leave blank if you quote custom pricing per client.">Your Price</label>
+                  <label data-tooltip="The amount you bill each client. Leave blank if you quote custom pricing per client." tabindex="0">Your Price</label>
                   <input type="number" step="0.01" min="0" name="wlClientPriceAmount" value="${escapeHtml(wl.clientPriceAmount ?? '')}" placeholder="e.g. 499.00">
                 </div>
                 <div class="form-group">
-                  <label data-tooltip="How often you bill your clients this amount.">Billing Cadence</label>
+                  <label data-tooltip="How often you bill your clients this amount." tabindex="0">Billing Cadence</label>
                   <select name="wlClientPriceCadence" data-tooltip="How often you bill your clients this amount.">
                     <option value="" ${!wl.clientPriceCadence ? 'selected' : ''}>Not set</option>
                     <option value="monthly" ${wl.clientPriceCadence === 'monthly' ? 'selected' : ''}>Monthly</option>
@@ -3827,11 +3827,11 @@
                 </div>
               </div>
               <div class="form-group">
-                <label data-tooltip="Where your clients actually pay you — your own Stripe Payment Link, PayPal.me, invoicing tool, or checkout page. MUSTER only stores this link; it never processes the payment.">Your Payment Link (optional)</label>
+                <label data-tooltip="Where your clients actually pay you — your own Stripe Payment Link, PayPal.me, invoicing tool, or checkout page. MUSTER only stores this link; it never processes the payment." tabindex="0">Your Payment Link (optional)</label>
                 <input type="url" name="wlClientPaymentUrl" value="${escapeHtml(wl.clientPaymentUrl || '')}" placeholder="e.g. https://buy.stripe.com/your-link">
               </div>
               <div class="form-group">
-                <label data-tooltip="Any context you want to remember about your own pricing — a discount policy, what's included, etc.">Pricing Notes (optional)</label>
+                <label data-tooltip="Any context you want to remember about your own pricing — a discount policy, what's included, etc." tabindex="0">Pricing Notes (optional)</label>
                 <textarea name="wlClientPricingNote" placeholder="e.g. Includes monthly SITREP + quarterly review call.">${escapeHtml(wl.clientPricingNote || '')}</textarea>
               </div>
             </div>
@@ -4678,7 +4678,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
             else if (score >= 4) cellClass = 'cell-med';
 
             matrixCellsHtml += `
-              <div class="matrix-cell ${cellClass}" data-tooltip="Likelihood ${likelihood} of 5, Impact ${impact} of 5: ${count} risk${count === 1 ? '' : 's'} here. Top-right is most urgent.">
+              <div class="matrix-cell ${cellClass}" data-tooltip="Likelihood ${likelihood} of 5, Impact ${impact} of 5: ${count} risk${count === 1 ? '' : 's'} here. Top-right is most urgent." tabindex="0">
                 <span class="matrix-count">${count > 0 ? count : ''}</span>
                 <span class="matrix-coord">${likelihood}×${impact}</span>
               </div>
@@ -4756,7 +4756,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           <div><span class="pill pill-medium">${escapeHtml(e.type)}</span></div>
           <div>
             <span style="font-size: 12px; color: #e2e8f0; display: block;">${escapeHtml(e.reviewer)}</span>
-            <span class="pill ${e.source === 'system' ? 'pill-system' : 'pill-client'}" style="margin-top: 4px; font-size: 9px;" data-tooltip="${e.source === 'system' ? 'Captured directly by the MUSTER scan engine.' : 'Uploaded or attested by a person. MUSTER has not independently verified this claim.'}">${e.source === 'system' ? 'System-verified' : 'Client-submitted'}</span>
+            <span class="pill ${e.source === 'system' ? 'pill-system' : 'pill-client'}" style="margin-top: 4px; font-size: 9px;" data-tooltip="${e.source === 'system' ? 'Captured directly by the MUSTER scan engine.' : 'Uploaded or attested by a person. MUSTER has not independently verified this claim.'}" tabindex="0">${e.source === 'system' ? 'System-verified' : 'Client-submitted'}</span>
           </div>
           <div><span class="pill ${e.status === 'Approved' ? 'pill-approved' : 'pill-pending'}">${e.status}</span></div>
           <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Artifact reviewed.')" data-tooltip="Marks this document as reviewed. Does not change its approval status yet.">Verify</button></div>
@@ -5787,7 +5787,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           </div>
           ${invites.length ? `
           <div class="panel-head" style="border-top:1px solid var(--surface-border);">
-            <div><h3 style="font-size:13px;" data-tooltip="Invited but not yet claimed -- the invitee needs to sign up with this email to join.">Pending invites (${invites.length})</h3></div>
+            <div><h3 style="font-size:13px;" data-tooltip="Invited but not yet claimed -- the invitee needs to sign up with this email to join." tabindex="0">Pending invites (${invites.length})</h3></div>
           </div>
           <div class="table-header grid-live-invites">
             <span>Email</span>
@@ -5803,7 +5803,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <div class="form-group" style="margin:0;"><label>Role</label><select name="role"><option value="executive">Executive</option><option value="risk_owner" selected>Risk owner</option><option value="control_owner">Control owner</option><option value="contributor">Contributor</option><option value="viewer">Viewer</option></select></div>
               <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;" data-tooltip="Sends a signup invite for this workspace at this role.">Invite</button>
             </form>
-            <label class="live-muted" style="display:flex; align-items:center; gap:8px;" data-tooltip="When on, MUSTER emails your executives and risk owners the moment a new critical or high risk is found. Turning this off does not stop the risk from being tracked -- only the email.">
+            <label class="live-muted" style="display:flex; align-items:center; gap:8px;" data-tooltip="When on, MUSTER emails your executives and risk owners the moment a new critical or high risk is found. Turning this off does not stop the risk from being tracked -- only the email." tabindex="0">
               <input type="checkbox" ${o.critical_alerts_enabled !== false ? 'checked' : ''} onchange="Live.setAlertPreference(this.checked)"> Email critical-finding alerts to executives and risk owners
             </label>
           </div>
@@ -5877,32 +5877,32 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               </div>
               <div class="list">
                 <div class="table-row grid-live-members" style="grid-template-columns: 1fr 1fr 1fr;">
-                  <div class="live-muted" data-tooltip="The OpenAI-compatible base URL MUSTER posts to.">${escapeHtml(cfg.base_url)}</div>
-                  <div class="live-muted" data-tooltip="The model name sent with every request.">${escapeHtml(cfg.model)}</div>
-                  <div class="live-muted" data-tooltip="Only the last four characters are ever stored in readable form. The key itself is held in Supabase Vault and is never returned to this page.">&bull;&bull;&bull;&bull;${escapeHtml(cfg.key_hint || '')}</div>
+                  <div class="live-muted" data-tooltip="The OpenAI-compatible base URL MUSTER posts to." tabindex="0">${escapeHtml(cfg.base_url)}</div>
+                  <div class="live-muted" data-tooltip="The model name sent with every request." tabindex="0">${escapeHtml(cfg.model)}</div>
+                  <div class="live-muted" data-tooltip="Only the last four characters are ever stored in readable form. The key itself is held in Supabase Vault and is never returned to this page." tabindex="0">&bull;&bull;&bull;&bull;${escapeHtml(cfg.key_hint || '')}</div>
                 </div>
               </div>
-              <p class="live-muted" style="margin-top:12px;" data-tooltip="The last time MUSTER successfully reached this endpoint, and the last failure if there has been one.">
+              <p class="live-muted" style="margin-top:12px;" data-tooltip="The last time MUSTER successfully reached this endpoint, and the last failure if there has been one." tabindex="0">
                 ${cfg.last_ok_at ? `Last succeeded ${String(cfg.last_ok_at).slice(0, 16).replace('T', ' ')} UTC.` : 'Not used yet.'}
                 ${err ? `<br><span style="color:var(--rose);">Last error ${cfg.last_error_at ? String(cfg.last_error_at).slice(0, 16).replace('T', ' ') + ' UTC' : ''}: ${escapeHtml(err)}</span>` : ''}
               </p>
             ` : `
-              <p class="live-muted" data-tooltip="Not configured is a working state, not a fault. It means nothing from this workspace is sent to any language model.">
+              <p class="live-muted" data-tooltip="Not configured is a working state, not a fault. It means nothing from this workspace is sent to any language model." tabindex="0">
                 No model is configured, so narratives come from MUSTER's deterministic generator and <strong>nothing from this workspace reaches a language model</strong>. That is a safe default, not an error.
               </p>
             `}
             ${canEdit ? `
             <form onsubmit="Live.saveLlm(event)" style="display:grid; grid-template-columns: 1.6fr 1.2fr 1.4fr auto; gap:8px; align-items:end; margin-top:16px;">
               <div class="form-group" style="margin:0;">
-                <label data-tooltip="An OpenAI-compatible base URL. Must be https on a public host -- loopback and private addresses are refused, so a key cannot be posted to something inside your network.">Endpoint</label>
+                <label data-tooltip="An OpenAI-compatible base URL. Must be https on a public host -- loopback and private addresses are refused, so a key cannot be posted to something inside your network." tabindex="0">Endpoint</label>
                 <input name="base_url" required data-tooltip="Must be https on a public host. Loopback and private addresses are refused, so your key cannot be posted somewhere inside your own network." placeholder="https://openrouter.ai/api/v1" value="${on ? escapeHtml(cfg.base_url) : ''}">
               </div>
               <div class="form-group" style="margin:0;">
-                <label data-tooltip="The model id exactly as your provider names it.">Model</label>
+                <label data-tooltip="The model id exactly as your provider names it." tabindex="0">Model</label>
                 <input name="model" required maxlength="160" data-tooltip="Sent verbatim to your provider, so it has to match their spelling exactly." placeholder="anthropic/claude-opus-5" value="${on ? escapeHtml(cfg.model) : ''}">
               </div>
               <div class="form-group" style="margin:0;">
-                <label data-tooltip="Stored in Supabase Vault and never shown again. Saving a new key replaces the old one and clears any previous error.">API key${on ? ' (replace)' : ''}</label>
+                <label data-tooltip="Stored in Supabase Vault and never shown again. Saving a new key replaces the old one and clears any previous error." tabindex="0">API key${on ? ' (replace)' : ''}</label>
                 <input name="api_key" type="password" required minlength="8" data-tooltip="Goes straight into Supabase Vault. It is never returned to this page and never appears in a report or an error message." placeholder="${on ? 'enter a new key to rotate' : 'sk-...'}" autocomplete="off">
               </div>
               <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:11.5px;" data-tooltip="Saves the endpoint, model and key for this workspace. Takes effect on the next narrative.">${on ? 'Update' : 'Save'}</button>
@@ -5911,7 +5911,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               <input id="llmLabel" maxlength="80" placeholder="Label, optional -- e.g. Acme OpenRouter" value="${on ? escapeHtml(cfg.label || '') : ''}" style="flex:1 1 260px;" data-tooltip="A name for your own reference. Shown here only.">
               ${on ? `<button class="btn-ghost" style="padding:6px 12px;font-size:11px;" onclick="Live.clearLlm()" data-tooltip="Deletes the key from Vault and this configuration. Narratives fall back to the deterministic generator; nothing else changes.">Remove</button>` : ''}
             </div>
-            ` : `<p class="live-muted" style="margin-top:14px;" data-tooltip="Changing the provider account a workspace bills against is an executive-level action.">Only an executive on this workspace can change this.</p>`}
+            ` : `<p class="live-muted" style="margin-top:14px;" data-tooltip="Changing the provider account a workspace bills against is an executive-level action." tabindex="0">Only an executive on this workspace can change this.</p>`}
           </div>`;
       },
       async saveLlm(e) {
