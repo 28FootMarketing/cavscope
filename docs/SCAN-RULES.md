@@ -214,7 +214,7 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `PRIV-002` | low | Third-party trackers loaded before consent could be verified | GDPR Art. 6 & 7, ePrivacy, CCPA opt-out |
 | `PRIV-003` | medium | Form submits to an insecure or external endpoint | GDPR Art. 32, NIST PR.DS-2 |
 
-## Governance — 5 rules
+## Governance — 8 rules
 
 | Code | Sev | Title | Theme |
 |---|---|---|---|
@@ -223,6 +223,17 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `GOV-003` | info | Meta description missing | AIO readiness |
 | `GOV-004` | info | AI crawler directives | AIO readiness |
 | `GOV-005` | info | Canonical link missing | AIO readiness |
+| `GOV-006` | info | No llms.txt file | AIO readiness |
+| `GOV-007` | info | No readable structured data (JSON-LD) | AIO readiness |
+| `GOV-008` | low | Homepage content is rendered by script, not served | AIO readiness |
+
+`GOV-006`..`008` were added **inactive** by migration `20260923042421` and wait for engine
+`http-native-1.8.0` or later to be observed in production, same gate as every rule before them.
+Proof of deploy is the `llms_txt` (`http_probe`) and `jsonld` (`html_excerpt`) evidence rows,
+written on every reachable HTML scan whatever the verdict: a well-prepared site keeps all three
+rules silent, so `skipped_inactive` may legitimately stay 0. `GOV-006` credits a file only if it is
+not HTML and opens with a Markdown H1, because an SPA answers `/llms.txt` with 200 and its shell.
+llms.txt is a proposal, not a standard, and the finding says so.
 
 ## AI governance — 5 rules
 
@@ -262,14 +273,23 @@ It sits behind the `browser_wcag_engine` feature flag, which is kill-switched. S
 asks what the accessibility score covers: it is HTTP-native only. Contrast ratios, focus order,
 keyboard traps and live ARIA state are **not** assessed today.
 
-**AI readiness (AIO) view** — four pillars over the governance and third-party rules:
+**AI readiness (AIO / GEO) view** — six pillars, nine checks, one engine rule per check:
 
 | Pillar | Driven by |
 |---|---|
-| 1. Crawl governance | `GOV-001`, `GOV-002` |
-| 2. Entity clarity | `GOV-003`, `GOV-005`, `A11Y-002` |
-| 3. AI crawler policy | `GOV-004` |
-| 4. Third-party script surface | `TP-001` |
+| 1. Crawlability & rendering | `GOV-008`, `GOV-001`, `GOV-002` |
+| 2. Entity clarity | `A11Y-002`, `GOV-003`, `GOV-005` |
+| 3. Structured data (JSON-LD) | `GOV-007` |
+| 4. LLM surface (/llms.txt) | `GOV-006` |
+| 5. AI crawler policy | `GOV-004` (passes when robots.txt addresses a known AI crawler) |
+| 6. Citability | **never scored** — providers decide citation and publish no test for it |
+
+A check passes only if its rule could have fired on the latest completed scan and did not: the
+rule is active (`public.muster_rule_status`, migration `20260923042540`), the scan's
+`engine_version` is at or past the version that first emitted it, and no `AVAIL-001/003/004` says
+the homepage went unread. Anything else is **not assessed** and is left out of the index. The index
+is `passed / assessed`, not the security posture score, which is what the view showed before
+2026-09-23. `Live.buildAio` in `app.html`, pinned by `tests/ui/aio-view.test.ts`.
 
 **Risk register** — security, availability and privacy findings promoted to risks.
 
@@ -280,8 +300,8 @@ keyboard traps and live ARIA state are **not** assessed today.
 | critical | 4 | `AVAIL-001`, `AVAIL-003`, `AVAIL-004`, `SEC-013` |
 | high | 8 | `ai-admt-policy-silent`, `EMAIL-001`–`004`, `EMAIL-007`, `SEC-001`, `SEC-010` |
 | medium | 17 | `A11Y-001`–`004`, `A11Y-006`, `A11Y-007`, `ai-chatbot-present-undisclosed`, `ai-vendor-undisclosed`, `AVAIL-002`, `EMAIL-005`, `PRIV-001`, `PRIV-003`, `SEC-002`, `SEC-004`, `SEC-005`, `SEC-011`, `SEC-014` |
-| low | 14 | `A11Y-005`, `ai-generated-content-undisclosed`, `EMAIL-006`, `EMAIL-008`, `GOV-001`, `GOV-002`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012`, `SEC-015` |
-| info | 5 | `ai-crawler-directives-missing`, `GOV-003`, `GOV-004`, `GOV-005`, `TP-001` |
+| low | 15 | `A11Y-005`, `ai-generated-content-undisclosed`, `EMAIL-006`, `EMAIL-008`, `GOV-001`, `GOV-002`, `GOV-008`, `PRIV-002`, `SEC-003`, `SEC-006`–`009`, `SEC-012`, `SEC-015` |
+| info | 7 | `ai-crawler-directives-missing`, `GOV-003`–`GOV-007`, `TP-001` |
 
 Only `critical` and `high` open an alert (`muster.notification_outbox` accepts `risk_opened` at
 those two severities only — see [`EMAIL-INVENTORY.md`](EMAIL-INVENTORY.md)).

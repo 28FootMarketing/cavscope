@@ -2131,8 +2131,8 @@
               </button>
             </div>
 
-            <!-- Quick Preset Domains -->
-            <div class="preset-chip-list">
+            <!-- Quick Preset Domains (sample walkthrough only; hidden in a live workspace) -->
+            <div class="preset-chip-list" id="aioPresetChips">
               <span style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Client Intake Presets:</span>
               <button type="button" class="preset-chip" onclick="setScanDomain('portal.northstar.com', 'Northstar Fintech', 'Fintech SaaS', 'Audit + Implementation Assets')" data-tooltip="Sample client. Loads its URL and engagement details into the audit.">Northstar Fintech (SPA Portal)</button>
               <button type="button" class="preset-chip" onclick="setScanDomain('acme-logistics.io', 'Acme Logistics', 'Supply Chain Tech', 'Audit-Only')" data-tooltip="Sample client. Loads its URL and engagement details into the audit.">Acme Logistics (WordPress)</button>
@@ -2228,7 +2228,7 @@
                 <span>Pillar & Component</span>
                 <span>Technical Finding & Impact</span>
                 <span>Required Remediation</span>
-                <span style="text-align: right;">Points Gain</span>
+                <span style="text-align: right;" id="aioFindingsLastCol" data-tooltip="Sample walkthrough: estimated score gain. Live workspace: the evidence the finding cites.">Points Gain</span>
               </div>
               <div id="aioFindingsTable" class="list">
                 <!-- Dynamically populated -->
@@ -2241,7 +2241,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                   <div>
                     <span class="eyebrow" style="color: var(--teal);">Implementation Asset 01</span>
-                    <h3 style="font-size: 15px; color: #fff;">Structured Data — JSON-LD (Paste Ready)</h3>
+                    <h3 style="font-size: 15px; color: #fff;" id="aioJsonLdHeading">Structured Data — JSON-LD (Paste Ready)</h3>
                   </div>
                   <button class="btn-copy-llm" onclick="copyCardLlmPrompt('jsonld')" data-tooltip="Copies a prompt to generate structured data AI crawlers can read.">🤖 Copy LLM Prompt</button>
                 </div>
@@ -2253,7 +2253,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                   <div>
                     <span class="eyebrow" style="color: var(--cyan);">Implementation Asset 02</span>
-                    <h3 style="font-size: 15px; color: #fff;">/llms.txt — Full File Contents</h3>
+                    <h3 style="font-size: 15px; color: #fff;" id="aioLlmsHeading">/llms.txt — Full File Contents</h3>
                   </div>
                   <button class="btn-copy-llm" onclick="copyCardLlmPrompt('llmstxt')" data-tooltip="Copies a prompt to write the /llms.txt file AI crawlers look for.">🤖 Copy LLM Prompt</button>
                 </div>
@@ -3186,6 +3186,13 @@
         domain: "portal.northstar.com",
         clientName: "Northstar Fintech",
         overallScore: 64,
+        badge: "64/100 · 80 is Good, 90+ is Better",
+        summary: "Crawlability is blocked by client-side SPA rendering. Resolving P0 server rendering elevates this site to 88/100 immediately.",
+        blocker: {
+          title: "Client-Side JavaScript Rendering (#root shell)",
+          text: 'AI crawlers (GPTBot, ClaudeBot) do not execute heavy client-side JavaScript. When they curl your URLs, they receive an empty <div id="root"></div> container, rendering all your product data and value propositions invisible to AI answer engines.'
+        },
+        executiveSummary: "The primary blocker for this client is client-side SPA rendering (#root shell), which prevents AI crawlers like GPTBot and ClaudeBot from indexing product specifications. Implementing server-side rendering and structured data is expected to raise this site's AIO score to 90+ and position the client to be a higher-confidence citation source for category research. AI providers control final citation behavior, not MUSTER.",
         pillars: [
           { id: "crawl", name: "1. Crawlability & Rendering", score: 4, rationale: "Empty #root shell served to GPTBot/ClaudeBot. Client-side JS rendering blocks crawler visibility.", pointsToTen: 6 },
           { id: "entity", name: "2. Entity Clarity", score: 7, rationale: "Per-route meta tags present on primary routes; missing canonical tags on pagination.", pointsToTen: 3 },
@@ -4175,6 +4182,21 @@
       }
       const cleanUrl = rawUrl.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
       const btn = document.getElementById('btnRunMasterAudit');
+      // Live: one real scan covers every view. The sample path below invents an
+      // accessibility score with Math.random(), which must never reach a tenant.
+      if (isLiveWorkspace()) {
+        const host = Live.website ? Live.host(Live.website.url) : '';
+        if (!host) { showToast('This workspace has no website yet. Add one in Client Accounts first.'); return; }
+        if (cleanUrl.toLowerCase() !== host.toLowerCase()) {
+          showToast(`Live scans run against this workspace's registered website (${host}). Add ${cleanUrl} as a website to scan it.`);
+          return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ Scanning ${escapeHtml(host)}...</span>`;
+        try { showView('aio'); await executeAioAudit(); }
+        finally { btn.disabled = false; btn.innerHTML = `<span>⚡ Run Universal Audit</span>`; }
+        return;
+      }
       btn.disabled = true;
       btn.innerHTML = `<span>⏳ Auditing WCAG, AIO & Risk for ${cleanUrl}...</span>`;
 
@@ -4208,9 +4230,12 @@
       showToast(`Loaded preset domain: ${domain}`);
     }
 
+    function isLiveWorkspace() {
+      return Live.active && !Live.showingDemo;
+    }
+
     async function executeAioAudit() {
       const input = document.getElementById('targetUrlInput');
-      const domain = (input?.value || state.aio.domain || 'portal.northstar.com').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
       const terminal = document.getElementById('aioTerminal');
       const resultsContainer = document.getElementById('aioResultsContainer');
 
@@ -4219,23 +4244,33 @@
         if (!terminal) return;
         const line = document.createElement('div');
         line.className = 'terminal-line';
-        line.innerHTML = `<span class="terminal-time">[${new Date().toLocaleTimeString()}]</span> <span class="${type}">${msg}</span>`;
+        line.innerHTML = `<span class="terminal-time">[${new Date().toLocaleTimeString()}]</span> <span class="${type}">${escapeHtml(msg)}</span>`;
         terminal.appendChild(line);
         terminal.scrollTop = terminal.scrollHeight;
       }
 
-      log(`[MUSTER-AIO] Probing domain: https://${domain}...`);
+      // A live workspace runs the real engine against its registered website and
+      // reports what that scan observed. Until 2026-09-23 this button printed the
+      // script below for every domain typed into it, live or not -- "llms.txt ->
+      // HTTP 404", "Schema.org Organization found" -- about bytes nothing had read.
+      if (isLiveWorkspace()) {
+        await Live.runAioAudit(log);
+        renderAioResults();
+        return;
+      }
+
+      const domain = (input?.value || state.aio.domain || 'portal.northstar.com').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+      log(`[SAMPLE] Scripted walkthrough for ${domain}. No request is made; sign in to scan a real site.`, 'terminal-warn');
       await new Promise(r => setTimeout(r, 250));
-      log(`Testing Bot Crawlability: curl -A "GPTBot" https://${domain}...`);
+      log(`[SAMPLE] Testing Bot Crawlability: curl -A "GPTBot" https://${domain}...`);
       await new Promise(r => setTimeout(r, 300));
-      log(`[ALERT] AI Crawler receives empty <div id="root"></div> shell with 0 product copy.`, 'terminal-crit');
+      log(`[SAMPLE] AI Crawler receives empty <div id="root"></div> shell with 0 product copy.`, 'terminal-crit');
       await new Promise(r => setTimeout(r, 250));
-      log(`Auditing Structured Data: Schema.org Organization found; SoftwareApplication missing.`, 'terminal-warn');
+      log(`[SAMPLE] Structured Data: Schema.org Organization found; SoftwareApplication missing.`, 'terminal-warn');
       await new Promise(r => setTimeout(r, 250));
-      log(`Checking LLM Surface: GET https://${domain}/llms.txt -> HTTP 404 Not Found.`, 'terminal-warn');
+      log(`[SAMPLE] LLM Surface: GET https://${domain}/llms.txt -> HTTP 404 Not Found.`, 'terminal-warn');
       await new Promise(r => setTimeout(r, 200));
-      log(`Evaluating Citability: High factual density detected on pricing tables.`, 'terminal-ok');
-      log(`[SUCCESS] Technical inspection complete. Generating 12-section AIO deliverable.`, 'terminal-ok');
+      log(`[SAMPLE] Sample deliverable rendered below.`, 'terminal-ok');
 
       if (resultsContainer) resultsContainer.style.display = 'block';
       renderAioResults();
@@ -4243,64 +4278,102 @@
 
     function renderAioResults() {
       const aio = state.aio;
+      const live = isLiveWorkspace() && !!aio.live;
       const b = getActiveBrand();
-      const heading = document.getElementById('aioReportHeading');
-      const meta = document.getElementById('aioReportMeta');
-      if (heading) heading.textContent = `AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}`;
-      if (meta) meta.textContent = `Client: ${state.client.name} (${state.aio.domain}) · Tier: ${state.client.tier || 'Audit + Implementation Assets'}`;
+      const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
-      const scoreEl = document.getElementById('aioOverallScore');
-      if (scoreEl) scoreEl.textContent = aio.overallScore;
+      // Live: the target is the workspace's registered website, not a free-text
+      // field -- a tenant scan can only run against a site the org owns -- and the
+      // sample client presets do not belong on a real tenant's screen.
+      const input = document.getElementById('targetUrlInput');
+      if (input) {
+        input.readOnly = live;
+        if (live) {
+          input.value = aio.domain || '';
+          input.dataset.tooltip = 'The website registered to this workspace. Live audits scan this site; add another in Client Accounts.';
+        } else {
+          input.dataset.tooltip = 'Enter a domain without https://. This is the site AI-readiness checks will run against.';
+        }
+      }
+      const presets = document.getElementById('aioPresetChips');
+      if (presets) presets.hidden = live;
+      const runBtn = document.getElementById('btnRunAioScan');
+      if (runBtn) runBtn.dataset.tooltip = live
+        ? 'Queues a real scan of this workspace\'s website and reports what the engine observed. Takes about a minute.'
+        : 'Plays the scripted sample walkthrough. Sign in to scan a real site.';
+      const results = document.getElementById('aioResultsContainer');
+      if (results && live) results.style.display = aio.scan ? 'block' : 'none';
+
+      setText('aioReportHeading', `AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}`);
+      setText('aioReportMeta', live && aio.scan
+        ? `Client: ${state.client.name} (${aio.domain}) · Scan #${aio.scan.id} · ${aio.scan.engine_version || 'engine'} · ${String(aio.scan.finished_at || '').slice(0, 16).replace('T', ' ')} UTC`
+        : `Client: ${state.client.name} (${aio.domain}) · Tier: ${state.client.tier || 'Audit + Implementation Assets'}`);
+
+      setText('aioOverallScore', aio.overallScore == null ? '—' : aio.overallScore);
+      setText('aioOverallBadge', aio.badge || `${aio.overallScore}/100 · 80 is Good, 90+ is Better`);
+      const badge = document.getElementById('aioOverallBadge');
+      if (badge) badge.dataset.tooltip = live
+        ? 'Share of the AI-readiness checks this scan could assess that passed. Checks it could not assess are left out, not counted as passes.'
+        : 'Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.';
+      setText('aioScoreSummary', aio.summary || '');
+      setText('aioBlockerTitle', (aio.blocker && aio.blocker.title) || '');
+      setText('aioBlockerText', (aio.blocker && aio.blocker.text) || '');
+      if (aio.blocker && aio.blocker.fields) registerLlmPrompt('blocker', { id: aio.blocker.id, fields: aio.blocker.fields });
 
       const pillarsGrid = document.getElementById('aioPillarsGrid');
       if (pillarsGrid) {
-        pillarsGrid.innerHTML = aio.pillars.map(p => `
+        pillarsGrid.innerHTML = aio.pillars.map(p => {
+          const assessed = p.score != null;
+          const colour = !assessed ? 'var(--text-dim)' : (p.score >= 8 ? 'var(--emerald)' : (p.score >= 5 ? 'var(--amber)' : 'var(--rose)'));
+          return `
           <div style="background: rgba(8, 16, 36, 0.7); border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 14px 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <strong style="color: #fff; font-size: 13px;">${escapeHtml(p.name)}</strong>
-              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 14px; color: ${p.score >= 8 ? 'var(--emerald)' : (p.score >= 5 ? 'var(--amber)' : 'var(--rose)')};">${p.score}/10</span>
+              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 14px; color: ${colour};" data-tooltip="${assessed ? 'Score out of 10 for this AI-readiness area.' : 'Not assessed: no check behind this area ran on the latest scan, so it is not scored rather than scored as a pass.'}">${assessed ? `${p.score}/10` : 'Not assessed'}</span>
             </div>
             <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <small style="color: var(--teal); font-weight: 700;">+${p.pointsToTen} pts to reach 10/10</small>
-              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('aio_' + p.id, { id: p.id, fields: [
+              <small style="color: var(--teal); font-weight: 700;">${assessed && p.pointsToTen ? `+${p.pointsToTen} pts to reach 10/10` : ''}</small>
+              ${assessed && p.pointsToTen ? `<button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('aio_' + p.id, { id: p.id, fields: [
                 ['AI-readiness area', p.name], ['MUSTER score', p.score + '/10'],
                 ['What MUSTER observed', p.rationale], ['Points available', '+' + p.pointsToTen],
-              ] })}')" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>
+              ] })}')" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>` : ''}
             </div>
-          </div>
-        `).join('');
+          </div>`;
+        }).join('');
       }
 
+      setText('aioFindingsLastCol', live ? 'Evidence' : 'Points Gain');
       const findingsTable = document.getElementById('aioFindingsTable');
       if (findingsTable) {
-        findingsTable.innerHTML = aio.findings.map(f => `
+        findingsTable.innerHTML = aio.findings.length ? aio.findings.map(f => `
           <div class="table-row grid-aio-p0">
-            <div><span class="pill ${f.priority === 'P0' ? 'pill-critical' : 'pill-high'}">${f.priority}</span></div>
+            <div><span class="pill ${f.priority === 'P0' ? 'pill-critical' : 'pill-high'}" data-tooltip="${escapeHtml(f.priorityTip || 'P0 is the most urgent; P3 the least.')}">${f.priority}</span></div>
             <div><strong style="font-size: 12.5px; color: #fff;">${escapeHtml(f.pillar)}</strong></div>
             <div><span style="font-size: 12px; color: #cbd5e1;">${escapeHtml(f.finding)}</span></div>
             <div><span style="font-size: 12px; color: var(--teal);">${escapeHtml(f.remediation)}</span></div>
-            <div style="text-align: right;"><span class="points-tag">${f.points}</span></div>
+            <div style="text-align: right;"><span class="points-tag" data-tooltip="${live ? 'Evidence the engine captured for this finding, as cited in the SITREP.' : 'Estimated score gain once fixed.'}">${escapeHtml(f.points)}</span></div>
           </div>
-        `).join('');
+        `).join('') : `<div class="table-row" style="font-size: 12.5px; color: var(--text-muted);">${live ? 'No open AI-readiness findings on the latest scan.' : 'No findings.'}</div>`;
       }
 
+      setText('aioJsonLdHeading', live ? 'Structured Data — JSON-LD (starter, from your registered details)' : 'Structured Data — JSON-LD (Paste Ready)');
+      setText('aioLlmsHeading', live ? '/llms.txt — starter file' : '/llms.txt — Full File Contents');
       const jsonSnippet = document.getElementById('jsonLdSnippet');
-      if (jsonSnippet) {
-        jsonSnippet.textContent = `<script type="application/ld+json">
+      if (jsonSnippet) jsonSnippet.textContent = live ? aio.jsonLd : `<script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://${state.aio.domain}/#organization",
+      "@id": "https://${aio.domain}/#organization",
       "name": "${state.client.name}",
-      "url": "https://${state.aio.domain}",
-      "logo": "https://${state.aio.domain}/assets/logo.png"
+      "url": "https://${aio.domain}",
+      "logo": "https://${aio.domain}/assets/logo.png"
     },
     {
       "@type": "SoftwareApplication",
-      "@id": "https://${state.aio.domain}/#software",
+      "@id": "https://${aio.domain}/#software",
       "name": "${state.client.name} Enterprise Platform",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "All Web Platforms",
@@ -4309,37 +4382,46 @@
   ]
 }
 <\/script>`;
-      }
 
       const llmsSnippet = document.getElementById('llmsTxtSnippet');
-      if (llmsSnippet) {
-        llmsSnippet.textContent = `# ${state.client.name} — AI Optimization Index
+      if (llmsSnippet) llmsSnippet.textContent = live ? aio.llmsTxt : `# ${state.client.name} — AI Optimization Index
 > Clean factual index for LLM crawlers (GPTBot, ClaudeBot, PerplexityBot).
 
 ## Core Products & Platforms
-- [Enterprise Platform](https://${state.aio.domain}/platform): Full-suite software for enterprise customers.
-- [Security & Compliance](https://${state.aio.domain}/security): Reviewed against SOC 2 Type II criteria and WCAG 2.2 AA conformance targets (not a certification).
+- [Enterprise Platform](https://${aio.domain}/platform): Full-suite software for enterprise customers.
+- [Security & Compliance](https://${aio.domain}/security): Reviewed against SOC 2 Type II criteria and WCAG 2.2 AA conformance targets (not a certification).
 
 ## Key APIs & Developer Resources
-- [Developer API Reference](https://${state.aio.domain}/docs/api): REST & GraphQL interfaces for automated integration.`;
-      }
+- [Developer API Reference](https://${aio.domain}/docs/api): REST & GraphQL interfaces for automated integration.`;
     }
 
     function buildAioMarkdown() {
       const b = getActiveBrand();
-      return `# AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}
-Domain: https://${state.aio.domain}
-Overall AIO Index: ${state.aio.overallScore}/100 (80 is Good, 90+ is Better)
+      const aio = state.aio;
+      const live = isLiveWorkspace() && !!aio.live;
+      const head = `# AI Optimization Audit & Roadmap — Prepared by ${b.name} for ${state.client.name}
+Domain: https://${aio.domain}
+${live && aio.scan ? `Scan: #${aio.scan.id} · ${aio.scan.engine_version || 'engine'} · ${String(aio.scan.finished_at || '').slice(0, 16).replace('T', ' ')} UTC\n` : ''}Overall AIO Index: ${aio.overallScore == null ? 'not assessed' : aio.overallScore + '/100'}${live ? '' : ' (80 is Good, 90+ is Better)'}`;
+      const checks = live ? `
+
+## 2. Checks
+${aio.checks.map(c => `- **${c.label}** (\`${c.rule}\`): ${c.state === 'pass' ? 'pass' : c.state === 'fail' ? 'FAIL' : 'not assessed'} — ${c.note}`).join('\n')}` : '';
+      return `${head}
 
 ## 1. Executive Summary
-The primary blocker for ${state.client.name} is client-side SPA rendering (#root shell), which prevents AI crawlers like GPTBot and ClaudeBot from indexing product specifications. Implementing server-side rendering and structured data is expected to raise this site's AIO score to 90+ and position ${state.client.name} to be a higher-confidence citation source for category research. AI providers control final citation behavior, not MUSTER.
+${live ? aio.summary : aio.executiveSummary}${checks}
 
-## 2. AIO Readiness Scorecard
-${state.aio.pillars.map(p => `- **${p.name}**: ${p.score}/10 — ${p.rationale}`).join('\n')}
+## ${live ? 3 : 2}. AIO Readiness Scorecard
+${aio.pillars.map(p => `- **${p.name}**: ${p.score == null ? 'not assessed' : p.score + '/10'} — ${p.rationale}`).join('\n')}
 
-## 3. Prioritized Findings (P0-P3)
-${state.aio.findings.map(f => `- [${f.priority}] ${f.pillar}: ${f.finding} -> Fix: ${f.remediation} (${f.points})`).join('\n')}
-
+## ${live ? 4 : 3}. Prioritized Findings (P0-P3)
+${aio.findings.length ? aio.findings.map(f => `- [${f.priority}] ${f.pillar}: ${f.finding} -> Fix: ${f.remediation} (${f.points})`).join('\n') : 'No open findings.'}
+${live ? `
+## What This Audit Did Not Check
+- Citability: whether AI assistants actually cite or recommend the site. Providers decide that and publish no method to test it.
+- Pages other than the homepage and the files at the site root.
+- Anything that needs a browser: content injected by script after load is not seen.
+` : ''}
 ${b.disclaimer}`;
     }
 
@@ -4398,6 +4480,32 @@ ${b.disclaimer}`;
               <div class="points-boost-item"><span>Eliminate modal focus trap (convert to native &lt;dialog&gt;)</span><span class="points-tag">+9 pts</span></div>
               <div class="points-boost-item"><span>Add accessible names to cart/search icon buttons</span><span class="points-tag">+5 pts</span></div>
             </div>
+          </div>
+        `;
+      } else if (scoreKey === 'aioOverall') {
+        // Built from the audit's own state. This key used to fall through to the
+        // generic branch below, which told every tenant their AIO score was
+        // "80 / 100" and that "pending evidence reviews" were worth +10.
+        const aio = state.aio;
+        titleEl.textContent = "AI Optimization Index Calculation";
+        const row = (label, tag) => `<div class="points-boost-item"><span>${escapeHtml(label)}</span><span class="points-tag">${escapeHtml(tag)}</span></div>`;
+        const live = isLiveWorkspace() && !!aio.live;
+        container.innerHTML = `
+          <div class="explainer-card">
+            <h4>AI Optimization Index: ${aio.overallScore == null ? 'not assessed' : escapeHtml(String(aio.overallScore)) + ' / 100'}</h4>
+            <div class="explainer-section">
+              <label>How it is calculated</label>
+              <p>${live
+                ? 'Each AI-readiness check the latest scan could assess is a pass or a fail; the index is the share that passed. A check the scan could not assess (a rule still held back, a scan from an older engine, or a homepage the engine could not read) is left out rather than counted as a pass. Citability is never scored: no AI provider publishes how it chooses what to cite.'
+                : 'Sample walkthrough: six pillars rated 0 to 10 by an analyst. Sign in to see the index computed from a real scan.'}</p>
+            </div>
+            <div class="explainer-section">
+              <label>${live ? 'Checks on this scan' : 'Pillars'}</label>
+              ${live
+                ? aio.checks.map(c => row(`${c.label}: ${c.note}`, c.state === 'pass' ? 'Pass' : c.state === 'fail' ? 'Fail' : 'Not assessed')).join('')
+                : aio.pillars.map(p => row(p.name, `${p.score}/10`)).join('')}
+            </div>
+            ${live ? '' : `<div class="explainer-section"><label>Path to 90+</label>${aio.findings.map(f => row(f.remediation, f.points)).join('')}</div>`}
           </div>
         `;
       } else {
@@ -5449,6 +5557,10 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         this.risks = this.website ? await this.rpc('muster_risks', { p_website_id: this.website.id }) : [];
         this.appetite = await this.rpc('muster_risk_appetite', { p_organization_id: o.id });
         this.pendingInvites = await this.rpc('muster_pending_invites', { p_organization_id: o.id });
+        // Which AIO rules can have fired. Settles on its own: if it fails, the
+        // AIO checks read "not assessed" rather than the workspace failing to load.
+        try { this.ruleStatus = await this.rpc('muster_rule_status', { p_rule_ids: this.aioChecks.map(c => c.rule) }); }
+        catch (_) { this.ruleStatus = null; }
         tenant.data = this.buildState(o, this.overview);
         activeTenantId = tenant.id;
         state = tenant.data;
@@ -5596,21 +5708,192 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
           criterionName: f.title, component: f.location || 'homepage', impact: f.plain_english, rootCause: f.detail, fix: f.remediation, location: f.page_url,
           validation: `HTTP engine · evidence ${(f.evidence_ids || []).map(i => 'E' + i).join(', ')}`, status: f.status === 'open' ? 'Open' : f.status
         }));
-        // AIO view: governance and third-party rules.
-        const gov = (rid) => openByRule[rid];
-        base.aio.domain = site ? this.host(site.url) : '';
-        base.aio.clientName = o.name;
-        base.aio.overallScore = posture ?? 0;
-        base.aio.pillars = [
-          { id: 'crawl', name: '1. Crawl governance (robots, sitemap)', score: (gov('GOV-001') || gov('GOV-002')) ? 4 : 9, rationale: (gov('GOV-001') || gov('GOV-002') || {}).detail || 'robots.txt and sitemap found.', pointsToTen: (gov('GOV-001') || gov('GOV-002')) ? 6 : 1 },
-          { id: 'entity', name: '2. Entity clarity (title, description, canonical)', score: (gov('GOV-003') || gov('GOV-005') || gov('A11Y-002')) ? 5 : 9, rationale: (gov('GOV-003') || gov('GOV-005') || gov('A11Y-002') || {}).detail || 'Title, description, and canonical present.', pointsToTen: (gov('GOV-003') || gov('GOV-005')) ? 5 : 1 },
-          { id: 'aibots', name: '3. AI crawler policy', score: gov('GOV-004') && /unaddressed/i.test(gov('GOV-004').detail) ? 3 : 8, rationale: (gov('GOV-004') || {}).detail || 'No robots.txt captured yet.', pointsToTen: 2 },
-          { id: 'thirdparty', name: '4. Third-party script surface', score: gov('TP-001') ? 6 : 10, rationale: (gov('TP-001') || {}).detail || 'No external scripts detected.', pointsToTen: gov('TP-001') ? 4 : 0 },
-        ];
-        base.aio.findings = findings.filter(f => ['governance', 'third_party'].includes(f.category)).map(f => ({
-          priority: f.severity === 'info' ? 'P2' : 'P1', pillar: f.category, finding: f.detail, remediation: f.remediation, points: `E${(f.evidence_ids || [])[0] || ''}`
-        }));
+        base.aio = this.buildAio(o, ov, site, base.aio);
         return base;
+      },
+
+      // ---------- AIO / GEO audit ----------
+      //
+      // Every check here is one engine rule. A check passes only when its rule
+      // could have fired on the latest completed scan and did not: the rule is
+      // active (muster_rule_status), the scan's engine is at or past the version
+      // that first emitted it, and the engine read the homepage at all. Anything
+      // else is "not assessed" and is left out of the index -- never counted as a
+      // pass, which is the same rule migration 062 enforces for controls.
+      //
+      // Until 2026-09-23 this view scored the pillars with the site's overall
+      // security posture, credited llms.txt and structured data that the engine
+      // never requested, and passed checks whose rule had never run.
+      aioChecks: [
+        { rule: 'GOV-008', pillar: 'crawl',  label: 'Homepage content served in the HTML', floor: '1.8.0' },
+        { rule: 'GOV-001', pillar: 'crawl',  label: 'robots.txt present' },
+        { rule: 'GOV-002', pillar: 'crawl',  label: 'XML sitemap found' },
+        { rule: 'A11Y-002', pillar: 'entity', label: 'Page title present' },
+        { rule: 'GOV-003', pillar: 'entity', label: 'Meta description present' },
+        { rule: 'GOV-005', pillar: 'entity', label: 'Canonical link present' },
+        { rule: 'GOV-007', pillar: 'schema', label: 'Readable JSON-LD structured data', floor: '1.8.0' },
+        { rule: 'GOV-006', pillar: 'llms',   label: '/llms.txt file', floor: '1.8.0' },
+        { rule: 'GOV-004', pillar: 'aibots', label: 'AI crawler decision recorded in robots.txt', reportsAlways: true },
+      ],
+      aioPillars: [
+        ['crawl', '1. Crawlability & Rendering'], ['entity', '2. Entity Clarity'], ['schema', '3. Structured Data (JSON-LD)'],
+        ['llms', '4. LLM Surface (/llms.txt)'], ['aibots', '5. AI Crawler Policy'], ['citability', '6. Citability'],
+      ],
+      engineAtLeast(version, floor) {
+        const m = /(\d+)\.(\d+)\.(\d+)/.exec(version || '');
+        if (!m) return false;
+        const a = m.slice(1).map(Number), f = floor.split('.').map(Number);
+        for (let i = 0; i < 3; i++) { if (a[i] !== f[i]) return a[i] > f[i]; }
+        return true;
+      },
+      buildAio(o, ov, site, demo) {
+        const host = site ? this.host(site.url) : '';
+        const findings = (ov && ov.findings) || [];
+        const byRule = {};
+        findings.forEach(f => { byRule[f.rule_id] = f; });
+        const scan = ((ov && ov.recent_scans) || []).find(s => s.status === 'complete') || null;
+        const active = {};
+        (this.ruleStatus || []).forEach(r => { active[r.rule_id] = r.active; });
+        const unread = ['AVAIL-001', 'AVAIL-003', 'AVAIL-004'].find(r => byRule[r]);
+
+        const checks = this.aioChecks.map(c => {
+          const f = byRule[c.rule];
+          const out = { rule: c.rule, pillar: c.pillar, label: c.label, finding: f || null };
+          if (!scan) return { ...out, state: 'na', note: 'No completed scan yet.' };
+          if (unread) return { ...out, state: 'na', note: `The engine could not read the homepage on scan #${scan.id} (${unread}), so nothing on it was assessed.` };
+          if (!this.ruleStatus) return { ...out, state: 'na', note: 'Could not read which rules are enabled, so this is not scored.' };
+          if (!active[c.rule]) return { ...out, state: 'na', note: `Rule ${c.rule} is not enabled yet; it is held until its engine release is confirmed in production.` };
+          if (c.floor && !this.engineAtLeast(scan.engine_version, c.floor)) return { ...out, state: 'na', note: `Scan #${scan.id} ran on ${scan.engine_version || 'an older engine'}; this check needs ${c.floor} or later. Run a new scan.` };
+          if (c.reportsAlways) {
+            // GOV-004 reports on every readable robots.txt; its detail is the verdict.
+            if (!f) return { ...out, state: 'na', note: byRule['GOV-001'] ? 'No robots.txt, so there is no AI crawler policy to read.' : 'robots.txt was not read on this scan.' };
+            return { ...out, state: /unaddressed/i.test(f.detail || '') ? 'fail' : 'pass', note: f.detail };
+          }
+          return f ? { ...out, state: 'fail', note: f.detail } : { ...out, state: 'pass', note: 'No open finding on the latest scan.' };
+        });
+
+        const assessed = checks.filter(c => c.state !== 'na');
+        const passed = assessed.filter(c => c.state === 'pass');
+        const pillars = this.aioPillars.map(([id, name]) => {
+          if (id === 'citability') {
+            return { id, name, score: null, pointsToTen: 0, rationale: 'Not assessed. Whether an AI assistant cites or recommends the site is decided by the provider, and no provider publishes a method to test it. MUSTER measures readiness, not outcome.' };
+          }
+          const cs = checks.filter(c => c.pillar === id);
+          const done = cs.filter(c => c.state !== 'na');
+          if (!done.length) return { id, name, score: null, pointsToTen: 0, rationale: cs.map(c => `${c.label}: ${c.note}`).join(' ') };
+          const score = Math.round(10 * done.filter(c => c.state === 'pass').length / done.length);
+          return { id, name, score, pointsToTen: 10 - score, rationale: cs.map(c => `${c.state === 'pass' ? 'Pass' : c.state === 'fail' ? 'Fail' : 'Not assessed'}: ${c.label}.${c.state === 'fail' ? ' ' + c.note : ''}`).join(' ') };
+        });
+
+        const pillarName = Object.fromEntries(this.aioPillars.map(([id, name]) => [id, name.replace(/^\d+\.\s*/, '')]));
+        const sevRank = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+        const failing = checks.filter(c => c.state === 'fail' && c.finding);
+        const aioFindings = failing
+          .slice().sort((x, y) => (sevRank[x.finding.severity] ?? 5) - (sevRank[y.finding.severity] ?? 5))
+          .map(c => ({
+            priority: ({ critical: 'P0', high: 'P0', medium: 'P1', low: 'P2', info: 'P3' })[c.finding.severity] || 'P3',
+            priorityTip: `Engine severity: ${c.finding.severity}.`,
+            pillar: `${pillarName[c.pillar]} · ${c.rule}`,
+            finding: c.finding.detail, remediation: c.finding.remediation || '',
+            points: (c.finding.evidence_ids || []).map(i => 'E' + i).join(' ') || '—',
+          }));
+
+        const top = failing.slice().sort((x, y) => (sevRank[x.finding.severity] ?? 5) - (sevRank[y.finding.severity] ?? 5))[0] || null;
+        const blocker = top
+          ? { id: top.rule, title: top.finding.title, text: `${top.finding.detail}${top.finding.remediation ? ' Fix: ' + top.finding.remediation : ''}`,
+              fields: [['Rule', top.rule], ['Title', top.finding.title], ['What MUSTER observed', top.finding.detail], ['Page', top.finding.page_url],
+                       ['MUSTER\'s recommended fix', top.finding.remediation], ['Evidence', (top.finding.evidence_ids || []).map(i => 'E' + i).join(', ')]] }
+          : { id: null, title: assessed.length ? 'No open AI-readiness blocker' : 'Nothing assessed yet',
+              text: assessed.length ? `All ${assessed.length} assessed checks pass on scan #${scan.id}.` : 'Run an audit to assess this site.', fields: null };
+
+        const na = checks.filter(c => c.state === 'na');
+        const summary = !scan
+          ? `No completed scan of ${host || 'this workspace\'s website'} yet. Run the audit to assess it.`
+          : `${passed.length} of ${assessed.length} assessed checks pass on scan #${scan.id} (${scan.engine_version || 'engine'}).`
+            + (na.length ? ` ${na.length} not assessed: ${na.map(c => c.label).join(', ')}.` : '')
+            + ' Citability is not scored.';
+
+        const orgName = o.name || host;
+        const sitemapKnown = checks.find(c => c.rule === 'GOV-002')?.state === 'pass';
+        const llmsCheck = checks.find(c => c.rule === 'GOV-006');
+        const ldCheck = checks.find(c => c.rule === 'GOV-007');
+        const jsonLd = ldCheck && ldCheck.state === 'pass'
+          ? `Scan #${scan.id} found readable JSON-LD on the homepage already. Nothing to add here; extend what is there rather than adding a second block.`
+          : `<script type="application/ld+json">
+${JSON.stringify({ '@context': 'https://schema.org', '@graph': [
+    { '@type': 'Organization', '@id': `https://${host}/#organization`, name: orgName, url: `https://${host}/` },
+    { '@type': 'WebSite', '@id': `https://${host}/#website`, name: orgName, url: `https://${host}/`, publisher: { '@id': `https://${host}/#organization` } },
+  ] }, null, 2).replace(/</g, '\\u003c')}
+<\/script>
+
+Only the name and address MUSTER holds for this workspace are filled in. Add logo, sameAs and contactPoint from your own records before publishing; MUSTER does not invent them.`;
+        const llmsTxt = llmsCheck && llmsCheck.state === 'pass'
+          ? `Scan #${scan.id} found a valid /llms.txt at https://${host}/llms.txt. Nothing to add here.`
+          : `# ${orgName}
+
+> One sentence: what ${orgName} does and who it serves. MUSTER does not write this line for you.
+
+## Key pages
+- [Home](https://${host}/): Start here.${sitemapKnown ? `\n- [Sitemap](https://${host}/sitemap.xml): Every public page (the path robots.txt names may differ; check it).` : ''}
+
+Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list the pages that matter with one line each.`;
+
+        return {
+          ...demo, live: true, domain: host, clientName: o.name, scan, checks,
+          overallScore: assessed.length ? Math.round(100 * passed.length / assessed.length) : null,
+          badge: assessed.length ? `${passed.length} of ${assessed.length} checks pass` : 'Not assessed yet',
+          summary, blocker, pillars, findings: aioFindings, jsonLd, llmsTxt,
+        };
+      },
+      async runAioAudit(log) {
+        if (this.aioRunning) { log('An audit is already running for this workspace.', 'terminal-warn'); return; }
+        if (!this.website) { log('This workspace has no website yet. Add one in Client Accounts first.', 'terminal-warn'); return; }
+        const site = this.website, host = this.host(site.url);
+        this.aioRunning = true;
+        this.stopPolling();
+        try {
+          log(`Requesting a scan of https://${host} from the MUSTER engine...`);
+          let r;
+          try { r = await this.rpc('muster_request_scan', { p_website_id: site.id }); }
+          catch (e) { log(`Scan request refused: ${e.message || e}`, 'terminal-crit'); return; }
+          log(r.deduplicated ? `Scan #${r.scan_id} was already in flight; following it.` : `Scan #${r.scan_id} queued. This usually takes about a minute.`);
+
+          // do_request_scan hands the engine call to pg_net, so the RPC returns
+          // before the scan starts. Poll to a terminal status, bounded, rather than
+          // reading a queued scan with no findings as a result.
+          let scan = null, last = '';
+          for (let n = 0; n < 40; n++) {
+            await new Promise(res => setTimeout(res, 6000));
+            let ov;
+            try { ov = await this.rpc('muster_website_overview', { p_website_id: site.id }); }
+            catch (e) { log(`Could not read scan status: ${e.message || e}`, 'terminal-crit'); return; }
+            scan = (ov.recent_scans || []).find(s => s.id === r.scan_id) || null;
+            const st = scan ? scan.status : 'queued';
+            if (st !== last) { log(`Scan #${r.scan_id}: ${st}`); last = st; }
+            if (st === 'complete' || st === 'failed') break;
+          }
+          if (!scan || (scan.status !== 'complete' && scan.status !== 'failed')) {
+            log(`Scan #${r.scan_id} is still running after four minutes. Results will appear here once it finishes; refresh later.`, 'terminal-warn');
+            return;
+          }
+          if (scan.status === 'failed') {
+            // A failed scan produces no findings, so the site keeps its previous
+            // results. Calling that complete would claim checks that never ran.
+            log(`Scan #${r.scan_id} failed: ${scan.error_message || 'no error recorded'}. No checks ran; the results below are from the previous scan.`, 'terminal-crit');
+          }
+          await this.activateOrg(this.org);
+          showView('aio');
+          const aio = state.aio;
+          if (scan.status === 'complete') {
+            log(`Scan #${r.scan_id} complete on ${scan.engine_version || 'engine'}. What it observed:`, 'terminal-ok');
+            for (const c of aio.checks || []) {
+              log(`${c.state === 'pass' ? 'PASS' : c.state === 'fail' ? 'FAIL' : 'NOT ASSESSED'} · ${c.label} (${c.rule}) · ${c.note}`,
+                c.state === 'pass' ? 'terminal-ok' : c.state === 'fail' ? 'terminal-crit' : 'terminal-warn');
+            }
+          }
+        } finally {
+          this.aioRunning = false;
+        }
       },
 
       // ---------- scans ----------
