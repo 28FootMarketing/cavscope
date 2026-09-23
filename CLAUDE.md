@@ -463,7 +463,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   about a page the engine never read. It has now happened twice on real prospect scans, six hours
   apart, through two different doors. `AVAIL-003` (migration `20260917071020`) took the first --
   a homepage answering **401, 403 or 429**, which means the server answered and declined us,
-  usually a WAF or bot filter. `AVAIL-004` (`20260917174318`, engine `http-native-1.6.0`) takes
+  usually a WAF or bot filter. `AVAIL-004` (`20260917174318`, activated by `20260918053307`, engine `http-native-1.6.0`) takes
   the second -- a response that **arrives and fails HTTP parsing**, which `hpsd.k12.pa.us` did
   with `invalid HTTP header parsed` while serving 200 to a lenient client and to this engine's own
   plain-HTTP probe *inside the same scan*, so the report called the site unreachable and described
@@ -479,11 +479,58 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   raises those errors *after* response bytes arrive, while DNS, connect and TLS failures produce
   different messages -- so a match is evidence a server answered, not a guess; a marker naming a
   connect or TLS phase would break the premise, and a test asserts none does.
+  **The activation is also the first time this project's CI actually deployed anything.** Every
+  earlier run took the skip path; the `deploy-functions` run on #120 ran its token-proving read and
+  spent 37 seconds in `supabase functions deploy`, and scan 63 came back on `http-native-1.6.0` with
+  `skipped_inactive: 1` -- the engine emitting a held rule and ingest refusing it, which is the only
+  one of those two numbers that proves anything. Scan 63 is also the cleanest illustration of why
+  posture is not the product: with the false `AVAIL-001` resolved and `AVAIL-004` still held,
+  `hpsd.k12.pa.us` scored **78 amber**, its best number of the day, on a scan that read no markup,
+  headers or cookies at all. Activation put it back to 53 red. Same number the bug produced, and now
+  it is true.
   And **one test owns the `ENGINE_VERSION` equality pin** -- the newest rule's, today
   `tests/scan/login.test.ts` (it was `availability.test.ts` until AUTH-* took `1.7.0`). `tests/scan/avail-refused.test.ts` was pinning the exact value
   too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
   line. If every rule's test pinned the value, one bump would edit all of them and the pressure
   would be to loosen the check rather than move it.
+- **The SITREP is a document, and it is judged as one.** `muster.generate_sitrep`
+  (latest definition wins; migrations are append-only, so find it by scanning rather
+  than by filename -- `tests/sitrep/report-contract.test.ts` does exactly that).
+  Four defects were found on 2026-09-18 by reading the report as a borough manager
+  would rather than as a function that returns a row, and all four are the same
+  family as the rest of this file.
+  **It stated a count it did not render.** The finding loop carried `limit 12` from
+  migration `013`, so SITREP 55 said "14 open findings: ... 3 informational" and
+  rendered 12 with one informational; `GOV-003` and `GOV-004` were absent and nothing
+  said so. Nothing could catch it, because the count and the list came from different
+  queries and were never compared. The cap is now `c_max_findings` at 50 and the
+  report says "Showing N of M"; when the cap binds, a claim names what it is not
+  showing. Trimming is fine. Trimming silently is the defect.
+  **Its header collapsed once the file travelled.** Organization / Target / Scan were
+  three lines joined by single newlines, which every CommonMark renderer folds into
+  one paragraph. Nothing in the product exposed it -- `admin.html` wraps `content_md`
+  in a `<pre>` and `sitrep.html` never reads `content_md` at all -- so it only bit
+  when the `.md` left the building, which is the only thing a `.md` is for. When a
+  format is only rendered by your own `<pre>`, you are not testing the format.
+  **The markdown and the viewer were different documents.** `sitrep.html` renders four
+  sections; the markdown rendered three, omitting Top Findings. This file justifies
+  the console's verbatim `<pre>` on the grounds that it "cannot disagree with what the
+  tenant reads at /sitrep" -- it did, and in the worse direction: the console reader
+  saw less. Both render findings now. **If you add a section to one, add it to both.**
+  **And it never stated its own scope.** `docs/SCAN-RULES.md` has always been careful
+  that a framework mapping is a citation and not a test, and that the engine has no
+  browser and no authenticated crawl -- while the one document a customer actually
+  reads said none of it. `## What This Scan Did Not Check` now ships in every report,
+  including the line that a clean result is evidence these checks passed on a date and
+  not a statement that the site is secure. For a product whose whole case is not
+  overclaiming, having the scope boundary anywhere except the deliverable was the
+  largest gap in it.
+  **Still unrendered, deliberately:** `muster.q_sitrep_jurisdiction` runs on every
+  generation and its output is stored in `sections.jurisdiction` -- 13 laws for
+  website 11, 6 needing attention, scoped to US-PA, carrying its own counsel
+  disclaimer -- and **nothing renders it**, not the markdown and not the viewer. That
+  is the most sellable content in the payload sitting dark. It is a product decision
+  rather than a rendering bug, so it was left alone rather than shipped unasked.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
@@ -521,7 +568,11 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   skips, rather than failing, until the **`MUSTER_SUPABASE_ACCESS_TOKEN`** repository secret is
   set -- prefixed, because this account's secrets span several brands. The guard accepts the
   unprefixed `SUPABASE_ACCESS_TOKEN` too and names which one it used, so a rename can no longer
-  produce a silent green skip. **As of 2026-09-17 neither name is visible to this repository**,
+  produce a silent green skip. **It deploys now.** The run on #120 (2026-09-18) was the first that
+  did, and #121 and #122 each shipped `muster-scan` through it on 2026-09-23 -- runs 35806182345
+  and 35806705653, each proving the token by a read before writing. What follows is the history of
+  why it did not for three weeks, kept because the failure mode is silent. **On 2026-09-17 neither
+  name was visible to this repository**,
   proven by dispatch rather than inferred: a probe printing only whether each candidate was
   non-empty came back empty for both secret forms and both variable forms. A secret defined at the
   organization level without this repo in its access list, scoped to an environment, or added on
