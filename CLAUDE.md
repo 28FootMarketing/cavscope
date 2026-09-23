@@ -525,12 +525,25 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   not a statement that the site is secure. For a product whose whole case is not
   overclaiming, having the scope boundary anywhere except the deliverable was the
   largest gap in it.
-  **Still unrendered, deliberately:** `muster.q_sitrep_jurisdiction` runs on every
-  generation and its output is stored in `sections.jurisdiction` -- 13 laws for
-  website 11, 6 needing attention, scoped to US-PA, carrying its own counsel
-  disclaimer -- and **nothing renders it**, not the markdown and not the viewer. That
-  is the most sellable content in the payload sitting dark. It is a product decision
-  rather than a rendering bug, so it was left alone rather than shipped unasked.
+  **The jurisdiction section renders as of 2026-09-23** (migration `20260923015214`, `muster_082`).
+  `muster.q_sitrep_jurisdiction` had run on every report since `046` and nothing displayed it. It
+  could not be printed as-is: its `status` says `clear` for "no open finding on a mapped rule",
+  and six of the YMCA's thirteen laws (CAN-SPAM, TCPA, C2PA, ISO 42001, the OECD principles, PA
+  Act 35) map to **no rule at all**, so "CAN-SPAM: clear" would have been a pass on something
+  the engine cannot look at. Each law now carries an `assessment` -- `open_findings`,
+  `no_open_findings`, or `not_assessed` (no mapped rule, **or** an unread scan) -- decided once
+  by `muster.sitrep_jurisdiction_assess` and stored in `sections.jurisdiction`. Both the
+  markdown (`muster.sitrep_jurisdiction_md`) and `sitrep.html` read that field and never derive
+  a bucket from `status`; `tests/sitrep/jurisdiction.test.ts` runs the viewer's real renderer
+  against the negative cases. Every law is shown with its "applies when" condition and the
+  payload's own disclaimer leads the section, because a list of statutes under a client's name
+  reads as a determination that they apply. **Never render the word "clear" or "compliant"
+  here**, and never add a law to the "no open findings" bucket that has no mapped rule.
+  `sitrep.html` also gained the scope note ("What This Scan Did Not Check") in the same change;
+  it had been in the markdown since `077` and missing from the viewer, which is the rule above
+  broken in the other direction. The law catalogue itself has rough edges this exposes: the
+  AI-governance rows' `applies_when` reads "Covers: media", and BPINA's reference URL ends in a
+  stray period. Those are catalogue data, not rendering, and are left for whoever owns it.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
