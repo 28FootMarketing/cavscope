@@ -3,7 +3,7 @@
 // Wired into index.ts as section 3b as of ENGINE_VERSION http-native-1.8.0.
 // The scan_rules row stays inactive until a scan reports that version live
 // -- see supabase/migrations/
-// 20260923190000_muster_084_hardening_gap_rules_inactive.sql for the
+// 20260923190000_muster_086_hardening_gap_rules_inactive.sql for the
 // activation step; do not flip `active` before then.
 //
 // WHAT THE PROBE IS

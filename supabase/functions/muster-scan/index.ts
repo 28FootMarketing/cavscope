@@ -69,7 +69,7 @@ import { evaluateCspQuality } from "./csp.ts";
 // added. It still moves, because rule output changed.
 //
 // 1.8.0 adds three rules from supabase/migrations/
-// 20260923190000_muster_084_hardening_gap_rules_inactive.sql -- SEC-016
+// 20260923190000_muster_086_hardening_gap_rules_inactive.sql -- SEC-016
 // (sensitive file/path exposure, judged by content signature the same way
 // AUTH-004/005 judge an admin console), SEC-017 (CORS that reflects an
 // untrusted Origin with Access-Control-Allow-Credentials: true, probed with a
@@ -108,7 +108,7 @@ import { evaluateCspQuality } from "./csp.ts";
 // resolver cannot detect a forged DNS answer anywhere under it). SEC-020
 // reuses the apex SEC-015/CAA already computes and needed a new scan_evidence
 // kind, `dns_ds` -- added by supabase/migrations/
-// 20260923200000_muster_085_dns_ds_evidence_kind.sql in the same change that
+// 20260923200000_muster_087_dns_ds_evidence_kind.sql in the same change that
 // emits it, per the CAA/dns_caa precedent (muster_061). That filename's
 // timestamp is a placeholder until apply_migration assigns the real one --
 // see supabase/migrations/README.md before this is actually applied.

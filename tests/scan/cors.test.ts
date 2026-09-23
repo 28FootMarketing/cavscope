@@ -4,7 +4,7 @@
 //
 // Wired into index.ts as section 3b as of ENGINE_VERSION http-native-1.8.0.
 // Held inactive in muster.scan_rules until a scan reports that version live
-// -- see supabase/migrations/20260923190000_muster_084_hardening_gap_rules_inactive.sql.
+// -- see supabase/migrations/20260923190000_muster_086_hardening_gap_rules_inactive.sql.
 //
 // The one thing worth getting right here is what is NOT flagged. A wildcard
 // Access-Control-Allow-Origin, or a reflected Origin with no credentials, is

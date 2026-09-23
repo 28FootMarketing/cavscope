@@ -1,4 +1,4 @@
--- MUSTER 085: adds the `dns_ds` scan_evidence kind, needed for SEC-020
+-- MUSTER 087: adds the `dns_ds` scan_evidence kind, needed for SEC-020
 -- (DNSSEC) -- see supabase/functions/muster-scan/hardening.ts's
 -- evaluateDnssec and index.ts's resolveDs, wired in the same change as this
 -- migration.
@@ -11,7 +11,7 @@
 -- migration as SEC-015 (muster_061). This migration exists so SEC-020's
 -- evidence kind is admitted before -- not after -- any scan can emit it.
 --
--- SEC-020 itself (migration 084) is still inactive and stays that way until
+-- SEC-020 itself (migration 086) is still inactive and stays that way until
 -- a scan reports http-native-1.9.0 or later. This migration only makes the
 -- evidence kind legal; it does not activate the rule.
 

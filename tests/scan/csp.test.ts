@@ -5,7 +5,7 @@
 // Wired into index.ts right after the SEC-004 check as of ENGINE_VERSION
 // http-native-1.8.0. Held inactive in muster.scan_rules until a scan reports
 // that version live -- see supabase/migrations/
-// 20260923190000_muster_084_hardening_gap_rules_inactive.sql.
+// 20260923190000_muster_086_hardening_gap_rules_inactive.sql.
 //
 // SEC-004 and SEC-018 are mutually exclusive by construction: a null/absent
 // CSP must never also raise SEC-018, or one defect (no policy at all) would

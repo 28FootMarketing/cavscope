@@ -1,4 +1,4 @@
--- MUSTER 084: SEC-016..020 and AUTH-006, six rules closing gaps identified in
+-- MUSTER 086: SEC-016..020 and AUTH-006, six rules closing gaps identified in
 -- a 2026-09-23 review of docs/SCAN-RULES.md against what the catalog does not
 -- check yet. All six inserted INACTIVE. This migration does not deploy any
 -- engine code -- see "INACTIVE ON PURPOSE" below before activating.

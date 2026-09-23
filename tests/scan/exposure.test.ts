@@ -5,7 +5,7 @@
 // Wired into index.ts's login-surface section (5c) as of ENGINE_VERSION
 // http-native-1.8.0. Held inactive in muster.scan_rules until a scan reports
 // that version live -- see supabase/migrations/
-// 20260923190000_muster_084_hardening_gap_rules_inactive.sql.
+// 20260923190000_muster_086_hardening_gap_rules_inactive.sql.
 //
 // The failure mode that matters most here is the one AUTH-004/AUTH-005
 // already guard against: a catch-all 404 page, or a single-page app that

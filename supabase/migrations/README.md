@@ -130,6 +130,80 @@ off by three.** The version prefix is the real ordering and always was.
 The sequence numbers are a reading aid, not an identifier. Nothing keys on them:
 `supabase_migrations.schema_migrations` keys on the version, and so does the CLI.
 
+## `083` and `084` were missing from every branch, found while building a scan-rule audit log
+
+On 2026-09-23, `28footmarketing@gmail.com` applied two migrations straight against
+`hjowfnzpomzxazmzywxw` -- `20260923042421` (adds `GOV-006`..`GOV-008`, the AIO-readiness rules
+for `llms.txt`, JSON-LD structured data, and script-rendered homepages, all three inactive) and
+`20260923042540` (`public.muster_rule_status`, a read-only RPC that looks up named rules' active
+state) -- and neither reached `main` or any branch. This surfaced not from `tests/migrations/
+ledger.test.ts` or `tools/migrations/check.mjs` (nobody ran either against a fresh dump that day),
+but from `muster.scan_rules` itself: a session auditing the rule catalog's own lifecycle found
+three `inactive` rows -- `GOV-006`, `GOV-007`, `GOV-008` -- that matched no `insert` anywhere in
+this directory, and a live ledger version `084` that collided with a same-numbered file already
+in progress on another branch.
+
+Both were recovered here unmodified from `supabase_migrations.schema_migrations.statements`,
+verified against that table's own `md5(array_to_string(statements,''))` before being written --
+same standard as the `076`–`078` recovery. The live ledger had named them `muster_083` and
+`muster_084`, and by version they genuinely are: `20260923042421` and `20260923042540` both
+precede `20260923044416`, the already-committed, already-applied `muster_083_catalogue_applies_
+when`. Keeping that file's own claim to `083` would have left three files with version order that
+disagreed with sequence order -- exactly what `tests/migrations/ledger.test.ts`'s
+`sequence_out_of_order` check exists to catch, and it did, the first time this was tried.
+
+So `catalogue_applies_when` is renumbered `085`, the two recovered files take their true `083`
+and `084`, and this is the `055`–`057` situation again in miniature: `catalogue_applies_when`'s own
+content still opens `-- MUSTER 083:` and cannot be corrected without disagreeing with what
+Postgres recorded, so **the filename is authoritative and that header is off by two.**
+`CLAUDE.md`'s prose reference to it has been corrected to `085`, because prose is not a frozen
+ledger entry and leaving it wrong there would be the "a number written in prose is a snapshot
+that rots" mistake CLAUDE.md itself names elsewhere.
+
+One thing this recovery could not do: neither `GOV-006`..`GOV-008` nor `muster_rule_status` has
+any engine code. The three rules are inactive with nothing in `supabase/functions/muster-scan/`
+that could ever emit them, and the RPC is a live-status lookup, not a history. Recovering the
+migration file closes the "applied with no file" gap; it does not mean the feature is built.
+
+## Five more, from a week earlier, found the same way
+
+The same pass turned up five more versions with no file, all from 2026-09-16 and all older than
+anything above: `20260916053301`/`20260916053307` (`public.muster_org_scans`, a paginated
+org-wide scan-history read path -- real, applied, and until now invisible to this repo),
+`20260916192324` (the five `ai_governance` rules: `ai-admt-policy-silent`,
+`ai-chatbot-present-undisclosed`, `ai-vendor-undisclosed`, `ai-generated-content-undisclosed`,
+`ai-crawler-directives-missing`), and `20260916194544` / `20260916195204` (jurisdiction and
+jurisdiction-law seed data for AI-governance tracking). None used the `muster_NNN_` naming
+convention, so none needed renumbering -- `tools/migrations/ledger.mjs`'s `SEQ` pattern only
+fires on that literal prefix, and a file without one is explicitly not a defect (`README`, above).
+All five recovered unmodified and verified against `schema_migrations`'s own md5 first.
+
+**`20260916192324` inserted three of its five rules as `active` with no code that can ever
+evaluate them**, and this recovery surfaced it rather than caused it: `ai-chatbot-present-
+undisclosed` and `ai-vendor-undisclosed` are `check_type = 'browser'`, `ai-generated-content-
+undisclosed` is `check_type = 'manual'`, and this engine is HTTP-native only -- `docs/
+SCAN-RULES.md`'s own accessibility section says as much for the browser engine ("0/10 and is not
+checked"). All three have sat `active` since 2026-09-16 with `updated_at` unchanged since
+`created_at`: nobody has revisited them. That means every scan since has had these three
+controls score **met** by the absence of findings the engine was never able to produce -- the
+exact failure `muster_062` held `SEC-014`/`SEC-015`/`EMAIL-008` inactive to prevent, now found to
+already exist, live, for AI-governance findings a client may be reading as clean. This recovery
+does not deactivate them; that changes real client posture scores and is a call for whoever owns
+the product, made on purpose, not fixed in passing while recovering a file.
+
+Also found and deliberately **not** recovered here: twelve more versions from later on
+2026-09-23 (`create_muster_beta_signups` through `muster_notify_include_industry`), a beta
+signup/notification feature with its own edge functions (`muster-beta-signup`,
+`muster-beta-confirm`, `muster-beta-export`, `muster-asset-admin`), entirely unrelated to the
+scan engine. Recovering those is a separate piece of work for whoever owns that feature.
+
+And one file here claims a version the ledger has never seen: `20260911002553_muster_049_
+public_pricing_tier_visibility.sql`. `public.muster_public_pricing` exists live and answers, so
+whatever created it works -- but it did not get there through `supabase_migrations.schema_
+migrations` under this version, which means either it ran under a different tracked version this
+note has not traced yet, or it was applied without the migration tooling. Not a scan-engine
+question, so left for a separate look rather than chased down here.
+
 ## How to check this directory against the ledger
 
 Neither the numbering collision above nor the two-byte edits were caught by anything;
