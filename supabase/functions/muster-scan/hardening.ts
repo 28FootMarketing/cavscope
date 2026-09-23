@@ -1,7 +1,7 @@
-// SEC-014 / SEC-015 / EMAIL-008: the supply-chain and transport-policy rules,
-// kept pure so they can be tested without a resolver or a network. index.ts does
-// the lookups and hands the answers in; everything below is a function of its
-// arguments, the same split email-auth.ts uses.
+// SEC-014 / SEC-015 / SEC-020 / EMAIL-008: the supply-chain and transport-
+// policy rules, kept pure so they can be tested without a resolver or a
+// network. index.ts does the lookups and hands the answers in; everything
+// below is a function of its arguments, the same split email-auth.ts uses.
 //
 // Why these three: the scanner already inventories third-party scripts (TP-001)
 // and already resolves DNS (EMAIL-*), so all three are a few lines of logic on
@@ -203,6 +203,45 @@ export function evaluateCaa(input: {
     title: "No CAA record restricts who may issue certificates",
     detail: `No CAA record is published at ${input.answers.map((a) => a.name).join(", ") || input.host}. Any public certificate authority may therefore issue a certificate for this domain, and a mis-issued certificate is what makes a convincing interception possible.`,
     location: `dns:${input.host}?type=CAA`,
+    confidence: "high",
+    evidence_keys: [input.evidenceKey],
+  }];
+}
+
+// ---------------------------------------------------------------------------
+// SEC-020: DNSSEC
+// ---------------------------------------------------------------------------
+
+/**
+ * Checked at the registrable domain (apex), not at the scanned host itself.
+ * A DS record is a delegation signer published in the PARENT zone -- it is
+ * how a resolver decides whether to expect DNSSEC signatures under a name at
+ * all -- and almost no operator signs an individual subdomain separately
+ * from its apex. Querying at the apex is where a resolver looks regardless of
+ * which subdomain of it is being resolved, and it is the same apex SEC-015
+ * already computes for CAA, so this reuses it rather than re-deriving a
+ * public-suffix stop here and letting the two drift.
+ */
+export function evaluateDnssec(input: {
+  /** The registrable domain DS was queried at (SEC-015's own `apex`). */
+  apex: string;
+  /** DS records found at the apex, via DNS type 43. */
+  records: string[];
+  resolverFailed?: boolean;
+  evidenceKey: string;
+}): HardeningFinding[] {
+  // Same rule as SPF, DMARC and CAA: a resolver outage must never become "no
+  // DNSSEC", which would manufacture a finding out of an outage rather than
+  // reporting an actual absence.
+  if (input.resolverFailed) return [];
+  if (input.records.length > 0) return [];
+
+  return [{
+    rule_id: "SEC-020",
+    severity: "low",
+    title: "DNSSEC not enabled",
+    detail: `No DS record is published for ${input.apex} at its parent zone, so a resolver has no cryptographic way to detect a forged DNS answer anywhere under this domain. DNSSEC signing needs to be enabled with the DNS host and the resulting DS record published at the registrar -- a signed zone with no DS record at the parent is signed and unverifiable at the same time, which is the most common way this is half-done.`,
+    location: `dns:${input.apex}?type=DS`,
     confidence: "high",
     evidence_keys: [input.evidenceKey],
   }];

@@ -14,6 +14,7 @@ import assert from "node:assert/strict";
 import {
   caaNames,
   evaluateCaa,
+  evaluateDnssec,
   evaluateMtaSts,
   evaluateSubresourceIntegrity,
   extractScripts,
@@ -159,6 +160,29 @@ test("SEC-015 fires only when every queried name came back empty", () => {
 test("SEC-015 is silent when the resolver failed, so an outage is never a finding", () => {
   assert.deepEqual(
     evaluateCaa({ host: "example.com", answers: [], resolverFailed: true, evidenceKey: "dns_caa" }),
+    [],
+  );
+});
+
+// --- SEC-020 -----------------------------------------------------------------
+
+test("SEC-020 fires when the apex has no DS record", () => {
+  const out = evaluateDnssec({ apex: "example.com", records: [], evidenceKey: "dns_ds" });
+  assert.equal(out.length, 1);
+  assert.equal(out[0].rule_id, "SEC-020");
+  assert.equal(out[0].severity, "low");
+  assert.equal(out[0].evidence_keys[0], "dns_ds");
+  assert.match(out[0].detail, /example\.com/);
+});
+
+test("SEC-020 is silent once a DS record is published", () => {
+  const out = evaluateDnssec({ apex: "example.com", records: ["12345 13 2 (abcdef...)"], evidenceKey: "dns_ds" });
+  assert.deepEqual(out, []);
+});
+
+test("SEC-020 is silent when the resolver failed, so an outage is never a finding -- same rule as SPF, DMARC and CAA", () => {
+  assert.deepEqual(
+    evaluateDnssec({ apex: "example.com", records: [], resolverFailed: true, evidenceKey: "dns_ds" }),
     [],
   );
 });

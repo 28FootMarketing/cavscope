@@ -4,7 +4,7 @@ import {
   dmarcCandidates, evaluateEmailAuth, mailDomain,
   spfRecords, spfLookupTerms, evaluateSpfLookups, SPF_MAX_LOOKUPS,
 } from "./email-auth.ts";
-import { caaNames, evaluateCaa, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
+import { caaNames, evaluateCaa, evaluateDnssec, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
 import { detectClientRendered, stripTags } from "./html.ts";
 import { responseRejectedByClient } from "./availability.ts";
 import {
@@ -100,7 +100,19 @@ import { evaluateCspQuality } from "./csp.ts";
 // confirms Deno.connect works inside the deployed muster-scan function
 // specifically -- not just in the Deno CLI -- SEC-019 has no engine and
 // should be treated as retired, not merely unscheduled.
-const ENGINE_VERSION = "http-native-1.8.0";
+//
+// 1.9.0 adds AUTH-006 (a login page served without Cache-Control: no-store,
+// judged on the login page alone -- unlike AUTH-001..003 it has no homepage
+// baseline, because an ordinary page is meant to be cached and a login page
+// never is) and SEC-020 (no DS record at the registrable domain, so a
+// resolver cannot detect a forged DNS answer anywhere under it). SEC-020
+// reuses the apex SEC-015/CAA already computes and needed a new scan_evidence
+// kind, `dns_ds` -- added by supabase/migrations/
+// 20260923200000_muster_085_dns_ds_evidence_kind.sql in the same change that
+// emits it, per the CAA/dns_caa precedent (muster_061). That filename's
+// timestamp is a placeholder until apply_migration assigns the real one --
+// see supabase/migrations/README.md before this is actually applied.
+const ENGINE_VERSION = "http-native-1.9.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -310,6 +322,31 @@ async function resolveCaa(name: string): Promise<{ records: string[]; failed: bo
       if (body?.Status !== 0 && body?.Status !== 3) continue;
       const records = (body?.Answer ?? [])
         .filter((a: { type?: number }) => a?.type === 257)
+        .map((a: { data?: string }) => String(a?.data ?? "").trim())
+        .filter(Boolean);
+      return { records, failed: false };
+    } catch { /* try the next resolver */ }
+  }
+  return { records: [], failed: true };
+}
+
+// DS is DNS type 43. Same failover as resolveCaa, for the same reason: a
+// single resolver being unreachable must not become "no DS record", which is
+// a DNSSEC finding manufactured from an outage rather than a real absence.
+async function resolveDs(name: string): Promise<{ records: string[]; failed: boolean }> {
+  for (const base of DOH_ENDPOINTS) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(`${base}?name=${encodeURIComponent(name)}&type=DS`, {
+        headers: { accept: "application/dns-json" }, signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const body = await res.json();
+      if (body?.Status !== 0 && body?.Status !== 3) continue;
+      const records = (body?.Answer ?? [])
+        .filter((a: { type?: number }) => a?.type === 43)
         .map((a: { data?: string }) => String(a?.data ?? "").trim())
         .filter(Boolean);
       return { records, failed: false };
@@ -852,6 +889,16 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
       excerpt: caaFailed ? "resolver unavailable" : (caaAnswers.map((a) => `${a.name}: ${a.records.join(" | ") || "(none)"}`).join("\n") || "(no names queried)"),
       byte_length: null }, caaAnswers.map((a) => a.records.join("|")).join("\n"));
     for (const f of evaluateCaa({ host: mailHost, answers: caaAnswers, resolverFailed: caaFailed, evidenceKey: "dns_caa" })) add(f);
+
+    // SEC-020: DNSSEC. Checked at the same apex CAA already computed -- see
+    // hardening.ts's evaluateDnssec for why the apex, not the scanned host,
+    // is where a resolver looks for the delegation signer.
+    const ds = await resolveDs(apex);
+    await ev({ key: "dns_ds", kind: "dns_ds", url: `dns:${apex}?type=DS`, http_status: null, content_type: null,
+      response_ms: null, headers: null,
+      excerpt: ds.failed ? "resolver unavailable" : (ds.records.join("\n") || "(no DS records)"),
+      byte_length: null }, ds.records.join("\n"));
+    for (const f of evaluateDnssec({ apex, records: ds.records, resolverFailed: ds.failed, evidenceKey: "dns_ds" })) add(f);
 
     // EMAIL-008: MTA-STS. The policy file is only fetched when the TXT record
     // claims one exists, so a domain with no record costs one lookup and no
