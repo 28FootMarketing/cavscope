@@ -176,6 +176,22 @@ export function frameable(headers: Record<string, string>): boolean {
 /** Anti-forgery tokens that frameworks deliberately expose to script. */
 const SCRIPT_READABLE_BY_DESIGN = /csrf|xsrf/i;
 
+/**
+ * Cookies a login page sets that carry no identity and never become a
+ * session, matched by exact name. Flags on them protect nothing, so asking for
+ * them is advice that costs credibility and fixes nothing.
+ *
+ * Deliberately an exact list, not a pattern, and deliberately short: every
+ * entry is a claim that a named product's cookie is inert, and a claim like
+ * that is only made after reading what the product puts in it.
+ *
+ * - wordpress_test_cookie: WordPress sets it on wp-login.php with the constant
+ *   value "WP Cookie check" to learn whether the browser accepts cookies. It
+ *   was AUTH-003's first live firing (www.hanoverymca.org, scan 86), and the
+ *   reason the rule was held back when the rest of the family was activated.
+ */
+export const INERT_BY_DESIGN = new Set(["wordpress_test_cookie"]);
+
 export function cookieName(setCookie: string): string {
   return setCookie.split(";")[0].split("=")[0].trim() || "(unnamed)";
 }
@@ -184,6 +200,7 @@ function cookieProblems(setCookies: string[], pageIsHttps: boolean): string[] {
   const out: string[] = [];
   for (const c of setCookies) {
     const name = cookieName(c);
+    if (INERT_BY_DESIGN.has(name.toLowerCase())) continue;
     const missing: string[] = [];
     // Secure is only a meaningful ask on HTTPS: on HTTP the page itself is the
     // problem, and AUTH-001 already says so.
@@ -271,7 +288,7 @@ export function evaluateLoginPage(input: {
   const bad = cookieProblems(setCookies.filter((c) => !already.has(cookieName(c).toLowerCase())), pageIsHttps);
   if (bad.length) {
     out.push({ ...base, rule_id: "AUTH-003", severity: "medium", title: "Login page sets cookies without protective flags",
-      detail: `Before anyone signs in, ${url} sets ${bad.length} cookie(s) without the flags a pre-login session needs: ${bad.join(" | ").slice(0, 1200)}. A cookie set here commonly becomes the signed-in session. Anti-forgery tokens (names containing csrf or xsrf) are not asked for HttpOnly, because frameworks expose them to script on purpose.`,
+      detail: `Before anyone signs in, ${url} sets ${bad.length} cookie(s) without the flags a pre-login session needs: ${bad.join(" | ").slice(0, 1200)}. A session cookie issued before sign-in is often the one that carries the signed-in session afterwards, unless the application issues a new one at sign-in. Anti-forgery tokens (names containing csrf or xsrf) are not asked for HttpOnly, because frameworks expose them to script on purpose, and cookies that carry no identity by design, such as wordpress_test_cookie, are not reported.`,
       location: "set-cookie" });
   }
   return out;

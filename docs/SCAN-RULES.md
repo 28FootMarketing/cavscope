@@ -1,7 +1,7 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **54 rules, 49 active** (read live 2026-09-23;
-the five inactive are `AUTH-001`..`AUTH-005`, held for engine `http-native-1.7.0`), all
+Every defect code the engine can raise, by audit area. **54 rules, 53 active** (read live 2026-09-23;
+the one inactive is `AUTH-003`, held for engine `http-native-1.7.1`), all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -72,7 +72,7 @@ Nine more rules (`EMAIL-001`..`EMAIL-009`) also carry `category = security`; the
 governs certificate issuance for the web host, so it is walked from the scanned host upward the way
 a certificate authority walks it, not from the `www.`-stripped mail domain.
 
-## Login surface — 5 rules, held inactive
+## Login surface — 5 rules, 4 active
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
@@ -82,8 +82,15 @@ a certificate authority walks it, not from the `www.`-stripped mail domain.
 | `AUTH-004` | low | CMS administrator login is reachable at its default path | OWASP A07:2025, NIST PR.AA-03, 800-53 AC-7/IA-2(1) |
 | `AUTH-005` | high | Database administration console is publicly reachable | OWASP A02/A07:2025, NIST PR.IR-01, 800-53 AC-17/SC-7 |
 
-Added inactive by migration `20260923012038` (`muster_079`); activate in a separate migration once a
-scan reports `http-native-1.7.0` or later. The proof of deploy is the `login_discovery` evidence row
+Added inactive by migration `20260923012038` (`muster_079`). `AUTH-001`, `002`, `004` and `005` were
+activated by `20260923012945` (`muster_080`) after six sandbox scans reported `http-native-1.7.0`;
+that migration's header carries the evidence. **`AUTH-003` is still held.** Its first live firing
+(`www.hanoverymca.org`, scan 86) was `wordpress_test_cookie`, a constant "WP Cookie check" value that
+never becomes a session. Engine `1.7.1` stops reporting it; activate `AUTH-003` once a scan reports
+`1.7.1` or later, and in the same migration reword its `description`, which still says a pre-login
+cookie "commonly becomes the signed-in session".
+
+The proof of deploy is the `login_discovery` evidence row
 (kind `http_probe`), which the engine writes on every reachable scan whether or not a login page
 exists. These rules are silent on most sites, so `skipped_inactive` may stay 0 and prove nothing.
 

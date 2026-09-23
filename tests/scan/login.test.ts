@@ -172,6 +172,26 @@ test("AUTH-003: names each cookie and what it lacks, and exempts CSRF tokens fro
   assert.doesNotMatch(out[0].detail, /ok: missing/);
 });
 
+test("AUTH-003 skips wordpress_test_cookie, verbatim from its first live firing, and nothing else", () => {
+  // Scan 86, www.hanoverymca.org/login/, 2026-09-23. The constant value is the
+  // point: it carries no identity, so its flags protect nothing.
+  const out = evaluateLoginPage({ url: "https://www.hanoverymca.org/login/", headers: SAFE_HEADERS, html: FORM, evidenceKey: "k", homepage: HARDENED_HOME,
+    setCookies: ["wordpress_test_cookie=WP%20Cookie%20check; path=/; secure"] });
+  assert.deepEqual(out, []);
+  // An exact name, not a pattern: a real WordPress session cookie beside it
+  // is still judged, and so is a lookalike.
+  const mixed = evaluateLoginPage({ url: "https://www.hanoverymca.org/login/", headers: SAFE_HEADERS, html: FORM, evidenceKey: "k", homepage: HARDENED_HOME,
+    setCookies: [
+      "wordpress_test_cookie=WP%20Cookie%20check; path=/; secure",
+      "wordpress_logged_in_abc=1; path=/; secure",
+      "wordpress_test_cookie2=x; path=/",
+    ] });
+  assert.deepEqual(mixed.map((f) => f.rule_id), ["AUTH-003"]);
+  assert.doesNotMatch(mixed[0].detail, /wordpress_test_cookie:/);
+  assert.match(mixed[0].detail, /wordpress_logged_in_abc: missing HttpOnly, SameSite/);
+  assert.match(mixed[0].detail, /wordpress_test_cookie2: missing Secure, HttpOnly, SameSite/);
+});
+
 test("AUTH-003 does not ask for Secure on an HTTP page, where AUTH-001 already owns the defect", () => {
   const out = evaluateLoginPage({ url: "http://www.example.com/login", headers: SAFE_HEADERS, html: FORM, evidenceKey: "k", homepage: HARDENED_HOME,
     setCookies: ["sid=1; HttpOnly; SameSite=Lax"] });
@@ -296,6 +316,7 @@ test("the engine's login section only follows chains, which are GET", () => {
 
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.7\.0";/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.7\.1";/);
   assert.match(engine, /1\.7\.0 adds AUTH-001\.\.005/);
+  assert.match(engine, /1\.7\.1 stops AUTH-003 reporting wordpress_test_cookie/);
 });
