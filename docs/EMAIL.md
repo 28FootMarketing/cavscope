@@ -196,6 +196,28 @@ whose `allowlist:*` probes pass but whose magic links still arrive at `www` root
 allowlist is fine and Site URL is the thing left to change — they are two different settings on
 the same dashboard page, and only one of them is what a link with no `redirect_to` falls back to.
 
+Run 2026-09-23 02:54 UTC, after `.github/workflows/auth-config.yml` set Site URL on 2026-09-17:
+**all six read-only steps green, and the fallback is now the app host.** `allowlist:control`
+rejected the unknown host and GoTrue fell back to `https://app.muster.partners/`, where the
+2026-09-09 run fell back to `https://www.muster.partners/`. That step is the one that proves
+Site URL: the two `allowlist:*` probes ask for their redirect by name and pass whatever Site URL
+is, while the control asks for a host that must be refused, so the only place it can land is the
+fallback. The rest held: `/reset` and `/app` honoured, `/reset` serves the new-password form, and
+a minted recovery link for the QA sentinel landed on `app.muster.partners/reset` with a recovery
+session in the fragment. It was invoked from Postgres through `pg_net` with the secret read from
+Vault inside the database, the way the cron jobs call engine functions, so the secret never left
+the project.
+
+What this run does **not** prove, so nobody reads more into it than it says:
+
+- **The password leg.** `rotate_password` was false, so set → sign-in did not run. It last
+  passed on 2026-09-09.
+- **Magic links specifically.** The smoke test mints a *recovery* link. A magic link goes through
+  the same allowlist check and the same Site URL fallback, so this is strong evidence it now lands
+  on the app host, but only following a real magic link proves that.
+- **Delivery.** Nothing was sent, so this says nothing about SMTP, Resend or which templates are
+  live.
+
 ## Path B — application email
 
 `muster-alert-dispatch` drains `muster.notification_outbox` every 5 minutes and sends each row
