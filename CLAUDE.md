@@ -584,9 +584,11 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   list ("Covers: highrisk, companion, text, media"), now one plain sentence each saying the law
   applies **only if** the organization uses AI in that way; and BPINA's reference URL ended in a
   stray period. The four tags are defined nowhere in the repo, so their meaning was read off the
-  laws carrying them and the mapping is in that migration's header. **`text` is the loose one**:
-  it also tags algorithmic-pricing laws, so it is rendered as broad public-facing AI use rather
-  than "generates text". A new catalogue row must be written as a sentence -- the migration
+  laws carrying them and the mapping is in that migration's header. **`text` means general AI
+  use**, confirmed by the owner on 2026-09-23 -- which is why it also tags algorithmic-pricing
+  laws, and why it is rendered as broad public-facing AI use rather than "generates text". The
+  migration header still calls this an inference; it predates the confirmation and cannot be
+  edited, because the file must match what the ledger recorded. A new catalogue row must be written as a sentence -- the migration
   asserts no `Covers:` value survives, but nothing stops one being inserted later.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
