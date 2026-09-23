@@ -7,6 +7,10 @@ import {
 import { caaNames, evaluateCaa, evaluateMtaSts, evaluateSubresourceIntegrity, extractScripts } from "./hardening.ts";
 import { detectClientRendered, stripTags } from "./html.ts";
 import { responseRejectedByClient } from "./availability.ts";
+import {
+  ADMIN_PROBES, MAX_LOGIN_PAGES, evaluateAdminProbes, evaluateLoginPage, findLoginLinks,
+  cookieName, frameable, hasPasswordField, isSameSite, passwordForms, probeHit, type ProbeResult,
+} from "./login.ts";
 
 // MUSTER scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -47,7 +51,13 @@ import { responseRejectedByClient } from "./availability.ts";
 // header parsed` over HTTPS while serving 200 to a lenient client and to this
 // engine's own plain-HTTP probe in the same scan, and AVAIL-001 called that
 // "Visitors cannot load the site."
-const ENGINE_VERSION = "http-native-1.6.0";
+//
+// 1.7.0 adds AUTH-001..005: the login surface, read from outside. The engine
+// now follows up to three same-site "Sign in" links from the homepage and GETs
+// five default admin paths, judging only pages whose served HTML contains a
+// password field. It still signs in to nothing and submits nothing; see
+// login.ts for what it deliberately leaves alone.
+const ENGINE_VERSION = "http-native-1.7.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -106,11 +116,11 @@ async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function fetchOnce(url: string, method: "GET" | "HEAD" = "GET"): Promise<Fetched> {
+async function fetchOnce(url: string, method: "GET" | "HEAD" = "GET", timeoutMs = TIMEOUT_MS): Promise<Fetched> {
   const started = Date.now();
   const out: Fetched = { ok: false, status: null, headers: {}, setCookies: [], body: "", bytes: 0, ms: 0, error: null, contentType: null, url };
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { method, redirect: "manual", signal: ctrl.signal, headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml,*/*;q=0.8" } });
     out.status = res.status;
@@ -149,12 +159,12 @@ async function fetchOnce(url: string, method: "GET" | "HEAD" = "GET"): Promise<F
   return out;
 }
 
-async function followChain(startUrl: string) {
+async function followChain(startUrl: string, maxHops = MAX_HOPS, timeoutMs = TIMEOUT_MS) {
   const hops: Array<{ url: string; status: number | null; location: string | null; ms: number; error: string | null }> = [];
   let url = startUrl;
   let last: Fetched | null = null;
-  for (let i = 0; i < MAX_HOPS; i++) {
-    const r = await fetchOnce(url, "GET");
+  for (let i = 0; i < maxHops; i++) {
+    const r = await fetchOnce(url, "GET", timeoutMs);
     const loc = r.headers["location"] ?? null;
     hops.push({ url, status: r.status, location: loc, ms: r.ms, error: r.error });
     last = r;
@@ -541,6 +551,95 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     const secOk = sec.status === 200 && /^\s*contact\s*:/im.test(sec.body);
     await ev({ key: "security_txt", kind: "security_txt", url: `${origin}/.well-known/security.txt`, http_status: sec.status, content_type: sec.contentType, response_ms: sec.ms, headers: null, excerpt: sec.body.slice(0, 4000), byte_length: sec.bytes }, sec.body || String(sec.status));
     if (!secOk) add({ rule_id: "SEC-012", severity: "low", title: "No security.txt disclosure policy", detail: `/.well-known/security.txt returned HTTP ${sec.status ?? "error"}${sec.status === 200 ? " without a Contact field" : ""}.`, location: "/.well-known/security.txt", confidence: "high", evidence_keys: ["security_txt"] });
+  }
+
+  // 5b. The login surface (AUTH-*), read the way an anonymous visitor reads it.
+  // Plain GETs only: nothing is submitted, no credential is sent, and a page
+  // counts as a login page only if its served HTML contains a password field.
+  // Every request goes out at once, with a shorter timeout and hop limit than
+  // the homepage gets, so a site where every path hangs costs this section
+  // about 3 x 8 s of wall clock rather than 8 x 90 s.
+  //
+  // The homepage is never assessed here even when it holds a login form: its
+  // transport, framing and cookies are already SEC-013, PRIV-003, SEC-005 and
+  // SEC-011, and one defect must not be scored twice.
+  if (reachable && host) {
+    const LOGIN_TIMEOUT_MS = 8000;
+    const LOGIN_HOPS = 3;
+    const origin = new URL(finalUrl).origin;
+    const dropHash = (u: string) => u.replace(/#.*$/, "");
+    const homeKey = dropHash(finalUrl);
+    const onSite = (u: string) => { const hn = hostOf(u); return hn !== null && isSameSite(hn, host); };
+    const links = isHtml ? findLoginLinks(html, finalUrl, host) : { onSite: [] as string[], offSite: [] as string[] };
+
+    const [linked, probed] = await Promise.all([
+      Promise.all(links.onSite.map((u) => followChain(u, LOGIN_HOPS, LOGIN_TIMEOUT_MS))),
+      Promise.all(ADMIN_PROBES.map((p) => followChain(origin + p.path, LOGIN_HOPS, LOGIN_TIMEOUT_MS))),
+    ]);
+
+    const probeResults: ProbeResult[] = probed.map((c, i) => ({
+      probe: ADMIN_PROBES[i],
+      finalUrl: onSite(c.finalUrl) ? dropHash(c.finalUrl) : null,
+      status: c.final.status,
+      body: c.final.body,
+    }));
+
+    const pages: Array<{ url: string; res: Fetched; via: string }> = [];
+    const notes: string[] = [];
+    const consider = (c: { final: Fetched; finalUrl: string }, via: string) => {
+      const url = dropHash(c.finalUrl);
+      if (!onSite(url)) { notes.push(`${via}: left the site for ${url}; not assessed, it is not this site's page`); return; }
+      if (c.final.error || c.final.status === null || c.final.status >= 400) { notes.push(`${via}: ${c.final.error ?? `HTTP ${c.final.status}`}`); return; }
+      if (url === homeKey) { notes.push(`${via}: is the homepage, already judged by the SEC-* rules`); return; }
+      if (!/text\/html|application\/xhtml/i.test(c.final.contentType ?? "") || !hasPasswordField(c.final.body)) {
+        notes.push(`${via}: no password field in the served HTML; a form rendered by JavaScript, or a single sign-on button, is not visible to the HTTP engine`);
+        return;
+      }
+      if (pages.some((pg) => pg.url === url)) { notes.push(`${via}: same page as one already assessed`); return; }
+      if (pages.length >= MAX_LOGIN_PAGES) { notes.push(`${via}: not assessed, ${MAX_LOGIN_PAGES}-page limit reached`); return; }
+      pages.push({ url, res: c.final, via });
+    };
+    // What the SEC-* rules already reported on the homepage, so AUTH-* only
+    // raises what is worse on the login page. Mirrors SEC-005 and SEC-011's own
+    // conditions rather than reading their findings back, which would couple
+    // this section to the order the rules happen to run in.
+    const homepage = {
+      https: isHttps,
+      frameProtected: !frameable(primary.headers),
+      flaggedCookies: primary.setCookies
+        .filter((c) => !/;\s*secure/i.test(c) || !/;\s*httponly/i.test(c) || !/;\s*samesite=/i.test(c))
+        .map(cookieName),
+    };
+    linked.forEach((c, i) => consider(c, `link ${links.onSite[i]}`));
+    probed.forEach((c, i) => { if (probeHit(probeResults[i])) consider(c, `default path ${ADMIN_PROBES[i].path}`); });
+
+    const discovery = [
+      `homepage has a password field: ${isHtml && hasPasswordField(html) ? "yes (judged by SEC-013, PRIV-003, SEC-005, SEC-011)" : "no"}`,
+      `sign-in links followed: ${links.onSite.length ? links.onSite.join(", ") : "none found"}`,
+      `off-site sign-in links, not assessed: ${links.offSite.length ? links.offSite.join(", ") : "none"}`,
+      "default admin paths:",
+      ...probeResults.map((r) => `  ${r.probe.path} -> ${r.status ?? "error"}${r.finalUrl === null ? " (left the site)" : ""}${probeHit(r) ? ` MATCHED ${r.probe.product}` : ""}`),
+      `login pages assessed: ${pages.length ? pages.map((pg) => `${pg.url} (via ${pg.via})`).join(", ") : "none"}`,
+      ...(notes.length ? ["notes:", ...notes.map((n) => "  " + n)] : []),
+    ].join("\n");
+    // Written whenever this section runs, found or not. AUTH-* is silent on a
+    // site with no login page, so a counter cannot prove the code executed;
+    // this row can, the same way dns_spf_chain proved EMAIL-009.
+    // Kind is http_probe because scan_evidence.kind is a CHECK-constrained
+    // list; a new kind would fail ingest and take the whole scan with it.
+    await ev({ key: "login_discovery", kind: "http_probe", url: origin + "/", http_status: null, content_type: null, response_ms: null,
+      headers: null, excerpt: discovery.slice(0, 8000), byte_length: discovery.length }, discovery);
+
+    for (const [i, pg] of pages.entries()) {
+      const key = `login_${i + 1}`;
+      const formTags = passwordForms(pg.res.body, pg.url).map((f) => `${f.tag.slice(0, 300)}  -> ${f.action ?? "(unresolvable action)"}`);
+      const excerpt = [headerList(pg.res.headers), ...pg.res.setCookies.map((c) => "set-cookie: " + c),
+        "", "password forms:", ...(formTags.length ? formTags : ["(password field outside any <form>; submitted by script)"])].join("\n");
+      await ev({ key, kind: "http_response", url: pg.url, http_status: pg.res.status, content_type: pg.res.contentType, response_ms: pg.res.ms,
+        headers: pg.res.headers, excerpt: excerpt.slice(0, 8000), byte_length: pg.res.bytes }, pg.res.body);
+      for (const f of evaluateLoginPage({ url: pg.url, headers: pg.res.headers, setCookies: pg.res.setCookies, html: pg.res.body, evidenceKey: key, homepage })) add(f);
+    }
+    for (const f of evaluateAdminProbes({ results: probeResults, evidenceKey: "login_discovery" })) add(f);
   }
 
   // 6. Email authentication (EMAIL-*). Runs regardless of whether the site

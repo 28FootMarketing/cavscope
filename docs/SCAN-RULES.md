@@ -1,6 +1,7 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **49 rules, 48 active**, all
+Every defect code the engine can raise, by audit area. **54 rules, 49 active** (read live 2026-09-23;
+the five inactive are `AUTH-001`..`AUTH-005`, held for engine `http-native-1.7.0`), all
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
 than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
 the network, and every reach is still an HTTPS request.
@@ -23,6 +24,8 @@ by which step of `supabase/functions/muster-scan/index.ts` raises the code.
 | Scope | Raised by | Codes |
 |---|---|---|
 | **Site** — one verdict per domain | the `http://host/` probe; the origin files; domain DNS | `SEC-001`, `GOV-001`, `GOV-002`, `GOV-004`, `SEC-012`, `EMAIL-001`–`007` |
+| **Site** — one verdict per default admin path | a GET to each product's default path, counted only on that product's own login form | `AUTH-004`, `AUTH-005` |
+| **Login page** — one verdict per login page found | up to three same-site sign-in links from the homepage, plus any admin-path hit | `AUTH-001`, `AUTH-002`, `AUTH-003` |
 | **Page** — one verdict per page | the fetched response, its headers, its HTML | everything else |
 
 Twelve site-scoped, twenty-six page-scoped.
@@ -68,6 +71,41 @@ Nine more rules (`EMAIL-001`..`EMAIL-009`) also carry `category = security`; the
 `SEC-015` reads DNS, not HTTP, despite living in this family rather than the email one: a CAA record
 governs certificate issuance for the web host, so it is walked from the scanned host upward the way
 a certificate authority walks it, not from the `www.`-stripped mail domain.
+
+## Login surface — 5 rules, held inactive
+
+| Code | Sev | Title | Maps to |
+|---|---|---|---|
+| `AUTH-001` | high | Login credentials can travel unencrypted | PCI DSS 4.2.1/8.3.2, OWASP A04/A07:2025, NIST PR.DS-02, 800-53 SC-8 |
+| `AUTH-002` | medium | Login page can be framed by another site | OWASP A02/A07:2025, NIST PR.PS-01 |
+| `AUTH-003` | medium | Login page sets cookies without protective flags | SOC 2 CC6.1/CC6.7, OWASP A02/A07:2025, 800-53 SC-23 |
+| `AUTH-004` | low | CMS administrator login is reachable at its default path | OWASP A07:2025, NIST PR.AA-03, 800-53 AC-7/IA-2(1) |
+| `AUTH-005` | high | Database administration console is publicly reachable | OWASP A02/A07:2025, NIST PR.IR-01, 800-53 AC-17/SC-7 |
+
+Added inactive by migration `20260923012038` (`muster_079`); activate in a separate migration once a
+scan reports `http-native-1.7.0` or later. The proof of deploy is the `login_discovery` evidence row
+(kind `http_probe`), which the engine writes on every reachable scan whether or not a login page
+exists. These rules are silent on most sites, so `skipped_inactive` may stay 0 and prove nothing.
+
+**It still signs in to nothing.** Every request is a plain GET. No form is submitted and no
+credential is held or sent. Rule logic is in `supabase/functions/muster-scan/login.ts`, pinned by
+`tests/scan/login.test.ts`. Four decisions a client or reviewer may ask about:
+
+- **A page is a login page only if its served HTML has a password field.** A form rendered by
+  JavaScript, or a single sign-on button, is invisible to the HTTP engine and is recorded in
+  evidence as not assessed, never reported as fine or as broken.
+- **An admin path counts only on the product's own form signature**, never on a status code. A
+  single-page app answers every path with 200, and reading that as "phpMyAdmin is exposed" would
+  be a high finding against a site that does not run it.
+- **Off-site login links are recorded, not judged.** A "Parent Portal" on a vendor's domain is the
+  vendor's system.
+- **`AUTH-001`..`003` fire only where the login page is worse than the homepage.** An HTTP-only
+  site is `SEC-013`, no framing header anywhere is `SEC-005`, and a cookie the homepage already set
+  badly is `SEC-011`. One defect is scored once, not once per login page the engine found.
+
+Left out on purpose: rate-limit or lockout probing, which means trying passwords against real
+users, and an "autocomplete allowed" finding, which current NIST SP 800-63B and OWASP guidance
+reverses (password managers should be allowed).
 
 ## Email authentication — 9 rules
 
@@ -147,7 +185,7 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `AVAIL-001` | **critical** | Site unreachable or returning an error | SOC 2 A1.2, NIST DE.CM-1 |
 | `AVAIL-002` | medium | Slow first response | NIST PR.DS-4 |
 | `AVAIL-003` | **critical** | Site could not be assessed: the scanner was refused | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
-| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP — *held inactive, see below* | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
+| `AVAIL-004` | **critical** | Site could not be assessed: the response was not valid HTTP — *activated 2026-09-18 by `20260918053307`, whose file is not yet in this repo* | SOC 2 A1.2, NIST DE.CM-01, 800-53 SI-4 |
 
 ## Accessibility — 7 rules
 
@@ -415,7 +453,9 @@ Worth being able to say out loud, because a prospect will ask:
 - **No browser engine.** Everything is HTTP-native: headers, HTML parsing, and fetches of
   `robots.txt`, the sitemap and `/.well-known/security.txt`. No rendering, no JavaScript execution,
   no computed styles.
-- **No authenticated crawl.** Only what an anonymous visitor sees.
+- **No authenticated crawl.** Only what an anonymous visitor sees. The `AUTH-*` family reads login
+  pages from outside and never signs in; what is behind the login is out of scope and always will
+  be under this architecture. Testing it is a penetration test under a signed scope.
 - **One page by default.** `website_scan_settings.max_pages` defaults to 1.
 - **No DKIM or BIMI check.** SPF and DMARC are covered by the `EMAIL-*` family above; DKIM cannot
   be checked without knowing the selector, and BIMI is not assessed. **MTA-STS is now covered** by
