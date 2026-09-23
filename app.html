@@ -179,6 +179,25 @@
       position: relative;
     }
 
+    /* The one nav entry that leaves the page (to admin.html). Styled as a nav
+       button so it reads as part of the list, but it is a real link. */
+    .nav a.nav-out {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9.5px 14px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      color: #fde68a;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .nav a.nav-out[hidden] { display: none; }
+    .nav a.nav-out:hover { background: var(--surface-hover); color: #fff; }
+
     .nav button:hover {
       background: var(--surface-hover);
       color: var(--text);
@@ -440,7 +459,7 @@
       color: #fff;
     }
 
-    button.btn-amber {
+    button.btn-amber, a.btn-amber {
       border: 1px solid rgba(251, 191, 36, 0.4);
       border-radius: var(--radius-md);
       padding: 8px 14px;
@@ -456,7 +475,10 @@
       transition: all 0.2s ease;
     }
 
-    button.btn-amber:hover {
+    a.btn-amber { text-decoration: none; }
+    a.btn-amber[hidden] { display: none; }
+
+    button.btn-amber:hover, a.btn-amber:hover {
       background: rgba(251, 191, 36, 0.22);
       color: #fff;
     }
@@ -789,6 +811,8 @@
       gap: 12px;
     }
 
+    .toggle-switch[hidden] { display: none; }
+
     .toggle-switch {
       position: relative;
       display: inline-block;
@@ -912,18 +936,7 @@
     .grid-objectives { grid-template-columns: 2fr 1.2fr 1fr 1.2fr 100px; }
     .grid-aio-p0 { grid-template-columns: 100px 1.5fr 2fr 1.2fr 100px; }
     .grid-wcag-defects { grid-template-columns: 90px 1.2fr 2fr 1.4fr 120px 110px; }
-    .grid-superadmin-tenants { grid-template-columns: 1.6fr 1.4fr 1.2fr 1.1fr 100px 140px; }
     .grid-subclients { grid-template-columns: 1.8fr 1.4fr 1.1fr 1fr 100px 150px; }
-    .grid-admin-tenants { grid-template-columns: 1.8fr 0.9fr 1fr 0.9fr 1fr 130px; }
-    .grid-admin-runs { grid-template-columns: 1.8fr 0.8fr 1fr 1fr; }
-    .grid-admin-incidents { grid-template-columns: 0.7fr 1.8fr 1.1fr 0.8fr 1.3fr; }
-    .grid-admin-flags { grid-template-columns: 1.4fr 2fr 0.7fr 0.9fr; }
-    .grid-admin-overrides { grid-template-columns: 1fr 1fr 0.6fr 1.6fr; }
-    .grid-admin-registry { grid-template-columns: 1.3fr 2.2fr 0.9fr 70px 60px 1fr; }
-    .grid-admin-ovr { grid-template-columns: 1.3fr 0.5fr 1.8fr 1.1fr 90px; }
-    .grid-admin-jurisdictions { grid-template-columns: 1.4fr 0.8fr 1fr; }
-    .grid-admin-users { grid-template-columns: 1.6fr 1.8fr 1fr 1fr; }
-    .grid-admin-imp { grid-template-columns: 1.3fr 1.3fr 1.8fr 1fr 0.7fr 0.8fr; }
     .grid-live-findings { grid-template-columns: 1fr 280px; }
     .grid-live-jurisdictions { grid-template-columns: 1.3fr 2.2fr 1fr; }
     .grid-live-members { grid-template-columns: 1.3fr 1.6fr 1fr; }
@@ -1602,12 +1615,18 @@
           <span>Assurance Testing</span>
         </button>
 
-        <div class="nav-label" style="margin-top: 10px;" id="navSuperAdminLabel">Platform Administration</div>
-        <button data-view="superadmin" style="color: #fde68a;" id="navSuperAdminBtn" data-tooltip="Platform-wide controls: tenants, feature flags, and white-labeling.">
-          <span class="ico" id="navSuperAdminIcon">👑</span>
-          <span id="navSuperAdminText">Super Admin Console</span>
-          <span class="nav-count" id="badgeTenantCount" style="background: rgba(251, 191, 36, 0.2); color: #fde68a;">3</span>
+        <div class="nav-label" style="margin-top: 10px;">Workspace</div>
+        <button data-view="teamSettings" data-tooltip="This workspace's team, invitations, API keys, report branding and AI narrative model.">
+          <span class="ico">👥</span>
+          <span>Team &amp; Settings</span>
         </button>
+        <!-- Platform administration is admin.html, not a view in this page. Shown
+             only to a super admin (Live.activateOrg); the console itself is
+             gated in Postgres whatever this link does. -->
+        <a class="nav-out" id="navPlatformConsole" href="/admin" hidden data-tooltip="Opens the Platform Console: every tenant, user, feature flag, incident, pricing and support access, in one place. Super admins only.">
+          <span class="ico">👑</span>
+          <span>Platform Console ↗</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
@@ -1649,12 +1668,12 @@
 
         <div class="topbar-right">
           <!-- White-label feature status badge -->
-          <button class="btn-ghost" id="btnWhiteLabelBadge" onclick="showView('superadmin')" style="padding: 6px 11px; font-size: 11px; border-color: rgba(56, 189, 248, 0.3);" data-tooltip="Whether agencies can replace MUSTER branding with their own. Change it in Super Admin.">
+          <button class="btn-ghost" id="btnWhiteLabelBadge" onclick="showView('teamSettings')" style="padding: 6px 11px; font-size: 11px; border-color: rgba(56, 189, 248, 0.3);" data-tooltip="Whether this workspace puts its own branding on reports instead of MUSTER's. Opens Team &amp; Settings.">
             🏷️ White-Label: <span id="lblWhiteLabelStatus" style="color: var(--amber); font-weight: 700;">OFF</span>
           </button>
-          <button class="btn-amber" onclick="showView('superadmin')" data-tooltip="Manage all client organizations and platform settings in one place.">
-            👑 Super Admin
-          </button>
+          <a class="btn-amber" id="btnPlatformConsole" href="/admin" hidden data-tooltip="Opens the Platform Console, where every platform-wide control lives. Super admins only.">
+            👑 Platform Console
+          </a>
           <button class="btn-primary" onclick="openModal('create_tenant')" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Set up a new client organization with its own isolated workspace.">
             ＋ Tenant
           </button>
@@ -1746,7 +1765,7 @@
             <div class="card metric-card" data-tooltip="When ON, agency clients see their own branding on reports instead of MUSTER's.">
               <label>White-Label Status</label>
               <div class="metric-value" style="color: var(--amber); font-size: 22px; margin-top: 22px;" id="kpiWlStatus">Flag: OFF</div>
-              <small style="color: var(--text-muted);">Toggleable in Super Admin</small>
+              <small style="color: var(--text-muted);">Set under Team &amp; Settings</small>
             </div>
           </div>
 
@@ -2680,139 +2699,56 @@
           </div>
         </section>
 
-        <!-- ================= VIEW 11: PLATFORM SUPER ADMIN CONSOLE ================= -->
-        <section id="superadmin" class="view">
+        <!-- ================= VIEW 11: TEAM & SETTINGS ================= -->
+        <!-- This view was the in-app "Platform Super Admin Console" until
+             2026-09-23. Platform administration now lives in exactly one place,
+             admin.html at /admin; this view holds only what a tenant manages for
+             itself (team, invitations, API keys, branding, AI narrative). A super
+             admin reaches the console from the nav link and topbar button, both
+             hidden for everyone else. -->
+        <section id="teamSettings" class="view">
           <div class="hero">
             <div class="hero-content">
-              <span class="eyebrow" style="color: var(--amber);">Platform Control Plane & Feature Flags</span>
-              <h2>Platform Super Admin Console</h2>
-              <p>Global management console for platform administrators to provision tenant accounts, configure feature flags, manage white-labeling, and monitor fleet assurance.</p>
-            </div>
-            <div class="hero-actions">
-              <button class="btn-ghost" onclick="exportAllTenantsJSON()" data-tooltip="Downloads every client organization and its workspace data as one JSON file.">↓ Export Roster (.json)</button>
-              <!-- The standalone console at /admin is on this same origin, so the
-                   Supabase session carries straight over -- see middleware.js. -->
-              <a class="btn-ghost" href="/admin" style="border-color: rgba(251, 191, 36, 0.45); color: var(--amber); text-decoration: none; display: inline-flex; align-items: center;"
-                data-tooltip="Opens the full-screen platform console: headline counts, 30-day scan activity, portfolio health and a computed action queue, all from one super-admin-gated RPC.">◱ Open Platform Console</a>
-              <button class="btn-primary" onclick="openModal('create_tenant')" data-tooltip="Set up a new client organization with its own isolated workspace.">＋ Provision New Tenant</button>
+              <span class="eyebrow">Workspace</span>
+              <h2>Team &amp; Settings</h2>
+              <p>Who is on this workspace, the API keys its agents use, how its reports are branded, and whether its findings are narrated by its own language model.</p>
             </div>
           </div>
 
-          <!-- Sample walkthrough content below -- hidden once a real super admin's
-               live data loads (see Live.loadAdmin), which renders its own properly
-               componentized panels instead of reusing these fake/static ones. -->
-          <div id="superadminDemoBlocks">
-          <!-- FEATURE FLAGS CONTROL PANEL -->
-          <div class="panel" style="margin-bottom: 24px; border-color: rgba(56, 189, 248, 0.4);">
-            <div class="panel-head" style="background: rgba(12, 32, 60, 0.5);">
-              <div>
-                <h3 style="color: #38bdf8;">🚩 Platform Feature Flags & Capability Gates</h3>
-                <p>Control system-wide capabilities, experimental modules, and agency white-label engines</p>
-              </div>
-              <span class="pill pill-medium" id="ffEngineTag">Gated Engine Active</span>
-            </div>
-            <div class="panel-body">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-
-                <!-- White-Labeling Feature Flag Card -->
-                <div style="padding: 16px; background: rgba(8, 16, 36, 0.7); border: 1.5px solid #23416c; border-radius: var(--radius-md);">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                      <strong style="color: #fff; font-size: 14px; display: block;">Agency White-Labeling & Custom Branding Engine</strong>
-                      <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px; line-height: 1.5;">
-                        Allows agency tenants to override platform branding, inject custom logos, custom disclaimers, and produce 100% white-labeled PDF/Markdown deliverables for their clients.
-                      </p>
-                    </div>
-                    <div class="switch-wrap" style="margin-left: 14px;">
-                      <label class="toggle-switch" data-tooltip="Turn on to let agency clients put their own branding on reports. Applies platform-wide.">
-                        <input type="checkbox" id="ffWhiteLabelToggle" aria-label="Enable agency white-labeling" onchange="toggleWhiteLabelFlag(this.checked)">
-                        <span class="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; color: var(--text-dim);">
-                      Flag State: <strong id="lblFfState" style="color: var(--amber);">DISABLED (false)</strong>
-                    </span>
-                    <button class="btn-ghost" id="btnConfigureWhiteLabel" style="padding: 4px 10px; font-size: 11px; opacity: 0.5;" onclick="openModal('whitelabel_settings')" disabled data-tooltip="Set the agency name, logo mark, and report footer. Turn the flag on first.">
-                      ⚙ Configure Branding
-                    </button>
-                  </div>
+          <!-- Sample walkthrough note, hidden once a live workspace loads (see
+               Live.renderLivePanels), which renders the real team, key and LLM
+               panels above the branding card. -->
+          <div id="teamSettingsDemoBlocks">
+            <div class="panel" style="margin-bottom: 24px;">
+              <div class="panel-head">
+                <div>
+                  <h3>Team, invitations and API keys</h3>
+                  <p>Sign in to a live workspace to manage its members, pending invitations, agent API keys and AI narrative model. The sample walkthrough has none of these.</p>
                 </div>
-
-                <!-- Deep Scan API Gate Card -->
-                <div style="padding: 16px; background: rgba(8, 16, 36, 0.7); border: 1px solid var(--surface-border); border-radius: var(--radius-md);">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                      <strong style="color: #fff; font-size: 14px; display: block;">External Headless Browser Crawler (Puppeteer/Playwright)</strong>
-                      <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px; line-height: 1.5;">
-                        Executes dynamic runtime DOM inspection via backend sandbox for zero-tolerance focus ring and live screen-reader emulation.
-                      </p>
-                    </div>
-                    <div class="switch-wrap" style="margin-left: 14px;">
-                      <label class="toggle-switch" data-tooltip="Always on. Runs a real browser to test keyboard focus and screen-reader behavior.">
-                        <input type="checkbox" checked disabled aria-label="Headless browser crawler (always on)">
-                        <span class="slider" style="opacity: 0.7;"></span>
-                      </label>
-                    </div>
-                  </div>
-                  <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; color: var(--emerald);">Flag State: ACTIVE (core)</span>
-                    <small style="color: var(--text-dim); font-size: 10px;">System Default</small>
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>
 
-          <!-- Super Admin Fleet Overview KPIs -->
-          <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card metric-card">
-              <label>Total Managed Tenants</label>
-              <div class="metric-value" style="color: var(--teal);" id="saTotalTenants">3</div>
-              <small style="color: var(--text-muted);" id="saActiveTenants">3 Active Organizations</small>
-            </div>
-            <div class="card metric-card" data-tooltip="Average safety score across every client organization on the platform.">
-              <label>Fleet Average Posture</label>
-              <div class="metric-value" style="color: var(--cyan);" id="saAvgPosture">84%</div>
-              <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
-              <small class="score-asof" data-asof></small>
-            </div>
-            <div class="card metric-card" data-tooltip="Critical issues still open across all clients. Each needs immediate attention.">
-              <label>Fleet Critical Risks</label>
-              <div class="metric-value" style="color: var(--rose);" id="saTotalCritical">1</div>
-              <small style="color: var(--rose);">1 requires immediate intervention</small>
-            </div>
-            <div class="card metric-card" data-tooltip="The MUSTER release you are running. Every change is logged in the changelog.">
-              <label>Platform Engine</label>
-              <div class="metric-value" style="color: var(--amber);" id="lblAppVersion">v0.1.3</div>
-              <small style="color: var(--text-muted);">WCAG 2.2 AA + AIO + Flags</small>
-            </div>
-          </div>
-
-          <!-- Tenants Roster Table -->
-          <div class="panel">
+          <div class="panel" style="margin-bottom: 24px;">
             <div class="panel-head">
               <div>
-                <h3>Tenant Accounts & Assigned Administrators</h3>
-                <p>Select any client organization to access their isolated workspace or copy onboarding credentials</p>
+                <h3>🏷️ Report Branding</h3>
+                <p>Put your agency's name, mark and disclaimer on SITREPs and client deliverables instead of MUSTER's.</p>
               </div>
-              <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('create_tenant')" data-tooltip="Set up a new client organization with its own isolated workspace.">＋ Create Tenant</button>
+              <span class="pill pill-medium" id="lblFfState" data-tooltip="Whether this workspace is entitled to custom branding. In a live workspace this comes from your plan, not from a switch here.">Not enabled</span>
             </div>
-            <div class="table-header grid-superadmin-tenants">
-              <span>Organization & Subdomain</span>
-              <span>Primary Production Domain</span>
-              <span>Assigned Administrator</span>
-              <span>License Tier & Region</span>
-              <span>Status</span>
-              <span style="text-align: right;">Action</span>
+            <div class="panel-body" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+              <p id="brandingNote" style="color: var(--text-muted); font-size: 12.5px; line-height: 1.55; margin: 0; flex: 1; min-width: 240px;">Sample data: turn the preview on to see how agency branding changes the reports.</p>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <label class="toggle-switch" id="ffWhiteLabelDemoSwitch" data-tooltip="Sample data only. Previews agency branding on the walkthrough reports. A live workspace takes this from its plan.">
+                  <input type="checkbox" id="ffWhiteLabelToggle" aria-label="Preview agency branding on sample data" onchange="toggleWhiteLabelFlag(this.checked)">
+                  <span class="slider"></span>
+                </label>
+                <button class="btn-ghost" id="btnConfigureWhiteLabel" style="padding: 6px 12px; font-size: 11.5px; opacity: 0.5;" onclick="openModal('whitelabel_settings')" disabled data-tooltip="Set the agency name, logo mark, report footer and client pricing shown on deliverables. Available once branding is enabled.">
+                  ⚙ Configure Branding
+                </button>
+              </div>
             </div>
-            <div id="superAdminTenantsList" class="list">
-              <!-- Rendered via renderSuperAdminView() -->
-            </div>
-          </div>
           </div>
         </section>
 
@@ -3362,26 +3298,32 @@
       };
     }
 
-    function toggleWhiteLabelFlag(checked) {
-      platformFeatureFlags.whiteLabeling = checked;
+    // Paints every surface that reports white-label state. `live` changes the
+    // wording only: a live workspace's entitlement comes from its plan and the
+    // flag registry, the sample walkthrough's from the preview switch.
+    function paintWhiteLabelState(on, live) {
       const statusLbl = document.getElementById('lblWhiteLabelStatus');
       const configBtn = document.getElementById('btnConfigureWhiteLabel');
       const ffState = document.getElementById('lblFfState');
       const kpiWl = document.getElementById('kpiWlStatus');
-
-      if (checked) {
-        if (statusLbl) { statusLbl.textContent = "ON"; statusLbl.style.color = "var(--teal)"; }
-        if (ffState) { ffState.textContent = "ACTIVE (true)"; ffState.style.color = "var(--teal)"; }
-        if (configBtn) { configBtn.disabled = false; configBtn.style.opacity = "1"; }
-        if (kpiWl) { kpiWl.textContent = "Flag: ON"; kpiWl.style.color = "var(--teal)"; }
-        showToast("✓ Feature Flag Activated: Agency White-Labeling is now available!");
-      } else {
-        if (statusLbl) { statusLbl.textContent = "OFF"; statusLbl.style.color = "var(--amber)"; }
-        if (ffState) { ffState.textContent = "DISABLED (false)"; ffState.style.color = "var(--amber)"; }
-        if (configBtn) { configBtn.disabled = true; configBtn.style.opacity = "0.5"; }
-        if (kpiWl) { kpiWl.textContent = "Flag: OFF"; kpiWl.style.color = "var(--amber)"; }
-        showToast("Feature Flag Deactivated: White-labeling toggled OFF.");
+      const note = document.getElementById('brandingNote');
+      const colour = on ? "var(--teal)" : "var(--amber)";
+      if (statusLbl) { statusLbl.textContent = on ? "ON" : "OFF"; statusLbl.style.color = colour; }
+      if (ffState) { ffState.textContent = on ? "Enabled" : "Not enabled"; ffState.className = on ? "pill pill-low" : "pill pill-medium"; }
+      if (configBtn) { configBtn.disabled = !on; configBtn.style.opacity = on ? "1" : "0.5"; }
+      if (kpiWl) { kpiWl.textContent = on ? "Flag: ON" : "Flag: OFF"; kpiWl.style.color = colour; }
+      if (note) {
+        note.textContent = live
+          ? (on ? "Included with this workspace's plan. Configure the name, mark and disclaimer your clients see."
+                : "Not included with this workspace's current plan. Reports carry MUSTER branding.")
+          : "Sample data: turn the preview on to see how agency branding changes the reports.";
       }
+    }
+
+    function toggleWhiteLabelFlag(checked) {
+      platformFeatureFlags.whiteLabeling = checked;
+      paintWhiteLabelState(checked, false);
+      showToast(checked ? "Branding preview on: sample reports now carry agency branding." : "Branding preview off: sample reports carry MUSTER branding.");
       applyBrandToUI();
     }
 
@@ -4171,27 +4113,6 @@
       `).join('');
     }
 
-    function toggleTenantStatus(tenantId) {
-      const t = multiTenantStore[tenantId];
-      if (!t) return;
-      t.status = t.status === "Active" ? "Suspended" : "Active";
-      renderSuperAdminView();
-      showToast(`Tenant ${t.name} set to ${t.status}.`);
-    }
-
-    function copyCredentials(tenantId) {
-      const t = multiTenantStore[tenantId];
-      if (!t) return;
-      const text = `MUSTER Tenant Credentials
-Tenant: ${t.name} (ID: ${t.id})
-Domain: https://${t.domain}
-Administrator: ${t.adminName} (${t.adminEmail})
-Cloud Region: ${t.region}
-Temporary Password: TempMU!${Math.floor(1000 + Math.random() * 9000)}`;
-      copyToClipboard(text);
-      showToast(`Copied onboarding credentials for ${t.name}.`);
-    }
-
     function pickClientUrl(domain) {
       if (!domain) return;
       const client = state.subClients.find(c => c.domain === domain);
@@ -4656,49 +4577,6 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       `).join('');
     }
 
-    function renderSuperAdminView() {
-      const tenants = Object.values(multiTenantStore);
-      const totalEl = document.getElementById('saTotalTenants');
-      const activeEl = document.getElementById('saActiveTenants');
-      const badgeTenant = document.getElementById('badgeTenantCount');
-
-      if (totalEl) totalEl.textContent = tenants.length;
-      if (activeEl) activeEl.textContent = `${tenants.filter(t => t.status === "Active").length} Active Organizations`;
-      if (badgeTenant) badgeTenant.textContent = tenants.length;
-
-      const list = document.getElementById('superAdminTenantsList');
-      if (!list) return;
-
-      list.innerHTML = tenants.map(t => `
-        <div class="table-row grid-superadmin-tenants">
-          <div>
-            <span class="eyebrow" style="color: var(--amber);">${t.id}</span>
-            <strong style="display: block; font-size: 13.5px; color: #fff;">${escapeHtml(t.name)}</strong>
-            <small style="color: var(--text-dim); font-size: 11px;">Slug: /${t.slug}</small>
-          </div>
-          <div>
-            <span style="font-family: var(--font-mono); font-size: 12px; color: var(--teal);">${t.domain}</span>
-          </div>
-          <div>
-            <strong style="font-size: 12px; color: #e2e8f0; display: block;">${escapeHtml(t.adminName)}</strong>
-            <small style="color: var(--text-dim); font-size: 11px;">${escapeHtml(t.adminEmail)}</small>
-          </div>
-          <div>
-            <span class="pill pill-medium" style="font-size: 9.5px;">${escapeHtml(t.tier)}</span>
-            <small style="display: block; color: var(--text-dim); font-size: 10px; margin-top: 2px;">${t.region}</small>
-          </div>
-          <div>
-            <span class="pill ${t.status === 'Active' ? 'tenant-pill-active' : 'tenant-pill-suspended'}">${t.status}</span>
-          </div>
-          <div style="text-align: right; display: flex; gap: 6px; justify-content: flex-end;">
-            <button class="btn-primary" style="padding: 4px 9px; font-size: 11px;" onclick="switchTenant('${t.id}')" data-tooltip="Open this organization's workspace. All views switch to its data.">↗ Access</button>
-            <button class="btn-ghost" style="padding: 4px 7px; font-size: 11px;" onclick="copyCredentials('${t.id}')" aria-label="Copy onboarding credentials" data-tooltip="Copies an onboarding summary with a sample temporary password. Not a live account.">📋</button>
-            <button class="btn-ghost" style="padding: 4px 7px; font-size: 11px;" onclick="toggleTenantStatus('${t.id}')" aria-label="${t.status === 'Active' ? 'Suspend tenant' : 'Reactivate tenant'}" data-tooltip="${t.status === 'Active' ? 'Suspends this organization. Their access pauses until reactivated.' : 'Reactivates this organization and restores their access.'}">${t.status === 'Active' ? '⏸' : '▶'}</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
     function renderAccessibilityView() {
       const a11y = state.accessibility;
       const scoreEl = document.getElementById('wcagOverallScore');
@@ -5010,7 +4888,6 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       renderGovernance();
       renderAssurance();
       renderBoard();
-      renderSuperAdminView();
       applyBrandToUI();
     }
 
@@ -5095,20 +4972,6 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       a.download = `muster-client-roster-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       showToast("Client accounts roster exported.");
-    }
-
-    function exportAllTenantsJSON() {
-      // Live super admins export the real roster (Live.admin.tenants, already
-      // fetched by loadAdmin); anyone still on the demo walkthrough exports the
-      // sample multiTenantStore -- never a mix of the two.
-      const live = Live.active && !Live.showingDemo && Live.admin;
-      const payload = live ? Live.admin.tenants : multiTenantStore;
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
-      const a = document.createElement('a');
-      a.href = dataStr;
-      a.download = `muster-platform-tenants-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      showToast(live ? "Real tenant roster exported." : "Sample tenant roster exported.");
     }
 
     function loadPreset(val) {
@@ -5292,7 +5155,8 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       // Synchronize feature flag toggle
       const toggle = document.getElementById('ffWhiteLabelToggle');
       if (toggle) toggle.checked = platformFeatureFlags.whiteLabeling;
-      toggleWhiteLabelFlag(platformFeatureFlags.whiteLabeling);
+      paintWhiteLabelState(platformFeatureFlags.whiteLabeling, false);
+      applyBrandToUI();
 
       refreshAll();
     });
@@ -5304,19 +5168,11 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
     // Every data call goes through public.muster_* RPCs; RLS is enforced
     // server-side, so this file never sees another tenant's rows.
     // =====================================================================
-    // An admin URL scan is queued, not run, by the time the RPC returns:
-    // muster.do_request_scan fires the engine through net.http_post, and pg_net
-    // dispatches on a background worker. Observed on this project: ~440ms from
-    // queued_at to started_at, ~900ms to finished_at. 1.5s x 20 gives 30s of
-    // headroom for a slow origin without spinning forever.
-    const POLL_INTERVAL_MS = 1500;
-    const POLL_MAX_TRIES = 20;
-
     const Live = {
       url: 'https://hjowfnzpomzxazmzywxw.supabase.co',
       key: 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL',
       sb: null, session: null, active: false, showingDemo: false,
-      ws: null, org: null, website: null, overview: null, admin: null,
+      ws: null, org: null, website: null, overview: null,
       demoStore: null, demoTenantId: null, poll: null, countries: null,
 
       init() {
@@ -5424,7 +5280,8 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       exit() {
         this.active = false;
         this.stopPolling();
-        this.ws = this.org = this.website = this.overview = this.admin = this.flagRegistry = null;
+        this.ws = this.org = this.website = this.overview = null;
+        ['navPlatformConsole', 'btnPlatformConsole'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
         this.restoreDemo();
         this.setSync('Demo workspace · sample data');
         this.renderTopbar();
@@ -5439,7 +5296,15 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       showDemo() {
         if (!this.active) return;
         this.showingDemo = true;
+        // Back to the sample walkthrough's own preview switch, not the live
+        // workspace's entitlement.
+        const wl = document.getElementById('ffWhiteLabelToggle');
+        platformFeatureFlags.whiteLabeling = !!(wl && wl.checked);
         this.restoreDemo();
+        const demoSwitch = document.getElementById('ffWhiteLabelDemoSwitch');
+        if (demoSwitch) demoSwitch.hidden = false;
+        paintWhiteLabelState(platformFeatureFlags.whiteLabeling, false);
+        applyBrandToUI();
         this.setSync('Demo workspace · sample data (signed in)');
         this.renderTopbar();
       },
@@ -5528,6 +5393,30 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       // ---------- workspace hydration ----------
       async loadWorkspace() {
         this.ws = await this.rpc('muster_my_workspace');
+        // A super admin arriving at /app with no fragment -- a magic link, a
+        // password sign-in, a bookmark -- is sent to the Platform Console, which
+        // is where their work is. Two fragments keep them here: #tenant=<id>,
+        // which is how admin.html opens a tenant's workspace, and any other
+        // fragment, which is how the console's own "MUSTER" link says "I meant
+        // to come here" without bouncing straight back. Only on the first load:
+        // switching orgs or refreshing after a write must never navigate away.
+        //
+        // Done here rather than in signin.html on purpose. Routing by role at
+        // sign-in would mean an extra RPC before every redirect, for every user,
+        // to branch for the handful who are super admins.
+        let pendingTenant = null;
+        if (this.ws.is_super_admin && !this._landed) {
+          this._landed = true;
+          const hash = location.hash.slice(1);
+          const m = /^tenant=(\d+)$/.exec(hash);
+          if (m) {
+            pendingTenant = Number(m[1]);
+            history.replaceState(null, '', location.pathname + location.search);
+          } else if (!hash) {
+            location.replace(location.origin + '/admin');
+            return;
+          }
+        }
         const orgs = this.ws.organizations || [];
         if (!orgs.length) { await this.openOnboard(); return; }
         const preferred = this.ws.preferences?.default_organization_id;
@@ -5536,6 +5425,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         Object.keys(multiTenantStore).forEach(k => delete multiTenantStore[k]);
         for (const o of orgs) multiTenantStore['live-' + o.id] = this.tenantFromOrg(o);
         await this.activateOrg(this.org);
+        if (pendingTenant != null && pendingTenant !== this.org.id) await this.openTenant(pendingTenant);
       },
       tenantFromOrg(o) {
         const site = (o.websites || [])[0];
@@ -5566,40 +5456,21 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         // 2026-09-16, which is not a flag that has ever existed, so this always
         // resolved undefined and the badge read OFF no matter what the flag said.
         platformFeatureFlags.whiteLabeling = !!(o.flags && o.flags.white_label_enabled);
-        const toggle = document.getElementById('ffWhiteLabelToggle');
-        if (toggle) { toggle.checked = platformFeatureFlags.whiteLabeling; toggle.disabled = !this.ws.is_super_admin; }
+        // Entitlement comes from the plan and the flag registry, so the sample
+        // data preview switch has no place in a live workspace.
+        const demoSwitch = document.getElementById('ffWhiteLabelDemoSwitch');
+        if (demoSwitch) demoSwitch.hidden = true;
+        paintWhiteLabelState(platformFeatureFlags.whiteLabeling, true);
         this.applyFlagsToNav(o.flags || {});
-        // This nav tab holds real tenant self-service (team, API keys, alert
-        // preferences) alongside platform-wide super-admin controls. A regular
-        // member shouldn't have to open something literally labeled "Super Admin
-        // Console" to find their own team/invite/API-key tools.
-        const navLabel = document.getElementById('navSuperAdminLabel'), navText = document.getElementById('navSuperAdminText'), navIcon = document.getElementById('navSuperAdminIcon'), navBadge = document.getElementById('badgeTenantCount');
-        if (navLabel && navText && navIcon) {
-          if (this.ws.is_super_admin) { navLabel.textContent = 'Platform Administration'; navText.textContent = 'Super Admin Console'; navIcon.textContent = '👑'; if (navBadge) navBadge.hidden = false; }
-          else { navLabel.textContent = 'Workspace'; navText.textContent = 'Team & API Keys'; navIcon.textContent = '👥'; if (navBadge) navBadge.hidden = true; }
-        }
+        // The Platform Console link is shown to a super admin and to nobody
+        // else. Hiding it is presentation; admin.html's only data source raises
+        // 42501 for anyone who is not a super admin, whatever this link does.
+        const isSuper = !!(this.ws && this.ws.is_super_admin);
+        ['navPlatformConsole', 'btnPlatformConsole'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = !isSuper; });
         switchTenant(tenant.id);
         this.setSync(`Live · ${o.name} · ${o.plan} plan`);
         this.renderTopbar();
         this.renderLivePanels();
-        if (this.ws.is_super_admin) {
-          // A super admin signing in lands on platform administration, not on
-          // one tenant's overview. The magic link drops them at /app -- same
-          // origin, which is what keeps the session valid -- and #overview is
-          // what the markup marks active, so without this they arrive in a
-          // tenant workspace and have to go hunting for the crown.
-          //
-          // Done here rather than in signin.html on purpose. Routing by role at
-          // sign-in would mean an extra RPC before every redirect, for every
-          // user, to branch for the handful who are super admins. This method
-          // already has the answer in this.ws.is_super_admin.
-          //
-          // Safe against the flag system: `superadmin` is deliberately absent
-          // from navFlagMap, so unlike every gated view it can never be hidden
-          // underneath this redirect.
-          showView('superadmin');
-          this.loadAdmin().catch(e => this.fail(e));
-        }
       },
       // ---------- flags decide what the workspace shows ----------
       //
@@ -5806,7 +5677,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         return html;
       },
       renderLivePanels() {
-        ['superadminDemoBlocks', 'boardDemoBlocks', 'plainReportDemoBlocks', 'controlsDemoBlocks'].forEach(id => {
+        ['teamSettingsDemoBlocks', 'boardDemoBlocks', 'plainReportDemoBlocks', 'controlsDemoBlocks'].forEach(id => {
           const dbEl = document.getElementById(id);
           if (dbEl) dbEl.hidden = true;
         });
@@ -5892,9 +5763,9 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       },
       renderAgentsPanel() {
         const o = this.org; if (!o) return;
-        const dbEl = document.getElementById('superadminDemoBlocks');
+        const dbEl = document.getElementById('teamSettingsDemoBlocks');
         if (dbEl) dbEl.hidden = true;
-        const el = this.panel('liveAgentsPanel', 'superadmin');
+        const el = this.panel('liveAgentsPanel', 'teamSettings');
         const agents = o.agents || [];
         const canIssue = !!(o.flags && o.flags.agent_api);
         const members = o.members || [];
@@ -5978,7 +5849,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
       // provider metadata in every workspace load for every member.
       async renderLlmPanel() {
         const o = this.org; if (!o) return;
-        const el = this.panel('liveLlmPanel', 'superadmin');
+        const el = this.panel('liveLlmPanel', 'teamSettings');
         let cfg;
         try {
           cfg = await this.rpc('muster_llm_config', { p_organization_id: o.id });
@@ -6093,690 +5964,18 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         } catch (err) { this.fail(err); }
       },
 
-      // ---------- super admin console ----------
-      async loadAdmin() {
-        [this.admin, this.adminUrlRuns, this.imp, this.impLog, this.flagRegistry] = await Promise.all([
-          this.rpc('muster_admin_overview'),
-          this.rpc('muster_admin_url_runs'),
-          this.rpc('muster_admin_impersonate_status'),
-          this.rpc('muster_admin_impersonation_log', { p_limit: 25 }),
-          this.rpc('muster_admin_flag_registry'),
-        ]);
-        const a = this.admin;
-        const demoBlocks = document.getElementById('superadminDemoBlocks');
-        if (demoBlocks) demoBlocks.hidden = true;
-        const el = this.panel('liveAdminPanel', 'superadmin');
-        const eng = a.engine || {}, alerts = a.alerts || {}, pricing = a.pricing || {};
-        const tenants = a.tenants || [], incidents = a.incidents || [], flags = a.flags || [];
-        const overrides = a.overrides || [], agents = a.platform_agents || [];
-        const jurisdictions = a.jurisdiction_review_queue || [], users = a.users || [];
-        const imp = this.imp || { active: false };
-        const criticalTenants = tenants.filter(t => t.open_critical > 0).length;
-        const inFlight = (eng.queued ?? 0) + (eng.running ?? 0);
-        const failed24 = eng.failed_24h ?? 0, complete24 = eng.complete_24h ?? 0;
-        const deadLetter = alerts.failed_dead_letter ?? 0, pending = alerts.pending ?? 0, sent24 = alerts.sent_24h ?? 0;
-
-        el.innerHTML = `
-          <div class="grid-4">
-            <div class="card metric-card" data-tooltip="Every organization currently provisioned on the platform.">
-              <div class="metric-card-top"><label>Total Tenants</label><div class="metric-icon-wrap">⌂</div></div>
-              <div class="metric-value"><span>${tenants.length}</span></div>
-              <div class="metric-sub"><span class="${criticalTenants > 0 ? 'alert' : 'ok'}">${criticalTenants} with open critical</span><span>${users.length} users</span></div>
-            </div>
-            <div class="card metric-card" data-tooltip="Open findings from muster-watchdog's health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters. Empty means nothing is currently flagged, not that nothing was checked.">
-              <div class="metric-card-top"><label>Open Incidents</label><div class="metric-icon-wrap">⚠</div></div>
-              <div class="metric-value"><span style="color:${incidents.length > 0 ? 'var(--rose)' : '#fff'};">${incidents.length}</span></div>
-              <div class="metric-sub"><span class="${incidents.length > 0 ? 'alert' : 'ok'}">${incidents.length > 0 ? 'needs triage' : 'none open'}</span><span>watchdog checks</span></div>
-            </div>
-            <div class="card metric-card" data-tooltip="Scans currently queued or running on the live engine, plus completions/failures in the last 24 hours.">
-              <div class="metric-card-top"><label>Scan Engine</label><div class="metric-icon-wrap">⟳</div></div>
-              <div class="metric-value"><span>${inFlight}</span><span class="denom">in flight</span></div>
-              <div class="metric-sub"><span class="${failed24 > 0 ? 'alert' : 'ok'}">${failed24} failed (24h)</span><span>${complete24} complete</span></div>
-            </div>
-            <div class="card metric-card" data-tooltip="Health of the outbound critical-finding email queue to tenants. Dead-letter means a send failed 5 times and stopped retrying -- worth checking Resend's own logs.">
-              <div class="metric-card-top"><label>Alert Delivery</label><div class="metric-icon-wrap">✉</div></div>
-              <div class="metric-value"><span style="color:${deadLetter > 0 ? 'var(--rose)' : '#fff'};">${deadLetter}</span><span class="denom">dead-letter</span></div>
-              <div class="metric-sub"><span>${pending} pending</span><span>${sent24} sent (24h)</span></div>
-            </div>
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head">
-              <div><h3>▶ Run a URL Scan</h3><p>Runs a real scan against any URL on the live engine -- for showing a prospect their actual findings on the spot. Kept in an internal sandbox, never a tenant's risk register.</p></div>
-            </div>
-            <div class="panel-body">
-              <form onsubmit="Live.runAdminUrl(event); return false;" style="display:flex; gap:10px; margin-bottom:16px;">
-                <input type="text" id="adminUrlInput" placeholder="https://prospect-site.com" required
-                  style="flex:1; padding:10px 14px; font-size:13px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                  data-tooltip="The site to scan. https:// is assumed if you leave the scheme off.">
-                <button class="btn-primary" type="submit" data-tooltip="Queues a real scan on the live engine. Usually finishes within a couple of minutes -- reopen this panel to see the result.">▶ Run Scan</button>
-              </form>
-              <div id="adminUrlRunResult"></div>
-            </div>
-            ${(this.adminUrlRuns || []).length ? `
-              <div class="table-header grid-admin-runs" data-tooltip="Every URL run through this tool, most recent first. Click one to see its findings."><span>URL</span><span>Score</span><span>Status</span><span>Findings</span></div>
-              <div class="list">
-                ${(this.adminUrlRuns || []).map(w => `<div class="table-row grid-admin-runs" style="cursor:pointer;" onclick="Live.viewAdminUrlRun(${w.id})">
-                  <div style="color:#fff; font-size:12.5px;">${escapeHtml(w.url)}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${w.posture_score != null ? w.posture_score + '/100' : '—'} <span style="text-transform:capitalize;">${escapeHtml(w.posture_band || '')}</span></div>
-                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml((w.latest_scan || {}).status || 'none')}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${w.open_findings ?? 0} open</div>
-                </div>`).join('')}
-              </div>` : `<div class="panel-body" style="padding-top:0; color:var(--text-dim); font-size:12.5px;">No ad-hoc runs yet.</div>`}
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Tenant Accounts (${tenants.length})</h3><p>Every organization on the platform. Change a plan directly, or open its workspace.</p></div></div>
-            ${tenants.length ? `
-              <div class="table-header grid-admin-tenants"><span>Organization</span><span>Plan</span><span>Members / Sites</span><span>Critical</span><span>Last Scan</span><span style="text-align:right;">Action</span></div>
-              <div class="list">
-                ${tenants.map(t => `<div class="table-row grid-admin-tenants">
-                  <div><strong style="color:#fff; font-size:13px; display:block;">${escapeHtml(t.name)}</strong><small style="color:var(--text-dim);">${escapeHtml([t.country_code, t.region_code].filter(Boolean).join('-') || 'no jurisdiction')} · ${escapeHtml(t.onboarding_status)}</small></div>
-                  <div><select class="filter-select" style="padding:4px 8px; font-size:11.5px;" onchange="Live.setPlan(${t.id}, this.value)" data-tooltip="Changes the plan. Flags with plan gates update immediately.">${['trial', 'starter', 'pro', 'enterprise', 'internal'].map(p => `<option value="${p}" ${p === t.plan ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
-                  <div style="color:var(--text-dim); font-size:12px;">${t.members} members · ${t.websites} sites</div>
-                  <div>${t.open_critical > 0 ? `<span class="pill pill-critical">${t.open_critical} critical</span>` : '<span class="pill pill-low">0 critical</span>'}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${t.last_scan_at ? String(t.last_scan_at).slice(0, 10) : 'never scanned'}</div>
-                  <div style="text-align:right;"><button class="btn-primary" style="padding:5px 11px; font-size:11.5px;" onclick="Live.openTenant(${t.id})" data-tooltip="Loads this tenant's workspace.">↗ Access</button></div>
-                </div>`).join('')}
-              </div>` : `<div class="panel-body" style="color:var(--text-dim); font-size:12.5px;">No tenants yet.</div>`}
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Open Incidents (${incidents.length})</h3><p>From muster-watchdog's health checks -- cron failures/misses, silent scans, stuck Stripe grants, alert dead-letters.</p></div></div>
-            ${incidents.length ? `
-              <div class="table-header grid-admin-incidents"><span>Severity</span><span>Operation</span><span>First / Last Seen</span><span>Status</span><span style="text-align:right;">Update</span></div>
-              <div class="list">
-                ${incidents.map(i => `<div class="table-row grid-admin-incidents">
-                  <div><span class="pill pill-${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></div>
-                  <div><strong style="color:#fff; font-size:12.5px; display:block;">${escapeHtml(i.affected_operation)}</strong><small style="color:var(--text-dim);">${escapeHtml(i.source)} · seen ${i.occurrence_count}x</small></div>
-                  <div style="color:var(--text-dim); font-size:11.5px;">${String(i.first_seen_at).slice(0, 16).replace('T', ' ')}<br>${String(i.last_seen_at).slice(0, 16).replace('T', ' ')}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(i.status)}</div>
-                  <div style="text-align:right;"><select class="filter-select" style="padding:4px 8px; font-size:11px;" onchange="Live.updateIncident(${i.id}, this.value)" data-tooltip="Move this incident through triage. Closing does not undo whatever caused it -- only marks it handled.">
-                    <option value="">Update status…</option>
-                    ${['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'].map(s => `<option value="${s}">${s}</option>`).join('')}
-                  </select></div>
-                </div>`).join('')}
-              </div>` : `<div class="panel-body" style="color:var(--emerald); font-size:12.5px;">None open.</div>`}
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head">
-              <div><h3>Public Pricing</h3><p>Controls which tiers index.html shows publicly, and which Seed/Fruit price each tier uses. Seed/Fruit is an internal pricing-stage label -- it never changes what a tenant's plan includes.</p></div>
-              <select class="filter-select" style="padding:5px 10px; font-size:12px;" onchange="Live.setPricingStage(this.value)" data-tooltip="Takes effect immediately on the public pricing page -- no deploy needed.">${['seed', 'fruit'].map(s => `<option value="${s}" ${s === pricing.current_stage ? 'selected' : ''}>${s}</option>`).join('')}</select>
-            </div>
-            <div class="panel-body" style="display:flex; gap:36px; flex-wrap:wrap; margin-bottom:16px;">
-              <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">Current stage</small><strong style="color:#fff; font-size:14px; text-transform:capitalize;">${escapeHtml(pricing.current_stage || 'unknown')}</strong></div>
-              <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">MUSTER</small><strong style="color:#fff; font-size:14px;">$${(((pricing.muster || {}).monthly_price_cents ?? 0) / 100).toFixed(0)}/mo</strong></div>
-              <div><small style="color:var(--text-dim); display:block; margin-bottom:2px;">MUSTER Partner</small><strong style="color:#fff; font-size:14px;">$${(((pricing.muster_partner || {}).monthly_price_cents ?? 0) / 100).toFixed(0)}/mo · ${(pricing.muster_partner || {}).included_client_orgs ?? '?'} included</strong></div>
-            </div>
-            <div class="panel-body" style="display:flex; gap:28px; flex-wrap:wrap; border-top:1px solid var(--surface-border); padding-top:16px;">
-              ${[
-                { key: 'muster', label: 'MUSTER', tip: 'Show the base MUSTER card on the public pricing page.' },
-                { key: 'muster_partner', label: 'MUSTER Partner', tip: 'Show the MUSTER Partner card on the public pricing page.' },
-                { key: 'enterprise', label: 'MUSTER Enterprise', tip: 'Show the Enterprise card on the public pricing page. Enterprise has no published price -- the card is a discovery CTA.' },
-              ].map(t => {
-                // Pre-migration RPC has no `visible` key; treat that as Partner-only
-                // so the admin panel matches what index.html already shows.
-                const on = pricing.visible
-                  ? !!pricing.visible[t.key]
-                  : t.key === 'muster_partner';
-                return `<div style="display:flex; align-items:center; gap:12px;">
-                  <label class="toggle-switch" data-tooltip="${t.tip}"><input type="checkbox" ${on ? 'checked' : ''} onchange="Live.setPricingVisibility('${t.key}', this.checked)"><span class="slider"></span></label>
-                  <div><strong style="color:#fff; font-size:13px; display:block;">${t.label}</strong><small style="color:var(--text-dim);">${on ? 'shown publicly' : 'hidden on pricing page'}</small></div>
-                </div>`;
-              }).join('')}
-            </div>
-          </div>
-
-          ${this.renderFlagRegistry()}
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Platform Agents (${agents.length})</h3><p>AI agents and API keys not scoped to any single tenant -- platform-level automation and integrations.</p></div></div>
-            <div class="panel-body">
-              ${agents.length ? agents.map(pa => `<div style="padding:10px 0; border-bottom:1px solid var(--surface-border);">
-                <strong style="color:#fff; font-size:13px;">${escapeHtml(pa.name)}</strong> <span style="color:var(--text-dim); font-size:11.5px;">(${escapeHtml(pa.kind)})${pa.active ? '' : ' · inactive'}</span>
-                ${(pa.keys || []).map(k => `<div style="padding-left:14px; margin-top:4px; color:var(--text-dim); font-size:11.5px;">${escapeHtml(k.key_prefix)}… · scopes: ${escapeHtml((k.scopes || []).join(', '))} ${k.revoked_at ? '· revoked' : (k.last_used_at ? '· last used ' + String(k.last_used_at).slice(0, 10) : '· never used')}</div>`).join('')}
-              </div>`).join('') : `<div style="color:var(--text-dim); font-size:12.5px;">None.</div>`}
-            </div>
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Jurisdictions Due for Review (${jurisdictions.length})</h3><p>Law rows not reviewed by a human in over 180 days -- a research/legal task, not something to automate.</p></div></div>
-            ${jurisdictions.length ? `
-              <div class="table-header grid-admin-jurisdictions"><span>Jurisdiction</span><span>Law Rows</span><span>Last Reviewed</span></div>
-              <div class="list">
-                ${jurisdictions.map(j => `<div class="table-row grid-admin-jurisdictions">
-                  <div style="color:#fff; font-size:12.5px;">${escapeHtml(j.name)} <span style="color:var(--text-dim);">(${escapeHtml(j.code)})</span></div>
-                  <div style="color:var(--text-dim); font-size:12px;">${j.laws} rows</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${j.reviewed_at ? String(j.reviewed_at).slice(0, 10) : 'never'}</div>
-                </div>`).join('')}
-              </div>` : `<div class="panel-body" style="color:var(--emerald); font-size:12.5px;">None overdue.</div>`}
-          </div>
-
-          <div class="panel" style="margin-bottom:24px; ${imp.active ? 'border-color:var(--amber);' : ''}">
-            <div class="panel-head">
-              <div>
-                <h3>Support Impersonation</h3>
-                <p>See what one user sees, read-only, for a bounded time and a stated reason. You stay signed in as yourself throughout; no session is ever created for them, and nothing here can change their data.</p>
-              </div>
-            </div>
-            <div class="panel-body">
-              ${imp.active ? `
-                <div style="border:1px solid var(--amber); border-radius:var(--radius-md); background:rgba(251,191,36,0.08); padding:14px 16px; margin-bottom:16px;"
-                     data-tooltip="An impersonation session is open. It ends by itself when the timer runs out, and the tenant can see it in their own activity feed.">
-                  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                    <div>
-                      <div style="color:var(--amber); font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;">Viewing as</div>
-                      <div style="color:#fff; font-size:14px; font-weight:600; margin-top:3px;">${escapeHtml(imp.target_email || ('user #' + imp.target_user_id))}</div>
-                      <div style="color:var(--text-dim); font-size:12px; margin-top:4px;">Reason: ${escapeHtml(imp.reason || '')}</div>
-                    </div>
-                    <div style="text-align:right;">
-                      <div id="impCountdown" style="color:var(--amber); font-size:20px; font-weight:700; font-variant-numeric:tabular-nums;"
-                           data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero; nothing has to sweep it.">--:--</div>
-                      <button class="btn-ghost" style="margin-top:8px; border-color:var(--amber); color:var(--amber);" onclick="Live.endImpersonation()"
-                              data-tooltip="Ends the session now. Access stops immediately, because authorisation is re-checked on every call rather than carried in a token.">End session</button>
-                    </div>
-                  </div>
-                </div>
-                <div id="impView" data-tooltip="What this user sees: their organizations, their sites, and their open finding counts. Reading this is itself recorded against the session."></div>
-              ` : `
-                <form onsubmit="Live.startImpersonation(event); return false;" style="display:grid; grid-template-columns:1.2fr 2fr 0.8fr auto; gap:10px; align-items:end;">
-                  <div>
-                    <label style="display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;">User</label>
-                    <select id="impTarget" class="filter-select" style="width:100%; padding:9px 10px; font-size:12.5px;" required
-                            data-tooltip="Super admins are deliberately absent from this list. Impersonating a peer admin is refused by the database, not just hidden here.">
-                      ${users.filter(u => u.role !== 'super_admin').map(u => `<option value="${u.id}">${escapeHtml(u.email)}</option>`).join('') || '<option value="" disabled>No eligible users</option>'}
-                    </select>
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;">Reason</label>
-                    <input type="text" id="impReason" minlength="10" required placeholder="e.g. ticket 412, customer cannot see their SITREP"
-                           style="width:100%; padding:9px 12px; font-size:12.5px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                           data-tooltip="Required, at least 10 characters, and shown to the tenant verbatim in their own activity feed. Write it for them to read.">
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;">Duration</label>
-                    <select id="impMinutes" class="filter-select" style="width:100%; padding:9px 10px; font-size:12.5px;"
-                            data-tooltip="How long before the session expires on its own. Sixty minutes is the hard ceiling the database enforces.">
-                      <option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">60 min</option>
-                    </select>
-                  </div>
-                  <button class="btn-primary" type="submit" data-tooltip="Opens a read-only session and writes a notice into the tenant's own activity feed, carrying your reason.">Start</button>
-                </form>
-              `}
-            </div>
-            ${(this.impLog || []).length ? `
-              <div class="table-header grid-admin-imp" data-tooltip="Every impersonation session ever opened, newest first. This log is append-only and cannot be edited from the application."><span>Admin</span><span>Target</span><span>Reason</span><span>Started</span><span>Actions</span><span>Outcome</span></div>
-              <div class="list">
-                ${(this.impLog || []).map(r => `<div class="table-row grid-admin-imp">
-                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(r.admin_email || '')}</div>
-                  <div style="color:#fff; font-size:12px;">${escapeHtml(r.target_email || '')}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(r.reason || '')}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${String(r.started_at || '').slice(0, 16).replace('T', ' ')}</div>
-                  <div style="color:var(--text-dim); font-size:12px;">${r.events ?? 0}</div>
-                  <div style="font-size:12px;" class="${r.active ? 'alert' : 'ok'}">${r.active ? 'active' : escapeHtml(r.ended_reason || 'ended')}</div>
-                </div>`).join('')}
-              </div>` : `<div class="panel-body" style="color:var(--text-dim); font-size:12.5px;">No impersonation sessions have been opened.</div>`}
-          </div>
-
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head"><div><h3>Users (${users.length})</h3><p>Every registered user and their platform role.</p></div></div>
-            <div class="table-header grid-admin-users"><span>Name</span><span>Email</span><span>Role</span><span>Last Signed In</span></div>
-            <div class="list">
-              ${users.map(u => `<div class="table-row grid-admin-users">
-                <div style="color:#fff; font-size:12.5px;">${escapeHtml(u.name || '')}</div>
-                <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(u.email)}</div>
-                <div><select class="filter-select" style="padding:4px 8px; font-size:11.5px;" onchange="Live.setRole('${escapeHtml(u.email)}', this.value)">${['user', 'admin', 'super_admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
-                <div style="color:var(--text-dim); font-size:12px;">${u.last_signed_in ? String(u.last_signed_in).slice(0, 10) : ''}</div>
-              </div>`).join('')}
-            </div>
-          </div>
-        `;
-
-        this.startImpersonationTicker();
-        if (imp.active) this.loadImpersonatedView().catch(() => {});
-      },
-      // ---------- feature flag registry ----------
+      // ---------- platform administration ----------
       //
-      // The panel this replaced listed 22 flags with a default toggle and a kill
-      // switch beside each, and eleven of those switches were wired to nothing.
-      // Nothing on screen distinguished them, so the console reported controls
-      // that did not exist -- and ten shipped surfaces had no flag at all.
+      // Lived here until 2026-09-23 as a second super admin console: plan and
+      // role changes, incident triage, pricing, the flag registry, support
+      // impersonation and an ad-hoc URL runner, all inside this view. It now
+      // lives only in admin.html (/admin), which was already the console, so a
+      // super admin has one place to act rather than two that disagreed.
+      // tests/ui/one-admin-console.test.ts fails if a platform write RPC is
+      // called from this page again.
       //
-      // muster_admin_flag_registry carries an `enforcement` array per flag, and
-      // everything here is built around showing it: an unwired flag gets a plain
-      // "read by nothing" badge and its switches are disabled, because a switch
-      // you can move that changes nothing is the thing being fixed.
-      flagCategories: [
-        ['workspace',     'Workspace surfaces',                'Nav items and views inside a tenant workspace.'],
-        ['reporting',     'Reporting and deliverables',        'What a client is handed: SITREPs, board packs, the plain-English report.'],
-        ['engine',        'Scan engine',                       'What the scanner does and when it runs.'],
-        ['notifications', 'Notifications',                     'Outbound application email. Auth email is GoTrue and is not covered by any flag here.'],
-        ['partner',       'Partner and white-label',           'Entitlements sold with the Partner tier.'],
-        ['platform',      'Platform capabilities',             'Tools that act across tenants, or outside them.'],
-        ['unbuilt',       'Declared, not built',               'Kept because they are real product commitments. Nothing reads them and nothing can, yet.'],
-        ['other',         'Uncategorised',                     'Created from this console and not yet filed.'],
-      ],
-      renderFlagRegistry() {
-        const reg = this.flagRegistry;
-        if (!reg) return '';
-        const sum = reg.summary || {}, plans = reg.plans || [], flags = reg.flags || [];
-        const unwired = sum.unwired || 0;
-        const planOpts = (sel) => ['<option value="">no plan gate</option>']
-          .concat(plans.map(p => `<option value="${p.plan}" ${p.plan === sel ? 'selected' : ''}>${escapeHtml(p.plan)}+</option>`)).join('');
-
-        const row = (f) => {
-          const wired = !!f.wired;
-          const enf = (f.enforcement || []).join(' + ');
-          const orgs = sum.organizations || 0;
-          const ovs = f.overrides || [];
-          const liveOvs = ovs.filter(o => !o.expired);
-          return `
-            <div class="table-row grid-admin-registry" style="${wired ? '' : 'opacity:0.82;'}">
-              <div>
-                <code style="color:${wired ? 'var(--teal)' : 'var(--text-dim)'}; font-size:11.5px;">${escapeHtml(f.key)}</code>
-                <br><small style="color:var(--text-dim);">${escapeHtml(f.scope)}${f.name ? ' · ' + escapeHtml(f.name) : ''}</small>
-              </div>
-              <div style="color:var(--text-muted); font-size:12px;">
-                ${escapeHtml(f.surface || f.description || '')}
-                <div style="margin-top:4px;">
-                  ${wired
-                    ? `<span class="pill pill-low" data-tooltip="Something in the codebase reads this key, so the switches beside it take effect. Enforced in: ${escapeHtml(enf)}.">enforced in ${escapeHtml(enf)}</span>`
-                    : `<span class="pill pill-high" data-tooltip="No code reads this key. Moving these switches would change nothing, so they are disabled. Open the row for why, and what would wire it.">read by nothing</span>`}
-                  ${f.kill_switch ? '<span class="pill pill-critical" data-tooltip="The kill switch is on, so this flag resolves off for everyone regardless of defaults, plans and overrides.">killed</span>' : ''}
-                </div>
-              </div>
-              <div>
-                <select class="filter-select" style="padding:4px 8px; font-size:11.5px;" onchange="Live.setFlagPlan('${escapeHtml(f.key)}', this.value)"
-                        data-tooltip="The lowest plan that gets this flag. An org below it resolves off whatever the default says; a per-org override still beats the plan gate.">${planOpts(f.plan_minimum)}</select>
-              </div>
-              <div class="switch-wrap"><label class="toggle-switch" data-tooltip="${wired ? 'Default on/off for every org, before plan gates and overrides.' : 'Disabled: nothing reads this key, so this switch would be theatre.'}">
-                <input type="checkbox" ${f.default_enabled ? 'checked' : ''} ${wired ? '' : 'disabled'} onchange="Live.setFlag('${escapeHtml(f.key)}', this.checked)"><span class="slider"></span></label></div>
-              <div class="switch-wrap"><label class="toggle-switch" data-tooltip="${wired ? 'Forces this flag off for everyone, ignoring the default, the plan gate and every override.' : 'Disabled: nothing reads this key, so there is nothing to kill.'}">
-                <input type="checkbox" ${f.kill_switch ? 'checked' : ''} ${wired ? '' : 'disabled'} onchange="Live.killSwitch('${escapeHtml(f.key)}', this.checked)"><span class="slider"></span></label></div>
-              <div style="font-size:12px; color:var(--text-dim);"
-                   data-tooltip="How many organizations this flag currently resolves ON for, counting kill switch, overrides, plan gates and the default -- not what the default says.">
-                ${f.orgs_enabled ?? 0}/${orgs} orgs${liveOvs.length ? ` · <span style="color:var(--amber);">${liveOvs.length} override${liveOvs.length === 1 ? '' : 's'}</span>` : ''}
-              </div>
-              <div style="grid-column:1 / -1;">
-                <details style="margin-top:8px;">
-                  <summary style="cursor:pointer; color:var(--teal); font-size:11.5px; list-style:none;"
-                           data-tooltip="Full description, per-plan resolution, every override on this flag, and the form to add one.">▸ detail, overrides and per-plan resolution</summary>
-                  <div style="padding:12px 0 4px 0;">
-                    <p style="color:var(--text-muted); font-size:12.5px; margin:0 0 10px 0;">${escapeHtml(f.description || '')}</p>
-                    ${f.wiring_note ? `<p style="color:var(--amber); font-size:12px; margin:0 0 10px 0; border-left:2px solid var(--amber); padding-left:10px;"
-                         data-tooltip="Why this flag is read by nothing, and what would have to change for it to mean something.">${escapeHtml(f.wiring_note)}</p>` : ''}
-
-                    <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;"
-                         data-tooltip="What an org on each plan resolves to from the default and the plan gate alone. A per-org override beats this.">
-                      ${plans.map(p => {
-                        const on = !!(f.enabled_by_plan || {})[p.plan];
-                        return `<span style="font-size:11.5px; color:${on ? 'var(--emerald)' : 'var(--text-dim)'};">${on ? '●' : '○'} ${escapeHtml(p.plan)}</span>`;
-                      }).join('')}
-                    </div>
-
-                    ${ovs.length ? `
-                      <div class="table-header grid-admin-ovr"><span>Target</span><span>State</span><span>Reason</span><span>Set by / expires</span><span style="text-align:right;">Revoke</span></div>
-                      <div class="list">
-                        ${ovs.map(o => `<div class="table-row grid-admin-ovr" style="${o.expired ? 'opacity:0.5;' : ''}">
-                          <div style="color:#fff; font-size:12px;">${escapeHtml(o.target_label || '')}<br><small style="color:var(--text-dim);">${escapeHtml(o.target_kind)}</small></div>
-                          <div><span class="pill ${o.enabled ? 'pill-low' : 'pill-high'}">${o.enabled ? 'on' : 'off'}</span></div>
-                          <div style="color:var(--text-dim); font-size:12px;">${escapeHtml(o.reason || '—')}</div>
-                          <div style="color:var(--text-dim); font-size:11.5px;">${escapeHtml(o.set_by || 'unknown')}<br>${o.expires_at ? (o.expired ? 'expired ' : 'expires ') + String(o.expires_at).slice(0, 10) : 'no expiry'}</div>
-                          <div style="text-align:right;"><button class="btn-ghost" style="padding:3px 9px; font-size:11px;" onclick="Live.clearFlagOverride(${o.id})"
-                                  data-tooltip="Removes this exception. The target falls back to the plan gate and the default immediately.">Revoke</button></div>
-                        </div>`).join('')}
-                      </div>` : `<div style="color:var(--text-dim); font-size:12px; margin-bottom:10px;">No overrides on this flag.</div>`}
-
-                    <form onsubmit="Live.addFlagOverride(event, '${escapeHtml(f.key)}'); return false;"
-                          style="display:grid; grid-template-columns:1.4fr 0.7fr 2fr 1fr auto; gap:8px; align-items:end; margin-top:12px; border-top:1px solid var(--surface-border); padding-top:12px;">
-                      <div>
-                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Organization</label>
-                        <select name="org" class="filter-select" style="width:100%; padding:7px 9px; font-size:12px;" required
-                                data-tooltip="Which tenant this exception applies to. An override beats both the plan gate and the default, in either direction.">
-                          ${(this.admin && this.admin.tenants || []).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('') || '<option value="" disabled>No tenants</option>'}
-                        </select>
-                      </div>
-                      <div>
-                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">State</label>
-                        <select name="enabled" class="filter-select" style="width:100%; padding:7px 9px; font-size:12px;"
-                                data-tooltip="On grants the feature to an org that would not otherwise have it. Off takes it away from one that would.">
-                          <option value="true">on</option><option value="false">off</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Reason</label>
-                        <input name="reason" required minlength="8" placeholder="e.g. pilot for the Q4 renewal, agreed with sales"
-                               style="width:100%; padding:7px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                               data-tooltip="Required. An override with no stated reason is indistinguishable from a mistake six months later.">
-                      </div>
-                      <div>
-                        <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label>
-                        <input name="expires" type="date"
-                               style="width:100%; padding:6px 9px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                               data-tooltip="Optional. An override with an expiry cleans itself up; one without stays until someone revokes it by hand.">
-                      </div>
-                      <button class="btn-primary" type="submit" style="padding:7px 12px; font-size:11.5px;"
-                              data-tooltip="Saves the exception. It takes effect on this org's next request -- no deploy, no restart.">Add override</button>
-                    </form>
-
-                    ${wired ? '' : `<div style="margin-top:12px;"><button class="btn-ghost" style="padding:4px 10px; font-size:11px; border-color:var(--rose); color:var(--rose);"
-                        onclick="Live.deleteFlag('${escapeHtml(f.key)}')"
-                        data-tooltip="Removes the flag and every override on it. Only offered because nothing reads this key -- the database refuses to delete a flag that is enforced, since has_flag would then answer false for it everywhere.">Delete this flag</button></div>`}
-                  </div>
-                </details>
-              </div>
-            </div>`;
-        };
-
-        const groups = this.flagCategories.map(([cat, title, blurb]) => {
-          const inCat = flags.filter(f => (f.category || 'other') === cat);
-          if (!inCat.length) return '';
-          return `
-            <div style="padding:14px 20px 4px 20px; border-top:1px solid var(--surface-border);">
-              <strong style="color:#fff; font-size:12.5px;">${escapeHtml(title)}</strong>
-              <span style="color:var(--text-dim); font-size:11.5px;"> · ${escapeHtml(blurb)}</span>
-            </div>
-            <div class="table-header grid-admin-registry"><span>Flag</span><span>What it gates</span><span>Plan gate</span><span>Default</span><span>Kill</span><span>Reach</span></div>
-            <div class="list">${inCat.map(row).join('')}</div>`;
-        }).join('');
-
-        return `
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head">
-              <div>
-                <h3>Feature Flags (${sum.total ?? 0})</h3>
-                <p>Every flag in the platform, what reads it, what each plan resolves to, and every exception. A flag marked "read by nothing" has its switches disabled on purpose.</p>
-              </div>
-            </div>
-            <div class="panel-body" style="display:flex; gap:28px; flex-wrap:wrap; padding-bottom:14px;">
-              <div data-tooltip="Flags that some code actually reads, so their switches take effect."><small style="color:var(--text-dim); display:block;">Enforced</small><strong style="color:var(--emerald); font-size:18px;">${sum.wired ?? 0}</strong></div>
-              <div data-tooltip="Flags nothing reads. Each one is either a feature that is not built or an entitlement recorded but not gated in code -- open the row for which."><small style="color:var(--text-dim); display:block;">Read by nothing</small><strong style="color:${unwired ? 'var(--amber)' : '#fff'}; font-size:18px;">${unwired}</strong></div>
-              <div data-tooltip="Flags forced off for everyone by their kill switch."><small style="color:var(--text-dim); display:block;">Killed</small><strong style="color:#fff; font-size:18px;">${sum.kill_switched ?? 0}</strong></div>
-              <div data-tooltip="Live per-org and per-user exceptions across every flag. Expired ones are not counted."><small style="color:var(--text-dim); display:block;">Overrides</small><strong style="color:#fff; font-size:18px;">${sum.overrides ?? 0}</strong></div>
-              <div data-tooltip="Organizations these flags resolve against."><small style="color:var(--text-dim); display:block;">Organizations</small><strong style="color:#fff; font-size:18px;">${sum.organizations ?? 0}</strong></div>
-            </div>
-            ${unwired ? `<div class="panel-body" style="padding-top:0;">
-              <div style="border:1px solid var(--amber); border-radius:var(--radius-md); background:rgba(251,191,36,0.07); padding:12px 14px; font-size:12.5px; color:var(--text-muted);"
-                   data-tooltip="These keys appear nowhere in the SQL, the pages or the edge functions. Their switches are disabled here so the console cannot report a control that does not exist.">
-                <strong style="color:var(--amber);">${unwired} flag${unwired === 1 ? '' : 's'} are read by nothing:</strong>
-                ${(reg.unwired_keys || []).map(k => `<code style="color:var(--text-dim); font-size:11.5px;">${escapeHtml(k)}</code>`).join(', ')}.
-                Each row says why. They are kept because they are real product commitments, not because they work.
-              </div>
-            </div>` : ''}
-            ${groups}
-            <div class="panel-body" style="border-top:1px solid var(--surface-border); margin-top:14px;">
-              <details>
-                <summary style="cursor:pointer; color:var(--teal); font-size:12.5px;"
-                         data-tooltip="Creates a flag row. It will be marked read by nothing until code is written that reads the key -- creating it here does not gate anything on its own.">▸ New flag</summary>
-                <form onsubmit="Live.createFlag(event); return false;" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:12px;">
-                  <div>
-                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Key</label>
-                    <input name="key" required pattern="[a-z][a-z0-9_]{2,47}" placeholder="lower_snake_case"
-                           style="width:100%; padding:8px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                           data-tooltip="What the code will read. lower_snake_case, 3 to 48 characters. It cannot be renamed afterwards without a migration.">
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Name</label>
-                    <input name="name" required placeholder="Human-readable name"
-                           style="width:100%; padding:8px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                           data-tooltip="What this appears as in the console.">
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Category</label>
-                    <select name="category" class="filter-select" style="width:100%; padding:8px 9px; font-size:12px;"
-                            data-tooltip="Which group this flag is filed under above.">
-                      ${this.flagCategories.map(([c, t]) => `<option value="${c}">${escapeHtml(t)}</option>`).join('')}
-                    </select>
-                  </div>
-                  <div style="grid-column:1 / -1;">
-                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Description</label>
-                    <input name="description" required minlength="10" placeholder="What this gates, written for whoever finds the switch next"
-                           style="width:100%; padding:8px 10px; font-size:12px; border-radius:var(--radius-md); border:1px solid var(--surface-border); background:#0a1224; color:#fff;"
-                           data-tooltip="Required. This is what the next person reads before deciding whether it is safe to flip.">
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Scope</label>
-                    <select name="scope" class="filter-select" style="width:100%; padding:8px 9px; font-size:12px;"
-                            data-tooltip="Organization is the usual choice. Platform means it is not per-tenant at all.">
-                      <option value="organization">organization</option><option value="platform">platform</option><option value="user">user</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;">Plan gate</label>
-                    <select name="plan" class="filter-select" style="width:100%; padding:8px 9px; font-size:12px;"
-                            data-tooltip="Lowest plan that gets it. Leave unset for no plan gate.">${planOpts(null)}</select>
-                  </div>
-                  <div style="display:flex; align-items:end; gap:10px;">
-                    <label class="toggle-switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships."><input type="checkbox" name="default_enabled"><span class="slider"></span></label>
-                    <button class="btn-primary" type="submit" style="padding:8px 14px; font-size:12px;"
-                            data-tooltip="Creates the flag, marked read by nothing until code reads the key.">Create flag</button>
-                  </div>
-                </form>
-              </details>
-            </div>
-          </div>
-        `;
-      },
-      async setFlagPlan(key, plan) {
-        try {
-          await this.rpc('muster_admin_set_flag_plan_minimum', { p_key: key, p_plan: plan || null });
-          showToast(plan ? `${key} now requires ${plan}+.` : `${key} plan gate removed.`);
-          await this.loadWorkspace();
-        } catch (e) { this.fail(e); }
-      },
-      async addFlagOverride(e, key) {
-        e.preventDefault();
-        const f = new FormData(e.target);
-        try {
-          await this.rpc('muster_admin_set_flag', {
-            p_key: key,
-            p_enabled: f.get('enabled') === 'true',
-            p_organization_id: Number(f.get('org')),
-            p_reason: f.get('reason'),
-            p_expires_at: f.get('expires') ? new Date(f.get('expires') + 'T23:59:59Z').toISOString() : null,
-          });
-          showToast(`Override saved on ${key}.`);
-          await this.loadWorkspace();
-        } catch (err) { this.fail(err); }
-      },
-      async clearFlagOverride(id) {
-        try {
-          const r = await this.rpc('muster_admin_clear_flag_override', { p_id: id });
-          showToast(`Override on ${r.flag_key} revoked.`);
-          await this.loadWorkspace();
-        } catch (e) { this.fail(e); }
-      },
-      async createFlag(e) {
-        e.preventDefault();
-        const f = new FormData(e.target);
-        try {
-          const r = await this.rpc('muster_admin_create_flag', {
-            p_key: f.get('key'), p_name: f.get('name'), p_description: f.get('description'),
-            p_scope: f.get('scope'), p_category: f.get('category'),
-            p_default_enabled: f.get('default_enabled') === 'on',
-            p_plan_minimum: f.get('plan') || null,
-          });
-          showToast(`${r.key} created. Nothing reads it yet.`);
-          e.target.reset();
-          await this.loadWorkspace();
-        } catch (err) { this.fail(err); }
-      },
-      async deleteFlag(key) {
-        if (!confirm(`Delete the flag ${key} and every override on it? This cannot be undone.`)) return;
-        try {
-          await this.rpc('muster_admin_delete_flag', { p_key: key });
-          showToast(`${key} deleted.`);
-          await this.loadWorkspace();
-        } catch (e) { this.fail(e); }
-      },
-      // ---------- support impersonation ----------
-      //
-      // The guardrails are in SQL (see muster_038 and docs/IMPERSONATION.md);
-      // nothing here is load-bearing for security. This is presentation over
-      // functions that refuse anyway: a non-super-admin who reconstructs these
-      // calls by hand gets 42501 from the database.
-      async startImpersonation(e) {
-        e.preventDefault();
-        const target = document.getElementById('impTarget');
-        const reason = document.getElementById('impReason');
-        const minutes = document.getElementById('impMinutes');
-        if (!target || !target.value) { showToast('Pick a user first.'); return; }
-        try {
-          const r = await this.rpc('muster_admin_impersonate_start', {
-            p_target_user_id: Number(target.value),
-            p_reason: reason.value,
-            p_minutes: Number(minutes.value),
-          });
-          showToast(`Viewing as ${r.target_email || ('user #' + r.target_user_id)}. Read only.`);
-          await this.loadAdmin();
-        } catch (err) { this.fail(err); }
-      },
-      async endImpersonation() {
-        try {
-          await this.rpc('muster_admin_impersonate_end');
-          showToast('Impersonation session ended.');
-          await this.loadAdmin();
-        } catch (err) { this.fail(err); }
-      },
-      // Ticks the banner down and reloads the console the moment the session
-      // lapses, so the UI can never show an "active" session the database has
-      // already stopped honouring.
-      startImpersonationTicker() {
-        if (this._impTimer) { clearInterval(this._impTimer); this._impTimer = null; }
-        const imp = this.imp || {};
-        if (!imp.active) return;
-        const el = document.getElementById('impCountdown');
-        if (!el) return;
-        let left = Number(imp.seconds_remaining ?? 0);
-        const paint = () => {
-          if (left <= 0) {
-            clearInterval(this._impTimer);
-            this._impTimer = null;
-            el.textContent = 'expired';
-            this.loadAdmin().catch(() => {});
-            return;
-          }
-          const m = Math.floor(left / 60), sec = left % 60;
-          el.textContent = `${m}:${String(sec).padStart(2, '0')}`;
-          left -= 1;
-        };
-        paint();
-        this._impTimer = setInterval(paint, 1000);
-      },
-      // The target's own view. Fetched separately from loadAdmin because every
-      // call is recorded against the session, so it should happen when an admin
-      // actually looks -- not on every console refresh.
-      async loadImpersonatedView() {
-        const host = document.getElementById('impView');
-        if (!host) return;
-        try {
-          const v = await this.rpc('muster_admin_impersonated_view');
-          const orgs = v.organizations || [];
-          host.innerHTML = orgs.length ? orgs.map(o => `
-            <div style="border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:10px;">
-              <div style="color:#fff; font-size:13px; font-weight:600;">${escapeHtml(o.name || '')}
-                <span style="color:var(--text-dim); font-weight:400; font-size:11.5px;"> &middot; their role: ${escapeHtml(o.role || '')}</span>
-              </div>
-              ${(o.websites || []).length ? `<div style="margin-top:8px;">${(o.websites || []).map(w => `
-                <div style="display:flex; justify-content:space-between; gap:12px; padding:5px 0; font-size:12px;">
-                  <span style="color:var(--text-dim);">${escapeHtml(w.url || '')}</span>
-                  <span>
-                    <span style="color:var(--text-dim);">score ${w.posture_score ?? '--'}</span>
-                    <span style="margin-left:12px;" class="${(w.open_critical_high ?? 0) > 0 ? 'alert' : 'ok'}">${w.open_critical_high ?? 0} critical/high</span>
-                    <span style="margin-left:12px; color:var(--text-dim);">${w.open_findings ?? 0} open</span>
-                  </span>
-                </div>`).join('')}</div>`
-                : `<div style="color:var(--text-dim); font-size:12px; margin-top:6px;">No sites in this organization.</div>`}
-            </div>`).join('')
-            : `<div style="color:var(--text-dim); font-size:12.5px;">This user belongs to no organization, so there is nothing for them to see.</div>`;
-        } catch (err) {
-          // The usual cause is a session that lapsed between render and click.
-          host.innerHTML = `<div style="color:var(--rose); font-size:12.5px;">${escapeHtml(err.message || String(err))}</div>`;
-        }
-      },
-      async setPlan(orgId, plan) { try { await this.rpc('muster_admin_set_plan', { p_organization_id: orgId, p_plan: plan }); showToast(`Plan set to ${plan}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
-      async setPricingStage(stage) { try { await this.rpc('muster_admin_set_pricing_stage', { p_stage: stage }); showToast(`Public pricing stage set to ${stage}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
-      async setPricingVisibility(tier, on) { try { await this.rpc('muster_admin_set_pricing_visibility', { p_tier: tier, p_visible: on }); showToast(`${tier} ${on ? 'shown' : 'hidden'} on the public pricing page.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
-      async setFlag(key, on) { try { await this.rpc('muster_admin_set_flag', { p_key: key, p_enabled: on }); showToast(`${key} default ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
-      async killSwitch(key, on) { try { await this.rpc('muster_admin_kill_switch', { p_key: key, p_on: on }); showToast(`${key} kill switch ${on ? 'on' : 'off'}.`); await this.loadWorkspace(); } catch (e) { this.fail(e); } },
-      async setRole(email, role) { try { await this.rpc('muster_admin_set_user_role', { p_email: email, p_role: role }); showToast(`${email} is now ${role}.`); } catch (e) { this.fail(e); } },
-      async updateIncident(id, status) { if (!status) return; try { await this.rpc('muster_admin_update_incident', { p_id: id, p_status: status }); showToast(`Incident #${id} marked ${status}.`); await this.loadAdmin(); } catch (e) { this.fail(e); } },
-      _urlRunPolls: 0,
-      _urlRunTimer: null,
-      // A queued scan is normally running within ~400ms and done inside a second;
-      // 30s of headroom covers a slow origin without spinning forever.
-      async runAdminUrl(e) {
-        e.preventDefault();
-        const input = document.getElementById('adminUrlInput');
-        const url = (input.value || '').trim();
-        if (!url) return;
-        try {
-          const r = await this.rpc('muster_admin_run_url', { p_url: url });
-          showToast(r.created ? `Website added and scan queued (#${r.first_scan?.scan_id ?? ''}).` : `Scan ${r.first_scan?.deduplicated ? 'already in flight' : 'queued'} (#${r.first_scan?.scan_id ?? ''}).`);
-          input.value = '';
-          await this.loadAdmin();
-          // poll=true: the scan has only been QUEUED at this point. do_request_scan
-          // fires the engine through net.http_post, which is asynchronous -- pg_net
-          // hands the request to a background worker and returns immediately. The
-          // engine typically starts ~400ms later and finishes under a second, so
-          // reading the result now shows a pending scan with no findings, which is
-          // what "the audit did not populate" actually was.
-          await this.viewAdminUrlRun(r.website_id, true);
-        } catch (err) { this.fail(err); }
-      },
-      async viewAdminUrlRun(websiteId, poll = false) {
-        const el = document.getElementById('adminUrlRunResult');
-        if (!el) return;
-        try {
-          const o = await this.rpc('muster_admin_website_overview', { p_website_id: websiteId });
-          const scan = o.latest_scan || {};
-          const sevPill = s => ['critical', 'high', 'medium', 'low'].includes(s) ? s : 'low';
-          el.innerHTML = `
-            <div style="border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:10px 12px; background:#0d1a38;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <strong style="color:#fff;">${escapeHtml(o.url)}</strong>
-                <span data-tooltip="Overall assurance score for this URL's most recent completed scan. Falls back to a clean 100 until the first scan finishes.">${o.posture_score ?? '—'}/100 <span style="text-transform:capitalize;">${escapeHtml(o.posture_band || '')}</span></span>
-              </div>
-              <div class="live-muted" style="margin-bottom:8px;" data-tooltip="Status of the most recent scan run against this URL.">Scan #${scan.id ?? '—'}: ${escapeHtml(scan.status || 'none')}${scan.finished_at ? ' · finished ' + String(scan.finished_at).slice(0, 16).replace('T', ' ') : ''}${scan.error_message ? ' · ' + escapeHtml(scan.error_message) : ''}</div>
-              ${(o.findings || []).length === 0 ? `<div class="live-muted">${scan.status === 'complete' ? 'No open findings.' : 'Findings will appear here once the scan completes.'}</div>` : `
-                <div style="max-height:240px; overflow-y:auto;">
-                  ${(o.findings || []).map(f => `<div class="live-grid" style="grid-template-columns: 0.6fr 2fr 1fr; padding:5px 0; border-bottom:1px solid var(--surface-border); font-size:12px;">
-                    <div><span class="pill pill-${sevPill(f.severity)}">${escapeHtml(f.severity)}</span></div>
-                    <div style="color:#fff;">${escapeHtml(f.title)}<br><span class="live-muted">${escapeHtml(f.page_url || '')}</span></div>
-                    <div class="live-muted">${escapeHtml(f.category || '')}</div>
-                  </div>`).join('')}
-                </div>`}
-            </div>`;
-
-          if (this._urlRunTimer) { clearTimeout(this._urlRunTimer); this._urlRunTimer = null; }
-          if (!poll) { this._urlRunPolls = 0; return; }
-
-          // 'error' is included defensively: the column is error_message, and the
-          // status vocabulary is owned by SQL, so an unrecognised status must not
-          // poll forever.
-          const terminal = ['complete', 'failed', 'error'].includes(String(scan.status || ''));
-          if (terminal) {
-            const hadPolled = (this._urlRunPolls || 0) > 0;
-            this._urlRunPolls = 0;
-            // Repaint the console so the runs table picks up the new score and
-            // finding counts, then redraw this panel, which loadAdmin just wiped.
-            if (hadPolled) { await this.loadAdmin(); await this.viewAdminUrlRun(websiteId, false); }
-            return;
-          }
-
-          this._urlRunPolls = (this._urlRunPolls || 0) + 1;
-          if (this._urlRunPolls > POLL_MAX_TRIES) {
-            this._urlRunPolls = 0;
-            el.insertAdjacentHTML('beforeend', `<div class="live-muted" style="margin-top:6px; color:var(--amber);"
-              data-tooltip="The scan was accepted but has not reported back within ${(POLL_MAX_TRIES * POLL_INTERVAL_MS) / 1000} seconds. It may still finish; reopen the console to check. If it never does, muster-watchdog raises a silent-scan incident.">Still running after ${(POLL_MAX_TRIES * POLL_INTERVAL_MS) / 1000}s. Reopen this panel to check again.</div>`);
-            return;
-          }
-          el.insertAdjacentHTML('beforeend', `<div class="live-muted" style="margin-top:6px;"
-            data-tooltip="The engine runs asynchronously, so this panel re-checks until the scan reports a final status.">Scanning… checking again shortly (${this._urlRunPolls}/${POLL_MAX_TRIES}).</div>`);
-          this._urlRunTimer = setTimeout(() => { this.viewAdminUrlRun(websiteId, true).catch(() => {}); }, POLL_INTERVAL_MS);
-        } catch (err) { this.fail(err); }
-      },
+      // openTenant stays: it is how a super admin enters a tenant's workspace,
+      // which is this page's job. admin.html links here as /app#tenant=<id>.
       async openTenant(orgId) {
         try {
           const o = await this.rpc('muster_admin_tenant', { p_organization_id: orgId });

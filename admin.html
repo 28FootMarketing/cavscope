@@ -323,13 +323,13 @@
       display: block; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
       color: var(--text-dim); margin-bottom: 5px;
     }
-    .field input[type="text"], .field select {
+    .field input:not([type="checkbox"]), .field select {
       width: 100%; box-sizing: border-box; padding: 9px 11px; font-size: 13px;
       font-family: var(--font-sans); color: var(--text);
       background: var(--surface); border: 1px solid var(--surface-border);
       border-radius: var(--radius-md);
     }
-    .field input[type="text"]:focus-visible, .field select:focus-visible, .btn:focus-visible {
+    .field input:not([type="checkbox"]):focus-visible, .field select:focus-visible, .btn:focus-visible {
       outline: 2px solid var(--teal); outline-offset: 1px;
     }
     .field input[type="text"]::placeholder { color: var(--text-dim); }
@@ -350,6 +350,97 @@
       font-size: 12px; color: var(--text-dim); line-height: 1.55;
       border-left: 2px solid var(--surface-border-strong); padding-left: 11px;
     }
+    /* ---- write controls ----------------------------------------------------
+     * Added 2026-09-23, when this page became the only super admin console and
+     * took over every write app.html's in-app view used to own: plan and role
+     * changes, incident triage, pricing, the flag registry and support access.
+     * Same plain language as the runner above; one design language per page. */
+    .btn.ghost { color: var(--text); background: transparent; border-color: var(--surface-border-strong); }
+    .btn.danger { color: var(--rose); background: transparent; border-color: var(--rose); }
+    .btn.sm { padding: 5px 10px; font-size: 11.5px; }
+    .inline-select {
+      padding: 5px 8px; font-size: 12px; font-family: var(--font-sans); color: var(--text);
+      background: var(--surface); border: 1px solid var(--surface-border); border-radius: var(--radius-sm);
+    }
+    .inline-select:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+    .switch { position: relative; display: inline-block; width: 34px; height: 19px; flex: none; vertical-align: middle; }
+    .switch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+    .switch .slider {
+      position: absolute; inset: 0; pointer-events: none;
+      border-radius: var(--radius-full); background: var(--surface-raised);
+      border: 1px solid var(--surface-border-strong); transition: background 0.15s ease;
+    }
+    .switch .slider::before {
+      content: ''; position: absolute; width: 13px; height: 13px; left: 2px; top: 2px;
+      border-radius: 50%; background: var(--text-muted); transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .switch input:checked + .slider { background: var(--teal-dim); border-color: var(--teal); }
+    .switch input:checked + .slider::before { transform: translateX(15px); background: var(--teal); }
+    .switch input:focus-visible + .slider { outline: 2px solid var(--teal); outline-offset: 1px; }
+    .switch input:disabled { cursor: not-allowed; }
+    .switch input:disabled + .slider { opacity: 0.4; }
+    .form-grid { display: grid; gap: 10px; align-items: end; }
+    .warnbox {
+      border: 1px solid var(--amber); border-radius: var(--radius-md); background: var(--amber-dim);
+      padding: 12px 14px; font-size: 12.5px; line-height: 1.55; color: var(--text-muted);
+    }
+    .warnbox b { color: var(--amber); }
+    .warnbox code, .flag-row code, .flag-detail code { font-family: var(--font-mono); font-size: 11.5px; }
+    .stat-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 14px; }
+    .stat-row small { color: var(--text-dim); display: block; font-size: 11px; }
+    .stat-row strong { font-size: 18px; }
+
+    .flag-head, .flag-row {
+      display: grid; gap: 12px; align-items: center;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 2fr) 132px 58px 58px minmax(0, 0.9fr);
+    }
+    .flag-head {
+      font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--text-dim); padding: 9px 0; border-bottom: 1px solid var(--surface-border);
+    }
+    .flag-row { padding: 11px 0; border-bottom: 1px solid var(--surface-border); font-size: 12.5px; }
+    .flag-row code { color: var(--teal); }
+    .flag-row.unwired { opacity: 0.82; }
+    .flag-row.unwired code { color: var(--text-dim); }
+    .flag-row > details { grid-column: 1 / -1; }
+    .flag-row summary, .flag-new summary { cursor: pointer; color: var(--teal); font-size: 11.5px; }
+    .flag-row summary, .flag-new summary { list-style: none; }
+    .flag-row summary::-webkit-details-marker, .flag-new summary::-webkit-details-marker { display: none; }
+    .flag-detail { padding: 12px 0 4px; }
+    .flag-detail p { color: var(--text-muted); font-size: 12.5px; margin: 0 0 10px; line-height: 1.55; }
+    .flag-detail .wiring { color: var(--amber); border-left: 2px solid var(--amber); padding-left: 10px; font-size: 12px; }
+    .flag-group { padding: 16px 0 4px; font-size: 12.5px; }
+    .flag-group b { color: var(--text); }
+    .flag-group span { color: var(--text-dim); font-size: 11.5px; }
+    .by-plan { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 11.5px; }
+
+    .imp-banner {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+      border: 1px solid var(--amber); border-radius: var(--radius-md); background: var(--amber-dim);
+      padding: 14px 16px; margin-bottom: 16px;
+    }
+    .imp-eyebrow { color: var(--amber); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .imp-who { color: var(--text); font-size: 14px; font-weight: 600; margin-top: 3px; }
+    .imp-why { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+    .imp-clock { color: var(--amber); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+    .imp-org { border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px; }
+    .imp-site { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12px; }
+
+    .flash {
+      position: fixed; right: 18px; bottom: 18px; z-index: 250; max-width: 440px;
+      padding: 11px 14px; border-radius: var(--radius-md);
+      background: var(--surface-elevated); border: 1px solid var(--surface-border-strong);
+      color: var(--text); font-size: 12.5px; line-height: 1.5;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      opacity: 0; transform: translateY(6px); transition: opacity 0.15s ease, transform 0.15s ease;
+      pointer-events: none;
+    }
+    .flash.show { opacity: 1; transform: none; }
+    .flash.ok { border-color: var(--teal); }
+    .flash.warn { border-color: var(--amber); }
+    .flash.bad { border-color: var(--rose); }
+
+    .page > section.panel { margin-bottom: 18px; }
     .empty { color: var(--text-dim); font-size: 12.5px; padding: 18px 0; text-align: center; }
     .empty.good { color: var(--emerald); }
 
@@ -582,6 +673,9 @@
       .kpis { grid-template-columns: repeat(2, 1fr); }
       .row.a, .row.b { grid-template-columns: 1fr; }
       .search kbd { display: none; }
+      .flag-head { display: none; }
+      .flag-row { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr !important; }
     }
   </style>
 </head>
@@ -653,6 +747,7 @@
     </header>
 
     <main class="page" id="page"></main>
+    <div class="flash" id="flash" role="status" aria-live="polite"></div>
 
     <div class="strip">
       <div class="strip-badge" aria-hidden="true">▤</div>
@@ -664,20 +759,32 @@
         <a href="#compliance" data-tooltip="Control effectiveness across every scanned site.">Compliance</a>
       </div>
       <span class="strip-tag">One platform. One version of the truth.</span>
-      <a class="strip-cta" href="/app" data-tooltip="Leaves the platform console and opens the tenant workspace.">MUSTER →</a>
+      <!-- #overview, not bare /app: app.html sends a super admin who arrives
+           with no fragment straight back here, and the fragment is how this
+           link says it meant to go to the workspace. -->
+      <a class="strip-cta" href="/app#overview" data-tooltip="Leaves the platform console and opens your own workspace in the app.">MUSTER →</a>
     </div>
 
   </div>
 </div>
 
 <script>
-  // MUSTER Super Admin Console.
+  // MUSTER Super Admin Console -- the only one.
   //
-  // This page is a renderer. Every figure on it comes from one RPC --
-  // public.muster_admin_console() -- which is SECURITY DEFINER, gated on
-  // muster.is_super_admin(), and computes its aggregates in Postgres. Nothing
-  // here decides who may see what; the database does, and a non-super-admin
-  // gets 42501 on the very first call.
+  // Until 2026-09-23 there were two: this page, and a "Platform Super Admin
+  // Console" view inside app.html that owned every write (plans, roles,
+  // incidents, pricing, the flag registry, support access). They read
+  // different RPCs, looked different, and disagreed -- that view's white-label
+  // switch changed only local page state, and its demo copy advertised a
+  // headless browser crawler the engine has never had. Everything a super admin
+  // does now happens here, and tests/ui/one-admin-console.test.ts keeps it so.
+  //
+  // This page is still a renderer. Its figures come from
+  // public.muster_admin_console() plus five side reads (see SIDE_READS), all
+  // SECURITY DEFINER and gated on muster.is_super_admin(), and its controls are
+  // forms over RPCs that check the caller themselves. Nothing here decides who
+  // may see or change what; the database does, and a non-super-admin gets
+  // 42501 on the very first call.
   //
   // Two figures on the design this page was built from have no instrumentation
   // behind them, and the payload says so rather than guessing: API request
@@ -692,6 +799,7 @@
 
   let sb = null;
   let DATA = null;
+  let MY_EMAIL = '';
   let section = 'overview';
   let orgFilter = 'all';
   let rangeDays = 30;
@@ -767,19 +875,20 @@
 
   const SECTIONS = [
     { id: 'overview',          icon: '▦', label: 'Overview',           tip: 'Platform-wide snapshot: headline counts, 30-day scan activity, live risk and what needs doing.' },
-    { id: 'organizations',     icon: '▣', label: 'Organizations',      tip: 'Every tenant on the platform, its plan, its worst site score and when it last scanned.' },
+    { id: 'organizations',     icon: '▣', label: 'Organizations',      tip: 'Every tenant on the platform, its plan, its worst site score and when it last scanned. Change a plan or open its workspace here.' },
     { id: 'workspaces',        icon: '◫', label: 'Workspaces',         tip: 'Not a separate object in this schema — an organization is the workspace.', stub: true },
-    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every MUSTER user, their platform role and when they last signed in.' },
+    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every MUSTER user, their platform role and when they last signed in. Change a role here.' },
+    { id: 'support',           icon: '◐', label: 'Support Access',     tip: 'See what one user sees, read-only, for a bounded time and a stated reason the tenant can read. Every session is logged.' },
     { id: 'audit-queue',       icon: '▤', label: 'Audit Queue',        tip: 'Scans the engine has run, with status, trigger and the resulting site score.' },
     { id: 'website-assurance', icon: '◍', label: 'Website Assurance',  tip: 'Every registered site, its posture score, open findings and verification state.' },
     { id: 'ai-readiness',      icon: '◈', label: 'AI Readiness',       tip: 'Sold on the landing page; no readiness assessment tables exist in this schema yet.', stub: true },
     { id: 'compliance',        icon: '▥', label: 'Compliance',         tip: 'Control effectiveness across every scanned site, plus the jurisdictions behind it.' },
     { id: 'domain-monitor',    icon: '◎', label: 'Domain Monitor',     tip: 'Continuous DNS, WHOIS and certificate watching. Not instrumented in this schema.', stub: true },
     { id: 'reports',           icon: '▧', label: 'Reports',            tip: 'Every SITREP this platform has generated, across every tenant, with the report itself.' },
-    { id: 'billing',           icon: '◱', label: 'Billing',            tip: 'Plan-implied revenue, the live pricing stage and which tiers are visible on the site.' },
+    { id: 'billing',           icon: '◱', label: 'Billing',            tip: 'Plan-implied revenue, the live pricing stage and which tiers are visible on the site. Both are set here.' },
     { id: 'integrations',      icon: '⚯', label: 'Integrations',       tip: 'Stripe grants and Resend delivery — what this platform actually observes about its integrations.' },
     { id: 'system-health',     icon: '◬', label: 'System Health',      tip: 'Cron schedules with last successful run, scan queue depth, open watchdog incidents.' },
-    { id: 'settings',          icon: '⚙', label: 'Settings',           tip: 'The feature-flag registry: scope, plan gate, kill switch and how each flag is enforced.' },
+    { id: 'settings',          icon: '⚙', label: 'Settings',           tip: 'The feature-flag registry: plan gate, default, kill switch, overrides, and how each flag is actually enforced.' },
   ];
 
   function tallyFor(id) {
@@ -1153,33 +1262,53 @@
     return `<div class="section-head"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(sub)}</p></div>`;
   }
 
+  // The plans muster_admin_set_plan accepts, as app.html's console offered them.
+  // A tenant already on something outside this list keeps it as an option, so
+  // the dropdown can never silently show a different plan from the real one.
+  const PLANS = ['trial', 'starter', 'pro', 'enterprise', 'internal'];
+
+  function planSelect(o) {
+    const list = PLANS.includes(o.plan) ? PLANS : PLANS.concat(o.plan ? [o.plan] : []);
+    return `<select class="inline-select" data-act="plan" data-org="${Number(o.id)}" data-name="${escapeHtml(o.name)}" data-current="${escapeHtml(o.plan)}"
+        aria-label="Plan for ${escapeHtml(o.name)}"
+        data-tooltip="Changes this tenant's plan. Plan-gated flags switch on or off for every member on their next request, and plan-implied revenue moves with it. Asks before saving.">
+      ${list.map((p) => `<option value="${escapeHtml(p)}"${p === o.plan ? ' selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+    </select>`;
+  }
+
   function renderOrganizations() {
     const rows = (DATA.organizations || []).filter((o) => inOrg(o.id) && matches(o.name, o.plan, o.jurisdiction, o.onboarding_status));
-    return head('Organizations', 'Every tenant on the platform. The internal sandbox is listed but flagged — it is not a customer.') +
+    return head('Organizations', 'Every tenant on the platform. Change a plan here, or open a tenant\'s workspace. The internal sandbox is listed but flagged — it is not a customer.') +
       panel('Tenant roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>Organization</th>
-          <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag.">Plan</th>
+          <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag. The small label beside it is the commercial stage it is priced at.">Plan</th>
           <th data-tooltip="Members with a seat, and registered websites.">Members / Sites</th>
           <th data-tooltip="Open critical and high findings across all of this tenant's sites.">Open Risk</th>
           <th data-tooltip="The posture score of this tenant's WORST site — a portfolio is only as assured as its weakest thing.">Worst Score</th>
           <th data-tooltip="When any site in this organization last finished a scan.">Last Scan</th>
+          <th data-tooltip="Opens the tenant's own workspace in the app.">Workspace</th>
         </tr></thead>
         <tbody>${rows.map((o) => `<tr>
           <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(o.name))}</span>
-            <span><b>${escapeHtml(o.name)}</b>${o.is_admin_sandbox ? ' <span class="pill medium">sandbox</span>' : ''}
+            <span><b>${escapeHtml(o.name)}</b>${o.is_admin_sandbox ? ' <span class="pill medium" data-tooltip="The internal organization ad-hoc URL scans are parked in. Nobody\'s data; not counted as a tenant.">sandbox</span>' : ''}
             <br><small class="muted">${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${escapeHtml(o.onboarding_status)}</small></span></span></td>
-          <td><span class="pill ${o.plan === 'trial' ? 'medium' : 'low'}">${escapeHtml(o.plan)}</span> <small class="muted">${escapeHtml(o.stage || '')}</small></td>
+          <td>${planSelect(o)} <small class="muted">${escapeHtml(o.stage || '')}</small></td>
           <td class="muted num">${num(o.members)} / ${num(o.websites)}</td>
           <td>${o.open_critical ? `<span class="pill critical">${o.open_critical} critical</span> ` : ''}${o.open_high ? `<span class="pill high">${o.open_high} high</span>` : (!o.open_critical ? '<span class="muted">clear</span>' : '')}</td>
           <td>${o.worst_score == null ? '<span class="muted">—</span>' : `<span class="score ${band(o.worst_score)}">${o.worst_score}</span>`}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(o.last_scan_at))}">${escapeHtml(ago(o.last_scan_at))}</td>
+          <td><a class="link-more" href="/app#tenant=${Number(o.id)}"
+                 data-tooltip="Opens ${escapeHtml(o.name)}'s workspace in the app, using your own super admin access. To see exactly what one of its users sees, use Support Access instead.">Open ↗</a></td>
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No organizations match.</div>');
   }
 
+  // Platform roles, as muster_admin_set_user_role accepts them.
+  const ROLES = ['user', 'admin', 'super_admin'];
+
   function renderUsers() {
     const rows = (DATA.users || []).filter((u) => matches(u.name, u.email, u.role));
-    return head('Users & Roles', 'Every MUSTER user. Role here is the platform role; what a user can see inside an organization is decided by RLS, not by this page.') +
+    return head('Users & Roles', 'Every MUSTER user. Role here is the platform role, and can be changed here; what a user can see inside an organization is decided by RLS, not by this page.') +
       panel('User roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>User</th>
@@ -1191,7 +1320,11 @@
         <tbody>${rows.map((u) => `<tr>
           <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(u.name || u.email))}</span>
             <span><b>${escapeHtml(u.name || '(no name)')}</b><br><small class="muted">${escapeHtml(u.email)}</small></span></span></td>
-          <td><span class="pill ${u.role === 'super_admin' ? 'high' : 'medium'}">${escapeHtml(u.role)}</span></td>
+          <td><select class="inline-select" data-act="role" data-email="${escapeHtml(u.email)}" data-current="${escapeHtml(u.role)}"
+                aria-label="Platform role for ${escapeHtml(u.email)}"
+                data-tooltip="Changes this user's platform role. super_admin opens this console and every tenant's data, so granting or removing it asks first.">
+              ${(ROLES.includes(u.role) ? ROLES : ROLES.concat([u.role])).map((r) => `<option value="${escapeHtml(r)}"${r === u.role ? ' selected' : ''}>${escapeHtml(r)}</option>`).join('')}
+            </select></td>
           <td class="muted num">${num(u.memberships)}</td>
           <td class="muted">${escapeHtml(u.login_method || '—')}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(u.last_signed_in))}">${escapeHtml(ago(u.last_signed_in))}</td>
@@ -1306,12 +1439,12 @@
 
   // ---- audit runner -------------------------------------------------------
   //
-  // This is the one place the console writes. Everything else on the page comes
-  // from a single read, muster_admin_console(), and that split was deliberate:
-  // app.html's superadmin view owned the actions. Running an audit is the one
-  // action worth having here anyway, because this is the page you are already on
-  // when you notice a site needs one, and sending someone to a different host to
-  // press a button is how a console stops being used.
+  // This was the first place the console wrote, on 2026-09-17, while app.html's
+  // superadmin view still owned every other action. Running an audit earned its
+  // place here first because this is the page you are already on when you notice
+  // a site needs one, and sending someone to a different host to press a button
+  // is how a console stops being used. The same argument then took the rest:
+  // since 2026-09-23 every super admin write lives on this page (see ---- writes).
   //
   // Neither call is trusted from here. muster_admin_run_url and
   // muster_request_scan are both SECURITY DEFINER and check
@@ -1607,7 +1740,29 @@
           auditor has tested it, and it does not mean the underlying obligation is satisfied. The same caveat is
           carried on every SITREP this platform generates, and it belongs on any number taken off this page.
         </div>`)}
-      </div>`;
+      </div>` + jurisdictionQueue();
+  }
+
+  // Law rows no human has reviewed in 180 days, or ever. A research and legal
+  // task, not something to automate -- this list only says whose turn it is.
+  // From muster_admin_platform_extras(), which also catches never-reviewed
+  // rows that the older 180-day query in muster_admin_overview() missed.
+  function jurisdictionQueue() {
+    if (sideError('platform')) return panel('Jurisdictions due for review', '', sideErrorPanel('platform', 'the jurisdiction review queue'));
+    const rows = ((EXTRA.platform || {}).jurisdiction_review_queue || []).filter((j) => matches(j.name, j.code));
+    return panel('Jurisdictions due for review', `${rows.length} not reviewed by a person in 180 days`, rows.length ? `<table class="tbl">
+      <thead><tr>
+        <th>Jurisdiction</th>
+        <th data-tooltip="How many law rows the advisory holds for this jurisdiction. Each one is a claim a tenant reads.">Law Rows</th>
+        <th data-tooltip="When a person last checked these rows against the current law. Never means nobody ever has.">Last Reviewed</th>
+      </tr></thead>
+      <tbody>${rows.map((j) => `<tr>
+        <td><b>${escapeHtml(j.name)}</b> <small class="muted">${escapeHtml(j.code)}</small></td>
+        <td class="num muted">${num(j.laws)}</td>
+        <td>${j.reviewed_at ? `<span class="muted num">${escapeHtml(String(j.reviewed_at).slice(0, 10))}</span>` : '<span class="pill high">never</span>'}</td>
+      </tr>`).join('')}</tbody></table>` : '<div class="empty good">None overdue.</div>', {
+      tip: 'Advisory law content goes stale as law changes. A row nobody has checked is a claim nobody is standing behind.',
+    });
   }
 
   function renderBilling() {
@@ -1623,7 +1778,15 @@
         note: (pricing.muster_partner || {}).included_client_orgs != null
           ? `${pricing.muster_partner.included_client_orgs} client orgs included` : null },
       { key: 'enterprise', name: 'Enterprise', price: null, note: 'contact sales' },
-    ].map((t) => ({ ...t, visible: visible[t.key] !== false }));
+    ].map((t) => ({
+      ...t,
+      // Same rule as index.html: a muster_public_pricing() that predates the
+      // `visible` key means Partner-only, which is what the public page shows
+      // in that case. Reading a missing key as "shown" made this page claim all
+      // three tiers were live while the site showed one.
+      visible: pricing.visible ? !!pricing.visible[t.key] : t.key === 'muster_partner',
+    }));
+    const stage = pricing.current_stage || DATA.stage || '';
     const paused = !!((pricing.cta || {}).muster_self_serve_paused);
     return head('Billing', 'What the current plan assignments price out to, and what the public site is currently offering.') +
       `<div class="row b" style="grid-template-columns: 1fr 1fr;">
@@ -1640,16 +1803,28 @@
             plan's price at its commercial stage. <code>customer.subscription.deleted</code> is unhandled, so a customer
             who cancelled in Stripe still prices in here until someone changes their plan by hand.
           </div>`)}
-        ${panel('Pricing surface', 'What muster.partners is showing buyers right now', `<table class="tbl">
+        ${panel('Pricing surface', 'What muster.partners is showing buyers right now. Both controls take effect on the public page immediately, with no deploy.', `
+          <div class="runner-row" style="margin-bottom:12px;">
+            <div class="field">
+              <label for="pricingStage">Pricing stage</label>
+              <select id="pricingStage" data-act="stage" data-current="${escapeHtml(stage)}"
+                      data-tooltip="Which Seed or Fruit price list the public pricing page uses. An internal label: it never changes what a tenant's plan includes. Asks before saving.">
+                ${['seed', 'fruit'].concat(stage && !['seed', 'fruit'].includes(stage) ? [stage] : []).map((st) => `<option value="${escapeHtml(st)}"${st === stage ? ' selected' : ''}>${escapeHtml(st)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <table class="tbl">
           <thead><tr>
             <th>Tier</th>
             <th data-tooltip="Monthly list price at the current commercial stage.">Price</th>
-            <th data-tooltip="Whether this tier renders on the public pricing grid. Hidden tiers still exist and can still be sold by hand.">On the site</th>
+            <th data-tooltip="Whether this tier renders on the public pricing grid. Hidden tiers still exist and can still be sold by hand. Partner stays on the page even if every switch is off.">On the site</th>
           </tr></thead>
           <tbody>${tiers.map((t) => `<tr>
             <td><b>${escapeHtml(t.name)}</b>${t.note ? `<br><small class="muted">${escapeHtml(t.note)}</small>` : ''}</td>
             <td class="num">${t.price != null ? money(t.price) : '<span class="muted">contact</span>'}</td>
-            <td>${t.visible ? '<span class="pill ok">visible</span>' : '<span class="pill medium">hidden</span>'}</td>
+            <td><label class="switch" data-tooltip="${escapeHtml(t.visible ? `Shown on the public pricing page. Switch off to hide the ${t.name} card.` : `Hidden on the public pricing page. Switch on to show the ${t.name} card.`)}">
+                <input type="checkbox" data-act="tier-visible" data-tier="${escapeHtml(t.key)}" data-name="${escapeHtml(t.name)}"${t.visible ? ' checked' : ''} aria-label="Show ${escapeHtml(t.name)} on the public pricing page"><span class="slider"></span></label>
+              <small class="muted">${t.visible ? 'shown' : 'hidden'}</small></td>
           </tr>`).join('')}</tbody></table>
           <div class="status" style="margin-top:14px;" data-tooltip="${escapeHtml(paused
             ? 'Self-serve checkout is paused, so the landing page and signin.html point at sales instead of a Stripe link. New accounts are provisioned by hand.'
@@ -1678,7 +1853,35 @@
           (currently just the <code>risk_opened</code> alert) goes through Resend's REST API from
           <code>muster-alert-dispatch</code>. Conflating the two is how an auth template ends up edited in the wrong place.
         </div>`)}
-      </div>`;
+      </div>` + platformAgents();
+  }
+
+  // Agents and API keys scoped to no tenant. A tenant's own agents are that
+  // tenant's business and show in its workspace. Only prefix, scopes and usage
+  // come back: the database holds a hash, and the plaintext existed once.
+  function platformAgents() {
+    if (sideError('platform')) return panel('Platform agents', '', sideErrorPanel('platform', 'the platform agent list'));
+    const agents = ((EXTRA.platform || {}).platform_agents || []).filter((a) => matches(a.name, a.kind));
+    return panel('Platform agents', `${agents.length} not scoped to any tenant`, agents.length ? `<table class="tbl">
+      <thead><tr>
+        <th>Agent</th>
+        <th data-tooltip="Key prefix only. The full key is never stored and cannot be shown.">Key</th>
+        <th data-tooltip="What the key is allowed to call.">Scopes</th>
+        <th data-tooltip="Last time the key authenticated a request, or whether it is revoked.">State</th>
+      </tr></thead>
+      <tbody>${agents.map((a) => {
+        const keys = a.keys && a.keys.length ? a.keys : [null];
+        return keys.map((k, i) => `<tr>
+          <td>${i === 0 ? `<b>${escapeHtml(a.name)}</b><br><small class="muted">${escapeHtml(a.kind)}${a.active ? '' : ' · inactive'}</small>` : ''}</td>
+          <td class="num muted">${k ? escapeHtml(k.key_prefix) + '…' : 'no keys'}</td>
+          <td class="muted">${k ? escapeHtml((k.scopes || []).join(', ')) : '—'}</td>
+          <td>${!k ? '<span class="muted">—</span>' : k.revoked_at ? '<span class="pill medium">revoked</span>'
+            : k.last_used_at ? `<span class="muted num" data-tooltip="${escapeHtml(stamp(k.last_used_at))}">used ${escapeHtml(ago(k.last_used_at))}</span>`
+            : '<span class="muted">never used</span>'}</td>
+        </tr>`).join('');
+      }).join('')}</tbody></table>` : '<div class="empty">No platform-level agents.</div>', {
+      tip: 'Automation and integrations that act across the platform rather than inside one tenant.',
+    });
   }
 
   function renderSystemHealth() {
@@ -1702,13 +1905,218 @@
             <td class="muted num" data-tooltip="${escapeHtml(stamp(j.last_success_at))}">${escapeHtml(ago(j.last_success_at))}</td>
           </tr>`).join('')}</tbody></table>` : '<div class="empty">No muster-* cron jobs are scheduled. Nothing is running on a timer.</div>')}
         ${panel('Platform status', 'Live', systemStatus())}
-      </div>`;
+      </div>` + incidentsPanel();
   }
 
+  // The triage states muster_admin_update_incident accepts.
+  const INCIDENT_STATES = ['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'];
+
+  // Open watchdog incidents with their ids, from muster_admin_overview() -- the
+  // console payload carries only the counts. muster-watchdog closes an incident
+  // itself when its check comes back clear; triage here is for the ones a
+  // person is working, and closing one marks it handled without fixing anything.
+  function incidentsPanel() {
+    if (sideError('overview')) return panel('Open incidents', '', sideErrorPanel('overview', 'the incident list'));
+    const rows = ((EXTRA.overview || {}).incidents || []).filter((i) => matches(i.affected_operation, i.source, i.severity, i.status));
+    return panel('Open incidents', `${rows.length} open · raised by muster-watchdog`, rows.length ? `<table class="tbl">
+      <thead><tr>
+        <th data-tooltip="Critical needs a person now; warning needs one soon.">Severity</th>
+        <th>Operation</th>
+        <th data-tooltip="First and most recent time the watchdog saw this condition, in UTC.">First / Last Seen</th>
+        <th data-tooltip="Where the incident is in triage.">Status</th>
+        <th data-tooltip="Move this incident through triage.">Triage</th>
+      </tr></thead>
+      <tbody>${rows.map((i) => `<tr>
+        <td><span class="pill ${i.severity === 'critical' ? 'critical' : i.severity === 'warning' ? 'high' : 'medium'}">${escapeHtml(i.severity)}</span></td>
+        <td><b>${escapeHtml(i.affected_operation)}</b><br><small class="muted">${escapeHtml(i.source)} · seen ${num(i.occurrence_count)}×</small></td>
+        <td class="muted num">${escapeHtml(String(i.first_seen_at || '').slice(0, 16).replace('T', ' '))}<br>${escapeHtml(String(i.last_seen_at || '').slice(0, 16).replace('T', ' '))}</td>
+        <td class="muted">${escapeHtml(i.status)}</td>
+        <td><select class="inline-select" data-act="incident" data-id="${Number(i.id)}" aria-label="Triage incident ${Number(i.id)}"
+                    data-tooltip="Moves this incident through triage. Closing it does not undo whatever caused it; it only marks it handled.">
+          <option value="">Move to…</option>
+          ${INCIDENT_STATES.filter((st) => st !== i.status).map((st) => `<option value="${st}">${st}</option>`).join('')}
+        </select></td>
+      </tr>`).join('')}</tbody></table>` : '<div class="empty good">None open.</div>', {
+      tip: 'Cron failures and misses, silent scans, stuck Stripe grants, alert dead-letters and control-register failures.',
+    });
+  }
+
+  // ---- support access ------------------------------------------------------
+  //
+  // Read-only impersonation: see what one user sees, for a bounded time and a
+  // stated reason. The guardrails are in SQL (muster_038, docs/IMPERSONATION.md):
+  // a super admin target is refused, sixty minutes is a hard ceiling, the reason
+  // is written into the tenant's own activity feed, and authorisation is
+  // re-checked on every call rather than carried in a token. Nothing here is
+  // load-bearing for security; a hand-made call gets 42501 without this panel.
+  //
+  // Moved from app.html on 2026-09-23 together with its test,
+  // tests/ui/impersonation-panel.test.ts, which extracts supportPanel() and
+  // renders it with hostile input: every field on it is attacker-influenced, and
+  // one missing escapeHtml() is stored XSS in a super admin's browser. Keep it a
+  // pure function of its arguments so the test can run it.
+  //
+  // The form lives in impForm, not only in the DOM, for the same reason the
+  // audit runner's does: render() replaces the page, and a countdown expiring or
+  // a search keystroke would otherwise blank a reason half typed.
+  const impForm = { target: '', reason: '', minutes: '30' };
+  let impView = null;       // rendered view of the target, once fetched
+  let impViewFor = null;    // which session impView belongs to
+  let impDeadline = 0;
+  let impTimer = null;
+
+  function supportPanel(imp, users, impLog, form, viewHtml) {
+    const eligible = users.filter((u) => u.role !== 'super_admin');
+    const body = imp.active ? `
+      <div class="imp-banner" data-tooltip="An impersonation session is open. It ends by itself when the timer runs out, and the tenant can see it in their own activity feed.">
+        <div>
+          <div class="imp-eyebrow">Viewing as</div>
+          <div class="imp-who">${escapeHtml(imp.target_email || ('user #' + imp.target_user_id))}</div>
+          <div class="imp-why">Reason: ${escapeHtml(imp.reason || '')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div id="impCountdown" class="imp-clock" data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero; nothing has to sweep it.">--:--</div>
+          <button class="btn warn sm" type="button" data-act="imp-end" data-tooltip="Ends the session now. Access stops immediately, because authorisation is re-checked on every call rather than carried in a token.">End session</button>
+        </div>
+      </div>
+      <div id="impView" data-tooltip="What this user sees: their organizations, their sites, and their open finding counts. Reading this is itself recorded against the session.">${viewHtml || '<div class="empty">Loading what this user sees…</div>'}</div>
+    ` : `
+      <form data-act="imp-start" class="form-grid" style="grid-template-columns:1.2fr 2fr 0.8fr auto;">
+        <div class="field">
+          <label for="impTarget">User</label>
+          <select id="impTarget" required data-tooltip="Super admins are deliberately absent from this list. Impersonating a peer admin is refused by the database, not just hidden here.">
+            ${eligible.map((u) => `<option value="${Number(u.id)}"${String(u.id) === String(form.target) ? ' selected' : ''}>${escapeHtml(u.email)}</option>`).join('') || '<option value="" disabled>No eligible users</option>'}
+          </select>
+        </div>
+        <div class="field">
+          <label for="impReason">Reason</label>
+          <input type="text" id="impReason" minlength="10" required value="${escapeHtml(form.reason)}" placeholder="e.g. ticket 412, customer cannot see their SITREP"
+                 data-tooltip="Required, at least 10 characters, and shown to the tenant verbatim in their own activity feed. Write it for them to read.">
+        </div>
+        <div class="field">
+          <label for="impMinutes">Duration</label>
+          <select id="impMinutes" data-tooltip="How long before the session expires on its own. Sixty minutes is the hard ceiling the database enforces.">
+            ${['15', '30', '60'].map((m) => `<option value="${m}"${String(form.minutes) === m ? ' selected' : ''}>${m} min</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn" type="submit" data-tooltip="Opens a read-only session and writes a notice into the tenant's own activity feed, carrying your reason.">Start</button>
+      </form>
+    `;
+    const log = impLog.length ? `
+      <table class="tbl" style="margin-top:18px;" data-tooltip="Every impersonation session ever opened, newest first. This log is append-only and cannot be edited from the application.">
+        <thead><tr><th>Admin</th><th>Target</th><th>Reason</th><th>Started (UTC)</th><th>Actions</th><th>Outcome</th></tr></thead>
+        <tbody>${impLog.map((r) => `<tr>
+          <td class="muted">${escapeHtml(r.admin_email || '')}</td>
+          <td>${escapeHtml(r.target_email || '')}</td>
+          <td class="muted">${escapeHtml(r.reason || '')}</td>
+          <td class="muted num">${escapeHtml(String(r.started_at || '').slice(0, 16).replace('T', ' '))}</td>
+          <td class="muted num">${Number(r.events || 0)}</td>
+          <td>${r.active ? '<span class="pill high">active</span>' : `<span class="pill medium">${escapeHtml(r.ended_reason || 'ended')}</span>`}</td>
+        </tr>`).join('')}</tbody></table>`
+      : '<div class="empty">No impersonation sessions have been opened.</div>';
+    return body + log;
+  }
+  // ---- end support panel
+
+  function impKey(imp) { return `${imp.target_user_id}|${imp.reason || ''}`; }
+
+  function renderSupport() {
+    const intro = head('Support Access', 'See what one user sees, read-only, for a bounded time and a stated reason. You stay signed in as yourself throughout; no session is ever created for them, and nothing here can change their data.');
+    if (sideError('imp')) return intro + panel('Support session', '', sideErrorPanel('imp', 'the impersonation status'));
+    const imp = EXTRA.imp || { active: false };
+    const log = Array.isArray(EXTRA.impLog) ? EXTRA.impLog : [];
+    // The target's view is fetched when an admin is actually looking, not on
+    // every console load, because every read of it is recorded against the
+    // session in the tenant's own audit trail.
+    if (imp.active && impViewFor !== impKey(imp)) loadImpersonatedView(imp);
+    return intro + panel(imp.active ? 'Session open' : 'Open a session',
+      imp.active ? 'Read only. Ends on its own when the timer runs out.' : 'Pick a user, say why, and choose how long.',
+      supportPanel(imp, DATA.users || [], log, impForm, impViewFor === impKey(imp) ? impView : null) +
+        (sideError('impLog') ? `<div class="runner-msg bad" style="margin-top:12px;">Could not load the session log: ${escapeHtml(sideError('impLog'))}</div>` : ''),
+      { tip: 'Every session is logged, append-only, with who opened it, for whom, why, and what was read.' });
+  }
+
+  async function loadImpersonatedView(imp) {
+    const key = impKey(imp);
+    impViewFor = key;
+    impView = null;
+    const { data, error } = await sb.rpc('muster_admin_impersonated_view');
+    if (impViewFor !== key) return; // a newer session replaced this one
+    if (error) {
+      // The usual cause is a session that lapsed between render and fetch.
+      impView = `<div class="runner-msg bad">${escapeHtml(error.message || String(error))}</div>`;
+    } else {
+      const orgs = (data && data.organizations) || [];
+      impView = orgs.length ? orgs.map((o) => `
+        <div class="imp-org">
+          <b>${escapeHtml(o.name || '')}</b> <small class="muted">· their role: ${escapeHtml(o.role || '')}</small>
+          ${(o.websites || []).length ? (o.websites || []).map((w) => `
+            <div class="imp-site">
+              <span class="muted">${escapeHtml(w.url || '')}</span>
+              <span>
+                <span class="muted">score ${w.posture_score == null ? '--' : Number(w.posture_score)}</span>
+                <span class="pill ${(w.open_critical_high || 0) > 0 ? 'critical' : 'ok'}" style="margin-left:10px;">${Number(w.open_critical_high || 0)} critical/high</span>
+                <span class="muted" style="margin-left:10px;">${Number(w.open_findings || 0)} open</span>
+              </span>
+            </div>`).join('') : '<div class="muted" style="font-size:12px; margin-top:6px;">No sites in this organization.</div>'}
+        </div>`).join('')
+        : '<div class="empty">This user belongs to no organization, so there is nothing for them to see.</div>';
+    }
+    if (section === 'support') render();
+  }
+
+  // Counts the banner down from the server's own seconds_remaining and re-reads
+  // the moment it lapses, so the page never shows an "active" session the
+  // database has already stopped honouring.
+  function syncImpersonation() {
+    if (impTimer) { clearInterval(impTimer); impTimer = null; }
+    const imp = EXTRA.imp;
+    if (!imp || imp.error || !imp.active) { impView = null; impViewFor = null; return; }
+    impDeadline = Date.now() + Number(imp.seconds_remaining || 0) * 1000;
+    impTimer = setInterval(() => {
+      const left = paintCountdown();
+      if (left <= 0) { clearInterval(impTimer); impTimer = null; refresh(false); }
+    }, 1000);
+  }
+
+  function paintCountdown() {
+    const left = Math.max(0, Math.round((impDeadline - Date.now()) / 1000));
+    const el = document.getElementById('impCountdown');
+    if (el) el.textContent = left <= 0 ? 'expired' : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    return left;
+  }
+
+  // ---- settings: the feature-flag registry --------------------------------
+  //
+  // Moved from app.html on 2026-09-23. muster_admin_flag_registry carries an
+  // `enforcement` array per flag, and the editor is built around showing it: a
+  // flag no code reads gets a plain "read by nothing" badge and its switches are
+  // disabled, because a switch you can move that changes nothing reports a
+  // control that does not exist. tests/ui/flag-registry.test.ts pins that here.
+  const FLAG_CATEGORIES = [
+    ['workspace',     'Workspace surfaces',          'Nav items and views inside a tenant workspace.'],
+    ['reporting',     'Reporting and deliverables',  'What a client is handed: SITREPs, board packs, the plain-English report.'],
+    ['engine',        'Scan engine',                 'What the scanner does and when it runs.'],
+    ['notifications', 'Notifications',               'Outbound application email. Auth email is GoTrue and is not covered by any flag here.'],
+    ['partner',       'Partner and white-label',     'Entitlements sold with the Partner tier.'],
+    ['platform',      'Platform capabilities',       'Tools that act across tenants, or outside them.'],
+    ['unbuilt',       'Declared, not built',         'Kept because they are real product commitments. Nothing reads them and nothing can, yet.'],
+    ['other',         'Uncategorised',               'Created from this console and not yet filed.'],
+  ];
+
   function renderSettings() {
+    const intro = head('Settings', 'The feature-flag registry. Plan gate, default, kill switch and overrides -- and the column that matters, how each flag is actually enforced.');
+    if (sideError('registry')) {
+      // Fall back to the console payload's read-only list rather than an empty
+      // page: the registry is the editable view, but the flags still exist.
+      return intro + panel('Flag editor unavailable', '', sideErrorPanel('registry', 'the flag registry, so the switches are not shown')) + flagListReadOnly();
+    }
+    return intro + flagRegistry(EXTRA.registry);
+  }
+
+  function flagListReadOnly() {
     const flags = (DATA.flags || []).filter((f) => matches(f.key, f.name, f.category, f.surface));
-    return head('Settings', 'The feature-flag registry. Scope, plan gate and — the column that matters — how each flag is actually enforced.') +
-      panel('Feature flags', `${flags.length} shown`, flags.length ? `<table class="tbl">
+    return panel('Feature flags (read-only)', `${flags.length} shown`, flags.length ? `<table class="tbl">
         <thead><tr>
           <th>Flag</th>
           <th data-tooltip="What the flag governs.">Category</th>
@@ -1716,17 +2124,179 @@
           <th data-tooltip="The lowest plan that gets this by default.">Plan Gate</th>
           <th data-tooltip="Where the flag is read and enforced. A flag with no enforcement is documentation, not a control.">Enforcement</th>
           <th data-tooltip="A kill switch is checked at the point of use and turns the capability off immediately, everywhere.">Kill</th>
-          <th data-tooltip="Per-organization or per-user overrides currently set on this flag.">Overrides</th>
         </tr></thead>
         <tbody>${flags.map((f) => `<tr>
           <td><b>${escapeHtml(f.name || f.key)}</b><br><small class="muted num">${escapeHtml(f.key)}</small></td>
           <td class="muted">${escapeHtml(f.category || '—')}</td>
           <td class="muted">${escapeHtml(f.scope || '—')}</td>
           <td class="muted">${escapeHtml(f.plan_minimum || 'any')}</td>
-          <td class="muted">${escapeHtml(f.enforcement || 'unspecified')}</td>
+          <td class="muted">${escapeHtml([].concat(f.enforcement || []).join(' + ') || 'read by nothing')}</td>
           <td>${f.kill_switch ? '<span class="pill high">kill switch</span>' : '<span class="muted">—</span>'}</td>
-          <td class="num ${f.overrides ? '' : 'muted'}">${num(f.overrides)}</td>
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No flags registered.</div>');
+  }
+
+  // Which rows are expanded, by key. Every save re-renders the page, and a row
+  // that snapped shut after you added an override to it would hide the result.
+  const openFlags = new Set();
+
+  function flagRegistry(reg) {
+    const sum = reg.summary || {}, plans = reg.plans || [];
+    const flags = (reg.flags || []).filter((f) => matches(f.key, f.name, f.category, f.surface, f.description));
+    const unwired = sum.unwired || 0;
+    const orgs = (DATA.organizations || []);
+    const planOpts = (sel) => ['<option value="">no plan gate</option>']
+      .concat(plans.map((p) => `<option value="${escapeHtml(p.plan)}"${p.plan === sel ? ' selected' : ''}>${escapeHtml(p.plan)}+</option>`)).join('');
+
+    const row = (f) => {
+      const wired = !!f.wired;
+      const enf = (f.enforcement || []).join(' + ');
+      const ovs = f.overrides || [];
+      const liveOvs = ovs.filter((o) => !o.expired);
+      const key = escapeHtml(f.key);
+      return `
+        <div class="flag-row${wired ? '' : ' unwired'}">
+          <div>
+            <code>${key}</code>
+            <br><small class="muted">${escapeHtml(f.scope)}${f.name ? ' · ' + escapeHtml(f.name) : ''}</small>
+          </div>
+          <div class="muted">
+            ${escapeHtml(f.surface || f.description || '')}
+            <div style="margin-top:4px;">
+              ${wired
+                ? `<span class="pill low" data-tooltip="Something in the codebase reads this key, so the switches beside it take effect. Enforced in: ${escapeHtml(enf)}.">enforced in ${escapeHtml(enf)}</span>`
+                : `<span class="pill high" data-tooltip="No code reads this key. Moving these switches would change nothing, so they are disabled. Open the row for why, and what would wire it.">read by nothing</span>`}
+              ${f.kill_switch ? '<span class="pill critical" data-tooltip="The kill switch is on, so this flag resolves off for everyone regardless of defaults, plans and overrides.">killed</span>' : ''}
+            </div>
+          </div>
+          <div>
+            <select class="inline-select" data-act="flag-plan" data-key="${key}" aria-label="Plan gate for ${key}"
+                    data-tooltip="The lowest plan that gets this flag. An org below it resolves off whatever the default says; a per-org override still beats the plan gate.">${planOpts(f.plan_minimum)}</select>
+          </div>
+          <div><label class="switch" data-tooltip="${wired ? 'Default on/off for every org, before plan gates and overrides.' : 'Disabled: nothing reads this key, so this switch would be theatre.'}">
+            <input type="checkbox" data-act="flag-default" data-key="${key}" aria-label="Default for ${key}"${f.default_enabled ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span></label></div>
+          <div><label class="switch" data-tooltip="${wired ? 'Forces this flag off for everyone, ignoring the default, the plan gate and every override. Asks before turning on.' : 'Disabled: nothing reads this key, so there is nothing to kill.'}">
+            <input type="checkbox" data-act="flag-kill" data-key="${key}" aria-label="Kill switch for ${key}"${f.kill_switch ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span></label></div>
+          <div class="muted" data-tooltip="How many organizations this flag currently resolves ON for, counting kill switch, overrides, plan gates and the default -- not what the default says.">
+            ${num(f.orgs_enabled)}/${num(sum.organizations)} orgs${liveOvs.length ? ` · <span style="color:var(--amber);">${liveOvs.length} override${liveOvs.length === 1 ? '' : 's'}</span>` : ''}
+          </div>
+          <details data-flag="${key}"${openFlags.has(f.key) ? ' open' : ''}>
+            <summary data-tooltip="Full description, per-plan resolution, every override on this flag, and the form to add one.">▸ detail, overrides and per-plan resolution</summary>
+            <div class="flag-detail">
+              <p>${escapeHtml(f.description || '')}</p>
+              ${f.wiring_note ? `<p class="wiring" data-tooltip="Why this flag is read by nothing, and what would have to change for it to mean something.">${escapeHtml(f.wiring_note)}</p>` : ''}
+              <div class="by-plan" data-tooltip="What an org on each plan resolves to from the default and the plan gate alone. A per-org override beats this.">
+                ${plans.map((p) => {
+                  const on = !!(f.enabled_by_plan || {})[p.plan];
+                  return `<span style="color:${on ? 'var(--emerald)' : 'var(--text-dim)'};">${on ? '●' : '○'} ${escapeHtml(p.plan)}</span>`;
+                }).join('')}
+              </div>
+              ${ovs.length ? `<table class="tbl">
+                <thead><tr><th>Target</th><th>State</th><th>Reason</th><th>Set by / expires</th><th></th></tr></thead>
+                <tbody>${ovs.map((o) => `<tr style="${o.expired ? 'opacity:0.5;' : ''}">
+                  <td><b>${escapeHtml(o.target_label || '')}</b><br><small class="muted">${escapeHtml(o.target_kind)}</small></td>
+                  <td><span class="pill ${o.enabled ? 'low' : 'high'}">${o.enabled ? 'on' : 'off'}</span></td>
+                  <td class="muted">${escapeHtml(o.reason || '—')}</td>
+                  <td class="muted">${escapeHtml(o.set_by || 'unknown')}<br>${o.expires_at ? (o.expired ? 'expired ' : 'expires ') + escapeHtml(String(o.expires_at).slice(0, 10)) : 'no expiry'}</td>
+                  <td><button class="btn ghost sm" type="button" data-act="override-revoke" data-id="${Number(o.id)}" data-key="${key}"
+                              data-tooltip="Removes this exception. The target falls back to the plan gate and the default immediately.">Revoke</button></td>
+                </tr>`).join('')}</tbody></table>` : '<div class="muted" style="font-size:12px; margin-bottom:10px;">No overrides on this flag.</div>'}
+
+              <form data-act="override-add" data-key="${key}" class="form-grid" style="grid-template-columns:1.4fr 0.7fr 2fr 1fr auto; margin-top:12px; border-top:1px solid var(--surface-border); padding-top:12px;">
+                <div class="field">
+                  <label>Organization</label>
+                  <select name="org" required aria-label="Organization" data-tooltip="Which tenant this exception applies to. An override beats both the plan gate and the default, in either direction.">
+                    ${orgs.map((t) => `<option value="${Number(t.id)}">${escapeHtml(t.name)}${t.is_admin_sandbox ? ' (sandbox)' : ''}</option>`).join('') || '<option value="" disabled>No tenants</option>'}
+                  </select>
+                </div>
+                <div class="field">
+                  <label>State</label>
+                  <select name="enabled" aria-label="Override state" data-tooltip="On grants the feature to an org that would not otherwise have it. Off takes it away from one that would.">
+                    <option value="true">on</option><option value="false">off</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Reason</label>
+                  <input type="text" name="reason" required minlength="8" aria-label="Reason for the override" placeholder="e.g. pilot for the Q4 renewal, agreed with sales"
+                         data-tooltip="Required. An override with no stated reason is indistinguishable from a mistake six months later.">
+                </div>
+                <div class="field">
+                  <label>Expires</label>
+                  <input type="date" name="expires" aria-label="Override expiry date" data-tooltip="Optional. An override with an expiry cleans itself up; one without stays until someone revokes it by hand.">
+                </div>
+                <button class="btn sm" type="submit" data-tooltip="Saves the exception. It takes effect on this org's next request -- no deploy, no restart.">Add override</button>
+              </form>
+
+              ${wired ? '' : `<div style="margin-top:12px;"><button class="btn danger sm" type="button" data-act="flag-delete" data-key="${key}"
+                  data-tooltip="Removes the flag and every override on it. Only offered because nothing reads this key -- the database refuses to delete a flag that is enforced, since has_flag would then answer false for it everywhere.">Delete this flag</button></div>`}
+            </div>
+          </details>
+        </div>`;
+    };
+
+    const groups = FLAG_CATEGORIES.map(([cat, title, blurb]) => {
+      const inCat = flags.filter((f) => (f.category || 'other') === cat);
+      if (!inCat.length) return '';
+      return `
+        <div class="flag-group"><b>${escapeHtml(title)}</b><span> · ${escapeHtml(blurb)}</span></div>
+        <div class="flag-head"><span>Flag</span><span>What it gates</span><span>Plan gate</span><span>Default</span><span>Kill</span><span>Reach</span></div>
+        ${inCat.map(row).join('')}`;
+    }).join('');
+
+    return panel(`Feature flags (${num(sum.total)})`, 'Every flag in the platform, what reads it, what each plan resolves to, and every exception.', `
+      <div class="stat-row">
+        <div data-tooltip="Flags that some code actually reads, so their switches take effect."><small>Enforced</small><strong style="color:var(--emerald);">${num(sum.wired)}</strong></div>
+        <div data-tooltip="Flags nothing reads. Each one is either a feature that is not built or an entitlement recorded but not gated in code -- open the row for which."><small>Read by nothing</small><strong style="color:${unwired ? 'var(--amber)' : 'var(--text)'};">${num(unwired)}</strong></div>
+        <div data-tooltip="Flags forced off for everyone by their kill switch."><small>Killed</small><strong>${num(sum.kill_switched)}</strong></div>
+        <div data-tooltip="Live per-org and per-user exceptions across every flag. Expired ones are not counted."><small>Overrides</small><strong>${num(sum.overrides)}</strong></div>
+        <div data-tooltip="Organizations these flags resolve against."><small>Organizations</small><strong>${num(sum.organizations)}</strong></div>
+      </div>
+      ${unwired ? `<div class="warnbox" data-tooltip="These keys appear nowhere in the SQL, the pages or the edge functions. Their switches are disabled here so the console cannot report a control that does not exist.">
+        <b>${num(unwired)} flag${unwired === 1 ? ' is' : 's are'} read by nothing:</b>
+        ${(reg.unwired_keys || []).map((k) => `<code>${escapeHtml(k)}</code>`).join(', ')}.
+        Each row says why. They are kept because they are real product commitments, not because they work.
+      </div>` : ''}
+      ${groups || '<div class="empty">No flags match.</div>'}
+      <details class="flag-new" style="margin-top:16px; border-top:1px solid var(--surface-border); padding-top:14px;">
+        <summary data-tooltip="Creates a flag row. It will be marked read by nothing until code is written that reads the key -- creating it here does not gate anything on its own.">▸ New flag</summary>
+        <form data-act="flag-create" class="form-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:12px;">
+          <div class="field">
+            <label>Key</label>
+            <input type="text" name="key" required aria-label="Flag key" pattern="[a-z][a-z0-9_]{2,47}" placeholder="lower_snake_case"
+                   data-tooltip="What the code will read. lower_snake_case, 3 to 48 characters. It cannot be renamed afterwards without a migration.">
+          </div>
+          <div class="field">
+            <label>Name</label>
+            <input type="text" name="name" required aria-label="Flag name" placeholder="Human-readable name" data-tooltip="What this appears as in the console.">
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select name="category" aria-label="Flag category" data-tooltip="Which group this flag is filed under above.">
+              ${FLAG_CATEGORIES.map(([c, t]) => `<option value="${c}">${escapeHtml(t)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Description</label>
+            <input type="text" name="description" required minlength="10" aria-label="Flag description" placeholder="What this gates, written for whoever finds the switch next"
+                   data-tooltip="Required. This is what the next person reads before deciding whether it is safe to flip.">
+          </div>
+          <div class="field">
+            <label>Scope</label>
+            <select name="scope" aria-label="Flag scope" data-tooltip="Organization is the usual choice. Platform means it is not per-tenant at all.">
+              <option value="organization">organization</option><option value="platform">platform</option><option value="user">user</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Plan gate</label>
+            <select name="plan" aria-label="Plan gate" data-tooltip="Lowest plan that gets it. Leave unset for no plan gate.">${planOpts(null)}</select>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label class="switch" data-tooltip="Whether it defaults on. A brand new flag usually defaults off until the code that reads it ships."><input type="checkbox" name="default_enabled" aria-label="Default on"><span class="slider"></span></label>
+            <button class="btn sm" type="submit" data-tooltip="Creates the flag, marked read by nothing until code reads the key.">Create flag</button>
+          </div>
+        </form>
+      </details>`, {
+      tip: 'A flag marked read by nothing has its switches disabled on purpose. The enforcement column is the answer to whether a switch does anything.',
+    });
   }
 
   // Surfaces the design calls for that this schema cannot answer. Each one says
@@ -1783,6 +2353,7 @@
     'system-health': renderSystemHealth,
     settings: renderSettings,
     reports: renderReports,
+    support: renderSupport,
   };
 
   function render() {
@@ -1790,6 +2361,7 @@
     renderNav();
     const fn = RENDER[section];
     document.getElementById('page').innerHTML = fn ? fn() : renderStub(section);
+    if (impTimer) paintCountdown();
     const n = (DATA.action_items || []).length;
     const bell = document.getElementById('bellCount');
     bell.textContent = String(n);
@@ -1806,16 +2378,70 @@
 
   // ---- boot ---------------------------------------------------------------
 
-  async function load() {
+  // ---- side reads ---------------------------------------------------------
+  //
+  // muster_admin_console() is the page's backbone. These are the five things it
+  // does not carry, each needed by one section. Fetched with it rather than
+  // lazily because four of them back a control -- the flag editor, incident
+  // triage, support access -- and a control drawn before its data arrives is one
+  // that can be pressed against nothing.
+  //
+  // Each settles on its own. A failure blanks only the panel that needed it and
+  // says so there; the console stays up, because losing the tenant roster over
+  // an impersonation log would be the wrong trade.
+  //
+  // muster_admin_overview() is here only for `incidents`: open watchdog
+  // incidents with the ids triage needs, which the console payload reduces to
+  // counts. It is the RPC app.html's in-app console used to load in full.
+  let EXTRA = {};
+  const SIDE_READS = {
+    registry: ['muster_admin_flag_registry'],
+    imp: ['muster_admin_impersonate_status'],
+    impLog: ['muster_admin_impersonation_log', { p_limit: 25 }],
+    overview: ['muster_admin_overview'],
+    platform: ['muster_admin_platform_extras'],
+  };
+
+  async function fetchExtras() {
+    const keys = Object.keys(SIDE_READS);
+    const results = await Promise.all(keys.map((k) => sb.rpc(...SIDE_READS[k]).then((r) => r, (err) => ({ error: err }))));
+    const next = {};
+    keys.forEach((k, i) => {
+      const r = results[i] || {};
+      next[k] = r.error ? { error: (r.error && r.error.message) || String(r.error) } : r.data;
+    });
+    EXTRA = next;
+    syncImpersonation();
+  }
+
+  function sideError(key) {
+    const v = EXTRA[key];
+    if (v == null) return 'no response';
+    return v.error || null;
+  }
+
+  function sideErrorPanel(key, what) {
+    return `<div class="notice"><b>Could not load ${escapeHtml(what)}.</b>${escapeHtml(sideError(key))}. The rest of the console is unaffected; reload the page to try again.</div>`;
+  }
+
+  async function fetchConsole() {
     const { data, error } = await sb.rpc('muster_admin_console');
     if (error) throw error;
     DATA = data;
+  }
 
+  function paintOrgFilter() {
     const orgs = (DATA.organizations || []);
     const sel = document.getElementById('orgFilter');
+    if (!orgs.some((o) => String(o.id) === orgFilter)) orgFilter = 'all';
     sel.innerHTML = '<option value="all">All organizations</option>' +
       orgs.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}${o.is_admin_sandbox ? ' (sandbox)' : ''}</option>`).join('');
     sel.value = orgFilter;
+  }
+
+  async function load() {
+    await Promise.all([fetchConsole(), fetchExtras()]);
+    paintOrgFilter();
 
     const hash = location.hash.slice(1);
     if (hash && (RENDER[hash] || STUBS[hash])) section = hash;
@@ -1823,6 +2449,186 @@
     document.getElementById('gateLoading').hidden = true;
     document.getElementById('shell').hidden = false;
     render();
+  }
+
+  // Re-reads everything and repaints, keeping the section, filters and search.
+  async function refresh(afterSave) {
+    try {
+      await Promise.all([fetchConsole(), fetchExtras()]);
+    } catch (err) {
+      flash('bad', (afterSave ? 'Saved, but the console could not reload: ' : 'The console could not reload: ') +
+        ((err && err.message) || 'unknown error') + '. Reload the page to see the current state.');
+      return;
+    }
+    paintOrgFilter();
+    render();
+  }
+
+  // ---- writes -------------------------------------------------------------
+  //
+  // Every control on this page is a form over a SECURITY DEFINER RPC that
+  // checks muster.is_super_admin() itself; nothing here is a permission check.
+  // After every write, success or not, the page re-reads. On success so it shows
+  // what the database now says rather than what was clicked; on failure so a
+  // select or switch the database refused snaps back to the truth instead of
+  // displaying a change that never happened.
+  let writing = false;
+  let flashTimer = null;
+
+  function flash(kind, msg) {
+    const el = document.getElementById('flash');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'flash show ' + kind;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => el.classList.remove('show'), kind === 'bad' ? 9000 : 4500);
+  }
+
+  function writeError(error) {
+    const msg = String((error && error.message) || error || 'unknown error');
+    const code = String((error && error.code) || '');
+    if (code === '42501' || /forbidden|permission denied/i.test(msg)) {
+      return 'Not saved: the database refused it (' + msg + '). Either this session is no longer a super admin, or the function refuses this particular change.';
+    }
+    return 'Not saved: ' + msg;
+  }
+
+  async function write(rpcName, args, okMsg) {
+    if (writing) {
+      flash('warn', 'Still saving the last change. Try again in a moment.');
+      render();
+      return null;
+    }
+    writing = true;
+    try {
+      const { data, error } = await sb.rpc(rpcName, args);
+      if (error) {
+        flash('bad', writeError(error));
+        await refresh(false);
+        return null;
+      }
+      flash('ok', typeof okMsg === 'function' ? okMsg(data || {}) : okMsg);
+      await refresh(true);
+      return data == null ? true : data;
+    } catch (err) {
+      flash('bad', writeError(err));
+      return null;
+    } finally {
+      writing = false;
+    }
+  }
+
+  // The handlers the controls above call. Each confirms first where a change
+  // reaches someone other than the person clicking: a tenant's entitlements, a
+  // user's privileges, what buyers see, or every org at once. Keyboard arrows
+  // on a focused select fire `change` in some browsers, so an unconfirmed select
+  // is one stray keypress from a real write.
+  async function setPlan(sel) {
+    const { org, name, current } = sel.dataset;
+    const next = sel.value;
+    if (next === current) return;
+    if (!window.confirm(`Move ${name} from ${current} to ${next}?\n\nPlan-gated features switch on or off for every member of this organization on their next request, and plan-implied revenue changes with it.`)) { render(); return; }
+    await write('muster_admin_set_plan', { p_organization_id: Number(org), p_plan: next }, `${name} is now on ${next}.`);
+  }
+
+  async function setRole(sel) {
+    const { email, current } = sel.dataset;
+    const next = sel.value;
+    if (next === current) return;
+    const self = email && email === MY_EMAIL;
+    const stakes = (next === 'super_admin' || current === 'super_admin')
+      ? '\n\nsuper_admin opens this console and every tenant\'s data.' : '';
+    const own = self ? '\n\nThis is your own account. Removing super_admin from it closes this console to you.' : '';
+    if (!window.confirm(`Change ${email}'s platform role from ${current} to ${next}?${stakes}${own}`)) { render(); return; }
+    await write('muster_admin_set_user_role', { p_email: email, p_role: next }, `${email} is now ${next}.`);
+  }
+
+  async function updateIncident(sel) {
+    const id = Number(sel.dataset.id);
+    const status = sel.value;
+    if (!status) return;
+    await write('muster_admin_update_incident', { p_id: id, p_status: status }, `Incident #${id} marked ${status}.`);
+  }
+
+  async function setPricingStage(sel) {
+    const next = sel.value, current = sel.dataset.current;
+    if (next === current) return;
+    if (!window.confirm(`Switch the public pricing stage from ${current || 'unset'} to ${next}?\n\nmuster.partners shows the ${next} prices immediately. No tenant's plan contents change.`)) { render(); return; }
+    await write('muster_admin_set_pricing_stage', { p_stage: next }, `Public pricing stage set to ${next}.`);
+  }
+
+  async function setPricingVisibility(box) {
+    const { tier, name } = box.dataset;
+    const on = box.checked;
+    await write('muster_admin_set_pricing_visibility', { p_tier: tier, p_visible: on }, `${name} ${on ? 'shown' : 'hidden'} on the public pricing page.`);
+  }
+
+  async function setFlagPlan(sel) {
+    const key = sel.dataset.key, plan = sel.value;
+    await write('muster_admin_set_flag_plan_minimum', { p_key: key, p_plan: plan || null },
+      plan ? `${key} now requires ${plan}+.` : `${key} plan gate removed.`);
+  }
+
+  async function setFlagDefault(box) {
+    const key = box.dataset.key, on = box.checked;
+    if (!window.confirm(`Turn the default for ${key} ${on ? 'on' : 'off'}?\n\nEvery organization without an override or a plan gate changes on its next request.`)) { render(); return; }
+    await write('muster_admin_set_flag', { p_key: key, p_enabled: on }, `${key} default ${on ? 'on' : 'off'}.`);
+  }
+
+  async function killSwitch(box) {
+    const key = box.dataset.key, on = box.checked;
+    if (on && !window.confirm(`Kill ${key}?\n\nIt resolves off for every organization and user immediately, ignoring defaults, plans and overrides.`)) { render(); return; }
+    await write('muster_admin_kill_switch', { p_key: key, p_on: on }, `${key} kill switch ${on ? 'on' : 'off'}.`);
+  }
+
+  async function addFlagOverride(form) {
+    const f = new FormData(form);
+    const key = form.dataset.key;
+    await write('muster_admin_set_flag', {
+      p_key: key,
+      p_enabled: f.get('enabled') === 'true',
+      p_organization_id: Number(f.get('org')),
+      p_reason: f.get('reason'),
+      p_expires_at: f.get('expires') ? new Date(f.get('expires') + 'T23:59:59Z').toISOString() : null,
+    }, `Override saved on ${key}.`);
+  }
+
+  async function clearFlagOverride(btn) {
+    const id = Number(btn.dataset.id), key = btn.dataset.key;
+    if (!window.confirm(`Revoke this override on ${key}? The organization falls back to the plan gate and the default immediately.`)) return;
+    await write('muster_admin_clear_flag_override', { p_id: id }, (r) => `Override on ${r.flag_key || key} revoked.`);
+  }
+
+  async function createFlag(form) {
+    const f = new FormData(form);
+    await write('muster_admin_create_flag', {
+      p_key: f.get('key'), p_name: f.get('name'), p_description: f.get('description'),
+      p_scope: f.get('scope'), p_category: f.get('category'),
+      p_default_enabled: f.get('default_enabled') === 'on',
+      p_plan_minimum: f.get('plan') || null,
+    }, (r) => `${r.key || f.get('key')} created. Nothing reads it yet, so the console marks it read by nothing.`);
+  }
+
+  async function deleteFlag(btn) {
+    const key = btn.dataset.key;
+    if (!window.confirm(`Delete the flag ${key} and every override on it? This cannot be undone.`)) return;
+    await write('muster_admin_delete_flag', { p_key: key }, `${key} deleted.`);
+  }
+
+  async function startImpersonation() {
+    const sel = document.getElementById('impTarget');
+    const target = impForm.target || (sel ? sel.value : '');
+    const reason = (impForm.reason || '').trim();
+    if (!target) { flash('warn', 'Pick a user first.'); return; }
+    if (reason.length < 10) { flash('warn', 'Give a reason of at least 10 characters. The tenant reads it in their own activity feed.'); return; }
+    const r = await write('muster_admin_impersonate_start', {
+      p_target_user_id: Number(target), p_reason: reason, p_minutes: Number(impForm.minutes || 30),
+    }, (d) => `Viewing as ${d.target_email || ('user #' + d.target_user_id)}. Read only.`);
+    if (r) { impForm.reason = ''; impForm.target = ''; }
+  }
+
+  async function endImpersonation() {
+    await write('muster_admin_impersonate_end', {}, 'Impersonation session ended.');
   }
 
   // Same set of shapes the SQL predicate, the muster-set-password edge function
@@ -1880,6 +2686,7 @@
     }
 
     const email = session.user && session.user.email;
+    MY_EMAIL = email || '';
     document.getElementById('whoEmail').textContent = email || 'MUSTER';
     document.getElementById('whoInitials').textContent = initials(email);
     document.getElementById('whoName').textContent = 'Super Admin';
@@ -1915,6 +2722,15 @@
     if (e.target.closest && e.target.closest('#runUrlBtn')) { if (!run.busy) runUrlScan(); return; }
     if (e.target.closest && e.target.closest('#runSiteBtn')) { if (!run.busy) runSiteScan(); return; }
     if (e.target.closest && e.target.closest('#sitrepBack')) { closeSitrep(); return; }
+    // Write controls. Matched by data-act through delegation, like everything
+    // else here, because render() replaces the node you clicked.
+    const act = e.target.closest && e.target.closest('button[data-act]');
+    if (act) {
+      const kind = act.getAttribute('data-act');
+      if (kind === 'override-revoke') { clearFlagOverride(act); return; }
+      if (kind === 'flag-delete') { deleteFlag(act); return; }
+      if (kind === 'imp-end') { endImpersonation(); return; }
+    }
     // The runner's "read the report" link, and any row in the Reports table.
     const rep = e.target.closest && e.target.closest('[data-sitrep]');
     if (rep) {
@@ -1931,12 +2747,44 @@
     // No render() here: this only records what was typed, and re-rendering on
     // every keystroke would move the caret to the end of the field.
     if (e.target.id === 'runUrl') { run.url = e.target.value; }
+    if (e.target.id === 'impReason') { impForm.reason = e.target.value; }
+  });
+
+  // `toggle` does not bubble, so this listens in the capture phase.
+  document.addEventListener('toggle', (e) => {
+    const d = e.target;
+    if (!d || !d.matches || !d.matches('details[data-flag]')) return;
+    const key = d.getAttribute('data-flag');
+    if (d.open) openFlags.add(key); else openFlags.delete(key);
+  }, true);
+
+  document.addEventListener('submit', (e) => {
+    const form = e.target.closest && e.target.closest('form[data-act]');
+    if (!form) return;
+    e.preventDefault();
+    const kind = form.getAttribute('data-act');
+    if (kind === 'override-add') addFlagOverride(form);
+    else if (kind === 'flag-create') createFlag(form);
+    else if (kind === 'imp-start') startImpersonation();
   });
 
   document.addEventListener('change', (e) => {
     if (e.target.id === 'orgFilter') { orgFilter = e.target.value; render(); }
     if (e.target.id === 'rangeFilter') { rangeDays = Number(e.target.value); render(); }
     if (e.target.id === 'runSite') { run.siteId = e.target.value; }
+    if (e.target.id === 'impTarget') { impForm.target = e.target.value; }
+    if (e.target.id === 'impMinutes') { impForm.minutes = e.target.value; }
+    switch (e.target.getAttribute && e.target.getAttribute('data-act')) {
+      case 'plan': setPlan(e.target); break;
+      case 'role': setRole(e.target); break;
+      case 'incident': updateIncident(e.target); break;
+      case 'stage': setPricingStage(e.target); break;
+      case 'tier-visible': setPricingVisibility(e.target); break;
+      case 'flag-plan': setFlagPlan(e.target); break;
+      case 'flag-default': setFlagDefault(e.target); break;
+      case 'flag-kill': killSwitch(e.target); break;
+      default: break;
+    }
   });
 
   document.addEventListener('keydown', (e) => {
