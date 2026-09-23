@@ -345,11 +345,18 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   with `apply` unchecked for a read-only report of what is live. Two independent runs confirmed
   the new value, and the second one -- a separate process doing its own `GET` -- is why this
   paragraph is allowed to say it changed.
-  **What is proven and what is not:** the *value* is set, read back twice. The *flow* is not
-  tested. Nobody has sent a magic link and followed it since the change. `muster-auth-smoke` is
-  what closes that gap and it has not been run against the new value, so do not write "magic
-  links work" anywhere until it has. Setting a field and delivering a working link are different
-  claims and this file has already conflated them once.
+  **What is proven and what is not:** the *value* is set, read back twice. **And the fallback is
+  proven**: `muster-auth-smoke` ran against it on 2026-09-23 02:54 UTC, all six read-only steps
+  green, and its `allowlist:control` probe -- the one step that exercises Site URL, because it asks
+  for a host that must be refused -- fell back to `https://app.muster.partners/` where the
+  2026-09-09 run fell back to `www`. A minted recovery link landed on `app.muster.partners/reset`
+  with a live recovery session. Three things that run did not cover, and none may be claimed from
+  it: the password leg (`rotate_password` was false; set → sign-in last passed 2026-09-09), a real
+  **magic** link (the function mints recovery links; same allowlist and fallback, but not followed),
+  and delivery (nothing is sent). So write "recovery links land on the app host", not "magic links
+  work", until someone has sent a magic link and followed it. Details in `docs/EMAIL.md`. Setting a
+  field and delivering a working link are different claims and this file has already conflated them
+  once.
   The workflow deliberately leaves `uri_allow_list` alone (`PATCH` is partial). That list is
   correct and was verified byte-identical either side of the change: it carries
   `app.muster.partners/app`, `/reset` and `/**`, the `28footsystems` equivalents, and the
