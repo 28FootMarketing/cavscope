@@ -480,7 +480,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   different messages -- so a match is evidence a server answered, not a guess; a marker naming a
   connect or TLS phase would break the premise, and a test asserts none does.
   And **one test owns the `ENGINE_VERSION` equality pin** -- the newest rule's, today
-  `tests/scan/availability.test.ts`. `tests/scan/avail-refused.test.ts` was pinning the exact value
+  `tests/scan/login.test.ts` (it was `availability.test.ts` until AUTH-* took `1.7.0`). `tests/scan/avail-refused.test.ts` was pinning the exact value
   too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
   line. If every rule's test pinned the value, one bump would edit all of them and the pressure
   would be to loosen the check rather than move it.
