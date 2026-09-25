@@ -259,6 +259,10 @@
 
     .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
     .kpi { padding: 14px 14px 15px; display: flex; gap: 11px; min-width: 0; }
+    .kpi[data-section] { cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease; }
+    .kpi[data-section]:hover { border-color: var(--teal); transform: translateY(-1px); }
+    .kpi[data-section]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .kpi-ico {
       width: 38px; height: 38px; flex: none;
       border-radius: var(--radius-md);
@@ -929,42 +933,42 @@
 
     const tiles = [
       {
-        cls: 'amber', icon: '▣', label: 'Active Organizations',
+        cls: 'amber', icon: '▣', label: 'Active Organizations', go: 'organizations',
         value: num(org.total),
         delta: org.new_30d > 0 ? { dir: 'up', text: '+' + org.new_30d } : { dir: 'flat', text: 'no change' },
         foot: `${num(org.new_30d)} new in 30 days · ${num(org.sandbox)} internal sandbox excluded`,
         tip: 'Organizations provisioned on the platform, excluding the internal sandbox that ad-hoc admin URL scans are parked in. The sandbox is not a tenant and is never counted as one.',
       },
       {
-        cls: 'teal', icon: '▶', label: 'Assessments Running',
+        cls: 'teal', icon: '▶', label: 'Assessments Running', go: 'audit-queue',
         value: num((asmt.queued || 0) + (asmt.running || 0)),
         delta: { dir: 'flat', text: num(asmt.queued) + ' queued' },
         foot: `${num(asmt.complete_24h)} completed · ${num(asmt.failed_24h)} failed in 24h`,
         tip: 'Scans queued or running on the live engine right now. A number that never falls means the scan worker is not draining the queue — check muster-scan-due under System Health.',
       },
       {
-        cls: 'rose', icon: '⚠', label: 'High-Risk Alerts',
+        cls: 'rose', icon: '⚠', label: 'High-Risk Alerts', go: 'website-assurance',
         value: num(risk.open),
         delta: risk.new_24h > 0 ? { dir: 'down', text: '+' + risk.new_24h + ' new' } : { dir: 'flat', text: 'none new' },
         foot: `${num(risk.critical)} critical · ${num(risk.high)} high · across ${num(risk.orgs_affected)} org${risk.orgs_affected === 1 ? '' : 's'}`,
         tip: 'Open or reopened findings at critical or high severity — the ones the alert dispatcher emails a tenant about. Sandbox findings are excluded.',
       },
       {
-        cls: 'teal', icon: '◈', label: 'Control Effectiveness',
+        cls: 'teal', icon: '◈', label: 'Control Effectiveness', go: 'compliance',
         value: comp.rate == null ? '—' : comp.rate + '%',
         delta: { dir: comp.not_met > 0 ? 'down' : 'flat', text: num(comp.not_met) + ' not met' },
         foot: comp.total ? `${num(comp.met)} met of ${num(comp.total)} · ${num(comp.partial)} partial` : 'no controls derived yet',
         tip: 'Share of derived controls assessed "met". Partial is deliberately not rounded up to met — a half-implemented control is exactly what an auditor asks about. This is scanner evidence, never a certification of compliance.',
       },
       {
-        cls: 'amber', icon: '◱', label: 'Monthly Revenue',
+        cls: 'amber', icon: '◱', label: 'Monthly Revenue', go: 'billing',
         value: money(rev.mrr_cents),
         delta: { dir: 'flat', text: 'plan-implied' },
         foot: `${num(rev.paying_orgs)} priced · ${num(rev.unpriced_orgs)} on internal or unpriced plans`,
         tip: 'What the current plan assignments price out to at each organization’s commercial stage. It is NOT billed revenue: nothing in this platform reads Stripe invoices, and customer.subscription.deleted is unhandled, so a cancelled customer still prices in until their plan is changed by hand.',
       },
       {
-        cls: 'purple', icon: '⌨', label: 'API Usage',
+        cls: 'purple', icon: '⌨', label: 'API Usage', go: 'integrations',
         value: api.instrumented ? num(api.requests_30d) : 'Not metered',
         delta: { dir: 'flat', text: num(api.keys_active) + ' active keys' },
         foot: `${num(api.keys_used_24h)} key${api.keys_used_24h === 1 ? '' : 's'} used in 24h · ${num(api.keys_total)} issued`,
@@ -973,8 +977,15 @@
       },
     ];
 
+    // Each tile opens the section it summarises. It is a div with role=button
+    // rather than a <button>, because a button may hold only phrasing content
+    // and the tile is three blocks; the delegated click handler already routes
+    // any [data-section], and the keydown handler below covers Enter and Space
+    // so a keyboard user gets the same door. The tooltip says so, per the
+    // tooltip rule, and the visually hidden span says so to a screen reader
+    // without replacing the live figure as an aria-label would.
     return `<div class="kpis">${tiles.map((t) => `
-      <div class="card kpi" data-tooltip="${escapeHtml(t.tip)}">
+      <div class="card kpi" role="button" tabindex="0" data-section="${t.go}" data-tooltip="${escapeHtml(t.tip)} Click to open ${escapeHtml(sectionLabel(t.go))}.">
         <div class="kpi-ico ${t.cls}" aria-hidden="true">${t.icon}</div>
         <div class="kpi-body">
           <div class="kpi-label">${escapeHtml(t.label)}</div>
@@ -983,8 +994,14 @@
             <span class="delta ${t.delta.dir}">${escapeHtml(t.delta.text)}</span>
           </div>
           <div class="kpi-foot">${escapeHtml(t.foot)}</div>
+          <span class="sr-only"> Opens ${escapeHtml(sectionLabel(t.go))}.</span>
         </div>
       </div>`).join('')}</div>`;
+  }
+
+  function sectionLabel(id) {
+    const s = SECTIONS.find((x) => x.id === id);
+    return s ? s.label : id;
   }
 
   // Stacked bars, drawn as plain SVG. A chart library would be the only
@@ -2945,6 +2962,14 @@
   });
 
   document.addEventListener('keydown', (e) => {
+    // A role=button element is only a button if Enter and Space activate it.
+    // Space is prevented so the page does not also scroll.
+    const tile = e.target && e.target.closest && e.target.closest('[role="button"][data-section]');
+    if (tile && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      go(tile.getAttribute('data-section'));
+      return;
+    }
     if (e.target && e.target.id === 'runUrl' && e.key === 'Enter') {
       e.preventDefault();
       if (!run.busy) runUrlScan();
