@@ -1,6 +1,6 @@
 # Admin impersonation protocol
 
-A MUSTER super admin can open a **read-only, time-boxed, reason-bound** session to see what one
+A CavScope super admin can open a **read-only, time-boxed, reason-bound** session to see what one
 user sees. This document is the protocol: what it does, what it deliberately cannot do, and what
 gets recorded.
 
@@ -17,7 +17,7 @@ super-admin-only `SECURITY DEFINER` reads to return one specific user's view.
 The alternative — generating a real session for the target, which is what most products mean by
 "impersonate" — was rejected for three reasons:
 
-| | Session swap | What MUSTER does |
+| | Session swap | What CavScope does |
 |---|---|---|
 | Attribution | a real credential exists for someone else's account; RLS and the logs cannot tell it from that person signing in | the admin is always the admin; the target's account is never authenticated |
 | Revocation | the token stays valid until it expires | authorisation is re-checked on every call, so ending a session cuts access off on the next one |

@@ -2,7 +2,7 @@
 // be tested without a resolver. index.ts does the lookups and hands the answers
 // in; everything below is a function of its arguments.
 //
-// Why this family exists: MUSTER checked 31 things and none of them was whether
+// Why this family exists: CavScope checked 31 things and none of them was whether
 // someone can send mail as the client's domain. Missing SPF and DMARC is the
 // most common way a business gets impersonated, and it is invisible from HTTP,
 // which is why a scanner built entirely on fetch() never saw it.

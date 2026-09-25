@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// End-to-end verification of the two GoTrue flows MUSTER depends on: the
+// End-to-end verification of the two GoTrue flows CavScope depends on: the
 // redirect allowlist, and password recovery from link to new-password sign-in.
 //
 // Why this exists as a function rather than a script: nothing outside Supabase's
@@ -289,7 +289,7 @@ Deno.serve(async (req: Request) => {
       // these are missing, the dashboard is still serving GoTrue's stock
       // template and the pasted-from-repo step never happened.
       const branded = html.includes("muster-emblem.png") &&
-        html.includes("MUSTER is website assurance by");
+        html.includes("CavScope is website assurance by");
 
       // Pull the redirect target out of the rendered confirmation link.
       let redirectOrigin = "";
@@ -307,8 +307,8 @@ Deno.serve(async (req: Request) => {
         step: "email_template:branding",
         ok: branded,
         detail: branded
-          ? `subject "${subject}" -- body is the MUSTER template`
-          : `subject "${subject}" -- body is NOT the MUSTER template; paste supabase/auth-email-templates/ into the dashboard`,
+          ? `subject "${subject}" -- body is the CavScope template`
+          : `subject "${subject}" -- body is NOT the CavScope template; paste supabase/auth-email-templates/ into the dashboard`,
       });
       steps.push({
         step: "email_template:redirect_target",

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const FROM = "MUSTER <team@mail.muster.partners>";
+const FROM = "CavScope <team@mail.muster.partners>";
 const LOGO_URL = "https://hjowfnzpomzxazmzywxw.supabase.co/storage/v1/object/public/brand-assets/muster-logo.jpg";
 
 async function getSecret(name: string): Promise<string> {
@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
   const companyLabel = esc(company_name || "your business");
   const siteLabel = esc(site_url);
 
-  const text = `You're confirmed for a free MUSTER scan
+  const text = `You're confirmed for a free CavScope scan
 
 Hi ${firstName},
 
@@ -57,11 +57,11 @@ Your site is queued: ${site_url}
 What happens next:
 - Your site is queued for scanning.
 - We'll follow up at this address with your results.
-- You'll get first access to bring MUSTER into ${company_name || "your business"} once it's ready to purchase.
+- You'll get first access to bring CavScope into ${company_name || "your business"} once it's ready to purchase.
 
 No card, no obligation. Just reply to this email if you have questions.
 
-- The MUSTER team`;
+- The CavScope team`;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -77,7 +77,7 @@ No card, no obligation. Just reply to this email if you have questions.
   <!-- Header / logo on the logo's own black field -->
   <tr>
     <td align="center" style="background-color:#0B0C0E; padding:28px 24px 22px; border-radius:6px 6px 0 0;">
-      <img src="${LOGO_URL}" width="96" alt="MUSTER" style="display:block; width:96px; height:96px; border:0;">
+      <img src="${LOGO_URL}" width="96" alt="CavScope" style="display:block; width:96px; height:96px; border:0;">
     </td>
   </tr>
 
@@ -92,7 +92,7 @@ No card, no obligation. Just reply to this email if you have questions.
   <tr>
     <td style="background-color:#1B2027; border-left:1px solid #2E3540; border-right:1px solid #2E3540; padding:6px 32px 8px;">
       <p style="color:#ECEFF2; font-size:16px; line-height:1.6; margin:22px 0 0;">Hi ${esc(firstName)},</p>
-      <p style="color:#ECEFF2; font-size:16px; line-height:1.6; margin:14px 0 0;">You're confirmed for a free MUSTER scan of</p>
+      <p style="color:#ECEFF2; font-size:16px; line-height:1.6; margin:14px 0 0;">You're confirmed for a free CavScope scan of</p>
       <p style="color:#D98E2F; font-size:17px; font-family:'Courier New',monospace; line-height:1.5; margin:6px 0 20px; word-break:break-all;">${siteLabel}</p>
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#20262E; border:1px solid #2E3540; border-radius:4px; margin-bottom:20px;">
@@ -100,7 +100,7 @@ No card, no obligation. Just reply to this email if you have questions.
           <p style="color:#8B94A0; font-size:11px; font-family:'Courier New',monospace; letter-spacing:0.06em; margin:0 0 10px;">WHAT HAPPENS NEXT</p>
           <p style="color:#ECEFF2; font-size:14.5px; line-height:1.7; margin:0 0 8px;">&bull;&nbsp; Your site is queued for scanning.</p>
           <p style="color:#ECEFF2; font-size:14.5px; line-height:1.7; margin:0 0 8px;">&bull;&nbsp; We'll follow up at this address with your results.</p>
-          <p style="color:#ECEFF2; font-size:14.5px; line-height:1.7; margin:0;">&bull;&nbsp; You'll get first access to bring MUSTER into ${companyLabel} once it's ready to purchase.</p>
+          <p style="color:#ECEFF2; font-size:14.5px; line-height:1.7; margin:0;">&bull;&nbsp; You'll get first access to bring CavScope into ${companyLabel} once it's ready to purchase.</p>
         </td></tr>
       </table>
 
@@ -111,7 +111,7 @@ No card, no obligation. Just reply to this email if you have questions.
   <!-- Footer -->
   <tr>
     <td style="background-color:#1B2027; border:1px solid #2E3540; border-top:none; border-radius:0 0 6px 6px; padding:16px 32px 22px;">
-      <p style="color:#5B6169; font-size:12px; line-height:1.6; margin:0;">&mdash; The MUSTER team<br>28 Foot Systems</p>
+      <p style="color:#5B6169; font-size:12px; line-height:1.6; margin:0;">&mdash; The CavScope team<br>28 Foot Systems</p>
     </td>
   </tr>
 
@@ -132,7 +132,7 @@ No card, no obligation. Just reply to this email if you have questions.
     body: JSON.stringify({
       from: FROM,
       to: [email],
-      subject: "You're confirmed — MUSTER beta scan",
+      subject: "You're confirmed — CavScope beta scan",
       text,
       html,
     }),

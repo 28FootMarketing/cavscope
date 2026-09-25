@@ -1,6 +1,6 @@
 // AUTH-001..005: the login surface, read from outside.
 //
-// MUSTER does not sign in to anything. It holds no client credentials, submits
+// CavScope does not sign in to anything. It holds no client credentials, submits
 // no form, and never sends a password -- see docs/SCAN-RULES.md, "No
 // authenticated crawl". What it can do is read the login page the way any
 // anonymous visitor can, because a login page is public by definition: it is
@@ -374,7 +374,7 @@ export function evaluateAdminProbes(input: {
         page_url: url, location: r.probe.path, confidence: "high", evidence_keys: [input.evidenceKey] });
     } else {
       out.push({ rule_id: "AUTH-004", severity: "low", title: "CMS administrator login is reachable at its default path",
-        detail: `The ${r.probe.product} administrator login answers at ${url}. This is normal for ${r.probe.product} and not a vulnerability on its own; it is where automated password guessing is aimed. MUSTER does not sign in, so it cannot see whether multi-factor authentication or login rate limiting is enforced -- confirm both.`,
+        detail: `The ${r.probe.product} administrator login answers at ${url}. This is normal for ${r.probe.product} and not a vulnerability on its own; it is where automated password guessing is aimed. CavScope does not sign in, so it cannot see whether multi-factor authentication or login rate limiting is enforced -- confirm both.`,
         page_url: url, location: r.probe.path, confidence: "high", evidence_keys: [input.evidenceKey] });
     }
   }

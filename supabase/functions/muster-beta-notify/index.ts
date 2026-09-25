@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
   const { full_name, company_name, industry, email, site_url, marketing_consent, created_at, offer_deadline } = payload;
 
   const lines = [
-    "📡 <b>MUSTER — new beta signup</b>",
+    "📡 <b>CavScope — new beta signup</b>",
     "",
     `<b>Name:</b> ${escapeForTelegram(full_name)}`,
     `<b>Company:</b> ${escapeForTelegram(company_name)}`,

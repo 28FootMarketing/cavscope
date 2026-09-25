@@ -1,10 +1,16 @@
-# Vulnerability disclosure policy for MUSTER (muster.partners) and the
-# app.muster.partners workspace, operated by After Today, LLC (DBA 28 Foot
-# Systems).
+# Vulnerability disclosure policy for CavScope -- served today at
+# muster.partners and app.muster.partners, and (once DNS/Vercel point there)
+# at cavscope.28footsystems.com, since /.well-known/ is shared across every
+# host in middleware.js -- operated by After Today, LLC (DBA 28 Foot Systems).
 #
 # RFC 9116. Expires is mandatory and this file stops being valid on that date --
 # renew it before then rather than after, because an expired security.txt is
 # treated as no policy at all.
+#
+# Contact/Canonical/Policy below point at the live muster.partners deployment.
+# Revisit Canonical once cavscope.28footsystems.com is the primary domain in
+# fact, not just in code -- RFC 9116 expects Canonical to match the host it is
+# actually fetched from.
 
 Contact: mailto:security@mail.muster.partners
 Expires: 2027-09-08T00:00:00.000Z

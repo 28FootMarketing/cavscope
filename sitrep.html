@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER SITREP Viewer — sign in to view your organization's cited situation reports on screen." />
-  <title>MUSTER — SITREP Viewer</title>
+  <meta name="description" content="CavScope SITREP Viewer — sign in to view your organization's cited situation reports on screen." />
+  <title>CavScope — SITREP Viewer</title>
   <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
        pointing at a URL that redirects is worse than none. -->
-  <link rel="canonical" href="https://www.muster.partners/sitrep">
+  <link rel="canonical" href="https://cavscope.28footsystems.com/sitrep">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -231,7 +231,7 @@
 
   <div class="topbar" id="topbar" hidden>
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SITREP VIEWER</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">CavScope <small>/ SITREP VIEWER</small></div>
       <div class="topbar-right">
         <select class="picker" id="websitePicker" onchange="onWebsiteChange(this.value)" data-tooltip="Switch which of your organization's websites this report covers." hidden></select>
         <select class="picker" id="historyPicker" onchange="onHistoryChange(this.value)" data-tooltip="View a previous SITREP for this website, to compare posture over time." hidden></select>
@@ -245,9 +245,9 @@
 
     <div class="auth-gate" id="authGate">
       <h1>SITREP Viewer</h1>
-      <p>Sign in with your MUSTER account to view your organization's situation reports on screen.</p>
+      <p>Sign in with your CavScope account to view your organization's situation reports on screen.</p>
       <form class="auth-form" id="authForm" onsubmit="return submitAuth(event)">
-        <label for="authEmail" data-tooltip="The email address your MUSTER account uses.">Email</label>
+        <label for="authEmail" data-tooltip="The email address your CavScope account uses.">Email</label>
         <input type="email" id="authEmail" placeholder="you@company.com" required>
         <label for="authPassword" data-tooltip="Optional — leave blank to receive a one-time magic sign-in link instead.">Password (optional)</label>
         <input type="password" id="authPassword" placeholder="Leave blank for a magic link">
@@ -311,7 +311,7 @@
         // The result is deliberately not inspected. "Signups not allowed" and a
         // rate-limit refusal both disclose whether the address has an account,
         // so every outcome gets the same confirmation.
-        msg.textContent = `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
+        msg.textContent = `If ${email} has a CavScope account, a sign-in link is on its way. Open it on this device to finish signing in.`;
         return false;
       }
       const { error } = await sb.auth.signInWithPassword({ email, password });
@@ -338,7 +338,7 @@
     const websites = (workspace.organizations || []).flatMap(o => (o.websites || []).map(w => ({ ...w, orgName: o.name })));
     const picker = document.getElementById('websitePicker');
     if (!websites.length) {
-      renderEmpty('No websites yet', 'Add a website inside the MUSTER workspace to start generating SITREPs.');
+      renderEmpty('No websites yet', 'Add a website inside the CavScope workspace to start generating SITREPs.');
       return;
     }
     picker.hidden = false;
@@ -370,7 +370,7 @@
       const sitrep = await rpc('muster_latest_sitrep', { p_website_id: currentWebsiteId });
       await loadHistory(currentWebsiteId, sitrep ? sitrep.id : null);
       if (!sitrep) {
-        renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the MUSTER workspace.');
+        renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the CavScope workspace.');
         return;
       }
       renderSitrep(sitrep);
@@ -413,7 +413,7 @@
 
   // What every rendering of a report ends with. The report model carries the
   // same sentence; this copy exists only for reports generated before it did.
-  const DEFAULT_DISCLAIMER = "MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.";
+  const DEFAULT_DISCLAIMER = "CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.";
 
   function renderSitrep(sitrep) {
     const root = document.getElementById('reportRoot');
@@ -511,7 +511,7 @@
             <td><span class="sev-chip sev-${i.assessment === 'not_met' ? 'high' : 'medium'}">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
           </tr>`).join('')}</tbody>
         </table></div>` : '<p class="law-lede">Every derived control is met or not assessed.</p>'}
-        ${(controls.items || []).length < (Number(controls.not_met) || 0) + (Number(controls.partial) || 0) ? `<p class="law-lede">Showing ${(controls.items || []).length} of ${(Number(controls.not_met) || 0) + (Number(controls.partial) || 0)} controls that are not fully met; the rest are in the MUSTER workspace under Controls.</p>` : ''}
+        ${(controls.items || []).length < (Number(controls.not_met) || 0) + (Number(controls.partial) || 0) ? `<p class="law-lede">Showing ${(controls.items || []).length} of ${(Number(controls.not_met) || 0) + (Number(controls.partial) || 0)} controls that are not fully met; the rest are in the CavScope workspace under Controls.</p>` : ''}
       </section>` : ''}
 
       ${renderJurisdiction(s.jurisdiction)}
@@ -535,7 +535,7 @@
         </div>
       </section>` : ''}
 
-      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
+      <footer class="disclaimer" data-tooltip="CavScope assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
         ${escapeHtml(report.disclaimer || DEFAULT_DISCLAIMER)}
         ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation.">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
       </footer>
@@ -590,11 +590,11 @@
 
     const noneHtml = none.length ? `
       <div class="law-group">
-        <h3 data-tooltip="Every check MUSTER maps to these passed on this date. That is evidence about those checks, not a determination of compliance.">No open findings on the mapped checks (${none.length})</h3>
-        <p class="law-group-note">The checks MUSTER maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>
+        <h3 data-tooltip="Every check CavScope maps to these passed on this date. That is evidence about those checks, not a determination of compliance.">No open findings on the mapped checks (${none.length})</h3>
+        <p class="law-group-note">The checks CavScope maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>
         ${none.map(l => `<div class="law">
           <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
-          <div class="law-meta"><span data-tooltip="The MUSTER checks mapped to this entry.">Checks:</span> <span class="mono-cell">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}</div>
+          <div class="law-meta"><span data-tooltip="The CavScope checks mapped to this entry.">Checks:</span> <span class="mono-cell">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}</div>
         </div>`).join('')}
       </div>` : '';
 
@@ -604,7 +604,7 @@
         <p class="law-group-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so laws whose checks depend on it are listed here rather than as passed.' : ''}</p>
         ${na.map(l => `<div class="law">
           <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
-          <div class="law-meta">${l.not_assessed_reason === 'no_mapped_check' ? 'No MUSTER check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}</div>
+          <div class="law-meta">${l.not_assessed_reason === 'no_mapped_check' ? 'No CavScope check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}</div>
         </div>`).join('')}
       </div>` : '';
 

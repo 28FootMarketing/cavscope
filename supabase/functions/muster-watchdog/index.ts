@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Self-healing PRD-001 (.planning/selfheal/prds/PRD-001-incident-intake-and-watchdog.md):
-// a fixed battery of cheap, read-only checks against MUSTER's own operational
+// a fixed battery of cheap, read-only checks against CavScope's own operational
 // data, run every 10 minutes. Anything anomalous is reported through
 // public.muster_engine_report_incident, which dedupes by fingerprint so a
 // repeated signal bumps an existing muster.incidents row instead of opening
@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
   // Checks 2-5: business-data anomalies, all via one RPC that returns a
   // structured summary (keeps this function free of raw SQL against
   // business tables -- it only ever calls RPCs, same as every other
-  // MUSTER client).
+  // CavScope client).
   checksRun.push("scan_silent_failure", "commercial_grant_stuck", "alert_dead_letter", "engine_error_spike", "control_register_failure");
   {
     const { data: summary, error } = await db.rpc("muster_engine_watchdog_summary");

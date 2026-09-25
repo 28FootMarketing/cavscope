@@ -54,6 +54,21 @@ const EVERY_ROUTE: Array<[string, string]> = [
   ["https://sitrep.muster.28footsystems.com/", "sitrep.muster.28footsystems.com"],
   ["https://sitrep.muster.28footsystems.com/sample", "sitrep.muster.28footsystems.com"],
   ["https://muster.28footsystems.com/", "muster.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/", "cavscope.28footsystems.com"],
+  ["https://www.cavscope.28footsystems.com/", "www.cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/privacy", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/onboarding", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/sitrep", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/sitrep/sample", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/beta", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/app", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/admin", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/signin", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/reset", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/robots.txt", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/sitemap.xml", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/.well-known/security.txt", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/assets/favicon-32.png", "cavscope.28footsystems.com"],
 ];
 
 test("every route carries every security header", () => {
@@ -171,4 +186,49 @@ test("a trailing slash resolves the same as no trailing slash", () => {
   assert.equal(rewriteTarget(call("https://muster.partners/privacy/", "muster.partners")), "/privacy.html");
   assert.equal(rewriteTarget(call("https://muster.partners/onboarding/", "muster.partners")), "/onboarding.html");
   assert.equal(rewriteTarget(call("https://muster.partners/beta/", "muster.partners")), "/beta.html");
+});
+
+// cavscope.28footsystems.com is the new brand's one host for everything --
+// see middleware.js for why it does not need the muster.partners /
+// app.muster.partners split. These pin that every required path resolves,
+// that root is marketing (not sign-in, unlike the legacy app hosts), and
+// that the legacy hosts are completely unaffected by this addition.
+test("cavscope.28footsystems.com serves every required path from one host", () => {
+  const host = "cavscope.28footsystems.com";
+  assert.equal(rewriteTarget(call(`https://${host}/`, host)), "/index.html");
+  assert.equal(rewriteTarget(call(`https://${host}/onboarding`, host)), "/onboarding.html");
+  assert.equal(rewriteTarget(call(`https://${host}/app`, host)), "/app.html");
+  assert.equal(rewriteTarget(call(`https://${host}/sitrep`, host)), "/sitrep.html");
+  assert.equal(rewriteTarget(call(`https://${host}/sitrep/sample`, host)), "/sitrep-sample.html");
+  assert.equal(rewriteTarget(call(`https://${host}/beta`, host)), "/beta.html");
+  assert.equal(rewriteTarget(call(`https://${host}/admin`, host)), "/admin.html");
+  assert.equal(rewriteTarget(call(`https://${host}/privacy`, host)), "/privacy.html");
+  assert.equal(rewriteTarget(call(`https://${host}/signin`, host)), "/signin.html");
+  assert.equal(rewriteTarget(call(`https://${host}/reset`, host)), "/signin.html");
+});
+
+test("www.cavscope.28footsystems.com is treated the same as the apex", () => {
+  assert.equal(
+    rewriteTarget(call("https://www.cavscope.28footsystems.com/", "www.cavscope.28footsystems.com")),
+    "/index.html",
+  );
+});
+
+test("cavscope.28footsystems.com gets its own merged robots.txt", () => {
+  const res = call("https://cavscope.28footsystems.com/robots.txt", "cavscope.28footsystems.com");
+  assert.equal(rewriteTarget(res), "/robots-cavscope.txt");
+});
+
+test("cavscope.28footsystems.com does not default unknown paths to sign-in", () => {
+  // Unlike the legacy app hosts, root here is marketing, so an unmatched path
+  // must fall through to a real static file (or 404), not silently become
+  // the sign-in gate.
+  const res = call("https://cavscope.28footsystems.com/nonexistent-page", "cavscope.28footsystems.com");
+  assert.equal(rewriteTarget(res), null);
+});
+
+test("adding cavscope.28footsystems.com leaves the legacy hosts' routing untouched", () => {
+  assert.equal(rewriteTarget(call("https://muster.partners/", "muster.partners")), "/index.html");
+  assert.equal(rewriteTarget(call("https://app.muster.partners/", "app.muster.partners")), "/signin.html");
+  assert.equal(rewriteTarget(call("https://app.muster.partners/app", "app.muster.partners")), "/app.html");
 });

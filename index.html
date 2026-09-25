@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER by 28 Foot Systems — continuous website assurance for leadership. 54 checks across security, email authentication, login pages, accessibility, privacy and AI governance, every finding cited to hashed evidence." />
-  <title>MUSTER — Website Assurance Before Someone Else Audits You</title>
-  <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
-       pointing at a URL that redirects is worse than none. -->
-  <link rel="canonical" href="https://www.muster.partners/">
+  <meta name="description" content="CavScope by 28 Foot Systems — continuous website assurance for leadership. 54 checks across security, email authentication, login pages, accessibility, privacy and AI governance, every finding cited to hashed evidence." />
+  <title>CavScope — Website Assurance Before Someone Else Audits You</title>
+  <!-- cavscope.28footsystems.com is the canonical production domain; the apex
+       serves directly there (no www redirect, unlike muster.partners). This
+       same file is also still served, unchanged, on muster.partners and the
+       *.muster.28footsystems.com hosts kept alive for links already in the
+       wild -- see middleware.js. -->
+  <link rel="canonical" href="https://cavscope.28footsystems.com/">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -536,12 +539,12 @@
 
 <div class="statusbar">
   <div class="wrap statusbar-inner">
-    <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ WEBSITE ASSURANCE</small></div>
+    <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">CavScope <small>/ WEBSITE ASSURANCE</small></div>
     <div class="statusbar-meta">
-      <span data-tooltip="MUSTER re-scans on a schedule and tracks findings over time, rather than producing a one-time report.">STATUS <b>MONITORING</b></span>
-      <span data-tooltip="SITREP: Situation Report — the plain-English executive summary MUSTER generates from its findings.">REPORT <b>SITREP</b></span>
+      <span data-tooltip="CavScope re-scans on a schedule and tracks findings over time, rather than producing a one-time report.">STATUS <b>MONITORING</b></span>
+      <span data-tooltip="SITREP: Situation Report — the plain-English executive summary CavScope generates from its findings.">REPORT <b>SITREP</b></span>
       <a class="nav-link pricing-link" href="#pricing" data-tooltip="Jump to the live public pricing for the tiers currently offered.">Pricing</a>
-      <a class="nav-link" href="https://app.muster.partners/" data-tooltip="Sign in to your MUSTER workspace, or continue with demo data from there.">Open Workspace →</a>
+      <a class="nav-link" id="workspaceCtaNav" href="https://app.muster.partners/" data-tooltip="Sign in to your CavScope workspace, or continue with demo data from there.">Open Workspace →</a>
     </div>
   </div>
 </div>
@@ -553,19 +556,19 @@
       <p class="eyebrow">Operational Briefing — Website Assurance Status</p>
       <h1>Your website is the one thing anyone can audit <em>without asking you first</em></h1>
       <p class="lede strong">A client, a regulator, a plaintiff's attorney, or a competitor can inspect your public web presence right now.</p>
-      <p class="lede">They do not need your permission and they do not need to tell you. MUSTER inspects it first, on a schedule, and hands you the evidence.</p>
+      <p class="lede">They do not need your permission and they do not need to tell you. CavScope inspects it first, on a schedule, and hands you the evidence.</p>
       <p class="lede">Fifty-four checks across security, email authentication, login pages, availability, accessibility, privacy, AI governance and AI readiness. Every finding cites the exact bytes it came from, hashed and timestamped.</p>
       <p class="lede">The outcome is a SITREP: a plain-English executive report showing what is exposed, what it maps to, what to fix, and in what order.</p>
       <div class="cta-row">
         <a class="btn-primary" href="#directive" data-tooltip="Scroll to the request form at the bottom of this page.">Request Your Website Assurance SITREP →</a>
-        <span class="cta-note" data-tooltip="MUSTER assesses your site the way any anonymous visitor would. Nothing is installed and no credentials are needed.">No agents installed. No code added. Nothing to disrupt.</span>
+        <span class="cta-note" data-tooltip="CavScope assesses your site the way any anonymous visitor would. Nothing is installed and no credentials are needed.">No agents installed. No code added. Nothing to disrupt.</span>
       </div>
     </div>
 
     <div class="sitrep-panel">
       <div class="sitrep-head">
-        <span class="tag" data-tooltip="A sample organization, shown with the real codes and severities MUSTER raises, so you can see the report's shape.">Sitrep · Illustrative Excerpt</span>
-        <span class="id" data-tooltip="Internal reference ID MUSTER assigns to each generated SITREP.">SITREP&nbsp;#16</span>
+        <span class="tag" data-tooltip="A sample organization, shown with the real codes and severities CavScope raises, so you can see the report's shape.">Sitrep · Illustrative Excerpt</span>
+        <span class="id" data-tooltip="Internal reference ID CavScope assigns to each generated SITREP.">SITREP&nbsp;#16</span>
       </div>
       <div class="sitrep-body">
         <div class="sitrep-org">Sample Organization — Professional Services</div>
@@ -587,9 +590,9 @@
         </div>
 
         <div class="finding-peek">
-          <div class="fp-row"><span class="fp-code" data-tooltip="Defect code EMAIL-001. Every code MUSTER can raise is published, with what it means and how to clear it.">EMAIL&#8209;001</span><span class="fp-sev" style="background:#f6516a" data-tooltip="High severity — this is the kind of finding that becomes a real incident if left alone."></span><span class="fp-text"><b>No SPF record</b> — anyone on the internet can send mail as this domain</span></div>
-          <div class="fp-row"><span class="fp-code" data-tooltip="Defect code SEC-004. Every code MUSTER can raise is published, with what it means and how to clear it.">SEC&#8209;004</span><span class="fp-sev" style="background:#fbbf24" data-tooltip="Medium severity — worth fixing soon, not an emergency."></span><span class="fp-text"><b>No Content-Security-Policy</b> — nothing limits which scripts can run on the page</span></div>
-          <div class="fp-row"><span class="fp-code" data-tooltip="Defect code SEC-012. Every code MUSTER can raise is published, with what it means and how to clear it.">SEC&#8209;012</span><span class="fp-sev" style="background:#36e2c9" data-tooltip="Low severity — a gap worth closing, not an exposure by itself."></span><span class="fp-text"><b>No security.txt</b> — a researcher who finds a flaw has no way to report it</span></div>
+          <div class="fp-row"><span class="fp-code" data-tooltip="Defect code EMAIL-001. Every code CavScope can raise is published, with what it means and how to clear it.">EMAIL&#8209;001</span><span class="fp-sev" style="background:#f6516a" data-tooltip="High severity — this is the kind of finding that becomes a real incident if left alone."></span><span class="fp-text"><b>No SPF record</b> — anyone on the internet can send mail as this domain</span></div>
+          <div class="fp-row"><span class="fp-code" data-tooltip="Defect code SEC-004. Every code CavScope can raise is published, with what it means and how to clear it.">SEC&#8209;004</span><span class="fp-sev" style="background:#fbbf24" data-tooltip="Medium severity — worth fixing soon, not an emergency."></span><span class="fp-text"><b>No Content-Security-Policy</b> — nothing limits which scripts can run on the page</span></div>
+          <div class="fp-row"><span class="fp-code" data-tooltip="Defect code SEC-012. Every code CavScope can raise is published, with what it means and how to clear it.">SEC&#8209;012</span><span class="fp-sev" style="background:#36e2c9" data-tooltip="Low severity — a gap worth closing, not an exposure by itself."></span><span class="fp-text"><b>No security.txt</b> — a researcher who finds a flaw has no way to report it</span></div>
         </div>
       </div>
       <div class="sitrep-foot">ILLUSTRATIVE — REAL CODES AND SEVERITIES, SAMPLE ORGANIZATION</div>
@@ -598,13 +601,13 @@
 
   <section class="block">
     <div class="block-head">
-      <h2>What MUSTER Checks</h2>
+      <h2>What CavScope Checks</h2>
       <span class="count" data-tooltip="The full catalog of defect codes the scan engine can raise. Every one is published.">54 checks, nine groups</span>
     </div>
     <div class="ledger">
       <div class="ledger-row" data-tooltip="HTTPS enforcement, security headers, cookie flags, mixed content, server version disclosure, and whether you publish a way to report a vulnerability."><span class="ledger-code">SEC</span><span class="ledger-text">Encryption, headers, cookies, script pinning, and disclosure policy</span><span class="ledger-cat">15 codes</span></div>
       <div class="ledger-row" data-tooltip="SPF, DMARC and MTA-STS records. Whether someone can send email that appears to come from your domain, and whether mail sent to you is required to travel encrypted."><span class="ledger-code">EMAIL</span><span class="ledger-text">Whether anyone can send mail as your domain</span><span class="ledger-cat">9 codes</span></div>
-      <div class="ledger-row" data-tooltip="Your sign-in pages, read the way any visitor sees them: whether passwords travel encrypted, whether another site can frame the form, how its cookies are protected, and whether an admin or database login sits at its default address. MUSTER never signs in and never tries a password."><span class="ledger-code">AUTH</span><span class="ledger-text">What your login pages expose before anyone signs in</span><span class="ledger-cat">5 codes</span></div>
+      <div class="ledger-row" data-tooltip="Your sign-in pages, read the way any visitor sees them: whether passwords travel encrypted, whether another site can frame the form, how its cookies are protected, and whether an admin or database login sits at its default address. CavScope never signs in and never tries a password."><span class="ledger-code">AUTH</span><span class="ledger-text">What your login pages expose before anyone signs in</span><span class="ledger-cat">5 codes</span></div>
       <div class="ledger-row" data-tooltip="Structural WCAG checks: declared language, page title, image alt text, pinch zoom, headings, form labels, and link text."><span class="ledger-code">A11Y</span><span class="ledger-text">Structural accessibility for assistive technology</span><span class="ledger-cat">7 codes</span></div>
       <div class="ledger-row" data-tooltip="Whether AI assistants and search engines can read and represent your site, and whether you have taken a stated position on AI crawlers."><span class="ledger-code">GOV</span><span class="ledger-text">AI readiness, crawl governance, and how you are represented</span><span class="ledger-cat">5 codes</span></div>
       <div class="ledger-row" data-tooltip="Whether a privacy policy is reachable, which trackers load, and where form submissions actually go."><span class="ledger-code">PRIV</span><span class="ledger-text">Privacy policy reachability, trackers, and form endpoints</span><span class="ledger-cat">3 codes</span></div>
@@ -618,7 +621,7 @@
   <section class="block">
     <div class="block-head">
       <h2>The SITREP Includes</h2>
-      <span class="count" data-tooltip="Every SITREP MUSTER generates follows this same fixed structure, in this order.">6 sections</span>
+      <span class="count" data-tooltip="Every SITREP CavScope generates follows this same fixed structure, in this order.">6 sections</span>
     </div>
     <div class="toc">
       <div class="toc-item" data-tooltip="A single 0-100 score with a green/amber/red band, meant to be read in one glance by a board or executive."><span class="toc-num">01</span><div><div class="toc-title">Posture Score</div><div class="toc-sub">One number, one band, board-ready</div></div></div>
@@ -632,7 +635,7 @@
 
   <section class="block">
     <div class="block-head"><h2>Who It Is For</h2></div>
-    <p class="roster-intro">MUSTER is built for leadership teams accountable for a public web presence they cannot personally inspect. Regardless of industry or size.</p>
+    <p class="roster-intro">CavScope is built for leadership teams accountable for a public web presence they cannot personally inspect. Regardless of industry or size.</p>
     <div class="roster">
       <span class="roster-chip" data-tooltip="Any owner accountable for the business's data and reputation, regardless of team size.">Business owners</span>
       <span class="roster-chip" data-tooltip="Agencies answerable for client websites, where one unnoticed gap affects the whole book.">Agencies</span>
@@ -654,14 +657,14 @@
     </div>
     <div>
       <p class="pull" data-tooltip="Anything reachable from the public internet is evidence that already exists, whether or not you have looked at it.">"We didn't know" stops being a position the moment somebody else can prove it was visible.</p>
-      <p class="pull-caption">— the gap MUSTER is built to close</p>
+      <p class="pull-caption">— the gap CavScope is built to close</p>
     </div>
   </section>
 
   <section class="block" id="pricing">
     <div class="block-head">
       <h2>Pricing</h2>
-      <span class="count" id="pricingCount" data-tooltip="Which plans are offered publicly is controlled from the admin console. Right now only MUSTER Partner is live.">One plan</span>
+      <span class="count" id="pricingCount" data-tooltip="Which plans are offered publicly is controlled from the admin console. Right now only CavScope Partner is live.">One plan</span>
     </div>
 
     <div class="pricing-grid" id="pricingGrid" data-visible-count="1">
@@ -669,7 +672,7 @@
       <!-- Default: Partner only. muster_public_pricing().visible can re-enable the others without a deploy. -->
       <div class="price-card" id="cardMuster" hidden>
         <div class="price-card-head">
-          <h3>MUSTER</h3>
+          <h3>CavScope</h3>
           <p class="price-purpose">We assure our own website.</p>
         </div>
         <div class="price-amount"><span class="price-num" id="musterPrice">$97</span><span class="price-cadence">/month</span></div>
@@ -688,25 +691,25 @@
           <li>Jurisdiction advisories</li>
           <li>Historical tracking and posture trend</li>
           <li>Internal users within reasonable plan limits</li>
-          <li>MUSTER / 28 Foot Systems branding</li>
+          <li>CavScope / 28 Foot Systems branding</li>
         </ul>
-        <p class="price-excludes" data-tooltip="These require the MUSTER Partner tier instead.">Does not include white-labeling, commercial client usage, client management, or removal of MUSTER branding.</p>
-        <p class="price-note" data-tooltip="We're focused on onboarding MUSTER Partner agencies and consultants right now. Standalone self-serve signup will reopen later.">Self-serve signup is paused while we onboard MUSTER Partner agencies and consultants.</p>
-        <a class="btn-primary price-cta" id="musterCta" data-tooltip="Emails us about MUSTER for your own organization — self-serve signup is paused right now.">Ask About MUSTER →</a>
+        <p class="price-excludes" data-tooltip="These require the CavScope Partner tier instead.">Does not include white-labeling, commercial client usage, client management, or removal of CavScope branding.</p>
+        <p class="price-note" data-tooltip="We're focused on onboarding CavScope Partner agencies and consultants right now. Standalone self-serve signup will reopen later.">Self-serve signup is paused while we onboard CavScope Partner agencies and consultants.</p>
+        <a class="btn-primary price-cta" id="musterCta" data-tooltip="Emails us about CavScope for your own organization — self-serve signup is paused right now.">Ask About CavScope →</a>
       </div>
 
       <div class="price-card featured" id="cardPartner">
         <span class="price-highlight">Built For Agencies &amp; Consultants</span>
         <div class="price-card-head">
-          <h3>MUSTER Partner</h3>
-          <p class="price-purpose">We use MUSTER on our clients' websites.</p>
+          <h3>CavScope Partner</h3>
+          <p class="price-purpose">We use CavScope on our clients' websites.</p>
         </div>
         <div class="price-amount"><span class="price-num" id="partnerPrice">$197</span><span class="price-cadence">/month</span></div>
         <span class="price-badge" id="partnerBadge">Founding Partner Pricing</span>
         <p class="price-allowance" id="partnerAllowance">Includes <b>5</b> active client organizations. Additional organizations: <b>$39</b>/month each.</p>
         <p class="price-lock" id="partnerLock">Locked while continuously subscribed and in good standing.</p>
         <ul class="price-features">
-          <li class="price-features-note">Everything in MUSTER, plus:</li>
+          <li class="price-features-note">Everything in CavScope, plus:</li>
           <li>White-label capability</li>
           <li>Custom branding</li>
           <li>Branded SITREPs</li>
@@ -716,16 +719,16 @@
           <li>Partner dashboard</li>
           <li>Multi-tenant client workspaces</li>
           <li>Custom brand identity</li>
-          <li>Removal of MUSTER / 28 Foot Systems customer-facing branding where appropriate</li>
+          <li>Removal of CavScope / 28 Foot Systems customer-facing branding where appropriate</li>
           <li>Custom domain or subdomain capability where technically supported</li>
           <li>Expansion billing based on active client organizations</li>
         </ul>
-        <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens a short intake so you can start your MUSTER Partner subscription.">Become a MUSTER Partner →</a>
+        <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens a short intake so you can start your CavScope Partner subscription.">Become a CavScope Partner →</a>
       </div>
 
       <div class="price-card enterprise-card" id="cardEnterprise" hidden>
         <div class="price-card-head">
-          <h3>MUSTER Enterprise</h3>
+          <h3>CavScope Enterprise</h3>
           <p class="price-purpose">Our web estate is larger or more complex.</p>
         </div>
         <div class="price-amount"><span class="price-num" data-tooltip="Enterprise pricing is scoped during discovery, not published -- it depends on how many organizations, departments, and websites are involved.">Custom Pricing</span></div>
@@ -754,18 +757,18 @@
     <div class="directive">
       <h2>Get Your Website Assurance SITREP</h2>
       <p>Know what is on your website before somebody else tells you.</p>
-      <a class="btn-primary" href="https://app.muster.partners/" data-tooltip="Sign in to your MUSTER workspace, or continue with demo data from there.">Request Your Website Assurance SITREP →</a>
+      <a class="btn-primary" id="workspaceCtaHero" href="https://app.muster.partners/" data-tooltip="Sign in to your CavScope workspace, or continue with demo data from there.">Request Your Website Assurance SITREP →</a>
     </div>
   </section>
 
   <footer>
     <div class="foot-row">
-      <div class="foot-brand">MUSTER — Website Assurance, prepared by After Today, LLC (DBA 28 Foot Systems)</div>
-      <div class="foot-disclaimer" data-tooltip="What MUSTER does and does not reach. Stated here so it is never a surprise.">Assessments cover your public web presence: response headers, HTML, and DNS. They require no credentials, render no JavaScript, and do not inspect internal systems.</div>
-      <div class="foot-disclaimer" data-tooltip="MUSTER assesses technical signals; it is not a lawyer, auditor, or certifying body.">MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.</div>
+      <div class="foot-brand">CavScope — Website Assurance, prepared by After Today, LLC (DBA 28 Foot Systems)</div>
+      <div class="foot-disclaimer" data-tooltip="What CavScope does and does not reach. Stated here so it is never a surprise.">Assessments cover your public web presence: response headers, HTML, and DNS. They require no credentials, render no JavaScript, and do not inspect internal systems.</div>
+      <div class="foot-disclaimer" data-tooltip="CavScope assesses technical signals; it is not a lawyer, auditor, or certifying body.">CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.</div>
       <div class="foot-links">
-        <a href="/privacy" data-tooltip="What MUSTER collects, which processors it passes through, and why.">Privacy</a>
-        <a href="/.well-known/security.txt" data-tooltip="Where to report a security vulnerability in MUSTER, per RFC 9116.">Security</a>
+        <a href="/privacy" data-tooltip="What CavScope collects, which processors it passes through, and why.">Privacy</a>
+        <a href="/.well-known/security.txt" data-tooltip="Where to report a security vulnerability in CavScope, per RFC 9116.">Security</a>
         <a href="/sitrep/sample" data-tooltip="A complete example SITREP built from fictional findings, covering every category and severity.">Sample SITREP</a>
       </div>
     </div>
@@ -774,6 +777,24 @@
 </div>
 
 <script>
+  // Workspace sign-in target. cavscope.28footsystems.com has no separate app
+  // host -- see middleware.js -- so the CTA should stay on this origin and go
+  // to /signin rather than hopping to app.muster.partners like it does on
+  // every other host this page is served from. This does not touch the
+  // stray-auth-fragment forwarder above in <head>: that stays pointed at
+  // app.muster.partners until Supabase's Site URL is actually cut over to the
+  // new domain -- see docs/BRAND-CUTOVER.md.
+  (function setWorkspaceCtaHref() {
+    const CAVSCOPE_HOSTS = new Set(['cavscope.28footsystems.com', 'www.cavscope.28footsystems.com']);
+    const href = CAVSCOPE_HOSTS.has(window.location.hostname)
+      ? window.location.origin + '/signin'
+      : 'https://app.muster.partners/';
+    for (const id of ['workspaceCtaNav', 'workspaceCtaHero']) {
+      const el = document.getElementById(id);
+      if (el) el.href = href;
+    }
+  })();
+
   // Seed/Fruit is an internal pricing-stage decision, not a software feature --
   // it never gates entitlements (see muster.feature_flags: those key off tier
   // alone) and visitors don't choose it. There is exactly one live price per
@@ -784,10 +805,10 @@
   // stale, price rather than blank content.
   //
   // Entitlement mapping (for when this wires into real billing/feature-flags --
-  // not implemented yet, see muster.feature_flags): MUSTER Partner corresponds to
+  // not implemented yet, see muster.feature_flags): CavScope Partner corresponds to
   // white_label_enabled + commercial_use_enabled + client_management_enabled +
   // custom_branding_enabled + custom_domain_enabled + partner_dashboard_enabled.
-  // MUSTER Enterprise corresponds to enterprise_enabled. The existing internal
+  // CavScope Enterprise corresponds to enterprise_enabled. The existing internal
   // plan axis (trial/starter/pro/enterprise/internal, set in app.html's admin
   // panel) maps tier -> plan (muster -> starter, muster_partner -> pro,
   // muster_enterprise -> enterprise); Seed/Fruit plays no part in that mapping.
@@ -797,9 +818,9 @@
   // No booking calendar, contact form, or phone number exists anywhere in this
   // project yet. This is a placeholder destination -- replace with a real
   // scheduling link (Calendly, GHL) or a confirmed monitored inbox before launch.
-  const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Enterprise%20Inquiry';
+  const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Enterprise%20Inquiry';
 
-  // MUSTER (base tier) self-serve checkout: PAUSED. Only MUSTER Partner is
+  // CavScope (base tier) self-serve checkout: PAUSED. Only CavScope Partner is
   // meant to be active right now (explicit decision). The real self-serve
   // path still exists end to end -- live Stripe Payment Links below, the
   // backend accepting them via muster-stripe-webhook/PRD-003, and
@@ -812,9 +833,9 @@
   const STRIPE_MUSTER_SEED_PAYMENT_LINK = 'https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t';
   const STRIPE_MUSTER_FRUIT_PAYMENT_LINK = 'https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u';
   const MUSTER_SELF_SERVE_PAUSED = true;
-  const MUSTER_PAUSED_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=MUSTER%20Interest';
+  const MUSTER_PAUSED_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Interest';
 
-  // MUSTER Partner/Enterprise: still sales-assisted, payment collected
+  // CavScope Partner/Enterprise: still sales-assisted, payment collected
   // inside GHL itself (native invoicing / Stripe-connect), not this Stripe
   // account. This is a placeholder GHL funnel/form URL -- swap the base
   // URL once a real one exists; keep the query params, GHL's form should
@@ -856,7 +877,7 @@
 
     const label = count === 1 ? 'One plan' : count === 2 ? 'Two plans' : 'Three plans';
     const tip = count === 1
-      ? 'Which plans are offered publicly is controlled from the admin console. Right now only MUSTER Partner is live.'
+      ? 'Which plans are offered publicly is controlled from the admin console. Right now only CavScope Partner is live.'
       : 'No hidden add-on tiers. Plans are chosen by whose websites you are assuring.';
     const countEl = document.getElementById('pricingCount');
     countEl.textContent = label;

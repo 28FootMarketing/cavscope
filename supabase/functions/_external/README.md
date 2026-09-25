@@ -3,10 +3,10 @@
 Everything here was deployed to the shared Supabase project
 (`mgtmqucaldkaxvxglguw`) from this session, for a subsystem that has **no
 repository anywhere**. It is kept here so the source exists in version control
-at all, not because MUSTER owns it.
+at all, not because CavScope owns it.
 
 `supabase/config.toml` does not declare these, and nothing in this repo deploys
-them. Do not add them to a MUSTER deploy. If the owning brand ever gets a repo,
+them. Do not add them to a CavScope deploy. If the owning brand ever gets a repo,
 move the directory there and delete it from here.
 
 | Function | Why it is here |

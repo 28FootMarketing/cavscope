@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER guided onboarding — a server-enforced, seven-step setup for your workspace." />
-  <title>MUSTER — Guided Onboarding</title>
+  <meta name="description" content="CavScope guided onboarding — a server-enforced, seven-step setup for your workspace." />
+  <title>CavScope — Guided Onboarding</title>
   <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
        pointing at a URL that redirects is worse than none. -->
-  <link rel="canonical" href="https://www.muster.partners/onboarding">
+  <link rel="canonical" href="https://cavscope.28footsystems.com/onboarding">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -208,7 +208,7 @@
 
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ GUIDED ONBOARDING</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">CavScope <small>/ GUIDED ONBOARDING</small></div>
     </div>
   </div>
 
@@ -220,13 +220,13 @@
 
     <div id="noSessionState" class="center-msg" hidden>
       <h1>Onboarding link required</h1>
-      <p>Open the invite link from your email to begin. If you've lost it, contact whoever set up your MUSTER workspace.</p>
+      <p>Open the invite link from your email to begin. If you've lost it, contact whoever set up your CavScope workspace.</p>
     </div>
 
     <div id="noOnboardingState" class="center-msg" hidden>
       <h1>Nothing to onboard</h1>
       <p>Your onboarding is already complete, or there's no guided setup in progress for this account.</p>
-      <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+      <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real CavScope workspace.">Go to your workspace →</a>
     </div>
 
     <div id="fatalState" class="center-msg" hidden>
@@ -470,7 +470,7 @@
     return `
       <div class="step-card">
         <h2>Step 4 of 7 — Set your risk appetite</h2>
-        <p class="step-desc">This defines what MUSTER treats as acceptable exposure for your organization.</p>
+        <p class="step-desc">This defines what CavScope treats as acceptable exposure for your organization.</p>
         <form onsubmit="return submitAppetite(event)">
           <label for="raStatement">Risk appetite statement <span class="hint" id="raCount">(min 40 characters)</span></label>
           <textarea id="raStatement" rows="4" required
@@ -558,7 +558,7 @@
       <div class="step-card">
         <h2>Step 6 of 7 — Run your first scan</h2>
         <p class="step-desc" id="scanStatus">Queuing your first scan…</p>
-        <div class="scan-pulse" data-tooltip="MUSTER is fetching and checking your site right now. This usually takes under two minutes."></div>
+        <div class="scan-pulse" data-tooltip="CavScope is fetching and checking your site right now. This usually takes under two minutes."></div>
       </div>`;
   }
   function clearScanPoll() {
@@ -629,7 +629,7 @@
       <div class="step-card done-card">
         <h2>You're all set</h2>
         <p class="step-desc">Onboarding is complete. Your workspace is live and scanning on the cadence you set.</p>
-        <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+        <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real CavScope workspace.">Go to your workspace →</a>
       </div>`;
   }
 

@@ -4,6 +4,7 @@
     "docs/SCAN-RULES.md": "public",
     "docs/GLOSSARY.md": "public",
     "docs/BACKEND.md": "internal",
+    "docs/BRAND-CUTOVER.md": "internal",
     "docs/CUTOVER.md": "internal",
     "docs/EMAIL.md": "internal",
     "docs/EMAIL-INVENTORY.md": "internal",

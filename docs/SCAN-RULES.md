@@ -1,4 +1,4 @@
-# MUSTER scan rules
+# CavScope scan rules
 
 Every defect code the engine can raise, by audit area. **Live on `hjowfnzpomzxazmzywxw` as of
 2026-09-25: 57 rules, 51 active, 6 inactive.** `GOV-006`..`GOV-008` (applied directly to the
@@ -276,7 +276,7 @@ first of them is what broke the control register on 2026-09-16 -- a 30-character
 | `ai-generated-content-undisclosed` | low | AI-generated content shown without disclosure | California SB 942 | **no** |
 | `ai-crawler-directives-missing` | info | No AI-crawler policy in robots.txt / llms.txt | — | yes |
 
-**These are disclosure checks, not eligibility rulings.** MUSTER reports that a site appears to use
+**These are disclosure checks, not eligibility rulings.** CavScope reports that a site appears to use
 automated decision-making or a chatbot and publishes no disclosure. Whether a given operator is in
 scope of a given statute is a question for the client's counsel, and the finding text says so.
 
@@ -364,7 +364,7 @@ appears in the register on the next scan without any other change.
 
 A homepage that answers **401, 403 or 429** raises `AVAIL-003`, not `AVAIL-001`. The server is
 running and declined the request -- commonly a WAF, CDN bot filter or rate limiter rejecting
-`MUSTER-Scanner/1.0`. A 404 homepage is genuinely broken and a 5xx is genuinely an outage, so both
+`CavScope-Scanner/1.0`. A 404 homepage is genuinely broken and a 5xx is genuinely an outage, so both
 stay on `AVAIL-001`.
 
 This exists because a real prospect scan reported a live site as a critical outage and told the
@@ -375,7 +375,7 @@ page the engine never read.
 `AVAIL-003` keeps **critical** severity, which looks wrong and is not. Severity drives posture
 (critical 25, high 10, medium 4, low 1, off 100; green at 85), so filing a refused scan as low
 would score an unreadable site 99 and render it **green** -- a clean bill of health for a site
-MUSTER could not read. What changed is the claim, not the weight: the finding now says the scan
+CavScope could not read. What changed is the claim, not the weight: the finding now says the scan
 produced no assessment. One request cannot distinguish bot protection from a 403 served to
 everyone, so the remediation answers both readings.
 
@@ -476,7 +476,7 @@ That last row is the distinction to hold onto when reading a quiet rule: **no fi
 evaluation look identical in a report and are not the same thing.** The evidence rows are what
 separate them, which is why a DNS lookup is recorded even when it returns nothing.
 
-The finding on `SEC-014` is against MUSTER's own marketing site, which is the correct outcome.
+The finding on `SEC-014` is against CavScope's own marketing site, which is the correct outcome.
 Its remediation is not a one-liner: `index.html` pins a floating major
 (`@supabase/supabase-js@2`), and a hash cannot be taken of a file that is meant to change. Pinning
 an exact version comes first, and `SEC-014`'s remediation text says so.
@@ -491,7 +491,7 @@ pinned by `tests/scan/hardening.test.ts`, which treats it as the most important 
 Three things about this that matter when a client asks:
 
 **A mapping is not a test.** Citing `A02:2025` says the finding belongs to that category. It does
-not say MUSTER tests the category. The engine is HTTP-native with no browser and no authenticated
+not say CavScope tests the category. The engine is HTTP-native with no browser and no authenticated
 crawl, so injection, broken access control and authentication are out of reach by construction and
 always will be under this architecture. The register states the same limit on every row.
 
@@ -501,7 +501,7 @@ in IDENTIFY: supply chain became `GV.SC` under the new GOVERN function. A prospe
 working in 2.0 could not have reconciled it.
 
 **None of this is a SOC 2 opinion.** A SOC 2 report is issued by a licensed CPA firm after an
-examination. What MUSTER produces is continuous, timestamped, independently collected evidence a
+examination. What CavScope produces is continuous, timestamped, independently collected evidence a
 client hands to that firm, plus readiness signal between audits. Route the attestation question to
 the client's auditor.
 

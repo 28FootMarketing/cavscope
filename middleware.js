@@ -1,20 +1,32 @@
 import { rewrite, next } from '@vercel/functions';
 
-// Routes each MUSTER host to its own static file. vercel.json's declarative
+// Routes each CavScope host to its own static file. vercel.json's declarative
 // rewrites cannot branch on the Host header (only real code can), so this uses
 // Vercel's Routing Middleware instead.
 //
-// Two host families are served:
+// Three host families are served:
 //
-//   muster.partners                  the main site. Paths, not subdomains:
-//                                    /, /onboarding, /sitrep, /sitrep/sample,
-//                                    /beta, /privacy
+//   cavscope.28footsystems.com       the current brand's one host, path-routed
+//                                    for everything: /, /onboarding, /sitrep,
+//                                    /sitrep/sample, /beta, /privacy, /signin,
+//                                    /app, /admin, /reset. See the block below
+//                                    for why this one host can do what the
+//                                    legacy pair below needed two hosts for.
+//   muster.partners                  the previous brand's main site. Paths,
+//                                    not subdomains: /, /onboarding, /sitrep,
+//                                    /sitrep/sample, /beta, /privacy
 //   *.muster.28footsystems.com       the original subdomain layout, still live
 //
-// The subdomain hosts are deliberately kept working. Magic-link emails already
-// sent point at app.muster.28footsystems.com/app, and onboarding invites are in
-// people's inboxes; retiring those hosts would strand every link already
-// delivered. They can be dropped once nothing in the wild references them.
+// The muster.partners / *.muster.28footsystems.com hosts are deliberately kept
+// working, unchanged, alongside the new domain -- not redirected away from.
+// Magic-link emails already sent point at app.muster.28footsystems.com/app,
+// and onboarding invites are in people's inboxes; retiring those hosts would
+// strand every link already delivered. They can be dropped once nothing in
+// the wild references them. See docs/BRAND-CUTOVER.md for what still has to
+// change outside this repo (DNS, the Vercel project domain, Supabase's Site
+// URL and redirect allowlist) before cavscope.28footsystems.com actually
+// resolves in production -- this file is ready for that day, not proof it
+// has arrived.
 
 // Trailing slashes are stripped so /onboarding and /onboarding/ resolve the
 // same. '' is kept meaning root.
@@ -112,6 +124,65 @@ export default function middleware(request) {
   // Sitemap likewise: it is one file describing muster.partners, and the app
   // hosts have their own robots.txt below rather than sharing this one.
   if (path === '/sitemap.xml') return secureNext();
+
+  // ---- cavscope.28footsystems.com: one host, every path ---------------------
+  //
+  // The legacy pair below splits marketing (muster.partners) from sign-in and
+  // the workspace (app.muster.partners) because a Supabase session is stored
+  // per-origin -- split them and a password sign-in appears to succeed, then
+  // the workspace loads signed-out. This host does not need that split:
+  // signin.html and app.html already derive every redirect from
+  // window.location.origin (WORKSPACE_URL, RESET_URL, admin.html's bounce to
+  // '/'), so serving marketing, sign-in, the workspace and the console from
+  // one origin costs no page changes and removes the reason for the split
+  // entirely, rather than reintroducing it under a new name.
+  if (host === 'cavscope.28footsystems.com' || host === 'www.cavscope.28footsystems.com') {
+    // One robots.txt covering both the marketing paths and the auth-gated
+    // ones -- robots.txt and robots-app.txt merged, because there is no
+    // second host here to carry robots-app.txt's "disallow everything".
+    if (path === '/robots.txt') {
+      return secureRewrite(new URL('/robots-cavscope.txt', request.url));
+    }
+    if (isUnder(path, '/onboarding')) {
+      return secureRewrite(new URL('/onboarding.html', request.url));
+    }
+    if (isUnder(path, '/sitrep')) {
+      // The one static, no-auth, fictional SITREP. Everything else under
+      // /sitrep is the signed-in, tenant-scoped viewer.
+      if (path === '/sitrep/sample') {
+        return secureRewrite(new URL('/sitrep-sample.html', request.url));
+      }
+      return secureRewrite(new URL('/sitrep.html', request.url));
+    }
+    if (isUnder(path, '/privacy')) {
+      return secureRewrite(new URL('/privacy.html', request.url));
+    }
+    if (isUnder(path, '/beta')) {
+      return secureRewrite(new URL('/beta.html', request.url));
+    }
+    if (isUnder(path, '/app')) {
+      return secureRewrite(new URL('/app.html', request.url));
+    }
+    // The platform console. Not a second gate -- admin.html holds no role
+    // check of its own; muster_admin_console() raises 42501 for anyone who
+    // is not a super admin, and the page renders whatever the database allows.
+    if (isUnder(path, '/admin')) {
+      return secureRewrite(new URL('/admin.html', request.url));
+    }
+    if (path === '/') {
+      return secureRewrite(new URL('/index.html', request.url));
+    }
+    // /signin is the explicit sign-in gate; /reset is the password-reset
+    // email's redirect target, handled by signin.html's own type=recovery
+    // branch -- there is no reset.html, same as the legacy app hosts.
+    if (path === '/signin' || path === '/reset') {
+      return secureRewrite(new URL('/signin.html', request.url));
+    }
+    // Anything else falls through to the static file of that name, same as
+    // muster.partners below -- an unknown path on this host is a 404, not a
+    // silent bounce to the sign-in page.
+    return secureNext();
+  }
 
   // ---- muster.partners: the main site, path-routed --------------------------
   if (host === 'muster.partners' || host === 'www.muster.partners') {

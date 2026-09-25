@@ -6,7 +6,7 @@
 // Why these three: the scanner already inventories third-party scripts (TP-001)
 // and already resolves DNS (EMAIL-*), so all three are a few lines of logic on
 // machinery that exists. They close the gaps named in docs/SCAN-RULES.md's "what
-// the engine does not check", and SEC-014 is the only rule MUSTER has that
+// the engine does not check", and SEC-014 is the only rule CavScope has that
 // produces direct evidence for OWASP A03:2025 Software Supply Chain Failures,
 // which is new at #3 in the 2025 Top 10.
 

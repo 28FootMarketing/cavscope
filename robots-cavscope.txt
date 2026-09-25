@@ -1,0 +1,54 @@
+# cavscope.28footsystems.com -- one host serving both the public marketing
+# site and the signed-in application. Merges what robots.txt and
+# robots-app.txt do separately for muster.partners / app.muster.partners.
+#
+# /onboarding, /sitrep (except the sample), /app, /admin and /signin are all
+# sign-in gates or tenant-scoped pages that return the signed-out state to a
+# crawler; indexing them would put an empty gate in search results under a
+# title that promises a report or a workspace. Longest-match wins, so the
+# Allow below beats the Disallow above it.
+
+User-agent: *
+Disallow: /onboarding
+Disallow: /sitrep
+Disallow: /app
+Disallow: /admin
+Disallow: /signin
+Allow: /sitrep/sample
+
+# AI crawlers, addressed explicitly rather than by silence -- same position
+# as robots.txt, for the same reason: CavScope's own GOV-004 rule reports
+# whether a site has taken a position on these at all, and a company selling
+# AI governance should not be the site with no stated position. The position
+# is: allow. Nothing on the public paths here is proprietary -- the product,
+# the SITREP viewer and every tenant's data live behind /app, /admin and
+# /sitrep (minus /sample), all disallowed above.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://cavscope.28footsystems.com/sitemap.xml

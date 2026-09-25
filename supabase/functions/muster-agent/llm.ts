@@ -74,7 +74,7 @@ export function isSafeLlmEndpoint(url: string): boolean {
  *
  * Accepts either the API base (`https://api.openai.com/v1`) or the full
  * endpoint, because both are what people paste, and appending to the latter
- * would produce a 404 the operator would read as "MUSTER cannot reach my
+ * would produce a 404 the operator would read as "CavScope cannot reach my
  * provider" rather than "I pasted one path segment too many".
  */
 export function chatCompletionsUrl(baseUrl: string): string {
@@ -104,7 +104,7 @@ export function buildChatHeaders(apiKey: string, openRouter: boolean, title: str
   };
   // Attribution headers OpenRouter reads and everyone else ignores. Sent only
   // where they mean something, so a tenant's request carries nothing about
-  // MUSTER that their provider did not ask for.
+  // CavScope that their provider did not ask for.
   if (openRouter) {
     headers["http-referer"] = "https://muster.partners";
     headers["x-title"] = title;
@@ -158,7 +158,7 @@ export function readLlmConfig(payload: unknown, websiteLabel: string): TenantLlm
   if (p.configured !== true) {
     throw new LlmNotConfiguredError(
       `no LLM is configured for the organization that owns ${websiteLabel}. ` +
-      "MUSTER does not fall back to its own inference account: an organization executive sets an endpoint, " +
+      "CavScope does not fall back to its own inference account: an organization executive sets an endpoint, " +
       "model and API key in the workspace, or this organization stays on the deterministic generator.",
     );
   }

@@ -7,7 +7,7 @@
 // cited as docs/SCAN-RULES.md#email-authentication-7-rules and the reader lands on
 // the exact text the agent read. Chunking by token count instead would retrieve
 // fragments nobody can go verify, which defeats the point of the citation scheme
-// the rest of MUSTER already runs on.
+// the rest of CavScope already runs on.
 
 /** One embeddable section of one document. */
 export type DocChunk = {
@@ -37,7 +37,7 @@ export const MAX_CHUNK_CHARS = 6000;
 /**
  * GitHub's heading-anchor rules, as far as these documents exercise them:
  * lowercase, drop anything that is not alphanumeric / space / hyphen, spaces to
- * hyphens. Em dashes and rule codes appear in MUSTER headings, so both paths are
+ * hyphens. Em dashes and rule codes appear in CavScope headings, so both paths are
  * live -- "Email authentication — 7 rules" has to come out as
  * "email-authentication--7-rules", the same string GitHub puts in the URL, or the
  * citation links to nothing.
