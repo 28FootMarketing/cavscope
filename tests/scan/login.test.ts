@@ -28,7 +28,7 @@ const loginSrc = readFileSync(join(repoRoot, "supabase", "functions", "muster-sc
 const HOME = "https://www.example.com/";
 const HOST = "www.example.com";
 const FORM = `<form method="post" action="/session"><input name="u"><input type="password" name="p"></form>`;
-const SAFE_HEADERS = { "x-frame-options": "DENY" };
+const SAFE_HEADERS = { "x-frame-options": "DENY", "cache-control": "no-store" };
 // A homepage that is HTTPS, refuses framing and set no bad cookies: every
 // AUTH-* defect below is then worse than the homepage, so it is AUTH-*'s to raise.
 const HARDENED_HOME = { https: true, frameProtected: true, flaggedCookies: [] as string[] };
@@ -150,9 +150,9 @@ test("AUTH-001: an HTTPS page whose password form posts to HTTP", () => {
 
 test("AUTH-002: framing is judged from headers only, never from a <meta> CSP", () => {
   const meta = `<meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'">` + FORM;
-  const bare = evaluateLoginPage({ url: "https://www.example.com/login", headers: {}, setCookies: [], html: meta, evidenceKey: "k", homepage: HARDENED_HOME });
+  const bare = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "cache-control": "no-store" }, setCookies: [], html: meta, evidenceKey: "k", homepage: HARDENED_HOME });
   assert.deepEqual(bare.map((f) => f.rule_id), ["AUTH-002"]);
-  const csp = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "content-security-policy": "frame-ancestors 'self'" }, setCookies: [], html: FORM, evidenceKey: "k", homepage: HARDENED_HOME });
+  const csp = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "content-security-policy": "frame-ancestors 'self'", "cache-control": "no-store" }, setCookies: [], html: FORM, evidenceKey: "k", homepage: HARDENED_HOME });
   assert.deepEqual(csp, []);
 });
 
@@ -198,6 +198,36 @@ test("AUTH-003 does not ask for Secure on an HTTP page, where AUTH-001 already o
   assert.deepEqual(out.map((f) => f.rule_id), ["AUTH-001"]);
 });
 
+test("AUTH-006: fires when the login page sends no Cache-Control at all", () => {
+  const out = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "x-frame-options": "DENY" }, setCookies: [], html: FORM, evidenceKey: "k", homepage: HARDENED_HOME });
+  assert.deepEqual(out.map((f) => f.rule_id), ["AUTH-006"]);
+  assert.equal(out[0].severity, "medium");
+  assert.match(out[0].detail, /no Cache-Control header at all/);
+});
+
+test("AUTH-006: fires on Cache-Control that omits no-store, e.g. a bare no-cache", () => {
+  const out = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "x-frame-options": "DENY", "cache-control": "no-cache, private" }, setCookies: [], html: FORM, evidenceKey: "k", homepage: HARDENED_HOME });
+  assert.deepEqual(out.map((f) => f.rule_id), ["AUTH-006"]);
+  assert.match(out[0].detail, /sent "no-cache, private"/);
+});
+
+test("AUTH-006: does not fire once no-store is present, however it is combined with other directives", () => {
+  const out = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "x-frame-options": "DENY", "cache-control": "no-store, no-cache, must-revalidate" }, setCookies: [], html: FORM, evidenceKey: "k", homepage: HARDENED_HOME });
+  assert.deepEqual(out, []);
+});
+
+test("AUTH-006 has no homepage baseline, unlike AUTH-001..003: the same login headers fire it whether the homepage is hardened or not", () => {
+  // A homepage is meant to be cached; that has no bearing on whether the
+  // login page, specifically, may be. AUTH-001..003 would change their
+  // verdict across these two homepage objects -- AUTH-006 must not.
+  const badHome = { https: false, frameProtected: false, flaggedCookies: [] };
+  const headers = { "x-frame-options": "DENY" };
+  const withHardenedHome = evaluateLoginPage({ url: "https://www.example.com/login", headers, setCookies: [], html: FORM, evidenceKey: "k", homepage: HARDENED_HOME });
+  const withBadHome = evaluateLoginPage({ url: "https://www.example.com/login", headers, setCookies: [], html: FORM, evidenceKey: "k", homepage: badHome });
+  assert.deepEqual(withHardenedHome.map((f) => f.rule_id), ["AUTH-006"]);
+  assert.deepEqual(withBadHome.map((f) => f.rule_id), ["AUTH-006"]);
+});
+
 // --- one defect is scored once ------------------------------------------------
 
 test("an HTTP-only site is SEC-013's: its HTTP login page is not raised again as AUTH-001", () => {
@@ -216,7 +246,7 @@ test("an insecure form action is AUTH-001's even on an HTTP site, because PRIV-0
 
 test("a site with no framing protection anywhere is SEC-005's, not AUTH-002's", () => {
   const home = { https: true, frameProtected: false, flaggedCookies: [] };
-  const out = evaluateLoginPage({ url: "https://www.example.com/login", headers: {}, setCookies: [], html: FORM, evidenceKey: "k", homepage: home });
+  const out = evaluateLoginPage({ url: "https://www.example.com/login", headers: { "cache-control": "no-store" }, setCookies: [], html: FORM, evidenceKey: "k", homepage: home });
   assert.deepEqual(out, []);
 });
 
@@ -316,7 +346,8 @@ test("the engine's login section only follows chains, which are GET", () => {
 
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.7\.1";/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.9\.0";/);
   assert.match(engine, /1\.7\.0 adds AUTH-001\.\.005/);
   assert.match(engine, /1\.7\.1 stops AUTH-003 reporting wordpress_test_cookie/);
+  assert.match(engine, /1\.9\.0 adds AUTH-006/);
 });

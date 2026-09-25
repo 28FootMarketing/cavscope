@@ -1810,7 +1810,7 @@
 
           <!-- Top Level Posture Metric Cards -->
           <div class="grid-4">
-            <div class="card metric-card" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue.">
+            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'risks')" onkeydown="navigateCard(event, 'risks')" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue. Click to open the Risk Register.">
               <div class="metric-card-top">
                 <label>Risk Posture Score</label>
                 <div class="metric-icon-wrap">〽</div>
@@ -1827,12 +1827,13 @@
                 <span>Target: 95%+</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('posture')" data-tooltip="See exactly what lowered this score and which fixes raise it most.">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('posture')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('posture')" data-tooltip="See exactly what lowered this score and which fixes raise it most.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="event.stopPropagation(); copyCardLlmPrompt('posture')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
+              <span class="sr-only"> Opens the Risk Register.</span>
             </div>
 
-            <div class="card metric-card" data-tooltip="Share of compliance rules you have confirmed are working, not just documented.">
+            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'controls')" onkeydown="navigateCard(event, 'controls')" data-tooltip="Share of compliance rules you have confirmed are working, not just documented. Click to open Controls.">
               <div class="metric-card-top">
                 <label>Control Coverage</label>
                 <div class="metric-icon-wrap">▣</div>
@@ -1848,12 +1849,13 @@
                 <span>SOC 2, GDPR, WCAG</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('controls')" data-tooltip="See which controls are still unverified and what closes them.">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('controls')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('controls')" data-tooltip="See which controls are still unverified and what closes them.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="event.stopPropagation(); copyCardLlmPrompt('controls')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
+              <span class="sr-only"> Opens Controls.</span>
             </div>
 
-            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
+            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'evidence')" onkeydown="navigateCard(event, 'evidence')" data-tooltip="How much of the proof an auditor would ask for is already collected and approved. Click to open the Evidence library.">
               <div class="metric-card-top">
                 <label>Evidence Readiness</label>
                 <div class="metric-icon-wrap">⌑</div>
@@ -1869,12 +1871,13 @@
                 <span>1 in review</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('evidence')" data-tooltip="See which proof documents are still missing or awaiting review.">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('evidence')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('evidence')" data-tooltip="See which proof documents are still missing or awaiting review.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="event.stopPropagation(); copyCardLlmPrompt('evidence')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
+              <span class="sr-only"> Opens the Evidence library.</span>
             </div>
 
-            <div class="card metric-card" data-tooltip="Average completion across every open fix. Overdue items are flagged below.">
+            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'remediation')" onkeydown="navigateCard(event, 'remediation')" data-tooltip="Average completion across every open fix. Overdue items are flagged below. Click to open the Remediation schedule.">
               <div class="metric-card-top">
                 <label>Remediation Progress</label>
                 <div class="metric-icon-wrap">◎</div>
@@ -1890,9 +1893,10 @@
                 <span>4 treatments active</span>
               </div>
               <div class="card-footer-action">
-                <button class="score-feedback-trigger" onclick="openScoreExplainer('remediation')" data-tooltip="See which open fixes to prioritize to move this score fastest.">Path to 90+ & 100 ›</button>
-                <button class="btn-copy-llm" onclick="copyCardLlmPrompt('remediation')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
+                <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('remediation')" data-tooltip="See which open fixes to prioritize to move this score fastest.">Path to 90+ & 100 ›</button>
+                <button class="btn-copy-llm" onclick="event.stopPropagation(); copyCardLlmPrompt('remediation')" data-tooltip="Copies a prompt you can paste into an AI assistant to get fix instructions.">🤖 Copy Fix</button>
               </div>
+              <span class="sr-only"> Opens the Remediation schedule.</span>
             </div>
           </div>
 
@@ -3272,6 +3276,17 @@
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       if (sidebar) sidebar.classList.toggle('open');
+    }
+
+    // Lets a card act as a nav link without turning it into a real <a>/<button>
+    // that would swallow the score-explainer and copy-fix buttons nested inside
+    // it. Mouse click and Enter/Space both navigate; any other key is ignored
+    // so typing inside a focused card (there is none today, but a future one)
+    // does not accidentally jump views.
+    function navigateCard(event, viewId) {
+      if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.type === 'keydown') event.preventDefault();
+      showView(viewId);
     }
 
     function getActiveBrand() {

@@ -1,16 +1,42 @@
 # MUSTER scan rules
 
-Every defect code the engine can raise, by audit area. **54 rules, all active** (read live 2026-09-23), all
+Every defect code the engine can raise, by audit area. **Live on `hjowfnzpomzxazmzywxw` as of
+2026-09-25: 57 rules, 51 active, 6 inactive.** `GOV-006`..`GOV-008` (applied directly to the
+project with no file here until a 2026-09-23 session recovered one -- see `supabase/migrations/083`
+and its README note) account for 3 of the inactive rows. The other 3 are new as of 2026-09-25:
+`ai-chatbot-present-undisclosed`, `ai-vendor-undisclosed` and `ai-generated-content-undisclosed`
+were deactivated at the owner's direction (`supabase/migrations/090`) after having been `active`
+since 2026-09-16 with `check_type` `'browser'`/`'manual'` and no browser engine or manual-review
+workflow ever built to evaluate them -- every scan in between had scored those three controls
+**met** by an absence of findings the engine could never have produced. `ai-admt-policy-silent` and
+`ai-crawler-directives-missing` are untouched and still active; both are `check_type = 'http_native'`
+with a real code path. **Not yet live**, sitting in `supabase/migrations/086`..`089` on a branch
+pending deploy: `SEC-016`..`018` and `SEC-020`, wired in the engine but awaiting a live-version
+observation, `AUTH-006` likewise, and `SEC-019`, wired nowhere and retired outright (`fetch()`
+cannot send TRACE). Once that branch deploys, the count becomes 63 rules, 51 active, 12 inactive.
+Almost all of the catalog is
 `check_type = http_native` — including the `EMAIL-*` family, which resolves DNS over HTTPS rather
-than fetching a page. `check_type` has no `dns` value; the column records how the engine reaches
-the network, and every reach is still an HTTPS request.
+than fetching a page; `check_type` has no `dns` value, because the column records how the engine
+reaches the network, and every reach is still an HTTPS request. **Three rows are not**, and they are
+exactly the three just deactivated above (`browser`/`manual`) -- deactivating them changed `active`,
+not `check_type`, so the catalog still carries three non-`http_native` rows, correctly inactive now
+rather than incorrectly active. See "AI governance" below.
 
-Source of truth is `muster.scan_rules` on `hjowfnzpomzxazmzywxw`, not this file. Regenerate with:
+Source of truth is `muster.scan_rules` on `hjowfnzpomzxazmzywxw`, not this file, and neither of
+those numbers above is guaranteed current the moment you read this -- **query it**:
 
 ```sql
-select rule_id, category, default_severity, title, framework_refs, plain_english
+select rule_id, category, default_severity, check_type, active, title, framework_refs, plain_english
 from muster.scan_rules order by category, rule_id;
 ```
+
+**Every rule's own lifecycle — created, activated, deactivated, retired, and why — is in
+`muster.scan_rule_history`** (added by migration `088`), not just in migration prose. Read it via
+`public.muster_admin_rule_history(p_rule_id)` (super admin only) or directly with service-role
+credentials. It has no foreign key to `scan_rules` on purpose, so it survives even if a rule row is
+ever deleted. `public.muster_rule_status(p_rule_ids)` (migration `084`, recovered this session with
+no file until now) is a separate, smaller thing: a live `active`/`title`/`severity` lookup for
+named rules, not a history.
 
 A finding is reported as `F<id>` (its row in `muster.findings`), and carries the `rule_id` below
 plus the evidence ids (`E<id>`) the engine captured for it.
@@ -214,7 +240,7 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `PRIV-002` | low | Third-party trackers loaded before consent could be verified | GDPR Art. 6 & 7, ePrivacy, CCPA opt-out |
 | `PRIV-003` | medium | Form submits to an insecure or external endpoint | GDPR Art. 32, NIST PR.DS-2 |
 
-## Governance — 5 rules
+## Governance — 8 rules (5 active, 3 inactive)
 
 | Code | Sev | Title | Theme |
 |---|---|---|---|
@@ -223,8 +249,18 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `GOV-003` | info | Meta description missing | AIO readiness |
 | `GOV-004` | info | AI crawler directives | AIO readiness |
 | `GOV-005` | info | Canonical link missing | AIO readiness |
+| `GOV-006` | info | No llms.txt file | AIO readiness (inactive) |
+| `GOV-007` | info | No readable structured data (JSON-LD) | AIO readiness (inactive) |
+| `GOV-008` | low | Homepage content is rendered by script, not served | AIO readiness (inactive) |
 
-## AI governance — 5 rules
+`GOV-006`..`008` were applied live on 2026-09-23 with no file in this repo until the same session
+that added `muster.scan_rule_history` recovered one -- see `supabase/migrations/README.md`'s "Five
+more, from a week earlier" section for the full story, and the one before it for a second,
+unrelated recovery the same day. All three are inactive with no engine code anywhere in
+`supabase/functions/muster-scan/` that could emit them: this table lists them because they exist
+in the live catalog, not because they are checked today.
+
+## AI governance — 5 rules (2 active with a real check, 3 deactivated 2026-09-25)
 
 Category `ai_governance`. These are the only rules keyed to **state statute** rather than a
 framework, which is why their `rule_id`s are slugs rather than a numbered family: the citation is
@@ -232,17 +268,34 @@ the law, and a numbered code would imply a catalog position the statutes do not 
 first of them is what broke the control register on 2026-09-16 -- a 30-character key against a
 `varchar(16)` column -- which is why `muster.frameworks` is a table now.
 
-| Code | Sev | Title | Maps to |
-|---|---|---|---|
-| `ai-admt-policy-silent` | high | Automated decision-making used without policy disclosure | Colorado SB 26-189 |
-| `ai-chatbot-present-undisclosed` | medium | Conversational AI present without disclosure | Colorado HB 26-1263 |
-| `ai-vendor-undisclosed` | medium | Third-party AI vendor undisclosed | — |
-| `ai-generated-content-undisclosed` | low | AI-generated content shown without disclosure | California SB 942 |
-| `ai-crawler-directives-missing` | info | No AI-crawler policy in robots.txt / llms.txt | — |
+| Code | Sev | Title | Maps to | Active |
+|---|---|---|---|---|
+| `ai-admt-policy-silent` | high | Automated decision-making used without policy disclosure | Colorado SB 26-189 | yes |
+| `ai-chatbot-present-undisclosed` | medium | Conversational AI present without disclosure | Colorado HB 26-1263 | **no** |
+| `ai-vendor-undisclosed` | medium | Third-party AI vendor undisclosed | — | **no** |
+| `ai-generated-content-undisclosed` | low | AI-generated content shown without disclosure | California SB 942 | **no** |
+| `ai-crawler-directives-missing` | info | No AI-crawler policy in robots.txt / llms.txt | — | yes |
 
 **These are disclosure checks, not eligibility rulings.** MUSTER reports that a site appears to use
 automated decision-making or a chatbot and publishes no disclosure. Whether a given operator is in
 scope of a given statute is a question for the client's counsel, and the finding text says so.
+
+**Three of the five were `active` from creation (2026-09-16) until 2026-09-25 with no code that
+could ever evaluate them, and were deactivated at the owner's direction once found.**
+`ai-chatbot-present-undisclosed` and `ai-vendor-undisclosed` are `check_type = 'browser'`;
+`ai-generated-content-undisclosed` is `'manual'`. This engine is HTTP-native only -- the
+accessibility view's own "Browser engine" pillar scores 0/10 and is not checked, and there is no
+manual-review workflow anywhere in the product. Only `ai-admt-policy-silent` and
+`ai-crawler-directives-missing` (`check_type = 'http_native'`) have a real path to a finding and
+remain active. For nine days, every scan scored the other three's controls **met** by an absence of
+findings the engine was never able to produce -- exactly the failure `SEC-014`/`SEC-015`/
+`EMAIL-008` were held inactive in 2026-09-16's other migration to prevent, found live here by the
+session that built `muster.scan_rule_history`, and closed by `supabase/migrations/090`
+(`20260925005911`) the same week. Deactivating drops all three out of
+`muster.rule_control_refs()` and retires their open findings per `20260917061404`'s own rule --
+reversible: reactivate once a browser engine or manual-review workflow exists, and evidence already
+collected is not lost. See `supabase/migrations/README.md` and migration `090`'s own header for
+the full account.
 
 ## Third party — 1 rule
 

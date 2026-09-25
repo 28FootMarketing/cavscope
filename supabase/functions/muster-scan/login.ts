@@ -27,6 +27,11 @@
 //   vendor's login page, not the client's. It is recorded in evidence and left
 //   alone, because scoring a client on a third party's headers is a claim about
 //   a system they do not operate.
+//
+// AUTH-006, added alongside the rest, is judged differently from AUTH-001..003:
+// it does NOT compare against a homepage baseline. An ordinary marketing page
+// is meant to be cached; a login page never is, regardless of what the
+// homepage sends. So it fires on the login page's own Cache-Control alone.
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
 
@@ -290,6 +295,21 @@ export function evaluateLoginPage(input: {
     out.push({ ...base, rule_id: "AUTH-003", severity: "medium", title: "Login page sets cookies without protective flags",
       detail: `Before anyone signs in, ${url} sets ${bad.length} cookie(s) without the flags a pre-login session needs: ${bad.join(" | ").slice(0, 1200)}. A session cookie issued before sign-in is often the one that carries the signed-in session afterwards, unless the application issues a new one at sign-in. Anti-forgery tokens (names containing csrf or xsrf) are not asked for HttpOnly, because frameworks expose them to script on purpose, and cookies that carry no identity by design, such as wordpress_test_cookie, are not reported.`,
       location: "set-cookie" });
+  }
+
+  // AUTH-006: no-store is the one directive that actually stops a shared
+  // cache or a browser's disk cache from retaining the page. no-cache alone
+  // still permits storage (it only forces revalidation), so it does not
+  // satisfy this check -- a bright line rather than a judgment call about
+  // which weaker combination might be good enough. Unlike AUTH-001..003 this
+  // does not compare against the homepage: an ordinary page is meant to be
+  // cached, a login page never is, so there is no "worse than the homepage"
+  // baseline to check against here.
+  const cacheControl = headers["cache-control"] ?? "";
+  if (!/\bno-store\b/i.test(cacheControl)) {
+    out.push({ ...base, rule_id: "AUTH-006", severity: "medium", title: "Login page response is cacheable",
+      detail: `${url} does not send Cache-Control: no-store${cacheControl ? ` (sent "${cacheControl}", which does not include no-store)` : " (no Cache-Control header at all)"}. A shared or intermediary cache -- a corporate proxy, a CDN caching by default, or a browser's disk cache on a shared computer -- may retain a copy of this page.`,
+      location: "response headers" });
   }
   return out;
 }

@@ -580,7 +580,10 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `sitrep.html` also gained the scope note ("What This Scan Did Not Check") in the same change;
   it had been in the markdown since `077` and missing from the viewer, which is the rule above
   broken in the other direction. Rendering it exposed two catalogue defects, repaired by
-  `20260923044416` (`muster_083`): all 83 AI-governance rows carried `applies_when` as a raw tag
+  `20260923044416` (`muster_085` -- renumbered from `083` on 2026-09-23 when two migrations
+  applied directly against the live project, with no file here, turned out to have the true claim
+  to `083`/`084` by version; see `supabase/migrations/README.md`): all 83 AI-governance rows
+  carried `applies_when` as a raw tag
   list ("Covers: highrisk, companion, text, media"), now one plain sentence each saying the law
   applies **only if** the organization uses AI in that way; and BPINA's reference URL ended in a
   stray period. The four tags are defined nowhere in the repo, so their meaning was read off the
