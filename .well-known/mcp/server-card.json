@@ -90,9 +90,9 @@
     "streaming": false
   },
   "documentation": {
-    "readme": "https://github.com/28FootMarketing/muster/blob/main/AGENTS.md",
+    "readme": "https://github.com/28FootMarketing/cavscope/blob/main/AGENTS.md",
     "openapi": "https://<project>.supabase.co/functions/v1/muster-agent/openapi.json",
-    "source": "https://github.com/28FootMarketing/muster/blob/main/supabase/functions/muster-agent/index.ts"
+    "source": "https://github.com/28FootMarketing/cavscope/blob/main/supabase/functions/muster-agent/index.ts"
   },
   "organization": {
     "name": "28 Foot Systems",

@@ -82,20 +82,30 @@ Listed so nobody goes looking for a problem that isn't one.
   exact reason the URL was ever pointed at a real page in the first place (see the comment
   above the `UA` constant in `supabase/functions/muster-scan/index.ts`).
 
-## 5. Optional, cosmetic, needs an explicit decision (not done here)
+## 5. Done: the GitHub repository rename
 
-None of these block anything above. Each has a real cost (broken bookmarks, a second
-review, or both), so each needs Anthony's sign-off rather than being done as part of a
-rename pass.
+**`28FootMarketing/muster` was renamed to `28FootMarketing/cavscope` on 2026-09-25**, on
+Anthony's explicit instruction after the tradeoff below was put to him. GitHub redirects
+the old clone/web URLs to the new name, so nothing broke immediately; `documentation.source`
+/ `documentation.readme` in `mcp/server-card.json` were repointed at `/cavscope` in the same
+change. Two things worth re-verifying, since a redirect is not the same as every consumer
+having actually moved:
 
-- **Renaming the GitHub repository** (`28FootMarketing/muster`). Every clone URL, CI badge,
-  and the `documentation.source` / `documentation.readme` URLs in `mcp/server-card.json` and
-  `AGENTS.md` currently resolve through `/muster`. GitHub keeps the old name as a redirect
-  after a rename, but Actions secrets, any hardcoded clone URLs outside this repo, and this
-  session's own branch remotes would all need re-verifying afterward. Not done in this
-  change per the task's own GitHub-safety guidance: customer-facing branding matters more
-  than the repository's internal name, and this one has real risk for no customer-visible
-  benefit (nobody outside the engineering team sees the repo URL).
+- Any clone or CI configuration outside this repo that hardcodes `.../muster` (not
+  `.../cavscope`) still resolves via GitHub's redirect today, but that redirect is not
+  guaranteed to be permanent if the old name is ever reused elsewhere. Repoint anything
+  found still using it.
+- Vercel's Git integration is tied to the repo by ID, not name, so it kept deploying without
+  reconnecting -- confirmed by the preview build on PR #146 succeeding after the rename.
+
+The original tradeoff, kept for the record: every clone URL, CI badge, and the two
+`documentation.*` URLs above resolved through `/muster` before this. Actions secrets are
+keyed to the repo, not its name, so they were unaffected by the rename itself.
+
+## 6. Optional, cosmetic, needs an explicit decision (not done here)
+
+None of these block anything above.
+
 - **Renaming the Vercel project** in the dashboard. Purely cosmetic (the project's internal
   name, not a domain); no functional effect either way.
 - **The Notion pages** `MUSTER — Product Standard Operating Procedure` and its Glossary
