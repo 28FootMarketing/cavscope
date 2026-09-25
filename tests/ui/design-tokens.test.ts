@@ -32,6 +32,7 @@ const PAGES = [
   "sitrep-sample.html",
   "admin.html",
   "privacy.html",
+  "beta.html",
 ];
 
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");

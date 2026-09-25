@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MUSTER beta — request access. One form, no account required." />
+  <title>MUSTER — Beta Access</title>
+  <link rel="canonical" href="https://www.muster.partners/beta">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */
+    :root {
+      /* Ground and surfaces */
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --bg-grid: rgba(54, 226, 201, 0.035);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-raised: #142547;
+      --surface-hover: #192b50;
+      --surface-border: #1f3358;
+      --surface-border-strong: #2c4574;
+
+      /* Text */
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      /* Brand and status hues */
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --cyan: #38bdf8;
+      --amber: #fbbf24;
+      --amber-dim: #453414;
+      --rose: #f43f5e;
+      --rose-dim: #4c1825;
+      --purple: #a855f7;
+      --purple-dim: #32164f;
+      --emerald: #10b981;
+
+      /* Type. --font-body and --font-display are the landing-page vocabulary for
+       * the same two faces; they are aliases so index.html and privacy.html keep
+       * their existing call sites rather than being rewritten in place. */
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, 'Times New Roman', serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --font-body: var(--font-sans);
+      --font-display: var(--font-serif);
+
+      /* Geometry and depth */
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
+      --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+    }
+    /* muster:tokens:end */
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface-card);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-elevated);
+      padding: 36px;
+    }
+
+    .wordmark {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--teal);
+      margin: 0 0 4px;
+    }
+
+    h1 {
+      font-size: 24px;
+      line-height: 1.3;
+      margin: 0 0 8px;
+    }
+
+    .lede {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 20px;
+    }
+
+    .deadline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--amber);
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      border-radius: var(--radius-full);
+      padding: 6px 12px;
+      margin: 0 0 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 6px;
+    }
+
+    .field { margin: 0 0 16px; }
+
+    input[type="text"], input[type="email"], input[type="url"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      padding: 11px 13px;
+    }
+
+    input:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 1px;
+      border-color: var(--teal);
+    }
+
+    .consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 4px 0 24px;
+    }
+
+    .consent input[type="checkbox"] {
+      margin-top: 3px;
+      accent-color: var(--teal);
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .consent label {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      background: var(--teal);
+      color: #052422;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 13px 20px;
+      cursor: pointer;
+      transition: filter 0.15s ease;
+    }
+
+    button[type="submit"]:hover { filter: brightness(1.08); }
+    button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    @media (prefers-reduced-motion: reduce) {
+      button[type="submit"] { transition: none; }
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .status.show { display: block; }
+    .status.ok { background: var(--teal-dim); border: 1px solid var(--teal); color: var(--text); }
+    .status.err { background: var(--rose-dim); border: 1px solid var(--rose); color: var(--text); }
+
+    .foot {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--surface-border);
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .foot a { color: var(--text-dim); }
+    .foot a:hover, .foot a:focus-visible { color: var(--teal); }
+
+    /* ---------- Tooltips ---------- */
+    .app-tooltip {
+      position: fixed;
+      z-index: 300;
+      max-width: 280px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: #0d1a33;
+      border: 1px solid #2e4a78;
+      color: #e6eefb;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(3px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .app-tooltip { transition: none; } }
+    [data-tooltip] { cursor: help; }
+    a[data-tooltip], button[data-tooltip] { cursor: pointer; }
+    [data-tooltip]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="wordmark">MUSTER</p>
+    <h1>Request beta access</h1>
+    <p class="lede">Tell us about your site and we'll follow up with next steps. No account needed to submit this form.</p>
+    <p class="deadline" data-tooltip="This beta pricing offer has a fixed end time. Requests submitted after it closes are not accepted.">⏳ Offer closes Sep 28, 2026, 11:59 PM ET</p>
+
+    <form id="betaForm" novalidate>
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input type="text" id="fullName" name="full_name" required autocomplete="name" data-tooltip="Who we'll follow up with about beta access.">
+      </div>
+      <div class="field">
+        <label for="companyName">Company</label>
+        <input type="text" id="companyName" name="company_name" required autocomplete="organization" data-tooltip="The business this site belongs to.">
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email" data-tooltip="Where we'll send beta access details and your confirmation.">
+      </div>
+      <div class="field">
+        <label for="siteUrl">Website URL</label>
+        <input type="url" id="siteUrl" name="site_url" required placeholder="https://example.com" autocomplete="url" data-tooltip="The site MUSTER will scan once you're in the beta. We'll add https:// if you leave it off.">
+      </div>
+      <div class="field">
+        <label for="industry">Industry</label>
+        <input type="text" id="industry" name="industry" required data-tooltip="Helps us tailor which checks and findings matter most for your site.">
+      </div>
+      <div class="consent">
+        <input type="checkbox" id="marketingConsent" name="marketing_consent" data-tooltip="Optional. Lets us quote you or your results in MUSTER marketing, with your review first.">
+        <label for="marketingConsent">I'm open to being quoted or featured as a beta testimonial (optional, reviewed with you first).</label>
+      </div>
+
+      <button type="submit" id="submitBtn" data-tooltip="Submits your request directly — no account or sign-in required.">Request access</button>
+
+      <div class="status" id="statusBox" role="status" aria-live="polite"></div>
+    </form>
+
+    <p class="foot">
+      <a href="https://www.muster.partners/" data-tooltip="Back to the MUSTER homepage.">muster.partners</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.muster.partners/privacy" data-tooltip="How MUSTER handles the information you submit here.">Privacy</a>
+    </p>
+  </main>
+
+  <script>
+    const SB_URL = 'https://hjowfnzpomzxazmzywxw.supabase.co';
+    const SB_KEY = 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL';
+
+    function normalizeUrl(raw) {
+      const v = raw.trim();
+      if (!v) return v;
+      return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    }
+
+    function showStatus(kind, message) {
+      const box = document.getElementById('statusBox');
+      box.textContent = message;
+      box.className = `status show ${kind}`;
+    }
+
+    document.getElementById('betaForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const submitBtn = document.getElementById('submitBtn');
+      const payload = {
+        full_name: form.full_name.value.trim(),
+        company_name: form.company_name.value.trim(),
+        email: form.email.value.trim(),
+        site_url: normalizeUrl(form.site_url.value),
+        industry: form.industry.value.trim(),
+        marketing_consent: form.marketing_consent.checked,
+      };
+
+      if (!payload.full_name || !payload.company_name || !payload.email || !payload.site_url || !payload.industry) {
+        showStatus('err', 'All fields except the testimonial checkbox are required.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+
+      try {
+        const res = await fetch(`${SB_URL}/rest/v1/muster_beta_signups`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SB_KEY,
+            Authorization: `Bearer ${SB_KEY}`,
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          form.hidden = true;
+          showStatus('ok', "You're on the list. Check your email for confirmation, and we'll follow up shortly.");
+          return;
+        }
+
+        const body = await res.json().catch(() => null);
+        const detail = (body && (body.message || body.hint)) || '';
+
+        if (/offer closed/i.test(detail)) {
+          showStatus('err', 'This beta offer has closed. Reach out at sales@28footsystems.com for current availability.');
+        } else if (res.status === 409 || /duplicate/i.test(detail)) {
+          showStatus('err', "It looks like you've already requested access with this information.");
+        } else if (/site_url/i.test(detail)) {
+          showStatus('err', 'Enter a valid website address, like https://example.com.');
+        } else if (/email/i.test(detail)) {
+          showStatus('err', 'Enter a valid email address.');
+        } else {
+          showStatus('err', 'Something went wrong submitting the form. Please try again in a moment.');
+        }
+      } catch {
+        showStatus('err', 'Network error — please check your connection and try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Request access';
+      }
+    });
+
+    // Tooltip engine: event delegation on [data-tooltip], one floating element.
+    // Shows on hover and keyboard focus, dismisses on Escape (WCAG 1.4.13),
+    // flips below the target when there is no room above, and is announced to
+    // screen readers via aria-describedby while visible.
+    // Right-click context menu suppression. Added 2026-09-08 at the owner's explicit
+    // request, after the tradeoff below was put to them in full.
+    //
+    // WHAT THIS DOES: suppresses the browser context menu on a real right-click.
+    //
+    // WHAT THIS DOES NOT DO, and nobody reading this later should think otherwise:
+    // it does not protect this page's source. Ctrl+U, F12, the browser's own View
+    // Page Source item, `curl`, Save Page As and simply turning JavaScript off all
+    // still read every byte. This is a speed bump on one gesture, not a security
+    // control, and it must never be cited as one in a SITREP, a control register,
+    // or a conversation with a client.
+    //
+    // The protection that is real is architectural and already in place: auth, RLS,
+    // the scan engine, posture scoring, control derivation and SITREP generation all
+    // run in Postgres and edge functions. What ships to a browser is a renderer.
+    //
+    // Two carve-outs keep this from becoming an accessibility defect on a product
+    // that sells accessibility auditing (A11Y-001..007):
+    //
+    //   1. Keyboard-invoked menus pass through. Screen reader and keyboard-only
+    //      users open the context menu with the Menu key or Shift+F10, which arrives
+    //      as a contextmenu event with button 0; a mouse right-click arrives with
+    //      button 2. Only button 2 is suppressed, so the assistive path is untouched.
+    //      Long-press on touch also reports button 0, so mobile copy and paste keeps
+    //      working -- a long-press is not a right-click and blocking it would break
+    //      text selection for every phone user to stop nobody.
+    //   2. Text-entry surfaces keep their native menu. Right-click inside an input,
+    //      textarea or contenteditable is how people paste and how spellcheck
+    //      suggestions are reached. Taking that away is a usability failure with no
+    //      upside, because a form field exposes no source.
+    function initContextMenuGuard() {
+      document.addEventListener('contextmenu', function (e) {
+        if (e.button !== 2) return;
+        var t = e.target;
+        if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return;
+        e.preventDefault();
+      });
+    }
+
+    function initTooltips() {
+      const tip = document.createElement('div');
+      tip.className = 'app-tooltip';
+      tip.id = 'appTooltip';
+      tip.setAttribute('role', 'tooltip');
+      document.body.appendChild(tip);
+
+      let current = null;
+      let suppressed = false;
+
+      function findTarget(node) {
+        return node && node.closest ? node.closest('[data-tooltip]') : null;
+      }
+
+      function show(target) {
+        const text = target.getAttribute('data-tooltip');
+        if (!text || suppressed) return;
+        current = target;
+        tip.textContent = text;
+        tip.classList.add('show');
+        target.setAttribute('aria-describedby', 'appTooltip');
+        position(target);
+      }
+
+      function position(target) {
+        const r = target.getBoundingClientRect();
+        const t = tip.getBoundingClientRect();
+        const gap = 8;
+        let top = r.top - t.height - gap;
+        if (top < 8) top = r.bottom + gap;
+        let left = r.left + (r.width / 2) - (t.width / 2);
+        left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+        tip.style.top = `${Math.round(top)}px`;
+        tip.style.left = `${Math.round(left)}px`;
+      }
+
+      function hide() {
+        if (current) current.removeAttribute('aria-describedby');
+        current = null;
+        tip.classList.remove('show');
+      }
+
+      document.addEventListener('mouseover', (e) => {
+        const target = findTarget(e.target);
+        if (target && target !== current) show(target);
+        else if (!target && current) hide();
+      });
+      document.addEventListener('mouseout', (e) => {
+        const target = findTarget(e.target);
+        if (target && !target.contains(e.relatedTarget)) hide();
+      });
+      document.addEventListener('focusin', (e) => {
+        const target = findTarget(e.target);
+        if (target) show(target);
+      });
+      document.addEventListener('focusout', hide);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && current) { hide(); suppressed = true; }
+      });
+      document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+      window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+      window.addEventListener('resize', () => { if (current) position(current); });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => { initTooltips(); initContextMenuGuard(); });
+  </script>
+</body>
+</html>
