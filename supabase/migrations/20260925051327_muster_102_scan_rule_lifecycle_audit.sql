@@ -1,94 +1,3 @@
--- MUSTER 088: an audit log for the scan-rule catalog's own lifecycle --
--- created, activated, deactivated, retired -- separate from muster.scans,
--- which audits what a SCAN did, not what happened to the RULES themselves.
---
--- WHY THIS EXISTS
---
--- Every activation and hold up to this point (SEC-014/015/EMAIL-008,
--- AVAIL-003/004, EMAIL-009, AUTH-001..006, and this session's own SEC-016..020)
--- is real history, but it lives only in migration file prose. That is fine for
--- a developer reading git log; it is invisible to anyone using the product,
--- including a super admin who wants to know why a rule stopped firing, and it
--- depends on nobody ever applying a change outside this repo. Both failure
--- modes are not hypothetical: this same migration recovers five scan-rule-
--- relevant changes (GOV-006..008, the five ai_governance rules, two
--- jurisdiction seeds) that were applied straight to hjowfnzpomzxazmzywxw with
--- no file here at all -- see supabase/migrations/README.md. A queryable table
--- does not depend on every future change going through this directory; it
--- depends on the table, which is a much smaller thing to keep correct.
---
--- WHY A SEPARATE TABLE, NOT muster.activity_events
---
--- activity_events requires organization_id not null: it audits what a
--- tenant's users did inside their own org. A scan rule's lifecycle has no
--- organization -- it is platform-wide, the same rule for every tenant -- so
--- forcing a fake organization_id onto it would be exactly the kind of
--- dishonest modeling this project keeps finding and fixing elsewhere (the
--- framework CHECK constraint, the white-label flag key that never existed).
---
--- WHY NO FOREIGN KEY TO scan_rules
---
--- The one job this table has is to survive the row it is about. rule_id is a
--- plain text column, not a reference to scan_rules(rule_id): if a rule is
--- ever genuinely deleted (findings.rule_id's own FK to scan_rules already
--- makes that impossible for any rule that has fired even once, without
--- CASCADE, which nothing here specifies), the history of what it was and why
--- it went away must not disappear with it. An audit log with a hard
--- dependency on the thing it audits is not an audit log.
---
--- retired_at / retired_reason vs. plain active = false
---
--- Every rule before this migration has exactly one state for "not running":
--- active = false, which means both "held pending engine work, will activate"
--- (SEC-014 in 2026-09 for three weeks) and "will never run from this engine"
--- (SEC-019, this session -- fetch() cannot send TRACE; see index.ts's
--- ENGINE_VERSION comment). Those are different facts and a console cannot
--- tell them apart from active alone. retired_at is null for the first kind
--- and set for the second; a CHECK constraint ties it to retired_reason so a
--- retirement can never be recorded with no explanation of why.
---
--- WHAT THE TRIGGER DOES AND DOES NOT CAPTURE
---
--- It fires on every insert and on every update that changes active or sets
--- retired_at, and infers created/activated/deactivated/retired from the
--- transition -- so a future migration that simply does the same
--- insert/update it always has gets an audit row for free, with no new
--- discipline required of whoever writes it. It does NOT fire on an ordinary
--- content edit (a fixed typo in remediation text, a reworded plain_english
--- line): that is not a lifecycle event, and logging every such edit would
--- bury the transitions that matter in noise.
---
--- WHY reason CAN BE A PLACEHOLDER, NOT WHY IT SHOULD BE
---
--- reason is NOT NULL, filled from current_setting('muster.rule_change_reason',
--- true) and falling back to an honest "(no reason recorded...)" string when
--- nothing set it. The fallback exists so a change is never silently lost for
--- want of one extra line; it is not permission to skip that line.
---
--- HOW REASON ACTUALLY GETS SET, AND WHY NOT set_config ALONE
---
--- The first version of this migration set the reason with a bare
--- `select set_config('muster.rule_change_reason', ..., true)` as its own
--- statement, immediately before the `update` that should have picked it up --
--- and it did not, in a local Postgres 16 test of this exact file. `true`
--- scopes a GUC to the CURRENT TRANSACTION, and this repo's own migrations
--- have never assumed a whole file runs as one transaction (084's own
--- assertion blocks are `do $$ ... $$` bodies precisely because a bare `select`
--- cannot roll a prior statement back on failure). Whether apply_migration
--- happens to send a whole file as one implicit transaction is not something
--- to build a correctness guarantee on when it was never verified either way.
---
--- So the reason-setting and the row change are done inside ONE function call
--- instead: muster.scan_rule_retire() and muster.scan_rule_set_active() below
--- both `perform set_config(...)` and then run their own `update`, in the same
--- plpgsql function body, which is atomic with respect to the caller no matter
--- how the caller's statements are batched. Every future migration that
--- retires or (de)activates a rule should call one of these two, not touch
--- `scan_rules.active` or `retired_at` directly. A plain multi-row `insert`
--- for a brand-new rule is unchanged -- that convention predates this
--- migration and stays -- so a 'created' history row records the honest
--- fallback reason unless a future change also wraps creation in a helper.
-
 alter table muster.scan_rules
   add column retired_at timestamptz,
   add column retired_reason text;
@@ -118,10 +27,6 @@ revoke all on muster.scan_rule_history from public, anon, authenticated;
 grant select, insert on muster.scan_rule_history to service_role;
 grant usage on sequence muster.scan_rule_history_id_seq to service_role;
 
--- Atomic wrappers: set the reason context and make the change in one function
--- call, so the two can never end up in different transactions. See the header
--- note above for why a bare set_config() followed by a separate update is not
--- safe to rely on here.
 create or replace function muster.scan_rule_set_active(p_rule_id text, p_active boolean, p_reason text, p_engine_version text default null, p_migration_ref text default null)
 returns void
 language plpgsql
@@ -165,7 +70,7 @@ begin
     elsif not new.active and old.active then
       v_action := 'deactivated';
     else
-      return new; -- a content edit, not a lifecycle transition
+      return new;
     end if;
   else
     return new;
@@ -189,9 +94,6 @@ create trigger scan_rules_log_lifecycle
   after insert or update on muster.scan_rules
   for each row execute function muster.log_scan_rule_change();
 
--- Super-admin-facing read, matching every other muster_admin_* RPC's shape and
--- grants exactly (see muster_068's muster_admin_platform_extras for the
--- pattern this copies). This is engine/catalog metadata, not tenant data.
 create or replace function public.muster_admin_rule_history(p_rule_id text default null)
 returns jsonb
 language plpgsql
@@ -220,12 +122,6 @@ comment on function public.muster_admin_rule_history(text) is
 revoke all on function public.muster_admin_rule_history(text) from public, anon;
 grant execute on function public.muster_admin_rule_history(text) to authenticated, service_role;
 
--- First real use: SEC-019 is retired for real, not just in a code comment.
--- fetch() throws "Method is forbidden" for TRACE/TRACK/CONNECT -- confirmed
--- against Deno 2.9.7, and it is the WHATWG Fetch spec's own forbidden-method
--- list, so no spec-compliant fetch() can ever send one. This engine's egress
--- is fetch()-only (see index.ts's ENGINE_VERSION comment for why), so there is
--- no path to activation without a transport this engine does not have.
 select muster.scan_rule_retire(
   'SEC-019',
   'fetch() cannot send TRACE/TRACK/CONNECT (WHATWG Fetch spec forbidden-method list, confirmed against Deno 2.9.7); this engine has no raw-socket fallback. No path to activation without a different transport.',
@@ -233,8 +129,6 @@ select muster.scan_rule_retire(
   '20260923210000_muster_088_scan_rule_lifecycle_audit'
 );
 
--- Assertions: schema shape, grants, the trigger actually fired for SEC-019,
--- and the admin RPC enforces super-admin the same way its siblings do.
 do $$
 declare
   v_history_rows int;
@@ -261,12 +155,11 @@ begin
     raise exception 'authenticated cannot execute muster_admin_rule_history: %', v_acl;
   end if;
 
-  -- The retirement-reason CHECK must actually hold both directions.
   begin
     update muster.scan_rules set retired_at = now() where rule_id = 'AUTH-006';
     raise exception 'scan_rules_retirement_reason_check did not reject retired_at with no retired_reason';
   exception when check_violation then
-    null; -- expected
+    null;
   end;
 
   raise notice 'scan_rule_history live: % row(s) for SEC-019, admin RPC grants correct, retirement CHECK enforced', v_history_rows;
