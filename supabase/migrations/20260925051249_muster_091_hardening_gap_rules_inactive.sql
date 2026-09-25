@@ -194,9 +194,10 @@ begin
   end if;
 
   select count(*), count(*) filter (where not active) into v_total, v_inactive
-    from muster.scan_rules;
+    from muster.scan_rules
+   where rule_id in ('SEC-016','SEC-017','SEC-018','SEC-019','AUTH-006','SEC-020');
   if v_inactive <> 6 then
-    raise exception 'expected exactly 6 inactive rules (SEC-016..020, AUTH-006), found %', v_inactive;
+    raise exception 'expected exactly 6 inactive rules among the six just inserted, found %', v_inactive;
   end if;
 
   -- The point of inserting inactive: none of the six may reach the control

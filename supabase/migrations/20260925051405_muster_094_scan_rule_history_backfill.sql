@@ -1,35 +1,3 @@
--- MUSTER 089: backfills muster.scan_rule_history (added by 088) so the audit
--- log has real history in it from the day it exists, rather than starting
--- empty and only covering changes from here forward.
---
--- Inserted directly, not through muster.scan_rule_retire() / scan_rule_
--- set_active(): those exist to keep a LIVE change's reason and row change
--- atomic, and are irrelevant to writing rows that already happened.
--- created_at is set explicitly to the real historical moment in every row
--- below, taken from two sources: the eleven rules with more than one
--- lifecycle event use the migration file that made each change (its
--- timestamp is the version apply_migration assigned, not a guess); every
--- other rule gets exactly one 'created' row taken straight from its own
--- scan_rules.created_at, which Postgres already recorded accurately -- no
--- reconstruction needed for those, and none attempted.
---
--- WHAT IS GENUINELY NOT RECOVERABLE, STATED RATHER THAN GUESSED
---
--- The baseline catalog (SEC-001..013, A11Y-*, GOV-001..005, PRIV-*, TP-001,
--- AVAIL-001/002) predates every scan_rules INSERT in this directory -- it
--- arrived by bulk data copy when this project was stood up, not a readable
--- migration (see supabase/migrations/README.md's own account of that
--- cutover). Its created_at is 2026-09-04 03:49:22 on every one of these rows
--- -- three days before this project itself existed (2026-09-07 per its own
--- created_at), which means the bulk copy preserved each row's ORIGINAL
--- created_at from the old shared project rather than stamping "now()" at
--- import. That is a real timestamp, just not the cutover moment it might
--- look like, and not a decision anyone narrated either way. The backfill row for
--- each says exactly that, rather than inventing a reason.
-
--- Group 1: rules with a real, multi-step lifecycle. One row per transition,
--- reason paraphrased from that migration's own header, migration_ref exact.
-
 insert into muster.scan_rule_history (rule_id, action, previous_active, new_active, reason, engine_version, migration_ref, created_at) values
   ('SEC-014', 'created', null, true,
    'Subresource Integrity on third-party scripts; inserted active, which migration 062 immediately caught as premature.',
@@ -118,19 +86,6 @@ insert into muster.scan_rule_history (rule_id, action, previous_active, new_acti
    '20260923012945_muster_080_activate_auth', '2026-09-23 01:29:45.40475+00')
 ;
 
--- Group 2: created once, never touched since (updated_at = created_at live),
--- but with a real narrative worth keeping rather than falling into the
--- generic catch-all below. GOV-006..008 are still inactive with no engine
--- code (see migration 083, recovered with no file until this session).
--- The five ai_governance rules were inserted ACTIVE and three of them --
--- ai-chatbot-present-undisclosed and ai-vendor-undisclosed (check_type
--- 'browser'), ai-generated-content-undisclosed ('manual') -- have no code in
--- this HTTP-native-only engine that could ever emit them. That is stated
--- here as what the record shows, not corrected here: deactivating a rule
--- that has been scoring real client controls 'met' since 2026-09-16 changes
--- live posture numbers, which is a product call for whoever owns that, not
--- a side effect of writing history down. See supabase/migrations/README.md.
-
 insert into muster.scan_rule_history (rule_id, action, previous_active, new_active, reason, migration_ref, created_at) values
   ('GOV-006', 'created', null, false,
    'No llms.txt file; AIO-readiness rule, inactive with no engine code yet.',
@@ -159,11 +114,6 @@ insert into muster.scan_rule_history (rule_id, action, previous_active, new_acti
    '20260916192324_add_ai_governance_scan_rules', '2026-09-16 19:23:24.700048+00')
 ;
 
--- Group 3a: the true baseline catalog, identified by its shared created_at
--- (2026-09-04 03:49:22.608386+00 on every one of these rows, predating this
--- project's own 2026-09-07 creation -- see the header note). One 'created'
--- row each, active exactly as it stands today, none ever having appeared in
--- an activate/deactivate migration.
 insert into muster.scan_rule_history (rule_id, action, previous_active, new_active, reason, created_at)
 select rule_id, 'created', null, active,
        '(bulk-copied baseline catalog; created_at is preserved from the old shared project, not this one, and not a reconstruction. See supabase/migrations/README.md.)',
@@ -171,11 +121,6 @@ select rule_id, 'created', null, active,
   from muster.scan_rules
  where created_at = timestamptz '2026-09-04 03:49:22.608386+00';
 
--- Group 3b: whatever is left -- rules with their own real migration and
--- created_at, never touched since, not otherwise covered above. As of this
--- writing that is exactly EMAIL-001..007, but the query is open-ended rather
--- than naming them, so a rule added later that never changes state falls
--- in here correctly without this migration needing an update.
 insert into muster.scan_rule_history (rule_id, action, previous_active, new_active, reason, created_at)
 select rule_id, 'created', null, active,
        '(created via its own migration; never changed since, so this is the only history row it has.)',
@@ -197,8 +142,6 @@ declare
 begin
   select count(*) into v_total from muster.scan_rule_history;
   select count(distinct rule_id) into v_rules from muster.scan_rule_history;
-  -- Every rule that exists must have at least one history row, or the
-  -- backfill missed one.
   if v_rules <> (select count(*) from muster.scan_rules) then
     raise exception 'backfill covers % rule_ids but scan_rules has % rows -- something was missed',
       v_rules, (select count(*) from muster.scan_rules);
