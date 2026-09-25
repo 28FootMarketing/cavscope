@@ -1,10 +1,12 @@
 # CavScope brand identity
 
-Adopted 2026-09-26. This is the implementation spec for the visual identity layer
-on top of the CavScope name migration in `CLAUDE.md`'s brand note and
-`docs/BRAND-CUTOVER.md`. Those two cover the product *name*; this covers what it
-*looks like* -- logo, palette, type, icons, and how a page is supposed to use
-them.
+Adopted 2026-09-26, revised the same day to the **"Charge" direction** after a
+design review against two alternatives (a flat-gold "Recon" and a literal
+red/gold-split "Guidon" -- both considered, neither shipped; see §2). This is
+the implementation spec for the visual identity layer on top of the CavScope
+name migration in `CLAUDE.md`'s brand note and `docs/BRAND-CUTOVER.md`. Those
+two cover the product *name*; this covers what it *looks like* -- logo,
+palette, type, icons, and how a page is supposed to use them.
 
 **Scope of what shipped with this doc**, read this before anything else:
 
@@ -71,13 +73,38 @@ The mark is a hybrid of two ideas the product actually does:
   detail, keeping the mark from reading as a flat ring-and-circle icon.
 
 Both ideas map directly to the tagline: the reticle is precision, the lens is
-visibility, and the two together, rendered in gold, are assurance -- a mark
-worth trusting.
+visibility, and the two together are assurance -- a mark worth trusting.
 
-What it deliberately avoids: no badge shape (shield, star-burst, seal), no
-tactical/military styling (no dot-and-crosshair gunsight, no stencil type, no
-camo or olive-drab), no mascot, no rounded "friendly SaaS blob" style. This is
-an enterprise security vendor's mark, not a consumer app's.
+**Where the color comes from.** The name is Cavalry + Scope, and the "Charge"
+palette makes that lineage explicit rather than hiding it: the ring runs the
+cavalry guidon's red into the Garry Owen crest's horseshoe gold in one
+diagonal sweep -- a color relationship a static insignia can't hold, which is
+deliberate, because this product watches continuously, not once. The open
+ring is already, structurally, a horseshoe; the gradient is what makes that
+reading intentional instead of coincidental. The lens glows cyan, the one
+color in the mark with no cavalry lineage at all -- it marks "this is
+watching now," distinct from the two heritage colors. Faint speed lines
+behind the full mark (see `cavscope-logo-symbol-dark.svg`) imply motion
+without literally drawing a horse.
+
+**Two directions considered and not shipped**, kept here so the choice isn't
+re-litigated from scratch later:
+- **Recon** -- the ring stayed flat gold (closer to this doc's original
+  2026-09-26 cut); only the lens gained the cyan glow. Safer, more
+  restrained, and the one to fall back to if "Charge" reads as too loud in
+  some future context (a printed document, a monochrome fax of a report).
+- **Guidon** -- the ring split red-over-gold along the horizontal axis,
+  echoing the guidon's own red-over-white banding directly, no gradient, no
+  glow. The most literal heritage reference and the least "2026 SaaS
+  product" next to the other two -- reads as a unit patch rather than a
+  software mark.
+
+What the mark deliberately avoids, still true for Charge: no badge shape
+(shield, star-burst, seal), no tactical/military styling (no dot-and-crosshair
+gunsight, no stencil type, no camo or olive-drab), no mascot, no rounded
+"friendly SaaS blob" style. Leaning into cavalry heritage in the *color story*
+is not the same as making the mark itself read as a unit insignia -- the ring
+and lens still have to read as instrumentation, not a patch.
 
 ## 3. Approved lockups
 
@@ -92,7 +119,8 @@ loaded, and fall back to Georgia/system-ui elsewhere).
 | `cavscope-logo-primary-light.svg` | Same lockup, for white/light backgrounds. Only the wordmark color changes ("Cav" goes from white to Deep Black); the symbol is unchanged. |
 | `cavscope-logo-vertical-dark.svg` | Stacked lockup for square or narrow spaces, dark backgrounds. |
 | `cavscope-logo-vertical-light.svg` | Same, for light backgrounds. |
-| `cavscope-logo-symbol-dark.svg` / `cavscope-logo-symbol-light.svg` | Symbol alone, no wordmark. Identical artwork (the gold/black two-tone mark has enough contrast on both); shipped as two files to match a consistent naming convention for background-aware assets, not because the art differs. |
+| `cavscope-logo-symbol-dark.svg` | Symbol alone, no wordmark, full detail including the speed lines -- for dark backgrounds. |
+| `cavscope-logo-symbol-light.svg` | Same mark for light backgrounds, minus the speed lines (low-opacity strokes tuned against a dark ground; they disappear into noise on white). Otherwise identical -- the gradient ring and cyan lens read fine on either. |
 | `cavscope-logo-monochrome-black.svg` | Single-color (`#0B0B0B`) mark for light or busy backgrounds where the two-tone version loses contrast -- print, a watermark, a favicon fallback. |
 | `cavscope-logo-monochrome-white.svg` | Single-color (`#FFFFFF`) mark for dark backgrounds outside the app's own gold accent -- a dark third-party surface, a footer on a photo. |
 | `cavscope-favicon.svg` | Simplified mark (ring + lens, no crosshair ticks or inner reticle lines) for anything under ~48px, where the fine detail disappears and just adds noise. Source for `favicon-32.png`. |
@@ -101,19 +129,27 @@ loaded, and fall back to Georgia/system-ui elsewhere).
 
 ## 4. Color palette
 
-Six brand colors, plus the product's existing functional status colors, which
-this identity does not touch (see §4.3).
+Nine brand colors (six neutrals/heritage plus the two Charge additions and the
+signature gradient), plus the product's existing functional status colors,
+which this identity does not touch (see §4.3).
 
 ### 4.1 Brand colors
 
 | Token (raw) | Hex | Role |
 |---|---|---|
-| `--cs-gold` | `#D4AF37` | Accent. The one color that means "CavScope" on sight. |
+| `--cs-gold` | `#F2B84C` | Cavalry gold, from the Garry Owen crest's horseshoe. Half of the signature gradient; the flat fallback accent where a gradient isn't practical (small icons, text on a colored background). |
+| `--cs-red` | `#FF3B4E` | Guidon red. The other half of the signature gradient -- not used as a large flat fill on its own (see §9). |
+| `--cs-cyan` | `#22D3EE` | "Signal" -- the one brand color with no cavalry lineage. Marks live/instrumented state: the lens glow, a monitoring pulse, an active nav item, the focus ring. |
 | `--cs-black` | `#0B0B0B` | Primary background (night mode). |
 | `--cs-charcoal` | `#1E1E1E` | Surface -- cards, panels, raised elements (night mode). |
 | `--cs-slate` | `#6B6B6B` | Secondary/muted text, and the base for hairline borders. |
 | `--cs-light-gray` | `#D9D9D9` | Borders on light backgrounds; a light-mode surface tint. |
 | `--cs-white` | `#FFFFFF` | Primary text on dark, primary background on light. |
+
+The gold value changed from this doc's first cut (`#D4AF37` → `#F2B84C`,
+brighter and warmer) as part of adopting Charge -- the muted "premium/antique
+brass" gold read as static; this one reads as energy, which is the point of
+picking a "dynamic" direction at all.
 
 ### 4.2 Semantic tokens (night mode -- what ships today)
 
@@ -128,22 +164,28 @@ component -- that's the whole point of a token layer.
 | `--border` | `color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%)` | New. Subtle hairline on a dark surface -- light gray at low opacity, not full-strength (full-strength light gray on black is a glare, not a border). |
 | `--text-primary` | `var(--cs-white)` | New. |
 | `--text-secondary` | `var(--cs-slate)` | New. |
-| `--accent` | `var(--cs-gold)` | New. |
+| `--accent` | `var(--cs-gold)` | New. Flat fallback accent -- see `--accent-gradient` for the signature treatment. |
 | `--accent-hover` | `color-mix(in srgb, var(--cs-gold) 100%, white 15%)` | New. Lightened gold for a hover/active state. |
 | `--accent-soft` | `color-mix(in srgb, var(--cs-gold) 22%, transparent)` | New. Gold at low alpha, for a soft badge/highlight background. |
+| `--accent-gradient` | `linear-gradient(135deg, var(--cs-red), var(--cs-gold))` | New. The "Charge" signature -- a hero headline's key phrase, a primary CTA, the logo ring. Not a general-purpose fill; see §9. |
+| `--signal` | `var(--cs-cyan)` | New. Live/instrumented state -- a monitoring pulse, an active nav item, the lens glow. |
+| `--signal-soft` | `color-mix(in srgb, var(--cs-cyan) 18%, transparent)` | New. |
 | `--success` / `--warning` / `--error` | `var(--emerald)` / `var(--amber)` / `var(--rose)` | New names, aliasing the **existing** status hues. See §4.3. |
-| `--focus-ring` | `var(--cs-gold)` | New. |
+| `--focus-ring` | `var(--cs-cyan)` | New. Cyan, not gold -- a focus ring has to read against gold accent surfaces too, and gold-on-gold nearly disappears. |
 
 ### 4.3 Status colors are functional, not decorative -- out of scope
 
-`--emerald`, `--amber`, `--rose`, `--purple`, `--teal`, `--cyan` already carry
-real meaning across the product: severity pills (`pill-critical`, `pill-high`,
-`pill-medium`, `pill-low`), control status, alert state. **This identity does
-not collapse them into gold.** A security-assurance product where "critical
-finding" and "the primary CTA" are the same color is a worse product, not a
-more on-brand one. `--success`/`--warning`/`--error` above are new *names* for
-those same existing colors, added so new components can reach for a semantic
-name instead of memorizing which hue means what -- the hues themselves are
+`--emerald`, `--amber`, `--rose`, `--purple`, `--teal`, `--cyan` (the
+product's **existing** cyan, `#38bdf8` -- a different value from the new
+`--cs-cyan`/`--signal`, `#22D3EE`; they are not the same token and are not
+meant to be unified) already carry real meaning across the product: severity
+pills (`pill-critical`, `pill-high`, `pill-medium`, `pill-low`), control
+status, alert state. **This identity does not collapse them into the brand
+palette.** A security-assurance product where "critical finding" and "the
+primary CTA" are the same color is a worse product, not a more on-brand one.
+`--success`/`--warning`/`--error` above are new *names* for those same
+existing colors, added so new components can reach for a semantic name
+instead of memorizing which hue means what -- the hues themselves are
 unchanged.
 
 ### 4.4 Two names this collides with -- read before touching `--surface` or `--text-muted`
@@ -175,6 +217,9 @@ for the brand tokens.
 | `--accent` | `var(--cs-gold)` |
 | `--accent-hover` | `color-mix(in srgb, var(--cs-gold) 100%, black 12%)` |
 | `--accent-soft` | `color-mix(in srgb, var(--cs-gold) 14%, transparent)` |
+| `--accent-gradient` | `linear-gradient(135deg, var(--cs-red), var(--cs-gold))` |
+| `--signal` | `var(--cs-cyan)` |
+| `--focus-ring` | `var(--cs-cyan)` |
 
 The equivalent of `--surface` (target `--cs-surface-target`) in day mode is a
 near-white neutral, `#F4F4F5` -- Charcoal itself is too dark to read as a card
@@ -273,16 +318,21 @@ tooling documentation writes CSS elsewhere) is:
   lines) reads clearly down to ~48px. Below that, use `cavscope-favicon.svg`
   (ring + lens only) -- verified at 32px in the live favicon.
 - **Never** stretch the mark to a non-1:1 aspect ratio, rotate it, recolor the
-  ring to anything but gold/black/white per the approved variants, or place it
-  on a background that drops the ring below roughly 3:1 contrast.
+  ring to anything outside the approved variants (the red→gold gradient,
+  flat gold, or the monochrome black/white fallbacks), or place it on a
+  background that drops the ring below roughly 3:1 contrast.
 
 ## 9. Do / don't
 
 **Do**
 - Use `cavscope-logo-primary-dark.svg` as the default lockup; reach for
   `-light` only when the background is genuinely light.
-- Use the semantic tokens (`var(--accent)`, `var(--text-primary)`, …) in new
-  CSS, not raw hex or the `--cs-*` raw-palette names directly.
+- Use the semantic tokens (`var(--accent)`, `var(--accent-gradient)`,
+  `var(--signal)`, `var(--text-primary)`, …) in new CSS, not raw hex or the
+  `--cs-*` raw-palette names directly.
+- Reserve `--accent-gradient` for hero moments -- a primary CTA, a headline's
+  key phrase, the logo ring. One per view, same reasoning as the "CavScope"
+  name itself in §1: a gradient everywhere reads as noise, not energy.
 - Keep severity/status colors as they are; cite `--success`/`--warning`/
   `--error` by name in new code so a future contributor doesn't have to
   remember that `--emerald` means "success."
@@ -291,9 +341,12 @@ tooling documentation writes CSS elsewhere) is:
 - Don't redefine `--surface` or `--text-muted` without a dedicated visual QA
   pass across all nine pages -- see §4.4.
 - Don't recolor the reticle ring or the lens to anything outside the approved
-  variants.
+  variants, and don't use `--cs-red` as a large flat fill on its own -- it
+  reads as an error state, not a brand color, outside the gradient.
 - Don't use the icon sprite's raw fill color -- always `stroke="currentColor"`
   and set color via CSS.
+- Don't confuse `--signal`/`--cs-cyan` (`#22D3EE`) with the product's existing
+  `--cyan` (`#38bdf8`) -- different tokens, different values, both real.
 - Don't repeat "CavScope" more than once per view. See §1.
 
 ## 10. File structure
