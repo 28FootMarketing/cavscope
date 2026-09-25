@@ -1,33 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="CavScope">
   <title>CavScope</title>
   <defs>
+    <linearGradient id="cs-ring" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF3B4E"/>
+      <stop offset="100%" stop-color="#F2B84C"/>
+    </linearGradient>
     <radialGradient id="cs-lens" cx="38%" cy="35%" r="75%">
-      <stop offset="0%" stop-color="#3a3a3a"/>
-      <stop offset="55%" stop-color="#1e1e1e"/>
-      <stop offset="100%" stop-color="#0b0b0b"/>
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="45%" stop-color="#0E5A66"/>
+      <stop offset="100%" stop-color="#0B0E14"/>
     </radialGradient>
   </defs>
 
+  <!-- Speed lines — the one purely decorative addition in the Charge
+       direction, standing in for the motion a still mark can't show
+       otherwise. Dropped in the favicon/app-icon masters, where they'd be
+       noise at small sizes; kept here since this file is the full-detail
+       reference mark. -->
+  <g opacity="0.55">
+    <line x1="6" y1="30" x2="46" y2="70" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+    <line x1="0" y1="52" x2="34" y2="86" stroke="#F2B84C" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+    <line x1="10" y1="8" x2="42" y2="40" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+  </g>
+
   <!-- Reticle ring, open on the east side — the "C" -->
   <path d="M 155.70 139.00 A 68 68 0 1 1 155.70 61.00"
-        fill="none" stroke="#D4AF37" stroke-width="16" stroke-linecap="round"/>
+        fill="none" stroke="url(#cs-ring)" stroke-width="16" stroke-linecap="round"/>
 
   <!-- Outer crosshair ticks: top, bottom, left (right is the ring's own opening) -->
-  <g stroke="#D4AF37" stroke-width="10" stroke-linecap="round">
+  <g stroke="url(#cs-ring)" stroke-width="10" stroke-linecap="round">
     <line x1="100" y1="6"   x2="100" y2="26"/>
     <line x1="100" y1="174" x2="100" y2="194"/>
     <line x1="6"   y1="100" x2="26"  y2="100"/>
   </g>
 
   <!-- Inner reticle lines, crossing behind the lens -->
-  <g stroke="#D4AF37" stroke-width="4" stroke-linecap="round" opacity="0.9">
+  <g stroke="url(#cs-ring)" stroke-width="4" stroke-linecap="round" opacity="0.9">
     <line x1="100" y1="40" x2="100" y2="64"/>
     <line x1="100" y1="136" x2="100" y2="160"/>
     <line x1="40"  y1="100" x2="64"  y2="100"/>
   </g>
 
-  <!-- Lens / inspection element -->
-  <circle cx="100" cy="100" r="30" fill="#0b0b0b" stroke="#D4AF37" stroke-width="6"/>
+  <!-- Lens / inspection element — glows cyan rather than sitting flat dark,
+       the one color in the mark with no cavalry lineage: it means "this is
+       watching," not "this is heritage." -->
+  <circle cx="100" cy="100" r="30" fill="#0b0e14" stroke="url(#cs-ring)" stroke-width="6"/>
   <circle cx="100" cy="100" r="17" fill="url(#cs-lens)"/>
-  <circle cx="91" cy="91" r="5" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="91" cy="91" r="5" fill="#FFFFFF" opacity="0.9"/>
 </svg>

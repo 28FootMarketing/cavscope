@@ -64,12 +64,16 @@
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
 
-      /* ---- CavScope brand identity, added 2026-09-26 -----------------------
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
        *
-       * Additive, not a reskin. Every name below is new; nothing above this
-       * block changed value, so all nine pages render pixel-identical to before
-       * this commit. See docs/BRAND.md for the full spec (logo system, icon
-       * system, component guidance) and the reasoning below.
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
        *
        * Two names this block deliberately does NOT define, because the product
        * already ships a token with that exact name and a different value:
@@ -89,7 +93,9 @@
        */
 
       /* Raw palette */
-      --cs-gold: #D4AF37;
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
       --cs-black: #0B0B0B;
       --cs-charcoal: #1E1E1E;
       --cs-slate: #6B6B6B;
@@ -107,15 +113,26 @@
       --accent: var(--cs-gold);
       --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
       --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
       /* Functional, not decorative -- a severity/status color has to stay
        * distinguishable from the brand accent and from every other status, so
-       * these alias the existing hues above rather than the gold palette.
-       * Collapsing them to brand gold would make "critical" and "this button
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
        * matters" look the same color, which is the wrong kind of consistent. */
       --success: var(--emerald);
       --warning: var(--amber);
       --error: var(--rose);
-      --focus-ring: var(--cs-gold);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
 
