@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="CavScope">
+  <title>CavScope</title>
+  <!-- Simplified mark for small sizes: ring + lens only, no ticks or inner
+       reticle lines — those disappear below ~32px and just add noise. -->
+  <path d="M 155.70 139.00 A 68 68 0 1 1 155.70 61.00"
+        fill="none" stroke="#D4AF37" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="100" cy="100" r="26" fill="#0b0b0b" stroke="#D4AF37" stroke-width="8"/>
+  <circle cx="91" cy="91" r="6" fill="#FFFFFF" opacity="0.85"/>
+</svg>

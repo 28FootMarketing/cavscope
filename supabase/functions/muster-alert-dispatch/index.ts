@@ -125,7 +125,7 @@ function alertHtml(row: OutboxRow): string {
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="padding-right:12px;" valign="middle">
-                  <img src="https://muster.partners/assets/muster-emblem.png" width="34" height="34" border="0" alt="CavScope" style="display:block; width:34px; height:34px;">
+                  <img src="https://muster.partners/assets/cavscope-emblem.png" width="34" height="34" border="0" alt="CavScope" style="display:block; width:34px; height:34px;">
                 </td>
                 <td valign="middle">
                   <span style="font-family:Georgia, 'Times New Roman', serif; font-size:19px; line-height:24px; font-weight:700; letter-spacing:2px; color:#f1f6ff;">CavScope</span>
