@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER beta — request access. One form, no account required." />
+  <meta name="description" content="MUSTER beta — request my audit. One form, no account required." />
   <title>MUSTER — Beta Access</title>
   <link rel="canonical" href="https://www.muster.partners/beta">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
@@ -283,7 +283,7 @@
         <label for="marketingConsent">I'm open to being quoted or featured as a beta testimonial (optional, reviewed with you first).</label>
       </div>
 
-      <button type="submit" id="submitBtn" data-tooltip="Submits your request directly — no account or sign-in required.">Request access</button>
+      <button type="submit" id="submitBtn" data-tooltip="Submits your request directly — no account or sign-in required.">Request my audit</button>
     </form>
 
     <div class="status" id="statusBox" role="status" aria-live="polite"></div>
@@ -371,7 +371,7 @@
         showStatus('err', 'Network error — please check your connection and try again.');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Request access';
+        submitBtn.textContent = 'Request my audit';
       }
     });
 
