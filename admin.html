@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="description" content="MUSTER Super Admin Console — platform-wide view of every organization, assessment, risk and system check." />
-  <title>MUSTER — Super Admin Console</title>
+  <meta name="description" content="CavScope Super Admin Console — platform-wide view of every organization, assessment, risk and system check." />
+  <title>CavScope — Super Admin Console</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -693,7 +693,7 @@
 <div id="gateDenied" class="gate" hidden>
   <h2>Not a super admin</h2>
   <p id="gateDeniedMsg">This console is platform-wide and only opens for a super admin. Your own workspace is where your organization's data lives.</p>
-  <a href="/app" data-tooltip="Opens the MUSTER workspace for the organizations you belong to.">Go to your workspace</a>
+  <a href="/app" data-tooltip="Opens the CavScope workspace for the organizations you belong to.">Go to your workspace</a>
 </div>
 
 <div class="shell" id="shell" hidden>
@@ -702,14 +702,14 @@
     <div class="brand">
       <img src="/assets/muster-emblem.png" alt="" width="40" height="40">
       <div>
-        <div class="brand-word">MUSTER</div>
+        <div class="brand-word">CavScope</div>
         <div class="brand-sub">Trust · Readiness · Progress</div>
       </div>
     </div>
 
     <nav class="nav" id="nav" aria-label="Super admin sections"></nav>
 
-    <div class="rail-promo" data-tooltip="MUSTER's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it.">
+    <div class="rail-promo" data-tooltip="CavScope's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it.">
       <h4>Build a more<br>assured internet.</h4>
       <p>AI readiness. Real protection. Measurable trust.</p>
     </div>
@@ -745,7 +745,7 @@
         <div class="avatar" id="whoInitials" aria-hidden="true">··</div>
         <div>
           <div class="who-name" id="whoName">Super Admin</div>
-          <div class="who-org" id="whoEmail">MUSTER</div>
+          <div class="who-org" id="whoEmail">CavScope</div>
         </div>
       </div>
     </header>
@@ -766,14 +766,14 @@
       <!-- #overview, not bare /app: app.html sends a super admin who arrives
            with no fragment straight back here, and the fragment is how this
            link says it meant to go to the workspace. -->
-      <a class="strip-cta" href="/app#overview" data-tooltip="Leaves the platform console and opens your own workspace in the app.">MUSTER →</a>
+      <a class="strip-cta" href="/app#overview" data-tooltip="Leaves the platform console and opens your own workspace in the app.">CavScope →</a>
     </div>
 
   </div>
 </div>
 
 <script>
-  // MUSTER Super Admin Console -- the only one.
+  // CavScope Super Admin Console -- the only one.
   //
   // Until 2026-09-23 there were two: this page, and a "Platform Super Admin
   // Console" view inside app.html that owned every write (plans, roles,
@@ -882,7 +882,7 @@
     { id: 'organizations',     icon: '▣', label: 'Organizations',      tip: 'Every tenant on the platform, its plan, its worst site score and when it last scanned. Change a plan or open its workspace here.' },
     { id: 'client-access',     icon: '◧', label: 'Client Access',      tip: 'One card per tenant: its plan, and every Partner-tier entitlement -- white-label branding, custom domain, and the rest -- with a switch for each. Same per-org override the Settings registry uses, organized by client instead of by flag.' },
     { id: 'workspaces',        icon: '◫', label: 'Workspaces',         tip: 'Not a separate object in this schema — an organization is the workspace.', stub: true },
-    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every MUSTER user, their platform role and when they last signed in. Change a role here.' },
+    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every CavScope user, their platform role and when they last signed in. Change a role here.' },
     { id: 'support',           icon: '◐', label: 'Support Access',     tip: 'See what one user sees, read-only, for a bounded time and a stated reason the tenant can read. Every session is logged.' },
     { id: 'audit-queue',       icon: '▤', label: 'Audit Queue',        tip: 'Scans the engine has run, with status, trigger and the resulting site score.' },
     { id: 'website-assurance', icon: '◍', label: 'Website Assurance',  tip: 'Every registered site, its posture score, open findings and verification state.' },
@@ -1239,11 +1239,11 @@
       <div class="page-head">
         <div>
           <h1>Super Admin Console</h1>
-          <p>Manage the entire MUSTER platform across all organizations.</p>
+          <p>Manage the entire CavScope platform across all organizations.</p>
         </div>
         <div class="motto">
           <em>“Safer organizations. A more trusted world.”</em>
-          <span>— MUSTER</span>
+          <span>— CavScope</span>
         </div>
       </div>
       ${kpiRow()}
@@ -1418,7 +1418,7 @@
 
   function renderUsers() {
     const rows = (DATA.users || []).filter((u) => matches(u.name, u.email, u.role));
-    return head('Users & Roles', 'Every MUSTER user. Role here is the platform role, and can be changed here; what a user can see inside an organization is decided by RLS, not by this page.') +
+    return head('Users & Roles', 'Every CavScope user. Role here is the platform role, and can be changed here; what a user can see inside an organization is decided by RLS, not by this page.') +
       panel('User roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>User</th>
@@ -1883,8 +1883,8 @@
     // no price object at all, which is why price is optional below.
     const visible = pricing.visible || {};
     const tiers = [
-      { key: 'muster', name: 'MUSTER', price: (pricing.muster || {}).monthly_price_cents },
-      { key: 'muster_partner', name: 'MUSTER Partner', price: (pricing.muster_partner || {}).monthly_price_cents,
+      { key: 'muster', name: 'CavScope', price: (pricing.muster || {}).monthly_price_cents },
+      { key: 'muster_partner', name: 'CavScope Partner', price: (pricing.muster_partner || {}).monthly_price_cents,
         note: (pricing.muster_partner || {}).included_client_orgs != null
           ? `${pricing.muster_partner.included_client_orgs} client orgs included` : null },
       { key: 'enterprise', name: 'Enterprise', price: null, note: 'contact sales' },
@@ -2848,7 +2848,7 @@
 
     const email = session.user && session.user.email;
     MY_EMAIL = email || '';
-    document.getElementById('whoEmail').textContent = email || 'MUSTER';
+    document.getElementById('whoEmail').textContent = email || 'CavScope';
     document.getElementById('whoInitials').textContent = initials(email);
     document.getElementById('whoName').textContent = 'Super Admin';
 

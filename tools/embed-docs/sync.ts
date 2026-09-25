@@ -1,4 +1,4 @@
-// Push docs/ into MUSTER's retrieval corpus.
+// Push docs/ into CavScope's retrieval corpus.
 //
 //   MUSTER_FUNCTIONS_URL=https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1 \
 //   MUSTER_CRON_SECRET=... \

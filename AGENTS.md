@@ -1,6 +1,6 @@
-# MUSTER Agent Integration
+# CavScope Agent Integration
 
-MUSTER provides an AI agent gateway via MCP (Model Context Protocol) and REST APIs. Agents can query workspace data, generate narratives, and run autonomous workflows.
+CavScope provides an AI agent gateway via MCP (Model Context Protocol) and REST APIs. Agents can query workspace data, generate narratives, and run autonomous workflows.
 
 ## Quick Start
 

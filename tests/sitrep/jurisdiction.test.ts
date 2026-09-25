@@ -121,7 +121,7 @@ test("the viewer buckets by assessment: CAN-SPAM under Not assessed, FTC under t
   const mapped = between(out, "No open findings on the mapped checks", "Not assessed by this scan");
   const open = between(out, "Open findings touch these", "No open findings on the mapped checks");
   assert.match(na, /CAN-SPAM/);
-  assert.match(na, /No MUSTER check maps to it\./);
+  assert.match(na, /No CavScope check maps to it\./);
   assert.match(mapped, /FTC Act Section 5/);
   assert.doesNotMatch(mapped, /CAN-SPAM/);
   assert.match(open, /ADA Title III/);

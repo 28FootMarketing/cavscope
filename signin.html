@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Sign in to your MUSTER workspace." />
-  <title>MUSTER — Sign In</title>
+  <meta name="description" content="Sign in to your CavScope workspace." />
+  <title>CavScope — Sign In</title>
   <link rel="canonical" href="https://app.muster.partners/">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
@@ -172,7 +172,7 @@
 
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SIGN IN</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">CavScope <small>/ SIGN IN</small></div>
     </div>
   </div>
 
@@ -201,7 +201,7 @@
         </form>
         <p class="signin-alt"><a href="#" onclick="showResetRequest(); return false;" data-tooltip="Emails you a link to choose a new password. Use this if you have a password but cannot remember it.">Forgot your password?</a></p>
         <div class="signin-footer">
-          <p>New to MUSTER? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
+          <p>New to CavScope? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=CavScope%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
           <p><a href="/app" data-tooltip="Opens the workspace with sample data, no sign-in required.">Just exploring? Continue with demo data →</a></p>
         </div>
       </div>
@@ -210,7 +210,7 @@
     <div id="resetState" hidden>
       <div class="signin-card">
         <h1>Reset your password</h1>
-        <p class="signin-desc">Enter the email address on your MUSTER account. We will send you a link that lets you choose a new password. The link is single-use and expires.</p>
+        <p class="signin-desc">Enter the email address on your CavScope account. We will send you a link that lets you choose a new password. The link is single-use and expires.</p>
         <form id="resetForm" onsubmit="return submitResetRequest(event)">
           <label for="rsEmail">Work email</label>
           <input type="email" id="rsEmail" required autocomplete="email" placeholder="you@company.com"
@@ -247,7 +247,7 @@
 
     <div id="sentState" class="center-msg" hidden>
       <h1>Check your email</h1>
-      <p id="sentMsg">If that address has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.</p>
+      <p id="sentMsg">If that address has a CavScope account, a sign-in link is on its way. Open it on this device to finish signing in.</p>
       <p id="resendMsg" role="status" aria-live="polite" style="margin-top:12px; font-size:12.5px; color:var(--text-dim);" hidden></p>
       <p style="margin-top:14px;">
         <button type="button" id="resendLink" class="btn-linklike" onclick="resendLast()" data-tooltip="Send the link again. Nothing arrives instantly; give it a minute and check spam before resending.">Resend link</button>
@@ -553,12 +553,12 @@
 
   // One message for every outcome. Whether the address exists, was rate
   // limited, or was never registered, the page says the same thing -- so this
-  // form cannot be used to test which addresses have MUSTER accounts.
+  // form cannot be used to test which addresses have CavScope accounts.
   function showSent(kind, email) {
     lastRequest = { kind, email };
     document.getElementById('sentMsg').textContent = kind === 'reset'
-      ? `Check your email for your password-reset link. If ${email} has a MUSTER account, one is on its way. Open it on this device to choose a new password.`
-      : `Check your email for your secure sign-in link. If ${email} has a MUSTER account, one is on its way. Open it on this device to finish signing in.`;
+      ? `Check your email for your password-reset link. If ${email} has a CavScope account, one is on its way. Open it on this device to choose a new password.`
+      : `Check your email for your secure sign-in link. If ${email} has a CavScope account, one is on its way. Open it on this device to finish signing in.`;
     showState('sentState');
     startResendCooldown();
   }

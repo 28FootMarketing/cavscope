@@ -32,7 +32,7 @@ stale number here would be a claim about coverage that nothing checks.
 `adapt.mjs` reads that file at runtime and removes four things — the Deno runtime
 typings import, the Supabase client, the two `muster_engine_*` RPCs at the tail of
 `runScan()`, and the `Deno.serve()` handler. Every rule, threshold, evidence key
-and the `MUSTER-Scanner/1.0` user agent come through untouched.
+and the `CavScope-Scanner/1.0` user agent come through untouched.
 
 Each transform asserts it matched exactly once, and the excised tail is checked for
 `add({` before being dropped, so a restructured engine makes this **fail loudly**

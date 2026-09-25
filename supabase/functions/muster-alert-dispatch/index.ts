@@ -38,10 +38,10 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const RESEND_API_BASE = "https://api.resend.com";
 
-// MUSTER sends from its own domain now that muster.partners is the product's
+// CavScope sends from its own domain now that muster.partners is the product's
 // home. mail.muster.partners is verified in Resend with sending enabled
 // (confirmed 2026-09-07). The previous mail.28footsystems.com is also still
-// verified, so nothing breaks in either direction -- but alerts about a MUSTER
+// verified, so nothing breaks in either direction -- but alerts about a CavScope
 // tenant should not arrive from the parent company's domain.
 //
 // Overridable by env so this same code is correct on both Supabase projects
@@ -50,14 +50,14 @@ const RESEND_API_BASE = "https://api.resend.com";
 // unverified domain outright, so a typo here fails loudly at send time and the
 // row is recorded as failed with the API's message -- it does not vanish.
 const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
-  ?? "MUSTER Alerts <alerts@mail.muster.partners>";
+  ?? "CavScope Alerts <alerts@mail.muster.partners>";
 
 // Where "Open the risk register" points. Overridable for the same reason as
 // the from-address: this code runs on two Supabase projects during the move,
 // and the workspace host has changed once already.
 const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://app.muster.partners/app";
 
-// The address MUSTER shows tenants as its support desk, and the default
+// The address CavScope shows tenants as its support desk, and the default
 // Reply-To. Unset by default, and that default is load-bearing: an advertised
 // address that cannot receive is worse than no address, because the tenant
 // writes to it and believes someone read it.
@@ -125,10 +125,10 @@ function alertHtml(row: OutboxRow): string {
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="padding-right:12px;" valign="middle">
-                  <img src="https://muster.partners/assets/muster-emblem.png" width="34" height="34" border="0" alt="MUSTER" style="display:block; width:34px; height:34px;">
+                  <img src="https://muster.partners/assets/muster-emblem.png" width="34" height="34" border="0" alt="CavScope" style="display:block; width:34px; height:34px;">
                 </td>
                 <td valign="middle">
-                  <span style="font-family:Georgia, 'Times New Roman', serif; font-size:19px; line-height:24px; font-weight:700; letter-spacing:2px; color:#f1f6ff;">MUSTER</span>
+                  <span style="font-family:Georgia, 'Times New Roman', serif; font-size:19px; line-height:24px; font-weight:700; letter-spacing:2px; color:#f1f6ff;">CavScope</span>
                 </td>
               </tr>
             </table>
@@ -162,7 +162,7 @@ ${paragraphs}
         <tr>
           <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
             <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
-              You are receiving this because you are listed as an alert recipient for your MUSTER organization. Alert recipients are managed in your workspace settings.
+              You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.
             </p>${
               SUPPORT_EMAIL
                 ? `
@@ -172,7 +172,7 @@ ${paragraphs}
                 : ""
             }
             <p style="margin-top:0; margin-bottom:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8e9fb8;">
-              MUSTER is website assurance by 28 Foot Systems, After Today, LLC &middot; Hanover, PA
+              CavScope is website assurance by 28 Foot Systems, After Today, LLC &middot; Hanover, PA
             </p>
           </td>
         </tr>

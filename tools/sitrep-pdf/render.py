@@ -86,7 +86,7 @@ A = story.append
 # ---------------------------------------------------------------- masthead
 site = D["website"]; sr = D["sitrep"]; scan = D["scan"]; summ = scan["summary"]
 
-A(Paragraph("MUSTER &#183; WEBSITE ASSURANCE SITREP", S["kicker"]))
+A(Paragraph("CavScope &#183; WEBSITE ASSURANCE SITREP", S["kicker"]))
 A(Spacer(1, 3))
 A(Paragraph(esc(site["name"]), S["title"]))
 A(Paragraph(f'{esc(site["url"])} &#183; prepared for {esc(D["org"])}', S["sub"]))
@@ -171,7 +171,7 @@ A(Spacer(1, 14))
 # ---------------------------------------------------------------- open findings
 open_intro = [
     Paragraph(f'Open findings ({len(D["top_findings"])})', S["h2"]),
-    Paragraph("Both are informational. MUSTER reports inventory and policy positions at this level: "
+    Paragraph("Both are informational. CavScope reports inventory and policy positions at this level: "
               "they describe a state of affairs, not a defect to remediate.", S["bodydim"]),
     Spacer(1, 7),
 ]
@@ -320,7 +320,7 @@ A(Paragraph(
     "cannot be enumerated from outside and reporting its absence would be a guess.", S["body"]))
 A(Spacer(1, 8))
 A(Paragraph(
-    "MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not "
+    "CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not "
     "constitute legal advice; organizations remain solely responsible for their own legal and regulatory "
     "obligations. Framework references indicate where a finding is relevant to a control, not that any "
     "certification has been achieved.", S["small"]))
@@ -334,7 +334,7 @@ def furniture(canvas, doc):
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(INK_DIM)
     canvas.drawString(20*mm, 11*mm,
-        f'MUSTER SITREP #{sr["id"]} v{sr["version"]}  |  scan #{scan["scan_id"]}  |  {site["url"]}')
+        f'CavScope SITREP #{sr["id"]} v{sr["version"]}  |  scan #{scan["scan_id"]}  |  {site["url"]}')
     canvas.drawRightString(w - 20*mm, 11*mm, f"Page {doc.page}")
     # The content hash goes on its own line. Centring it on the same baseline
     # ran it straight through the URL on the left.
@@ -345,8 +345,8 @@ def furniture(canvas, doc):
 
 doc = BaseDocTemplate(OUT, pagesize=LETTER,
                       leftMargin=20*mm, rightMargin=20*mm, topMargin=18*mm, bottomMargin=22*mm,
-                      title=f'MUSTER SITREP - {site["name"]} - scan {scan["scan_id"]}',
-                      author="MUSTER by 28 Foot Systems (After Today, LLC)",
+                      title=f'CavScope SITREP - {site["name"]} - scan {scan["scan_id"]}',
+                      author="CavScope by 28 Foot Systems (After Today, LLC)",
                       subject=sr["headline"])
 frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")
 doc.addPageTemplates([PageTemplate(id="main", frames=[frame], onPage=furniture)])

@@ -18,7 +18,7 @@ import {
   type TenantLlm,
 } from "./llm.ts";
 
-// MUSTER agent gateway. Makes every workspace usable by an AI agent or AI employee.
+// CavScope agent gateway. Makes every workspace usable by an AI agent or AI employee.
 //
 // Auth: header  x-muster-api-key: mk_...   (issued by public.muster_create_api_key, hashed at rest)
 // Two surfaces on the same URL:
@@ -36,28 +36,28 @@ import {
 //     muster.org_llm_config via muster_engine_llm_config_for_website(). A tenant with no
 //     configuration gets NO llm: the call fails with an actionable message and that
 //     organization stays on the deterministic SITREP generator. There is deliberately no
-//     fallback to MUSTER's key, because the point of the feature is that their findings do
+//     fallback to CavScope's key, because the point of the feature is that their findings do
 //     not reach our inference account. A broken tenant key is a visible error, never a
 //     silent redirect. See migrations 069/070/071 and docs/BACKEND.md.
 //
-//   search_* embeddings  ->  MUSTER's own key, always. finding_embeddings, doc_chunks and
+//   search_* embeddings  ->  CavScope's own key, always. finding_embeddings, doc_chunks and
 //     chunk embeddings are pinned to vector(1536); a tenant model with other dimensions
 //     breaks retrieval and one with the same dimensions silently poisons it. Re-embedding a
 //     corpus is an operation, not a setting. Say that to a client rather than glossing it.
-//     Set MUSTER's own:
+//     Set CavScope's own:
 //       supabase secrets set MUSTER_OPENROUTER_API_KEY=...   (the key named "muster-agent")
 //     Falls back to the project-wide OPENROUTER_API_KEY when that is unset.
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const PROTOCOL_VERSION = "2025-06-18";
 
-// MUSTER's own OpenRouter credential. EMBEDDINGS ONLY -- see the header. Nothing
+// CavScope's own OpenRouter credential. EMBEDDINGS ONLY -- see the header. Nothing
 // model-facing on the narrative or agent-loop path may read this.
 // Edge function secrets are project-wide, and
 // this Supabase project is shared across every 28FS brand, so OPENROUTER_API_KEY is
 // one value that CORA, AIVA, ROS, BRD, GFFH and s28 all draw against -- a spend cap
-// hit by any one of them takes MUSTER down too (it did, 2026-09-06). Prefer a
-// MUSTER-scoped key, fall back to the shared one so nothing breaks before it is set.
+// hit by any one of them takes CavScope down too (it did, 2026-09-06). Prefer a
+// CavScope-scoped key, fall back to the shared one so nothing breaks before it is set.
 function openRouterKey(): string | undefined {
   return Deno.env.get("MUSTER_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
 }
@@ -146,10 +146,10 @@ async function generateOpenAPISchema(req: Request) {
   const schema: Record<string, unknown> = {
     openapi: "3.1.0",
     info: {
-      title: "MUSTER Agent API",
+      title: "CavScope Agent API",
       version: "1.0.0",
       description:
-        "AI agent gateway for MUSTER website assurance. Provides MCP (JSON-RPC 2.0) and REST interfaces to query findings, generate narratives, and access workspace data.",
+        "AI agent gateway for CavScope website assurance. Provides MCP (JSON-RPC 2.0) and REST interfaces to query findings, generate narratives, and access workspace data.",
       contact: {
         name: "28 Foot Systems",
         url: "https://muster.partners",
@@ -158,7 +158,7 @@ async function generateOpenAPISchema(req: Request) {
     servers: [
       {
         url: baseUrl,
-        description: "MUSTER agent endpoint",
+        description: "CavScope agent endpoint",
       },
     ],
     paths: {
@@ -368,7 +368,7 @@ async function embedText(text: string): Promise<number[]> {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
       "http-referer": "https://muster.partners",
-      "x-title": "MUSTER search embedding",
+      "x-title": "CavScope search embedding",
     },
     body: JSON.stringify({
       model: "openai/text-embedding-3-small",
@@ -452,7 +452,7 @@ async function callSearchDocs(ctx: unknown, args: Record<string, unknown>): Prom
 
   const embedding = await embedText(query);
 
-  // No website_id: MUSTER's documentation is not tenant data and is not scoped to a
+  // No website_id: CavScope's documentation is not tenant data and is not scoped to a
   // site. Which documents come back IS scoped -- the shim decides from p_ctx whether
   // this key may see internal documentation, so a tenant key gets the rule catalog
   // and nothing about the infrastructure.
@@ -489,7 +489,7 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
 // Resolve the LLM of the organization that OWNS the website being narrated --
 // not the organization on the API key. Those differ: a platform-scoped key
 // (organization_id null) may narrate any site, and running that through
-// MUSTER's own account would send a tenant's findings to our inference provider
+// CavScope's own account would send a tenant's findings to our inference provider
 // through the one path built to stop exactly that. SQL maps website -> org ->
 // vault, so this function never names an org id and cannot ask for the wrong
 // tenant's credential.
@@ -537,7 +537,7 @@ async function runAgentLoop(ctx: unknown, llm: TenantLlm, systemPrompt: string, 
     try {
       res = await fetch(endpoint, {
         method: "POST",
-        headers: buildChatHeaders(llm.api_key, openRouter, "MUSTER AI agent loop"),
+        headers: buildChatHeaders(llm.api_key, openRouter, "CavScope AI agent loop"),
         body: JSON.stringify(buildChatBody({
           model: llm.model,
           systemPrompt,
@@ -620,7 +620,7 @@ async function generateAiNarrative(ctx: unknown, context: Record<string, unknown
   const label = context.website_url ? `${context.website_name} (${context.website_url})` : `website ${context.website_id}`;
   // Throws LlmNotConfiguredError when this tenant has no endpoint, which is a
   // normal state and not a fault: they stay on the deterministic generator.
-  // Nothing below runs, so no MUSTER credential is anywhere on this path.
+  // Nothing below runs, so no CavScope credential is anywhere on this path.
   const llm = await resolveTenantLlm(context.website_id, label);
 
   let verified;
@@ -693,7 +693,7 @@ Deno.serve(async (req: Request) => {
         const baseUrl = `${publicOrigin(req, url)}${publicPath(url).replace(/\/?$/, "")}`;
         return json({ jsonrpc: "2.0", id, result: { protocolVersion: PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "muster", version: "1.0.0" },
-          instructions: `You are connected to MUSTER website assurance as agent "${(ctx as { agent_name: string }).agent_name}". Every finding and SITREP claim carries evidence ids; cite them (E<id>, F<id>) when reporting to humans. Statuses reflect scanner evidence, not legal certification.`,
+          instructions: `You are connected to CavScope website assurance as agent "${(ctx as { agent_name: string }).agent_name}". Every finding and SITREP claim carries evidence ids; cite them (E<id>, F<id>) when reporting to humans. Statuses reflect scanner evidence, not legal certification.`,
           discovery: { openapi: `${baseUrl}/openapi.json`, catalog: baseUrl } } });
       }
       if (method === "notifications/initialized" || method.startsWith("notifications/")) return new Response(null, { status: 202 });

@@ -1,13 +1,13 @@
-# MUSTER Comprehensive Glossary of Terms
+# CavScope Comprehensive Glossary of Terms
 
-> Also published in Notion as a child page of "MUSTER — Product Standard Operating Procedure".
+> Also published in Notion as a child page of "CavScope — Product Standard Operating Procedure".
 > This file is the source of truth; edit here first, then re-sync the Notion page.
 
 ## Purpose
 
-The MUSTER Glossary defines the terminology used across MUSTER assessments, scores, findings, controls, reports, recommendations, and SITREPs.
+The CavScope Glossary defines the terminology used across CavScope assessments, scores, findings, controls, reports, recommendations, and SITREPs.
 
-MUSTER evaluates more than whether a website works. It considers artificial intelligence, cybersecurity, domain and email trust, website assurance, privacy, accessibility, operational resilience, governance, compliance readiness, and organizational risk.
+CavScope evaluates more than whether a website works. It considers artificial intelligence, cybersecurity, domain and email trust, website assurance, privacy, accessibility, operational resilience, governance, compliance readiness, and organizational risk.
 
 ---
 
@@ -293,13 +293,13 @@ MUSTER evaluates more than whether a website works. It considers artificial inte
 
 ---
 
-## MUSTER-Specific Terms
+## CavScope-Specific Terms
 
-These are MUSTER-defined concepts. They should not be presented as definitions created by NIST, OWASP, AICPA, W3C, CISA, or another standards organization.
+These are CavScope-defined concepts. They should not be presented as definitions created by NIST, OWASP, AICPA, W3C, CISA, or another standards organization.
 
-- **Assurance Benchmark.** A reference point used by MUSTER to compare observed conditions against expected assurance practices.
+- **Assurance Benchmark.** A reference point used by CavScope to compare observed conditions against expected assurance practices.
 - **Assurance Finding.** A condition affecting trust, security, accessibility, governance, privacy, resilience, AI readiness, or another assessed area.
-- **Assurance Layer.** A major MUSTER assessment category. Potential layers include:
+- **Assurance Layer.** A major CavScope assessment category. Potential layers include:
   - AI Readiness
   - AI Governance
   - Cybersecurity
@@ -312,10 +312,10 @@ These are MUSTER-defined concepts. They should not be presented as definitions c
   - Third-Party Risk
 - **Assurance Posture.** The combined condition of assessed risks, controls, evidence, findings, and practices at a point in time.
 - **Benchmark Gap.** The difference between an observed state and a target or benchmark state.
-- **Control Confidence.** MUSTER's indication of how strongly available evidence demonstrates that a control exists and functions.
+- **Control Confidence.** CavScope's indication of how strongly available evidence demonstrates that a control exists and functions.
 - **Control Coverage.** How much relevant risk is addressed by existing controls.
-- **Digital Assurance.** MUSTER's umbrella concept for evaluating security, trust, accessibility, privacy, governance, resilience, and operational discipline.
-- **Domain Trust.** The MUSTER assessment area covering domains, DNS, certificates, email authentication, encryption, and related trust controls.
+- **Digital Assurance.** CavScope's umbrella concept for evaluating security, trust, accessibility, privacy, governance, resilience, and operational discipline.
+- **Domain Trust.** The CavScope assessment area covering domains, DNS, certificates, email authentication, encryption, and related trust controls.
 - **Evidence-Backed Finding.** A finding supported by technical evidence, documentation, test results, or other verifiable information.
 - **Evidence Confidence.** The strength and reliability of evidence supporting a finding.
 - **Exposure Indicator.** A condition increasing potential exposure without proving compromise or harm.
@@ -323,24 +323,24 @@ These are MUSTER-defined concepts. They should not be presented as definitions c
 - **Finding Severity.** The potential significance of a finding. Severity should remain distinct from remediation priority.
 - **Governance Readiness.** The degree to which policies, ownership, documentation, accountability, controls, and oversight exist.
 - **Known Finding.** A condition sufficiently supported by available evidence.
-- **MUSTER.** A digital assurance and AI readiness platform designed to identify, organize, explain, prioritize, and track technology, trust, governance, accessibility, security, compliance-readiness, and operational risk.
-- **MUSTER Assessment.** A structured evaluation using automated tests, observed evidence, organizational information, manual review, or combinations of those methods.
-- **MUSTER Benchmark.** A defined reference condition used to compare organizational practices or technical conditions against expected practices.
-- **MUSTER Finding.** An observable condition surfaced through MUSTER. A finding does not automatically mean:
+- **CavScope.** A digital assurance and AI readiness platform designed to identify, organize, explain, prioritize, and track technology, trust, governance, accessibility, security, compliance-readiness, and operational risk.
+- **CavScope Assessment.** A structured evaluation using automated tests, observed evidence, organizational information, manual review, or combinations of those methods.
+- **CavScope Benchmark.** A defined reference condition used to compare organizational practices or technical conditions against expected practices.
+- **CavScope Finding.** An observable condition surfaced through CavScope. A finding does not automatically mean:
   - a breach occurred
   - a law was violated
   - regulatory noncompliance exists
   - a cyberattack succeeded
   - negligence occurred
   - harm occurred
-- **MUSTER Readiness.** The demonstrated ability to responsibly operate, govern, secure, monitor, and improve a capability.
-- **MUSTER Risk Signal.** Technical, operational, or governance evidence suggesting further review may be warranted.
-- **MUSTER Score.** A MUSTER-generated measurement representing assessed conditions across defined dimensions. A MUSTER Score is not government certification, regulatory approval, a formal audit opinion, or a guarantee of security unless an independent external process establishes such status.
-- **MUSTER SITREP.** Situation Report. An executive-level view of current assurance posture, material findings, significant changes, priorities, and recommended actions.
-- **Observable Evidence.** Information MUSTER can directly detect, retrieve, test, or substantiate.
+- **CavScope Readiness.** The demonstrated ability to responsibly operate, govern, secure, monitor, and improve a capability.
+- **CavScope Risk Signal.** Technical, operational, or governance evidence suggesting further review may be warranted.
+- **CavScope Score.** A CavScope-generated measurement representing assessed conditions across defined dimensions. A CavScope Score is not government certification, regulatory approval, a formal audit opinion, or a guarantee of security unless an independent external process establishes such status.
+- **CavScope SITREP.** Situation Report. An executive-level view of current assurance posture, material findings, significant changes, priorities, and recommended actions.
+- **Observable Evidence.** Information CavScope can directly detect, retrieve, test, or substantiate.
 - **Priority Finding.** A finding elevated because of severity, exposure, likelihood, business importance, context, or other relevant factors.
 - **Readiness Gap.** The difference between current demonstrated capability and capability reasonably required for responsible implementation.
-- **Readiness Score.** A MUSTER measurement representing preparedness within a defined area.
+- **Readiness Score.** A CavScope measurement representing preparedness within a defined area.
 - **Recommended Action.** A proposed step to address, validate, investigate, mitigate, monitor, or document a finding.
 - **Remediation Status.** The current state of corrective work. Suggested states:
   - Open
@@ -354,9 +354,9 @@ These are MUSTER-defined concepts. They should not be presented as definitions c
   - Not Applicable
 - **Risk Context.** Business, legal, technical, operational, human, or environmental information affecting how a finding should be interpreted.
 - **Risk Signal.** Observable information indicating possible risk or a change in risk. A risk signal is not proof of compromise or regulatory violation.
-- **Score Transparency.** Showing the evidence, findings, factors, and weighting logic contributing to a MUSTER score.
+- **Score Transparency.** Showing the evidence, findings, factors, and weighting logic contributing to a CavScope score.
 - **Verified Finding.** A finding that has received additional validation.
-- **Website Assurance Score.** A MUSTER measurement reflecting website-related security, trust, accessibility, technical health, privacy, resilience, and operational controls.
+- **Website Assurance Score.** A CavScope measurement reflecting website-related security, trust, accessibility, technical health, privacy, resilience, and operational controls.
 
 ---
 
@@ -470,9 +470,9 @@ Severity does not prove exploitation or harm.
 
 ---
 
-## Critical MUSTER Distinctions
+## Critical CavScope Distinctions
 
-- **Assessment is not certification.** MUSTER can evaluate observable conditions without constituting formal certification.
+- **Assessment is not certification.** CavScope can evaluate observable conditions without constituting formal certification.
 - **Readiness is not compliance.** Strong readiness does not replace a legal, regulatory, contractual, or independent compliance determination.
 - **A vulnerability is not a breach.** A weakness does not prove exploitation.
 - **A finding is not a violation.** A technical or governance finding does not automatically establish a legal violation.
@@ -482,11 +482,11 @@ Severity does not prove exploitation or harm.
 - **Monitoring is not remediation.** Detection does not fix the problem.
 - **AI adoption is not AI readiness.** Using AI does not prove that governance, training, oversight, security, or risk management exists.
 - **AI governance is not AI prohibition.** Governance establishes boundaries, responsibilities, oversight, and controls for appropriate use.
-- **A score is not a guarantee.** No MUSTER score guarantees security, compliance, accessibility, resilience, or freedom from risk.
+- **A score is not a guarantee.** No CavScope score guarantees security, compliance, accessibility, resilience, or freedom from risk.
 
 ---
 
-## Core MUSTER Principle
+## Core CavScope Principle
 
 Every material finding should answer:
 
@@ -496,6 +496,6 @@ Every material finding should answer:
 4. What should the organization do about it?
 5. How will we know when it has been addressed?
 
-MUSTER's objective is not to generate more findings.
+CavScope's objective is not to generate more findings.
 
 Its purpose is to turn technical and organizational evidence into understandable decisions, prioritized action, and measurable improvement.

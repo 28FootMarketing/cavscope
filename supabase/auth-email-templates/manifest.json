@@ -1,8 +1,8 @@
 [
-  { "file": "01-confirm-signup.html",  "flow": "confirmation",     "subject": "Confirm your MUSTER email address" },
-  { "file": "02-invite-user.html",     "flow": "invite",           "subject": "You have been invited to MUSTER" },
-  { "file": "03-magic-link.html",      "flow": "magic_link",       "subject": "Your secure MUSTER sign-in link" },
-  { "file": "04-change-email.html",    "flow": "email_change",     "subject": "Confirm your new MUSTER email address" },
-  { "file": "05-reset-password.html",  "flow": "recovery",         "subject": "Reset your MUSTER password" },
-  { "file": "06-reauthentication.html","flow": "reauthentication", "subject": "Your MUSTER verification code" }
+  { "file": "01-confirm-signup.html",  "flow": "confirmation",     "subject": "Confirm your CavScope email address" },
+  { "file": "02-invite-user.html",     "flow": "invite",           "subject": "You have been invited to CavScope" },
+  { "file": "03-magic-link.html",      "flow": "magic_link",       "subject": "Your secure CavScope sign-in link" },
+  { "file": "04-change-email.html",    "flow": "email_change",     "subject": "Confirm your new CavScope email address" },
+  { "file": "05-reset-password.html",  "flow": "recovery",         "subject": "Reset your CavScope password" },
+  { "file": "06-reauthentication.html","flow": "reauthentication", "subject": "Your CavScope verification code" }
 ]

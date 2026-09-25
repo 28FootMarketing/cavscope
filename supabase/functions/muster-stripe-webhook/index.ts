@@ -2,8 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { gateCheckoutSession, verifyStripeSignature } from "./core.ts";
 
-// PRD-003: Stripe self-serve checkout for the base MUSTER tier only.
-// MUSTER Partner/Enterprise stay sales-assisted via muster-ghl-webhook
+// PRD-003: Stripe self-serve checkout for the base CavScope tier only.
+// CavScope Partner/Enterprise stay sales-assisted via muster-ghl-webhook
 // (BLOCKERS-AND-DECISIONS.md B-1). Does not use muster.onboard_client
 // (dead, buggy -- see migration 20260906012143's header). Instead: this
 // function only records that a real payment happened (invites the auth

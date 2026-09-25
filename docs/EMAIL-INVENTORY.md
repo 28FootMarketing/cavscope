@@ -1,6 +1,6 @@
-# MUSTER email inventory
+# CavScope email inventory
 
-Every email MUSTER can cause to be sent, the real application event behind it, and **one** owner per
+Every email CavScope can cause to be sent, the real application event behind it, and **one** owner per
 event. The owner column is the point of this document: an event with two owners sends two emails,
 and the usual way that happens is somebody adding an email for something the auth or payment
 provider already sends.
@@ -18,19 +18,19 @@ Routing and configuration: [`docs/EMAIL.md`](EMAIL.md). Auth template sources:
 | Team or client invitation | `muster-stripe-webhook` → `inviteUserByEmail`, or a manual dashboard invite | invited address | **GoTrue** | `02-invite-user.html` |
 | Email-address change | user changes their address in Supabase Auth | both old and new address | **GoTrue** | `04-change-email.html` |
 | Reauthentication code | GoTrue reauthentication | signed-in user | **GoTrue** | `06-reauthentication.html` |
-| Critical/high risk opened | `muster.autotriage()` opens a risk → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | org's alert recipients | **MUSTER** (Resend REST API) | `alertHtml()` in the function |
+| Critical/high risk opened | `muster.autotriage()` opens a risk → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | org's alert recipients | **CavScope** (Resend REST API) | `alertHtml()` in the function |
 
-## Deliberately not sent by MUSTER
+## Deliberately not sent by CavScope
 
-Each of these has an owner already. Building a MUSTER version would produce a second email for one
+Each of these has an owner already. Building a CavScope version would produce a second email for one
 event, which is the failure this table exists to prevent.
 
-| Event | Owner | Why not MUSTER |
+| Event | Owner | Why not CavScope |
 |---|---|---|
-| Payment receipt / invoice | **Stripe** | Stripe emails receipts and invoices when the customer email is collected. MUSTER holds no line items and no tax detail, so anything it sent would be a worse duplicate. Enable it in Stripe → Settings → Customer emails. |
-| Payment failure, card action required | **Stripe** | Stripe owns dunning, the retry schedule, and the hosted payment-update page. MUSTER has no equivalent and should not compete with the retry timeline. |
-| Subscription cancellation confirmation | **Stripe** | Same. MUSTER is not told the difference between a cancel-at-period-end and an immediate cancel unless it subscribes to more events than it currently does. |
-| Trial ending | **Stripe** | No MUSTER tier currently offers a trial. If one is introduced, Stripe's trial-ending email is the owner; do not add a second. |
+| Payment receipt / invoice | **Stripe** | Stripe emails receipts and invoices when the customer email is collected. CavScope holds no line items and no tax detail, so anything it sent would be a worse duplicate. Enable it in Stripe → Settings → Customer emails. |
+| Payment failure, card action required | **Stripe** | Stripe owns dunning, the retry schedule, and the hosted payment-update page. CavScope has no equivalent and should not compete with the retry timeline. |
+| Subscription cancellation confirmation | **Stripe** | Same. CavScope is not told the difference between a cancel-at-period-end and an immediate cancel unless it subscribes to more events than it currently does. |
+| Trial ending | **Stripe** | No CavScope tier currently offers a trial. If one is introduced, Stripe's trial-ending email is the owner; do not add a second. |
 | Welcome after account creation | **GoTrue invite** | The invite email *is* the welcome for every paid client: `muster-stripe-webhook` invites on `checkout.session.completed`, and the invite lands the user in onboarding. A separate welcome would arrive within seconds of it. |
 | Promotional / campaign email | **GHL** | Marketing lives in GHL against the `src:` / `product:` / `intent:` tag taxonomy. It must not share a sending identity or a suppression list with transactional mail. |
 

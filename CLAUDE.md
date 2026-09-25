@@ -1,4 +1,27 @@
-# MUSTER — standing rules for this repo
+# CavScope (repo/internal codename: MUSTER) — standing rules for this repo
+
+## Brand: CavScope is the product; MUSTER is the internal codename
+
+This repo builds the product now marketed as **CavScope, Web Assurance by 28 Foot
+Systems**, at `https://cavscope.28footsystems.com/`. `MUSTER` was the product's previous
+customer-facing name and is now the internal codename this repo, its Postgres schema,
+every `muster_*` RPC and `muster-*` edge function, its migration filenames, and the
+`muster.partners` / `*.muster.28footsystems.com` hostnames are still built and named
+after -- deliberately, not as an oversight. Renaming those would touch live production
+data, deployed API contracts (`x-muster-api-key`, `mk_` key prefixes), and DNS/Supabase
+config with no customer-visible benefit; see `docs/BRAND-CUTOVER.md` for the full
+reasoning, what already changed in this repo, and the handful of things that still need
+a dashboard, DNS or Notion change outside it.
+
+**Reading the rest of this file:** every rule below was written under the MUSTER name and
+is left as originally written, because it is a historical and technical record --
+migration headers, verified live-config values (a Site URL, an SMTP sender name, an
+`ENGINE_VERSION` string) and war stories about what actually shipped and when. Where you
+see `MUSTER` used as the product's customer-facing name in prose below, read it as
+`CavScope` -- the two files documenting the actual current split are `docs/BRAND-CUTOVER.md`
+(what changed, what didn't, why) and this section. Where `MUSTER` appears as part of an
+identifier (`muster.foo`, `muster_bar`, `muster-baz`, a hostname, a migration filename), it
+is unchanged and still means exactly what it always meant.
 
 ## Tooltips are mandatory on every page
 

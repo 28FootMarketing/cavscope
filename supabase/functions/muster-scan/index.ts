@@ -15,7 +15,7 @@ import { EXPOSURE_PROBES, evaluateExposure, exposureHit, type ExposureProbeResul
 import { PROBE_ORIGIN, evaluateCors } from "./cors.ts";
 import { evaluateCspQuality } from "./csp.ts";
 
-// MUSTER scan engine, phase 1: HTTP-native checks.
+// CavScope scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
 // (service_role only). Each finding cites the evidence rows it was derived from, by key -> evidence id.
 //
@@ -119,11 +119,16 @@ const EXCERPT_BYTES = 4096;
 const DEGRADED_MS = 3000;
 const HSTS_MIN_AGE = 15552000;
 const MAX_HOPS = 6;
-// Identifies MUSTER to every site it touches. The URL has to resolve: the
+// Identifies CavScope to every site it touches. The URL has to resolve: the
 // previous +https://muster.28footsystems.com/scanner 404s, because no /scanner
-// page was ever built. muster.partners is the product's home and explains what
-// MUSTER is, which is what an operator seeing this in their logs wants.
-const UA = "Mozilla/5.0 (compatible; MUSTER-Scanner/1.0; +https://muster.partners)";
+// page was ever built. muster.partners is kept alive and now serves
+// CavScope-branded content -- see CLAUDE.md's brand section and
+// docs/BRAND-CUTOVER.md -- so it still explains what CavScope is, which is
+// what an operator seeing this in their logs wants. Point this at
+// https://cavscope.28footsystems.com once that domain actually resolves in
+// production; not before, for the same reason the old /scanner path was
+// dropped -- a UA string should never link to a 404.
+const UA = "Mozilla/5.0 (compatible; CavScope-Scanner/1.0; +https://muster.partners)";
 
 const TRACKER_HOSTS: Array<[RegExp, string]> = [
   [/googletagmanager\.com/i, "Google Tag Manager"],
@@ -395,7 +400,7 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   const unparsable = !refused && responseRejectedByClient(primary.error);
   if (refused) {
     add({ rule_id: "AVAIL-003", severity: "critical", title: "Site could not be assessed: the scanner was refused",
-      detail: `The homepage returned HTTP ${primary.status} after ${chain.hops.length} hop(s). The server answered, so it is running, but it declined this request -- commonly a WAF, CDN bot filter or rate limiter rejecting the MUSTER-Scanner user agent. No markup, headers or cookies were read, so every HTTP-derived rule produced nothing for this site and its score reflects an unassessed target rather than a clean one. DNS-derived checks are independent of the web server and still ran.`,
+      detail: `The homepage returned HTTP ${primary.status} after ${chain.hops.length} hop(s). The server answered, so it is running, but it declined this request -- commonly a WAF, CDN bot filter or rate limiter rejecting the CavScope-Scanner user agent. No markup, headers or cookies were read, so every HTTP-derived rule produced nothing for this site and its score reflects an unassessed target rather than a clean one. DNS-derived checks are independent of the web server and still ran.`,
       location: "homepage", confidence: "high", evidence_keys: ["primary", "chain"] });
   } else if (unparsable) {
     add({ rule_id: "AVAIL-004", severity: "critical", title: "Site could not be assessed: the response was not valid HTTP",

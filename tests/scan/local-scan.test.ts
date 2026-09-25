@@ -33,9 +33,9 @@ test("the adapter preserves every rule in the engine", async () => {
   assert.ok(ids.length >= 20, "sanity: the engine should name at least 20 rule ids inline");
   for (const id of new Set(ids)) assert.ok(adapted.includes(`rule_id: "${id}"`), `${id} was lost by the adapter`);
 
-  // The user agent identifies MUSTER to every site it touches; a local scan must
-  // not appear in an operator's logs as something else.
-  assert.ok(adapted.includes("MUSTER-Scanner/1.0"), "the engine user agent must be unchanged");
+  // The user agent identifies CavScope to every site it touches; a local scan
+  // must not appear in an operator's logs as something else.
+  assert.ok(adapted.includes("CavScope-Scanner/1.0"), "the engine user agent must be unchanged");
 });
 
 test("the adapter fails loudly rather than cutting a region it does not recognise", async () => {

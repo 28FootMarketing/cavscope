@@ -24,7 +24,7 @@ class FatalEmbedError extends Error {}
 
 // Edge function secrets are project-wide, and this Supabase project is shared across
 // every 28FS brand, so OPENROUTER_API_KEY is one value CORA, AIVA, ROS, BRD, GFFH and
-// s28 all draw against. Prefer MUSTER's own key, fall back to the shared one.
+// s28 all draw against. Prefer CavScope's own key, fall back to the shared one.
 function openRouterKey(): string | undefined {
   return Deno.env.get("MUSTER_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY");
 }
@@ -41,7 +41,7 @@ async function embedText(text: string): Promise<number[]> {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
       "http-referer": "https://muster.partners",
-      "x-title": "MUSTER embedding backfill",
+      "x-title": "CavScope embedding backfill",
     },
     body: JSON.stringify({
       model: "openai/text-embedding-3-small",
