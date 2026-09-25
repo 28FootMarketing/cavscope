@@ -876,6 +876,7 @@
   const SECTIONS = [
     { id: 'overview',          icon: '▦', label: 'Overview',           tip: 'Platform-wide snapshot: headline counts, 30-day scan activity, live risk and what needs doing.' },
     { id: 'organizations',     icon: '▣', label: 'Organizations',      tip: 'Every tenant on the platform, its plan, its worst site score and when it last scanned. Change a plan or open its workspace here.' },
+    { id: 'client-access',     icon: '◧', label: 'Client Access',      tip: 'One card per tenant: its plan, and every Partner-tier entitlement -- white-label branding, custom domain, and the rest -- with a switch for each. Same per-org override the Settings registry uses, organized by client instead of by flag.' },
     { id: 'workspaces',        icon: '◫', label: 'Workspaces',         tip: 'Not a separate object in this schema — an organization is the workspace.', stub: true },
     { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every MUSTER user, their platform role and when they last signed in. Change a role here.' },
     { id: 'support',           icon: '◐', label: 'Support Access',     tip: 'See what one user sees, read-only, for a bounded time and a stated reason the tenant can read. Every session is logged.' },
@@ -896,6 +897,7 @@
     const k = DATA.kpi || {};
     switch (id) {
       case 'organizations': return (k.organizations || {}).total;
+      case 'client-access': return (k.organizations || {}).total;
       case 'users': return (DATA.users || []).length;
       case 'website-assurance': return (DATA.websites || []).length;
       case 'audit-queue': return (DATA.recent_scans || []).length;
@@ -1301,6 +1303,97 @@
           <td><a class="link-more" href="/app#tenant=${Number(o.id)}"
                  data-tooltip="Opens ${escapeHtml(o.name)}'s workspace in the app, using your own super admin access. To see exactly what one of its users sees, use Support Access instead.">Open ↗</a></td>
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No organizations match.</div>');
+  }
+
+  // ---- client access --------------------------------------------------------
+  //
+  // Added 2026-09-25. Organizations changes a plan; Settings has the full flag
+  // registry, every category, every plan, one flag per row with every org's
+  // overrides underneath it. Neither answers "what is this one client actually
+  // allowed to do" without cross-referencing both. This section is that
+  // cross-reference, organized by client instead of by flag -- one card per
+  // organization, its plan, and a switch for every Partner-tier entitlement:
+  // white_label_enabled, custom_domain_enabled and the rest of `partner`.
+  //
+  // It adds nothing new underneath. Every switch here is
+  // muster_admin_set_flag / muster_admin_clear_flag_override, the same RPCs
+  // the flag registry already calls to set or clear a per-org override --
+  // this card just resolves and writes them per client instead of per flag.
+  // An unwired entitlement (client_management_enabled, commercial_use_enabled,
+  // custom_branding_enabled, partner_dashboard_enabled -- see Settings for
+  // why each one is unwired) renders the same disabled, "read by nothing"
+  // treatment as the registry: a switch that changes nothing is worse than a
+  // missing one.
+  //
+  // What a tenant fills in for itself once it has an entitlement -- the brand
+  // name, colors, logo, the custom domain string, what it bills its own
+  // client -- stays exactly where it already lives, in the tenant's own Team
+  // & Settings (muster_save_brand, app.html). This card controls only whether
+  // they are allowed to; it does not read or duplicate brand_profiles.
+
+  function planDefaultForOrg(f, o) {
+    if (f.kill_switch) return false;
+    return !!(f.enabled_by_plan || {})[o.plan];
+  }
+
+  function resolvedForOrg(f, o) {
+    const override = (f.overrides || []).find((x) =>
+      x.target_kind === 'organization' && Number(x.organization_id) === Number(o.id) && !x.expired) || null;
+    const planDefault = planDefaultForOrg(f, o);
+    return { state: override ? !!override.enabled : planDefault, override, planDefault };
+  }
+
+  function clientEntitlementRow(f, o) {
+    const wired = !!f.wired;
+    const { state, override, planDefault } = resolvedForOrg(f, o);
+    const key = escapeHtml(f.key);
+    const switchTip = !wired
+      ? 'Disabled: nothing reads this key, so this switch would be theatre. See Settings for why.'
+      : override
+        ? `Overridden ${override.enabled ? 'on' : 'off'} for ${escapeHtml(o.name)}: "${escapeHtml(override.reason || 'no reason recorded')}". Toggling back to the plan default clears this override; toggling elsewhere asks for a new reason.`
+        : `Resolves from the ${escapeHtml(o.plan)} plan (${planDefault ? 'on' : 'off'}). Toggling sets an explicit exception for ${escapeHtml(o.name)} alone.`;
+    return `<div class="flag-row${wired ? '' : ' unwired'}" style="grid-template-columns: minmax(0,1.5fr) 120px minmax(0,1fr);">
+      <div>
+        <code>${key}</code><br><small class="muted">${escapeHtml(f.surface || f.description || '')}</small>
+      </div>
+      <div><label class="switch" data-tooltip="${escapeHtml(switchTip)}">
+        <input type="checkbox" data-act="client-flag" data-key="${key}" data-org="${Number(o.id)}" data-org-name="${escapeHtml(o.name)}"
+               data-override-id="${override ? Number(override.id) : ''}" data-plan-default="${planDefault ? 'true' : 'false'}"
+               aria-label="${key} for ${escapeHtml(o.name)}"${state ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span>
+      </label></div>
+      <div style="font-size:11.5px;">
+        ${override
+          ? `<span class="pill ${override.enabled ? 'low' : 'high'}" data-tooltip="${escapeHtml(override.reason || 'no reason recorded')}">override for this client</span>`
+          : (wired ? '<span class="muted">plan default</span>'
+                   : `<span class="pill high" data-tooltip="${escapeHtml(f.wiring_note || 'Nothing reads this key.')}">read by nothing</span>`)}
+      </div>
+    </div>`;
+  }
+
+  function clientAccessCard(o, partnerFlags) {
+    return panel(
+      o.name,
+      `${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${o.is_admin_sandbox ? 'sandbox, not a customer' : escapeHtml(o.onboarding_status)}`,
+      `<div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+         <div>${planSelect(o)} <small class="muted">${escapeHtml(o.stage || '')}</small></div>
+         <a class="link-more" href="/app#tenant=${Number(o.id)}"
+            data-tooltip="Opens ${escapeHtml(o.name)}'s own workspace, where the tenant sets its brand name, colors, logo, custom domain string and what it bills its own client under Team &amp; Settings. This card controls only whether they're allowed to.">Open workspace ↗</a>
+       </div>
+       <div class="flag-head" style="grid-template-columns: minmax(0,1.5fr) 120px minmax(0,1fr);"><span>Entitlement</span><span>Enabled</span><span>Source</span></div>
+       ${partnerFlags.map((f) => clientEntitlementRow(f, o)).join('') || '<div class="empty">No Partner-tier entitlements defined.</div>'}`,
+      { tip: `Partner-tier entitlements for ${escapeHtml(o.name)} only. Full registry, every category, every plan, every client's overrides: Settings.` }
+    );
+  }
+
+  function renderClientAccess() {
+    const intro = head('Client Access', 'One card per client: its plan, and every Partner-tier entitlement it does or does not have. The full flag registry -- every category, every plan -- is under Settings; this is the same overrides, organized by client.');
+    if (sideError('registry')) {
+      return intro + panel('Client Access unavailable', '', sideErrorPanel('registry', 'the flag registry, so per-client entitlements are not shown'));
+    }
+    const partnerFlags = (EXTRA.registry.flags || []).filter((f) => f.category === 'partner');
+    const orgs = (DATA.organizations || []).filter((o) => inOrg(o.id) && matches(o.name, o.plan, o.jurisdiction, o.onboarding_status));
+    if (!orgs.length) return intro + panel('Client Access', '', '<div class="empty">No organizations match.</div>');
+    return intro + orgs.map((o) => clientAccessCard(o, partnerFlags)).join('');
   }
 
   // Platform roles, as muster_admin_set_user_role accepts them.
@@ -2364,6 +2457,7 @@
   const RENDER = {
     overview: renderOverview,
     organizations: renderOrganizations,
+    'client-access': renderClientAccess,
     users: renderUsers,
     'audit-queue': renderAuditQueue,
     'website-assurance': renderWebsiteAssurance,
@@ -2614,6 +2708,34 @@
     if (saved) { delete drafts['override:' + key]; render(); }
   }
 
+  // The Client Access card's per-client switch. Unlike the registry's own
+  // add-override form, this is one control per (client, entitlement): flipping
+  // it to whatever the client's plan already gives clears any override and
+  // falls back cleanly; flipping it away from the plan default asks for a
+  // reason -- same discipline the registry's form requires, just not a form,
+  // because that page already knows which client and which flag.
+  async function toggleClientFlag(box) {
+    const key = box.dataset.key;
+    const orgId = Number(box.dataset.org);
+    const orgName = box.dataset.orgName;
+    const overrideId = box.dataset.overrideId ? Number(box.dataset.overrideId) : null;
+    const planDefault = box.dataset.planDefault === 'true';
+    const next = box.checked;
+
+    if (next === planDefault) {
+      if (!overrideId) { render(); return; }
+      if (!window.confirm(`Clear the override on ${key} for ${orgName}?\n\nIt falls back to the ${orgName} plan default (${planDefault ? 'on' : 'off'}) immediately.`)) { render(); return; }
+      await write('muster_admin_clear_flag_override', { p_id: overrideId }, `Override on ${key} for ${orgName} cleared -- back to the plan default.`);
+      return;
+    }
+    const reason = window.prompt(`Reason for ${next ? 'granting' : 'revoking'} ${key} for ${orgName}\n\nRequired -- an override with no stated reason is indistinguishable from a mistake six months later.`, '');
+    if (reason === null) { render(); return; }
+    if (reason.trim().length < 8) { flash('warn', 'Not saved: give a reason of at least 8 characters.'); render(); return; }
+    await write('muster_admin_set_flag', {
+      p_key: key, p_enabled: next, p_organization_id: orgId, p_reason: reason.trim(),
+    }, `${key} ${next ? 'granted to' : 'revoked from'} ${orgName}.`);
+  }
+
   async function clearFlagOverride(btn) {
     const id = Number(btn.dataset.id), key = btn.dataset.key;
     if (!window.confirm(`Revoke this override on ${key}? The organization falls back to the plan gate and the default immediately.`)) return;
@@ -2817,6 +2939,7 @@
       case 'flag-plan': setFlagPlan(e.target); break;
       case 'flag-default': setFlagDefault(e.target); break;
       case 'flag-kill': killSwitch(e.target); break;
+      case 'client-flag': toggleClientFlag(e.target); break;
       default: break;
     }
   });
