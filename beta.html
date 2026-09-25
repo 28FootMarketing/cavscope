@@ -253,9 +253,9 @@
 <body>
   <main class="card">
     <p class="wordmark">MUSTER</p>
-    <h1>Request beta access</h1>
-    <p class="lede">Tell us about your site and we'll follow up with next steps. No account needed to submit this form.</p>
-    <p class="deadline" data-tooltip="This beta pricing offer has a fixed end time. Requests submitted after it closes are not accepted.">⏳ Offer closes Sep 28, 2026, 11:59 PM ET</p>
+    <h1 id="headline">Request beta access</h1>
+    <p class="lede" id="lede">Tell us about your site and we'll follow up with next steps. No account needed to submit this form.</p>
+    <p class="deadline" id="deadline" data-tooltip="This beta pricing offer has a fixed end time. Requests submitted after it closes are not accepted.">⏳ Offer closes Sep 28, 2026, 11:59 PM ET</p>
 
     <form id="betaForm" novalidate>
       <div class="field">
@@ -284,9 +284,9 @@
       </div>
 
       <button type="submit" id="submitBtn" data-tooltip="Submits your request directly — no account or sign-in required.">Request access</button>
-
-      <div class="status" id="statusBox" role="status" aria-live="polite"></div>
     </form>
+
+    <div class="status" id="statusBox" role="status" aria-live="polite"></div>
 
     <p class="foot">
       <a href="https://www.muster.partners/" data-tooltip="Back to the MUSTER homepage.">muster.partners</a>
@@ -346,7 +346,10 @@
 
         if (res.ok) {
           form.hidden = true;
-          showStatus('ok', "You're on the list. Check your email for confirmation, and we'll follow up shortly.");
+          document.getElementById('deadline').hidden = true;
+          document.getElementById('headline').textContent = 'Request received';
+          document.getElementById('lede').textContent = "We have what we need about your site. A confirmation is on its way to your inbox, and we'll follow up with next steps.";
+          showStatus('ok', "You're on the list.");
           return;
         }
 
