@@ -411,6 +411,10 @@
   }
   function renderError(msg) { renderEmpty('Something went wrong', msg); }
 
+  // What every rendering of a report ends with. The report model carries the
+  // same sentence; this copy exists only for reports generated before it did.
+  const DEFAULT_DISCLAIMER = "MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.";
+
   function renderSitrep(sitrep) {
     const root = document.getElementById('reportRoot');
     root.hidden = false;
@@ -421,6 +425,11 @@
     const findings = s.top_findings || [];
     const evidence = s.evidence_index || [];
     const scope = (s.scope_note || {}).items || [];
+    // Both come from the report model (migration 20260925200050, muster_109).
+    // A report generated before it has neither; the Controls block is then
+    // omitted and the disclaimer falls back to the sentence the model carries.
+    const report = s.report || {};
+    const controls = report.controls || null;
     const score = sitrep.posture_score;
     const band = sitrep.posture_band;
     const color = bandColor(band);
@@ -490,6 +499,21 @@
         </div>
       </section>` : ''}
 
+      ${controls ? `
+      <section class="block">
+        <h2 data-tooltip="Framework controls derived from this site's findings. A citation to a framework is not a test of it; this is not an audit opinion.">Controls</h2>
+        <p class="law-lede">${controls.met || 0} of ${controls.total || 0} derived controls met, ${controls.partial || 0} partial, ${controls.not_met || 0} not met, ${controls.not_assessed || 0} not assessed. Controls are derived from findings against the frameworks each rule cites; a citation is not a test of the framework, and this is not an audit opinion.</p>
+        ${(controls.items || []).length ? `<div class="overflow-x"><table class="data-table">
+          <thead><tr><th>Framework</th><th>Reference</th><th>Assessment</th></tr></thead>
+          <tbody>${(controls.items || []).map(i => `<tr>
+            <td>${escapeHtml(i.framework_label || i.framework || '')}</td>
+            <td class="mono-cell">${escapeHtml(i.reference || '')}</td>
+            <td><span class="sev-chip sev-${i.assessment === 'not_met' ? 'high' : 'medium'}">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
+          </tr>`).join('')}</tbody>
+        </table></div>` : '<p class="law-lede">Every derived control is met or not assessed.</p>'}
+        ${(controls.items || []).length < (Number(controls.not_met) || 0) + (Number(controls.partial) || 0) ? `<p class="law-lede">Showing ${(controls.items || []).length} of ${(Number(controls.not_met) || 0) + (Number(controls.partial) || 0)} controls that are not fully met; the rest are in the MUSTER workspace under Controls.</p>` : ''}
+      </section>` : ''}
+
       ${renderJurisdiction(s.jurisdiction)}
 
       ${evidence.length ? `
@@ -512,7 +536,7 @@
       </section>` : ''}
 
       <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
-        MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
+        ${escapeHtml(report.disclaimer || DEFAULT_DISCLAIMER)}
         ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation.">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
       </footer>
     `;

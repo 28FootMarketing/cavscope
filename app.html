@@ -1471,13 +1471,86 @@
     }
 
     /* Print View */
+
+    /* ---- the report document: one renderer, two profiles ---------------------
+       Both the client (Plain English) and the board report are rendered by
+       renderReport() from the SITREP payload's `report` model. These classes
+       are the only styling either report has; there is no per-report CSS. */
+    .report-doc { max-width: 980px; }
+    .rd-head { padding: 22px 24px; border-radius: var(--radius-md); background: linear-gradient(135deg, rgba(8,16,36,0.85), rgba(12,24,52,0.7)); border: 1px solid var(--surface-border); margin-bottom: 18px; }
+    .rd-brand { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .rd-brand .eyebrow { margin: 0; }
+    .rd-prepared { font-size: 11.5px; color: var(--text-dim); }
+    .rd-title { font-family: var(--font-serif); font-size: 26px; color: #fff; margin: 10px 0 4px; line-height: 1.2; }
+    .rd-audience { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+    .rd-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px 18px; margin-bottom: 16px; }
+    .rd-meta div { font-size: 12.5px; color: #d0dbe9; word-break: break-word; }
+    .rd-meta span { display: block; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 2px; }
+    .rd-score { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .rd-gauge { position: relative; width: 84px; height: 84px; flex: none; }
+    .rd-gauge svg { width: 84px; height: 84px; transform: rotate(-90deg); }
+    .rd-gauge-value { position: absolute; inset: 0; display: flex; align-items: baseline; justify-content: center; gap: 2px; padding-top: 30px; font-family: var(--font-mono); }
+    .rd-gauge-value .num { font-size: 22px; font-weight: 700; }
+    .rd-gauge-value .of100 { font-size: 10px; color: var(--text-dim); }
+    .rd-band { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .rd-band-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+    .rd-block { margin-bottom: 18px; padding: 18px 22px; border-radius: var(--radius-md); background: rgba(8, 16, 36, 0.55); border: 1px solid var(--surface-border); }
+    .rd-block h3 { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--teal); margin: 0 0 12px; }
+    .rd-block h4 { font-size: 13px; color: #fff; margin: 14px 0 8px; }
+    .rd-block p { font-size: 12.5px; color: #d0dbe9; line-height: 1.6; margin: 0 0 8px; }
+    .rd-lede { color: var(--text-muted); }
+    .rd-list { margin: 0; padding: 0; list-style: none; }
+    .rd-list li { padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; color: #e2e8f0; line-height: 1.55; }
+    .rd-list li:last-child { border-bottom: 0; }
+    .rd-cite { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 10px; background: rgba(54, 226, 201, 0.12); color: var(--teal); border: 1px solid rgba(54, 226, 201, 0.3); white-space: nowrap; }
+    .rd-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .rd-tile { padding: 14px; border-radius: var(--radius-sm); background: rgba(8, 16, 36, 0.7); border: 1px solid var(--surface-border); }
+    .rd-tile label { display: block; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+    .rd-tile .rd-tile-value { font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: #fff; }
+    .rd-tile .rd-tile-value small { font-size: 11px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+    .rd-tile p { margin: 6px 0 0; font-size: 11.5px; color: var(--text-muted); }
+    .rd-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .rd-table th { text-align: left; padding: 8px 10px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid var(--surface-border); }
+    .rd-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #d0dbe9; vertical-align: top; }
+    .rd-table .rd-mono { font-family: var(--font-mono); font-size: 11px; }
+    .rd-table .rd-dim { color: var(--text-dim); font-size: 11.5px; margin-top: 3px; }
+    .rd-scroll { overflow-x: auto; }
+    .rd-sev { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap; }
+    .rd-sev-critical { background: rgba(244, 63, 94, 0.18); color: var(--rose); border-color: rgba(244, 63, 94, 0.4); }
+    .rd-sev-high { background: rgba(251, 146, 60, 0.16); color: #fdba74; border-color: rgba(251, 146, 60, 0.4); }
+    .rd-sev-medium { background: rgba(251, 191, 36, 0.14); color: var(--amber); border-color: rgba(251, 191, 36, 0.4); }
+    .rd-sev-low { background: rgba(56, 189, 248, 0.14); color: var(--cyan); border-color: rgba(56, 189, 248, 0.4); }
+    .rd-sev-info { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
+    .rd-sev-not_met { background: rgba(244, 63, 94, 0.18); color: var(--rose); border-color: rgba(244, 63, 94, 0.4); }
+    .rd-sev-partial { background: rgba(251, 191, 36, 0.14); color: var(--amber); border-color: rgba(251, 191, 36, 0.4); }
+    .rd-law { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .rd-law:last-child { border-bottom: 0; }
+    .rd-law-name { font-weight: 700; color: #fff; font-size: 13px; }
+    .rd-law-where { font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+    .rd-law-meta { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
+    .rd-law-meta a { color: var(--teal); }
+    .rd-law-note { font-size: 12px; color: var(--text-muted); font-style: italic; margin: 0 0 8px; }
+    .rd-missing { border-color: rgba(244, 63, 94, 0.45); color: var(--rose); }
+    .rd-empty { text-align: center; padding: 34px 18px; color: var(--text-muted); font-size: 13px; }
+    .rd-foot { font-size: 11.5px; color: var(--text-dim); line-height: 1.6; padding: 14px 4px 0; }
+    .rd-foot .rd-mono { font-family: var(--font-mono); font-size: 10.5px; word-break: break-all; }
+    .rd-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+
     @media print {
       body { background: #fff !important; color: #000 !important; font-size: 12pt; }
       .sidebar, .topbar, .filter-bar, .modal-actions, .hero-actions, .toast, .score-feedback-trigger, #presetSelect, .copy-btn { display: none !important; }
       .app { grid-template-columns: 1fr !important; }
       .content { padding: 0 !important; max-width: 100% !important; }
       .view { display: none !important; }
-      #plainReportView.view, #board.view { display: block !important; }
+      /* Only the report that is open prints. The selector used to name
+         #plainReportView, an id that has never existed, so the client report
+         printed as an empty page for as long as it had a print button. */
+      #plainReport.view.active, #board.view.active { display: block !important; }
+      .no-print, .live-panel { display: none !important; }
+      .rd-head, .rd-block, .rd-tile { background: #fff !important; border: 1px solid #ccc !important; color: #000 !important; break-inside: avoid; }
+      .rd-block p, .rd-list li, .rd-table td, .rd-meta div, .rd-tile .rd-tile-value, .rd-law-name, .rd-band-desc, .rd-title, .rd-audience { color: #000 !important; }
+      .rd-block h3, .rd-tile label, .rd-meta span, .rd-table th, .rd-law-meta, .rd-foot, .rd-prepared { color: #444 !important; }
+      .rd-cite, .rd-sev { border: 1px solid #888 !important; color: #000 !important; background: transparent !important; }
       .card, .panel, .explainer-card, .simple-explainer-banner { border: 1px solid #ccc !important; background: #fff !important; color: #000 !important; box-shadow: none !important; }
       .metric-value, h2, h3, h4, strong { color: #000 !important; }
       .pill { border: 1px solid #888 !important; color: #000 !important; background: transparent !important; }
@@ -2283,87 +2356,7 @@
             </div>
           </div>
 
-          <div id="plainReportDemoBlocks">
-          <div class="simple-explainer-banner">
-            <h4>💡 How to Read This Report</h4>
-            <p id="lblPlainExplainerBody">
-              Think of your website like a store with glass windows. If the lights are off and the doors are locked, customers—and the smart computer robots that help people find answers (like ChatGPT and Google)—can't see what you sell. This report explains what is working, what is broken, and what needs fixing in simple words.
-            </p>
-          </div>
-
-          <!-- Plain Scorecard Grid -->
-          <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card metric-card" data-tooltip="Easy-to-understand safety score out of 100">
-              <label>Website Safety Grade</label>
-              <div class="metric-value" style="color: var(--teal);" id="plainSafetyScore">82 / 100</div>
-              <small class="score-asof" data-asof></small>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                <strong>80 is Good, 90+ is Better.</strong> Your site is mostly safe, but 1 locked door needs fixing.
-              </p>
-            </div>
-
-            <div class="card metric-card" data-tooltip="Alignment with basic safety and privacy rules we reviewed">
-              <label>Rule Following (Rules Met)</label>
-              <div class="metric-value" style="color: var(--cyan);" id="plainRulesScore">80%</div>
-              <small class="score-asof" data-asof></small>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                Based on what we reviewed, you are meeting 4 out of 5 business rules we checked (like privacy laws and user safety).
-              </p>
-            </div>
-
-            <div class="card metric-card" data-tooltip="Real receipts proving your website is safe">
-              <label>Proof & Receipts Ready</label>
-              <div class="metric-value" style="color: var(--amber);" id="plainProofScore">75%</div>
-              <small class="score-asof" data-asof></small>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                We have real receipts proving that safety protections are active and working.
-              </p>
-            </div>
-
-            <div class="card metric-card" data-tooltip="Percentage of website fixes finished so far">
-              <label>Fix-It Progress</label>
-              <div class="metric-value" style="color: var(--purple);" id="plainFixProgress">65%</div>
-              <small class="score-asof" data-asof></small>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
-                More than half of our repair tasks are already done. Zero repairs are late!
-              </p>
-            </div>
-          </div>
-
-          <!-- Plain English Deep Dives -->
-          <div class="panel panel-body" style="margin-bottom: 24px;">
-            <h3 style="font-size: 18px; color: #fff; margin-bottom: 12px;">1. The Main Story (Executive Summary)</h3>
-            <p style="font-size: 14px; color: #d0deef; line-height: 1.7; margin-bottom: 16px;" id="plainSummaryText">
-              Right now, your website works well for people who click around. But there is one big issue: when computer robots try to read your site, they get confused because parts of your site hide words behind complex code. Additionally, there is one security weak spot in the checkout area that needs a quick lock installed. Fixing these two items is expected to raise your MUSTER score from 82 to 94.
-            </p>
-
-            <h3 style="font-size: 18px; color: #fff; margin: 20px 0 12px;">2. The 3 Things We Are Fixing Right Now</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;" id="plainActionItemsList">
-              <div style="padding: 14px; border-radius: var(--radius-sm); background: rgba(8, 16, 36, 0.7); border-left: 4px solid var(--rose);">
-                <strong style="color: #fff; font-size: 13.5px;">Fix #1: Lock the Checkout Form (Critical)</strong>
-                <p style="color: #cbd5e1; font-size: 12.5px; margin-top: 4px;">
-                  We are adding a digital lock to the payment page so sneaky computer programs cannot steal information typed into the boxes.
-                </p>
-              </div>
-              <div style="padding: 14px; border-radius: var(--radius-sm); background: rgba(8, 16, 36, 0.7); border-left: 4px solid var(--amber);">
-                <strong style="color: #fff; font-size: 13.5px;">Fix #2: Ask Permission for Tracking Tags (Privacy)</strong>
-                <p style="color: #cbd5e1; font-size: 12.5px; margin-top: 4px;">
-                  We are making sure visitors in Europe get asked if they want cookies before tracking tools turn on, which keeps the company legal.
-                </p>
-              </div>
-              <div style="padding: 14px; border-radius: var(--radius-sm); background: rgba(8, 16, 36, 0.7); border-left: 4px solid var(--teal);">
-                <strong style="color: #fff; font-size: 13.5px;">Fix #3: Give AI Robots an Easy Map (/llms.txt)</strong>
-                <p style="color: #cbd5e1; font-size: 12.5px; margin-top: 4px;">
-                  We are putting a simple cheat-sheet text file on your website so AI systems like ChatGPT can read your products in one second and recommend you.
-                </p>
-              </div>
-            </div>
-
-            <div style="margin-top: 24px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11.5px; color: var(--text-dim);" id="plainReportFooterNotice">
-              Prepared under the MUSTER Assurance Framework by 28 Foot Systems. All rights reserved.
-            </div>
-          </div>
-          </div>
+          <div id="plainReportDoc" class="report-doc" aria-live="polite"></div>
         </section>
 
         <!-- ================= VIEW 4: RISK REGISTER ================= -->
@@ -2567,49 +2560,7 @@
             </div>
           </div>
 
-          <div id="boardDemoBlocks">
-          <!-- Board Executive Hero Banner -->
-          <div class="report-hero">
-            <div>
-              <span class="eyebrow" style="color: var(--teal);">Executive Assurance Position</span>
-              <h3 id="boardHeroHeadline">1 critical risk requires prioritized executive remediation.</h3>
-              <p id="boardHeroText" style="max-width: 780px; font-size: 14px; color: #b7cbdf; line-height: 1.6;">
-                The website portfolio is operating near threshold tolerance. Remediation plans are actively underway for Cross-Site Scripting vulnerabilities, while alignment with SOC 2 CC6.1 and WCAG 2.1 AA criteria remains on track based on evidence reviewed to date.
-              </p>
-            </div>
-            <div class="report-badge">
-              <span class="eyebrow" style="color: var(--text-dim);">Reporting Snapshot</span>
-              <strong style="display: block; font-size: 14px; color: #fff; margin: 4px 0 2px;">Q3 Standing Brief</strong>
-              <small style="color: var(--teal); font-size: 11px;" id="lblBoardAuthSub">Validated via Telemetry</small>
-            </div>
-          </div>
-
-          <!-- Executive Summary Metrics -->
-          <div class="grid-4" style="margin-bottom: 24px;">
-            <div class="card metric-card" data-tooltip="Critical issues not yet fixed. Leadership's approved limit is zero.">
-              <label>Open Critical Risks</label>
-              <div class="metric-value" id="boardCritCount" style="color: var(--rose);">1</div>
-              <small style="color: var(--text-muted);">Tolerance limit: 0</small>
-            </div>
-            <div class="card metric-card" data-tooltip="Share of compliance rules confirmed to be working, not just documented.">
-              <label>Control Assurance</label>
-              <div class="metric-value" id="boardControlPct" style="color: var(--teal);">80%</div>
-              <small style="color: var(--text-muted);">Assessed controls effective</small>
-              <small class="score-asof" data-asof></small>
-            </div>
-            <div class="card metric-card" data-tooltip="How much of the proof an auditor would ask for is already collected and approved.">
-              <label>Evidence Readiness</label>
-              <div class="metric-value" id="boardEvidencePct" style="color: var(--cyan);">75%</div>
-              <small style="color: var(--text-muted);">Artifacts reviewed & approved</small>
-              <small class="score-asof" data-asof></small>
-            </div>
-            <div class="card metric-card" data-tooltip="Approved, time-limited departures from policy. Each has an owner and expiry date.">
-              <label>Active Exceptions</label>
-              <div class="metric-value" id="boardExceptionCount" style="color: var(--amber);">1</div>
-              <small style="color: var(--text-muted);">Time-bound & governed</small>
-            </div>
-          </div>
-          </div>
+          <div id="boardDoc" class="report-doc" aria-live="polite"></div>
         </section>
 
         <!-- ================= VIEW 9: ENTERPRISE GOVERNANCE ================= -->
@@ -3289,6 +3240,373 @@
       showView(viewId);
     }
 
+
+    // ===================================================================
+    // The report document. One renderer, two profiles, one payload.
+    //
+    // Both reports are rendered from a SITREP's `sections.report` model, which
+    // Postgres emits (migration 20260925200050, muster_109): the header block,
+    // the metrics, control coverage, the section list each profile shows, and
+    // the disclaimer. This code walks a profile's section list and draws each
+    // named section from the payload. It decides how a section looks, never
+    // which sections a report has -- that is the template, and it lives in SQL
+    // so the client report, the board report, /sitrep and the markdown cannot
+    // drift apart. A section the template names and this file cannot draw is
+    // rendered as a visible notice, never skipped; tests/sitrep/report-template
+    // .test.ts checks every key the template names has a renderer here.
+    //
+    // Demo mode (no session) renders SAMPLE_SITREP through the same code, so a
+    // prospect sees the real document shape with fictional data, not a
+    // hand-written mockup that diverges from what a customer gets.
+    // ===================================================================
+
+    const REPORT_PROFILE_VIEWS = { client: 'plainReportDoc', board: 'boardDoc' };
+
+    function renderReports() {
+      if (typeof Live === 'undefined') return;
+      const live = Live.active && !Live.showingDemo;
+      const sitrep = live ? ((Live.overview && Live.overview.latest_sitrep) || null) : SAMPLE_SITREP;
+      const brand = getActiveBrand();
+      for (const [profile, id] of Object.entries(REPORT_PROFILE_VIEWS)) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.innerHTML = sitrep
+          ? renderReport(profile, sitrep, brand, { live, sample: !live })
+          : renderReportEmpty(profile, brand);
+      }
+    }
+
+    function renderReportEmpty(profile, brand) {
+      const org = (Live.org && Live.org.name) || '';
+      const site = (Live.website && Live.website.url) || '';
+      return `<div class="rd-head">
+          <div class="rd-brand"><span class="eyebrow">${escapeHtml(brand.name)} · ${profile === 'client' ? 'Client Briefing' : 'Board Report'}</span></div>
+          <div class="rd-title">${escapeHtml(org || 'This workspace')}</div>
+          <div class="rd-meta"><div><span>Target</span>${escapeHtml(site || 'No website registered')}</div></div>
+        </div>
+        <div class="rd-block rd-empty" data-tooltip="Reports are generated from a completed scan. Run one from the Board view's scan controls or the Overview.">No completed scan yet. Run a scan to produce the first cited report for this website.</div>`;
+    }
+
+    function reportBandColor(band) {
+      return ({ green: 'var(--teal)', amber: 'var(--amber)', red: 'var(--rose)' })[String(band || '').toLowerCase()] || 'var(--text-muted)';
+    }
+
+    function reportCite(claim) {
+      const ids = [...((claim.finding_ids || []).map(id => `F${id}`)), ...((claim.evidence_ids || []).map(id => `E${id}`))];
+      if (claim.finding_id != null) ids.unshift(`F${claim.finding_id}`);
+      if (!ids.length) return '';
+      const shown = ids.slice(0, 6);
+      const more = ids.length - shown.length;
+      return `<span class="rd-cite" data-tooltip="Finding [F] and evidence [E] ids this statement is cited to. Nothing in a MUSTER report is asserted without a source.">[${shown.join('][')}]${more > 0 ? `[+${more}]` : ''}</span>`;
+    }
+
+    function reportWhen(ts) {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      return isNaN(d) ? escapeHtml(String(ts)) : d.toLocaleString();
+    }
+
+    function renderReport(profile, sitrep, brand, opts) {
+      opts = opts || {};
+      const s = sitrep.sections || {};
+      const r = s.report;
+      if (!r || !r.profiles || !r.profiles[profile]) {
+        return `<div class="rd-block rd-missing" data-tooltip="This SITREP predates the report template. The next scan of this site produces one that carries it.">This report was generated before the report template existed, so it cannot be rendered here. Open it at /sitrep, or run a new scan.</div>`;
+      }
+      const p = r.profiles[profile];
+      const h = r.header || {};
+      const m = r.metrics || {};
+      const score = h.posture_score ?? sitrep.posture_score;
+      const band = h.posture_band ?? sitrep.posture_band;
+      const color = reportBandColor(band);
+      const kind = profile === 'client' ? 'Client Briefing' : 'Board Report';
+      const prepared = brand.mode === 'white-label'
+        ? `Prepared by ${escapeHtml(brand.name)}`
+        : (brand.isCustom ? `Prepared by ${escapeHtml(brand.name)} with MUSTER` : 'Prepared by MUSTER');
+      const ctx = { sitrep, s, r, m, profile, live: !!opts.live };
+
+      const sections = (p.sections || []).map(key => renderReportSection(key, ctx)).join('');
+
+      return `
+        <div class="rd-head">
+          <div class="rd-brand">
+            <span class="eyebrow" data-tooltip="Whose name this report goes out under. Set under Team &amp; Settings → Report branding.">${escapeHtml(brand.name)} · ${kind}${opts.sample ? ' · Sample data' : ''}</span>
+            <span class="rd-prepared" data-tooltip="Every statement in this report cites a finding or a captured evidence row.">${prepared}${h.engine_version ? ` · engine ${escapeHtml(h.engine_version)}` : ''}</span>
+          </div>
+          <div class="rd-title">${escapeHtml(h.title || sitrep.headline || 'Report')}</div>
+          <p class="rd-audience">${escapeHtml(p.audience || '')}</p>
+          <div class="rd-meta">
+            <div><span>Organization</span>${escapeHtml(h.organization || '')}</div>
+            <div><span>Target</span>${escapeHtml(h.target || '')}</div>
+            <div><span>Scan</span>#${escapeHtml(String(h.scan_id ?? ''))} · ${reportWhen(h.completed_at)}</div>
+            <div><span>Report</span>${p.title ? escapeHtml(p.title) : kind} · v${escapeHtml(String(sitrep.version ?? 1))}</div>
+          </div>
+          <div class="rd-score">
+            <div class="rd-gauge" data-tooltip="Posture score: one number from 0 to 100 summarizing exposure across all open findings. Weights: critical 25, high 10, medium 4, low 1. Higher is safer.">
+              <svg viewBox="0 0 96 96" aria-hidden="true">
+                <circle cx="48" cy="48" r="42" fill="none" stroke="#1f3358" stroke-width="8"></circle>
+                <circle cx="48" cy="48" r="42" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="${264 - (264 * (Number(score) || 0) / 100)}"></circle>
+              </svg>
+              <div class="rd-gauge-value"><span class="num" style="color:${color}">${escapeHtml(String(score ?? '—'))}</span><span class="of100">/ 100</span></div>
+            </div>
+            <div>
+              <div class="rd-band" style="color:${color}" data-tooltip="Green: 85 and above. Amber: gaps present, no critical exposure. Red: critical exposure needs action now.">● ${escapeHtml(String(band || 'unscored').toUpperCase())}</div>
+              <div class="rd-band-desc">${Number(m.open) || 0} open findings — ${m.critical || 0} critical, ${m.high || 0} high, ${m.medium || 0} medium, ${m.low || 0} low, ${m.info || 0} informational${h.previous_score != null ? ` · previous score ${escapeHtml(String(h.previous_score))}` : ''}</div>
+            </div>
+          </div>
+        </div>
+        ${sections}
+        <footer class="rd-foot" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
+          ${escapeHtml(r.disclaimer || '')}
+          ${brand.disclaimer ? `<div style="margin-top:6px;">${escapeHtml(brand.disclaimer)}</div>` : ''}
+          ${sitrep.content_sha256 ? `<div class="rd-mono" style="margin-top:8px;" data-tooltip="SHA-256 of this report's markdown. Recompute it from a saved copy to prove the report has not been altered since generation.">sha256 ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
+        </footer>`;
+    }
+
+    function renderReportSection(key, ctx) {
+      const { s, r, m, live } = ctx;
+      switch (key) {
+        case 'board_report': {
+          const b = s.board_report || {};
+          const claims = b.claims || [];
+          return `<section class="rd-block">
+            <h3 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence.">Board Report</h3>
+            ${b.headline ? `<p><strong style="color:#fff;">${escapeHtml(b.headline)}</strong></p>` : ''}
+            <ul class="rd-list">${claims.map(c => `<li>${escapeHtml(c.text)}${reportCite(c)}</li>`).join('') || '<li>No claims recorded for this scan.</li>'}</ul>
+          </section>`;
+        }
+        case 'metrics': {
+          const c = m.controls || {};
+          const laws = m.laws || {};
+          return `<section class="rd-block">
+            <h3 data-tooltip="The numbers behind the narrative, each from the same scan the narrative cites.">At a Glance</h3>
+            <div class="rd-tiles">
+              <div class="rd-tile" data-tooltip="Open findings by severity. Critical and high are what the alert dispatcher emails about.">
+                <label>Open findings</label>
+                <div class="rd-tile-value">${Number(m.open) || 0}<small>${m.critical || 0} critical · ${m.high || 0} high</small></div>
+                <p>${m.medium || 0} medium · ${m.low || 0} low · ${m.info || 0} informational</p>
+              </div>
+              <div class="rd-tile" data-tooltip="Share of derived controls assessed met. Partial is not rounded up. Derived from scanner findings, not an audit.">
+                <label>Control coverage</label>
+                <div class="rd-tile-value">${c.rate == null ? '—' : escapeHtml(String(c.rate)) + '%'}<small>${c.met || 0} met of ${c.total || 0}</small></div>
+                <p>${c.partial || 0} partial · ${c.not_met || 0} not met · ${c.not_assessed || 0} not assessed</p>
+              </div>
+              <div class="rd-tile" data-tooltip="Captured evidence rows this report cites: HTTP responses, headers, DNS answers.">
+                <label>Evidence captured</label>
+                <div class="rd-tile-value">${Number(m.evidence) || 0}<small>rows</small></div>
+                <p>Every claim cites at least one</p>
+              </div>
+              <div class="rd-tile" data-tooltip="Laws and standards relevant to this organization's location, and how many a mapped check currently touches.">
+                <label>Laws and standards</label>
+                <div class="rd-tile-value">${Number(laws.count) || 0}<small>${laws.open_findings || 0} touched</small></div>
+                <p>${laws.no_open_findings || 0} mapped and clear · ${laws.not_assessed || 0} not assessed</p>
+              </div>
+            </div>
+          </section>`;
+        }
+        case 'controls': {
+          const c = r.controls || {};
+          const items = c.items || [];
+          const gaps = (Number(c.not_met) || 0) + (Number(c.partial) || 0);
+          return `<section class="rd-block">
+            <h3 data-tooltip="Framework controls derived from this site's findings. A citation to a framework is not a test of it; this is not an audit opinion.">Controls</h3>
+            <p class="rd-lede">${c.met || 0} of ${c.total || 0} derived controls met, ${c.partial || 0} partial, ${c.not_met || 0} not met, ${c.not_assessed || 0} not assessed. Controls are derived from findings against the frameworks each rule cites; a citation is not a test of the framework, and this is not an audit opinion.</p>
+            ${items.length ? `<div class="rd-scroll"><table class="rd-table">
+              <thead><tr><th>Framework</th><th>Reference</th><th>Assessment</th></tr></thead>
+              <tbody>${items.map(i => `<tr>
+                <td>${escapeHtml(i.framework_label || i.framework || '')}</td>
+                <td class="rd-mono">${escapeHtml(i.reference || '')}</td>
+                <td><span class="rd-sev rd-sev-${escapeHtml(String(i.assessment || ''))}">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
+              </tr>`).join('')}</tbody>
+            </table></div>` : '<p>Every derived control is met or not assessed.</p>'}
+            ${items.length < gaps ? `<p class="rd-lede">Showing ${items.length} of ${gaps} controls that are not fully met; the rest are under Controls in this workspace.</p>` : ''}
+            ${c.as_of ? `<p class="rd-lede" style="font-size:11px;">Control coverage as of ${reportWhen(c.as_of)}.</p>` : ''}
+          </section>`;
+        }
+        case 'top_findings': {
+          const findings = s.top_findings || [];
+          const b = s.board_report || {};
+          const shown = findings.length, open = Number(b.open) || shown;
+          return `<section class="rd-block">
+            <h3 data-tooltip="Every open finding this scan surfaced, most severe first.">Findings</h3>
+            <p class="rd-lede">Showing ${shown} of ${open} open finding${open === 1 ? '' : 's'}, most severe first.</p>
+            ${findings.length ? `<div class="rd-scroll"><table class="rd-table">
+              <thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Remediation</th>${live ? '<th class="no-print">Action</th>' : ''}</tr></thead>
+              <tbody>${findings.map(f => `<tr>
+                <td class="rd-mono" data-tooltip="Internal rule code that produced this finding.">${escapeHtml(f.rule_id || '')}</td>
+                <td>${escapeHtml(f.title || '')}${reportCite(f)}<div class="rd-dim">${escapeHtml(f.detail || '')}</div></td>
+                <td><span class="rd-sev rd-sev-${escapeHtml(String(f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></td>
+                <td>${escapeHtml(f.remediation || '')}</td>
+                ${live ? `<td class="no-print"><div class="rd-actions">
+                  <select class="filter-select" style="padding:4px 6px;font-size:10.5px;" onchange="Live.updateFindingStatus(${Number(f.finding_id)}, this.value)" data-tooltip="Change this finding's status.">
+                    <option value="">Status…</option><option value="open">Open</option><option value="reopened">Reopened</option><option value="accepted">Accepted risk</option><option value="resolved">Resolved</option>
+                  </select>
+                  <button class="btn-ghost" style="padding:4px 9px;font-size:10.5px;" onclick="Live.promoteFinding(${Number(f.finding_id)})" data-tooltip="Manually opens a tracked risk with a remediation action for this finding.">Promote</button>
+                </div></td>` : ''}
+              </tr>`).join('')}</tbody>
+            </table></div>` : '<p>No findings are open against this site.</p>'}
+          </section>`;
+        }
+        case 'plain_english': {
+          const items = (s.plain_english || {}).items || [];
+          return `<section class="rd-block">
+            <h3 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h3>
+            <ul class="rd-list">${items.map(i => `<li>${escapeHtml(i.text)}${reportCite(i)}</li>`).join('') || '<li>No open findings. Keep scanning on schedule so this stays true.</li>'}</ul>
+          </section>`;
+        }
+        case 'scope_note': {
+          const items = (s.scope_note || {}).items || [];
+          return `<section class="rd-block">
+            <h3 data-tooltip="The limits of this scan, stated so a clean result is not read as more than it is.">What This Scan Did Not Check</h3>
+            <ul class="rd-list">${items.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
+          </section>`;
+        }
+        case 'jurisdiction':
+          return renderReportJurisdiction(s.jurisdiction);
+        case 'evidence_index': {
+          const ev = s.evidence_index || [];
+          return `<section class="rd-block">
+            <h3 data-tooltip="The captured proof every finding above cites: HTTP responses, headers, DNS answers, page content.">Evidence Index</h3>
+            ${ev.length ? `<div class="rd-scroll"><table class="rd-table">
+              <thead><tr><th>Id</th><th>Kind</th><th>URL</th><th>HTTP</th><th>Captured</th><th>SHA-256</th></tr></thead>
+              <tbody>${ev.map(e => `<tr>
+                <td class="rd-mono">E${escapeHtml(String(e.evidence_id ?? ''))}</td>
+                <td class="rd-mono">${escapeHtml(e.kind || '')}</td>
+                <td style="word-break:break-all;">${escapeHtml(e.url || '')}</td>
+                <td class="rd-mono">${escapeHtml(String(e.http_status ?? ''))}</td>
+                <td class="rd-mono">${reportWhen(e.captured_at)}</td>
+                <td class="rd-mono" data-tooltip="Hash of the captured bytes, proving the evidence has not been altered since capture.">${escapeHtml(String(e.sha256 || '').slice(0, 12))}…</td>
+              </tr>`).join('')}</tbody>
+            </table></div>` : '<p>No evidence rows were captured for this scan.</p>'}
+          </section>`;
+        }
+        default:
+          // The template named a section this page cannot draw. Say so where the
+          // reader would have looked, rather than silently rendering less than
+          // the template promised.
+          return `<section class="rd-block rd-missing">This report includes a section ("${escapeHtml(key)}") that this page does not render yet. The full report is at /sitrep.</section>`;
+      }
+    }
+
+    // Laws and Standards. Mirrors sitrep.html's renderJurisdiction and reads the
+    // same stored per-law `assessment`, decided once in SQL (migration 082). It
+    // never derives a verdict from `status`, and never renders the word "clear"
+    // or "compliant": a list of statutes under a client's name reads as a
+    // determination that they apply, and this is not one.
+    function renderReportJurisdiction(j) {
+      const head = '<h3 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice.">Laws and Standards</h3>';
+      if (!j) return '';
+      if (j.available === false) {
+        return `<section class="rd-block">${head}<p class="rd-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
+      }
+      const laws = Array.isArray(j.laws) ? j.laws : [];
+      if (!laws.length) return `<section class="rd-block">${head}<p class="rd-lede">No laws are recorded for this location.</p></section>`;
+      if (laws.some(l => !l.assessment)) {
+        return `<section class="rd-block">${head}<p class="rd-lede">This report was generated before laws were assessed against its checks. The report from the next scan of this site lists them.</p></section>`;
+      }
+      const names = {};
+      (j.jurisdictions || []).forEach(x => { names[x.code] = x.name; });
+      const place = (j.jurisdictions || []).filter(x => x.kind === 'region' || x.kind === 'country')
+        .sort((a, b) => (a.kind === 'region' ? 0 : 1) - (b.kind === 'region' ? 0 : 1)).map(x => x.name).join(', ');
+      const where = l => escapeHtml(names[l.jurisdiction_code] || l.jurisdiction_code || '');
+      const safeLink = url => /^https:\/\//i.test(url || '')
+        ? ` · <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The official text or guidance this entry is summarized from. Opens in a new tab.">Reference</a>` : '';
+      const applies = l => `<span data-tooltip="Whether this applies depends on facts the scan cannot see. Confirm with counsel.">Applies when:</span> ${escapeHtml(l.applies_when || 'not stated')}`;
+      const byName = (a, b) => String(a.short_name || '').localeCompare(String(b.short_name || ''));
+      const open = laws.filter(l => l.assessment === 'open_findings').sort((a, b) => ((b.status === 'exposed') - (a.status === 'exposed')) || byName(a, b));
+      const none = laws.filter(l => l.assessment === 'no_open_findings').sort(byName);
+      const na = laws.filter(l => l.assessment === 'not_assessed').sort(byName);
+      const law = (l, meta) => `<div class="rd-law"><span class="rd-law-name">${escapeHtml(l.short_name)}</span><span class="rd-law-where">${where(l)}</span>${l.summary ? `<p style="margin:4px 0 0;">${escapeHtml(l.summary)}</p>` : ''}<div class="rd-law-meta">${meta}</div></div>`;
+      return `<section class="rd-block">
+        ${head}
+        <p class="rd-law-note" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one.">${escapeHtml(j.disclaimer || '')}</p>
+        <p class="rd-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}. These are laws and standards commonly relevant to an organization in this location. Whether each applies depends on facts a website scan cannot see.</p>
+        ${open.length ? `<h4 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached.">Open findings touch these (${open.length})</h4>${open.map(l => law(l, `${applies(l)}${safeLink(l.reference_url)}<ul class="rd-list">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="rd-sev rd-sev-${escapeHtml(String(f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></li>`).join('')}</ul>`)).join('')}` : ''}
+        ${none.length ? `<h4 data-tooltip="Every check MUSTER maps to these passed on this date. That is evidence about those checks, not a determination of compliance.">No open findings on the mapped checks (${none.length})</h4><p class="rd-law-note">The checks MUSTER maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>${none.map(l => law(l, `<span data-tooltip="The MUSTER checks mapped to this entry.">Checks:</span> <span class="rd-mono">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}${safeLink(l.reference_url)}`)).join('')}` : ''}
+        ${na.length ? `<h4 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do.">Not assessed by this scan (${na.length})</h4><p class="rd-law-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so its checks could not run.' : ''}</p>${na.map(l => law(l, `${l.not_assessed_reason === 'no_mapped_check' ? 'No MUSTER check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}${safeLink(l.reference_url)}`)).join('')}` : ''}
+      </section>`;
+    }
+    // end renderReportJurisdiction
+
+    // Fictional. Northstar Fintech is the demo workspace's client; this is what
+    // its SITREP would carry, in the exact shape muster.generate_sitrep writes,
+    // so demo mode exercises the same renderer a customer's report goes through.
+    const SAMPLE_SITREP = {
+      id: 0, version: 1, generator: 'deterministic', generated_at: '2026-09-25T13:00:00Z',
+      headline: 'portal.northstar.com: posture 82/100 (amber), 6 open findings, 1 critical',
+      posture_score: 82, posture_band: 'amber',
+      content_sha256: 'sample-data-not-a-real-report-0000000000000000000000000000000000',
+      sections: {
+        scan: { scan_id: 0, target_url: 'https://portal.northstar.com/', finished_at: '2026-09-25T12:58:40Z', engine_version: 'http-native-1.9.0', http_status: 200, response_ms: 412 },
+        board_report: {
+          headline: 'portal.northstar.com: posture 82/100 (amber), 6 open findings, 1 critical',
+          posture_score: 82, posture_band: 'amber', previous_score: 74, open: 6, critical: 1, high: 1, medium: 2, low: 1, info: 1, shown: 6,
+          claims: [
+            { id: 'C1', text: 'Overall website assurance posture is 82 of 100 (amber).', finding_ids: [101, 102, 103, 104, 105, 106], evidence_ids: [9001] },
+            { id: 'C2', text: 'Posture improved from 74 to 82 since the previous report (+8). This scan added 0 new findings, reopened 0 and resolved 2.', finding_ids: [], evidence_ids: [] },
+            { id: 'C3', text: 'The most severe open item is Checkout form posts over plain HTTP (critical).', finding_ids: [101], evidence_ids: [9001] },
+            { id: 'C4', text: '6 open findings: 1 critical, 1 high, 2 medium, 1 low, 1 informational.', finding_ids: [101, 102, 103, 104, 105, 106], evidence_ids: [] },
+            { id: 'C5', text: 'The homepage returned HTTP 200 in 412 ms from https://portal.northstar.com/.', finding_ids: [], evidence_ids: [9001] },
+          ],
+        },
+        scope_note: { items: [
+          'MUSTER reads this site over HTTP and DNS only. It does not execute JavaScript, so anything a page builds in the browser after load is not assessed.',
+          'It reads the homepage and a small set of well-known paths. It does not crawl the whole site, so a finding absent here may still exist on a page that was not fetched.',
+          'It never signs in. Nothing behind a login, paywall or member area is assessed.',
+          'Framework and statute references are citations, not test results. They say which control family a finding belongs to. They never assert that MUSTER tested that control, and this report is not a SOC 2 opinion, an accessibility audit of record, or legal advice.',
+          'A clean result is evidence that these specific checks passed on this date. It is not a statement that the site is secure.',
+        ] },
+        plain_english: { items: [
+          { id: 'P1', finding_id: 101, text: 'The payment form sends what people type over an unencrypted connection, so anyone on the same network can read it. Fix: Serve the checkout page and its form action over HTTPS only, and redirect the HTTP version.', evidence_ids: [9001, 9002] },
+          { id: 'P2', finding_id: 102, text: 'Nothing tells receiving servers what to do with forged mail from your domain, so they deliver it. Fix: Publish a TXT record at _dmarc.<domain> starting v=DMARC1. Begin with p=none and a rua= address, read the reports, then move to quarantine and reject.', evidence_ids: [9003] },
+          { id: 'P3', finding_id: 103, text: 'The site uses tracking tools. Depending on where visitors live, consent may be required first. Fix: Confirm a consent mechanism gates these scripts where required, and list them in the privacy policy.', evidence_ids: [9002] },
+          { id: 'P4', finding_id: 104, text: 'Browsers are not told to always use the secure connection. One header fixes it. Fix: Add Strict-Transport-Security: max-age=31536000; includeSubDomains after confirming every subdomain serves HTTPS.', evidence_ids: [9001] },
+          { id: 'P5', finding_id: 105, text: 'Search engines have no map of the site, so pages may be missed. Fix: Generate an XML sitemap and reference it from robots.txt.', evidence_ids: [9004] },
+          { id: 'P6', finding_id: 106, text: 'Whether AI assistants may read this site is a policy choice. This lists which crawlers your robots.txt names and which it blocks, so the decision is visible and deliberate rather than accidental. Fix: Decide which AI crawlers to allow, then record that decision explicitly in robots.txt.', evidence_ids: [9004] },
+        ] },
+        top_findings: [
+          { rank: 1, finding_id: 101, rule_id: 'SEC-009', category: 'security', severity: 'critical', status: 'open', title: 'Checkout form posts over plain HTTP', detail: 'The form at /checkout submits to http://portal.northstar.com/pay. Card and address fields travel unencrypted.', remediation: 'Serve the checkout page and its form action over HTTPS only, and redirect the HTTP version.', evidence_ids: [9001, 9002] },
+          { rank: 2, finding_id: 102, rule_id: 'EMAIL-004', category: 'security', severity: 'high', status: 'open', title: 'No DMARC record', detail: 'No v=DMARC1 TXT record found for northstar.com (checked _dmarc.northstar.com).', remediation: 'Publish a TXT record at _dmarc.<domain> starting v=DMARC1. Begin with p=none and a rua= address, then move to quarantine and reject.', evidence_ids: [9003] },
+          { rank: 3, finding_id: 103, rule_id: 'PRIV-003', category: 'privacy', severity: 'medium', status: 'open', title: 'Tracking scripts load before consent', detail: 'Google Tag Manager and Meta Pixel load on first paint with no consent gate detected.', remediation: 'Confirm a consent mechanism gates these scripts where required, and list them in the privacy policy.', evidence_ids: [9002] },
+          { rank: 4, finding_id: 104, rule_id: 'SEC-002', category: 'security', severity: 'medium', status: 'open', title: 'Missing Strict-Transport-Security header', detail: 'The homepage response carries no HSTS header.', remediation: 'Add Strict-Transport-Security: max-age=31536000; includeSubDomains after confirming every subdomain serves HTTPS.', evidence_ids: [9001] },
+          { rank: 5, finding_id: 105, rule_id: 'GOV-002', category: 'governance', severity: 'low', status: 'open', title: 'No XML sitemap', detail: '/sitemap.xml returned 404 and robots.txt names no Sitemap.', remediation: 'Generate an XML sitemap and reference it from robots.txt.', evidence_ids: [9004] },
+          { rank: 6, finding_id: 106, rule_id: 'GOV-004', category: 'governance', severity: 'info', status: 'open', title: 'AI crawler policy unaddressed', detail: 'robots.txt names no AI crawler (GPTBot, ClaudeBot, PerplexityBot) either way.', remediation: 'Decide which AI crawlers to allow, then record that decision explicitly in robots.txt.', evidence_ids: [9004] },
+        ],
+        jurisdiction: {
+          available: true, country_code: 'US', region_code: 'US-NY', law_count: 3, open_findings_count: 1, no_open_findings_count: 1, not_assessed_count: 1,
+          disclaimer: 'This section lists laws and standards commonly relevant to an organization in the recorded location. It is informational, not legal advice, and it is not a determination that any law applies or was breached.',
+          jurisdictions: [{ code: 'US', name: 'United States', kind: 'country' }, { code: 'US-NY', name: 'New York', kind: 'region' }],
+          laws: [
+            { law_id: 1, short_name: 'NYDFS Part 500', full_name: 'NYDFS Cybersecurity Regulation (23 NYCRR 500)', jurisdiction_code: 'US-NY', category: 'security', status: 'exposed', assessment: 'open_findings', summary: 'Cybersecurity program requirements for entities regulated by the New York Department of Financial Services.', applies_when: 'The organization is licensed or regulated by NYDFS.', reference_url: 'https://www.dfs.ny.gov/industry_guidance/cybersecurity', rule_ids: ['SEC-002', 'SEC-009'], open_findings: [{ title: 'Checkout form posts over plain HTTP', severity: 'critical' }, { title: 'Missing Strict-Transport-Security header', severity: 'medium' }] },
+            { law_id: 2, short_name: 'FTC Act Section 5', full_name: 'Federal Trade Commission Act, Section 5', jurisdiction_code: 'US', category: 'privacy', status: 'clear', assessment: 'no_open_findings', summary: 'Prohibits unfair or deceptive practices, including privacy promises a site does not keep.', applies_when: 'Any organization engaged in commerce in the United States.', reference_url: 'https://www.ftc.gov/legal-library/browse/statutes/federal-trade-commission-act', rule_ids: ['PRIV-001'], open_findings: [] },
+            { law_id: 3, short_name: 'CAN-SPAM', full_name: 'Controlling the Assault of Non-Solicited Pornography And Marketing Act', jurisdiction_code: 'US', category: 'marketing', status: 'clear', assessment: 'not_assessed', not_assessed_reason: 'no_mapped_check', summary: 'Rules for commercial email: identification, opt-out, and physical address.', applies_when: 'The organization sends commercial email to US recipients.', reference_url: 'https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business', rule_ids: [], open_findings: [] },
+          ],
+        },
+        evidence_index: [
+          { evidence_id: 9001, kind: 'http_response', url: 'https://portal.northstar.com/', http_status: 200, sha256: '3f9a1c0e7b2d4a6f8e1c3b5d7f9a1c0e7b2d4a6f8e1c3b5d7f9a1c0e7b2d4a6f', captured_at: '2026-09-25T12:58:39Z' },
+          { evidence_id: 9002, kind: 'page_html', url: 'https://portal.northstar.com/checkout', http_status: 200, sha256: 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90', captured_at: '2026-09-25T12:58:39Z' },
+          { evidence_id: 9003, kind: 'dns_txt', url: 'dns://_dmarc.northstar.com', http_status: null, sha256: '0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f', captured_at: '2026-09-25T12:58:38Z' },
+          { evidence_id: 9004, kind: 'robots_txt', url: 'https://portal.northstar.com/robots.txt', http_status: 200, sha256: '9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', captured_at: '2026-09-25T12:58:39Z' },
+        ],
+        report: {
+          template_version: 1,
+          header: { title: 'Northstar Fintech customer portal', organization: 'Northstar Fintech', target: 'https://portal.northstar.com/', scan_id: 0, completed_at: '2026-09-25T12:58:40Z', engine_version: 'http-native-1.9.0', posture_score: 82, posture_band: 'amber', previous_score: 74, headline: 'portal.northstar.com: posture 82/100 (amber), 6 open findings, 1 critical', prepared_by: 'MUSTER' },
+          metrics: { open: 6, critical: 1, high: 1, medium: 2, low: 1, info: 1, shown: 6, controls: { total: 48, met: 37, partial: 6, not_met: 3, not_assessed: 2, rate: 77 }, evidence: 4, laws: { count: 3, open_findings: 1, no_open_findings: 1, not_assessed: 1 } },
+          controls: { total: 48, met: 37, partial: 6, not_met: 3, not_assessed: 2, rate: 77, shown: 4, as_of: '2026-09-25T12:58:40Z', items: [
+            { framework: 'PCI_DSS', framework_label: 'PCI DSS', reference: '4.2.1', title: 'PCI DSS 4.2.1', assessment: 'not_met' },
+            { framework: 'OWASP_TOP10', framework_label: 'OWASP Top 10:2025', reference: 'A02:2025', title: 'OWASP Top 10:2025 A02:2025', assessment: 'not_met' },
+            { framework: 'NIST_CSF_V2', framework_label: 'NIST CSF 2.0', reference: 'PR.DS-02', title: 'NIST CSF 2.0 PR.DS-02', assessment: 'not_met' },
+            { framework: 'OWASP_SECURE_HEADERS', framework_label: 'OWASP Secure Headers', reference: 'Strict-Transport-Security', title: 'OWASP Secure Headers Strict-Transport-Security', assessment: 'partial' },
+          ] },
+          profiles: {
+            client: { title: 'Plain English Briefing', audience: 'For the people who own this website: every open finding in everyday language, with the fix.', sections: ['plain_english', 'top_findings', 'scope_note', 'jurisdiction'] },
+            board: { title: 'Board & Committee Risk Report', audience: 'For leadership: posture, exposure by severity, control coverage, and the evidence behind every claim.', sections: ['board_report', 'metrics', 'controls', 'top_findings', 'scope_note', 'evidence_index'] },
+          },
+          disclaimer: "MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.",
+        },
+      },
+    };
+
     function getActiveBrand() {
       const activeTenant = multiTenantStore[activeTenantId];
       if (platformFeatureFlags.whiteLabeling && activeTenant?.whiteLabel?.enabled) {
@@ -3367,6 +3685,9 @@
       if (boardEyebrow) boardEyebrow.textContent = `Executive Assurance Briefing — ${b.name}`;
       if (aioEyebrow) aioEyebrow.textContent = `${b.name} — AI Optimization Framework`;
       if (aioReportBrand) aioReportBrand.textContent = `${b.name} Client Deliverable`;
+      // The two reports carry the brand in their own header and footer, so a
+      // brand change re-renders them rather than poking ids inside them.
+      renderReports();
     }
 
     const modalTemplates = {
@@ -5692,7 +6013,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         return html;
       },
       renderLivePanels() {
-        ['teamSettingsDemoBlocks', 'boardDemoBlocks', 'plainReportDemoBlocks', 'controlsDemoBlocks'].forEach(id => {
+        ['teamSettingsDemoBlocks', 'controlsDemoBlocks'].forEach(id => {
           const dbEl = document.getElementById(id);
           if (dbEl) dbEl.hidden = true;
         });
@@ -5703,7 +6024,7 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
         board.innerHTML = `
           <div class="panel-head">
             <div>
-              <h3>Live SITREP <span class="live-badge">Live</span></h3>
+              <h3>Scan controls <span class="live-badge">Live</span></h3>
               <p>${sitrep ? `Generated ${String(sitrep.generated_at).slice(0, 16).replace('T', ' ')} UTC &middot; ${escapeHtml(sitrep.headline)}` : 'No completed scan yet.'}</p>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
@@ -5714,40 +6035,15 @@ Provide actionable code fixes and format as a MUSTER executive brief.`;
               ${sitrep ? `<button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
             </div>
           </div>
-          <div class="panel-body">
-            ${sitrep ? `<div class="live-md">${this.md(sitrep.content_md)}</div>` : '<p class="live-muted">Run a scan to produce the first cited SITREP for this website.</p>'}
-          </div>`;
+`;
 
-        const plain = this.panel('livePlainPanel', 'plainReport');
-        const items = (sitrep && sitrep.sections && sitrep.sections.plain_english && sitrep.sections.plain_english.items) || [];
-        plain.innerHTML = `
-          <div class="panel-head">
-            <div>
-              <h3>Live Plain English Findings</h3>
-              <p>${sitrep ? `${items.length} open finding${items.length === 1 ? '' : 's'}, explained without jargon` : 'No SITREP yet.'}</p>
-            </div>
-          </div>
-          ${items.length ? `
-          <div class="table-header grid-live-findings">
-            <span>Finding</span>
-            <span style="text-align:right;">Status / Action</span>
-          </div>
-          <div class="list">
-            ${items.map(i => `
-            <div class="table-row grid-live-findings">
-              <div>${escapeHtml(i.text)} <span class="live-cite">F${i.finding_id}</span>${(i.evidence_ids || []).map(e => `<span class="live-cite">E${e}</span>`).join('')}</div>
-              <div style="display:flex; gap:6px; align-items:center; justify-content:flex-end;">
-                <select class="filter-select" style="padding:4px 6px;font-size:10.5px;" onchange="Live.updateFindingStatus(${i.finding_id}, this.value)" data-tooltip="Change this finding's status.">
-                  <option value="">Status…</option>
-                  <option value="open">Open</option>
-                  <option value="reopened">Reopened</option>
-                  <option value="accepted">Accepted risk</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-                <button class="btn-ghost" style="padding:4px 9px;font-size:10.5px;" onclick="Live.promoteFinding(${i.finding_id})" data-tooltip="Manually opens a tracked risk with a remediation action, before autotriage would otherwise get to it.">→ Promote to risk</button>
-              </div>
-            </div>`).join('')}
-          </div>` : `<div class="panel-body"><p class="live-muted">${sitrep ? 'No open findings. Keep scanning on schedule so this stays true.' : 'No SITREP yet.'}</p></div>`}`;
+        // The Plain English and Board reports are rendered by renderReports()
+        // from the SITREP's report model, the same payload sitrep.html reads.
+        // A stale live-panel from an earlier build is removed so two copies of
+        // the findings never sit on one page.
+        const stalePlain = document.getElementById('livePlainPanel');
+        if (stalePlain) stalePlain.remove();
+        renderReports();
 
         const comp = this.panel('liveCompliancePanel', 'controls');
         const laws = (ov && ov.compliance && ov.compliance.laws) || [];

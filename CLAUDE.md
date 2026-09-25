@@ -593,6 +593,26 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   migration header still calls this an inference; it predates the confirmation and cannot be
   edited, because the file must match what the ledger recorded. A new catalogue row must be written as a sentence -- the migration
   asserts no `Covers:` value survives, but nothing stops one being inserted later.
+- **The report is a template emitted by Postgres, and every page renders it.** As of 2026-09-25
+  (migration `20260925200050`, `muster_109`) `sections.report` on every SITREP carries the header
+  block, the metrics, control coverage (`muster.sitrep_controls`), the section list each report
+  shows in order (`profiles.client`, `profiles.board`) and the disclaimer. `app.html`'s Plain
+  English (client) and Board & Committee (company) reports are one renderer, `renderReport()`,
+  walking a profile's section list; `sitrep.html` reads the same payload; the markdown gained
+  `## Controls` in the same migration. **A page decides how a section looks, never which
+  sections a report has.** To add a section: emit it from `generate_sitrep`, name it in the
+  profile(s) in `sitrep_report_model`, add a `case` to `renderReportSection` in `app.html`, a
+  block in `sitrep.html` and a heading in the markdown -- `tests/sitrep/report-template.test.ts`
+  fails on any of those left out, and a key the template names that `app.html` cannot draw renders
+  as a visible notice rather than nothing. Until this change the two workspace reports were demo
+  scaffolds with hardcoded copy ("Q3 Standing Brief") and different headers, a signed-in tenant got
+  a findings list under one and raw markdown under the other, and the client report printed as an
+  empty page because its print rule named `#plainReportView`, an id that never existed. Demo mode
+  renders `SAMPLE_SITREP` (fictional, Northstar Fintech) through the same renderer, and the test
+  pins its profiles to SQL's, so a prospect sees the document shape a customer gets. Branding comes
+  from `getActiveBrand()` into the report's own header and footer; white-label hides the MUSTER
+  line, co-branded says "with MUSTER". The finding status and promote controls in the client
+  report's Findings table are workspace actions, marked `.no-print`, and never reach paper.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent
