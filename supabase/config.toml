@@ -16,7 +16,7 @@ project_id = "hjowfnzpomzxazmzywxw"
 # default. verify_jwt defaults to TRUE when a function is omitted, and most of
 # these need FALSE -- an omitted entry is not a neutral choice, it is a wrong
 # one that only shows up as 401s in production. Values below are the live
-# settings, verified 2026-09-08 and re-read 2026-09-25 when the four functions
+# settings, verified 2026-09-08 and re-read 2026-09-25 when the six functions
 # at the bottom were found deployed but undeclared here.
 
 [functions.muster-scan]
@@ -100,6 +100,20 @@ entrypoint = "./functions/muster-beta-notify/index.ts"
 # goes out, silently -- the row still inserts.
 verify_jwt = false
 entrypoint = "./functions/muster-beta-confirm/index.ts"
+
+[functions.muster-beta-export]
+# Shared secret in the query string (?key=) against vault muster_beta_export_key,
+# because the consumer is a Google Sheets IMPORTDATA call, which can send no
+# header. A URL-borne secret lands in access logs; rotate the key if the sheet
+# is ever shared. Returns the signup list as CSV, service-role read.
+verify_jwt = false
+entrypoint = "./functions/muster-beta-export/index.ts"
+
+[functions.muster-asset-admin]
+# Shared secret: x-muster-signal against vault muster_asset_admin_secret.
+# Uploads into the public brand-assets bucket with the service role.
+verify_jwt = false
+entrypoint = "./functions/muster-asset-admin/index.ts"
 
 [functions.muster-telegram-debug]
 # Retired: answers 410 to everything. Kept only because the MCP has no delete
