@@ -105,6 +105,7 @@ test("muster.partners routes to the right page", () => {
   assert.equal(rewriteTarget(call("https://muster.partners/onboarding", "muster.partners")), "/onboarding.html");
   assert.equal(rewriteTarget(call("https://muster.partners/sitrep", "muster.partners")), "/sitrep.html");
   assert.equal(rewriteTarget(call("https://muster.partners/sitrep/sample", "muster.partners")), "/sitrep-sample.html");
+  assert.equal(rewriteTarget(call("https://muster.partners/beta", "muster.partners")), "/beta.html");
 });
 
 // The scanner reads these three by URL. If any of them is answered with a page
@@ -160,6 +161,7 @@ test("isUnder does not match a sibling with a shared prefix", () => {
   // through to a static file of that name, which does not exist.
   assert.equal(rewriteTarget(call("https://muster.partners/sitrepfoo", "muster.partners")), null);
   assert.equal(rewriteTarget(call("https://muster.partners/privacywall", "muster.partners")), null);
+  assert.equal(rewriteTarget(call("https://muster.partners/betawall", "muster.partners")), null);
   // /administrator is not the console. On an app host it falls to signin.html
   // like any other unknown path, not to admin.html.
   assert.equal(rewriteTarget(call("https://app.muster.partners/administrator", "app.muster.partners")), "/signin.html");
@@ -168,4 +170,5 @@ test("isUnder does not match a sibling with a shared prefix", () => {
 test("a trailing slash resolves the same as no trailing slash", () => {
   assert.equal(rewriteTarget(call("https://muster.partners/privacy/", "muster.partners")), "/privacy.html");
   assert.equal(rewriteTarget(call("https://muster.partners/onboarding/", "muster.partners")), "/onboarding.html");
+  assert.equal(rewriteTarget(call("https://muster.partners/beta/", "muster.partners")), "/beta.html");
 });

@@ -7,7 +7,8 @@ import { rewrite, next } from '@vercel/functions';
 // Two host families are served:
 //
 //   muster.partners                  the main site. Paths, not subdomains:
-//                                    /, /onboarding, /sitrep, /sitrep/sample
+//                                    /, /onboarding, /sitrep, /sitrep/sample,
+//                                    /beta, /privacy
 //   *.muster.28footsystems.com       the original subdomain layout, still live
 //
 // The subdomain hosts are deliberately kept working. Magic-link emails already
@@ -127,6 +128,9 @@ export default function middleware(request) {
     }
     if (isUnder(path, '/privacy')) {
       return secureRewrite(new URL('/privacy.html', request.url));
+    }
+    if (isUnder(path, '/beta')) {
+      return secureRewrite(new URL('/beta.html', request.url));
     }
     if (path === '/') {
       return secureRewrite(new URL('/index.html', request.url));
