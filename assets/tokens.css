@@ -1,4 +1,4 @@
-/* MUSTER design tokens -- the single source of truth for every page.
+/* CavScope design tokens -- the single source of truth for every page.
  *
  * This file is NOT served to a browser. Each page carries its own copy of the
  * block below, inlined into its <style> between the muster:tokens markers, and
@@ -67,4 +67,73 @@
   --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
   --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+  /* ---- CavScope brand identity, added 2026-09-26 -----------------------
+   *
+   * Additive, not a reskin. Every name below is new; nothing above this
+   * block changed value, so all nine pages render pixel-identical to before
+   * this commit. See docs/BRAND.md for the full spec (logo system, icon
+   * system, component guidance) and the reasoning below.
+   *
+   * Two names this block deliberately does NOT define, because the product
+   * already ships a token with that exact name and a different value:
+   *   --surface     already #0c1527 above, driving every card/panel today.
+   *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+   *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+   *                 on all nine pages today. The brand palette's equivalent
+   *                 is Slate Gray (#6b6b6b).
+   * Redefining either one HERE would silently reskin the live product the
+   * moment this file is committed and synced -- every card background or
+   * every piece of muted text, everywhere, with no visual review. That is
+   * a real decision, not a token rename, so it stays a decision: the two
+   * target values are named below as --cs-surface-target and
+   * --cs-text-muted-target, ready to promote to --surface / --text-muted
+   * in a dedicated reskin pass once someone has actually looked at all
+   * nine pages with the new colors.
+   */
+
+  /* Raw palette */
+  --cs-gold: #D4AF37;
+  --cs-black: #0B0B0B;
+  --cs-charcoal: #1E1E1E;
+  --cs-slate: #6B6B6B;
+  --cs-light-gray: #D9D9D9;
+  --cs-white: #FFFFFF;
+
+  /* Semantic tokens, night mode (this product's only mode today) */
+  --background: var(--cs-black);
+  --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+  --cs-surface-target: var(--cs-charcoal);
+  --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+  --text-primary: var(--cs-white);
+  --text-secondary: var(--cs-slate);
+  --cs-text-muted-target: var(--cs-slate);
+  --accent: var(--cs-gold);
+  --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+  --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+  /* Functional, not decorative -- a severity/status color has to stay
+   * distinguishable from the brand accent and from every other status, so
+   * these alias the existing hues above rather than the gold palette.
+   * Collapsing them to brand gold would make "critical" and "this button
+   * matters" look the same color, which is the wrong kind of consistent. */
+  --success: var(--emerald);
+  --warning: var(--amber);
+  --error: var(--rose);
+  --focus-ring: var(--cs-gold);
 }
+
+/* Day mode is specified, not shipped -- deliberately not live CSS here.
+ * This product has no light/dark switch today (checked: no data-theme
+ * handling exists anywhere in the nine pages), and
+ * tests/ui/design-tokens.test.ts treats every custom-property declaration
+ * in this file as one flat, single-valued vocabulary, comments included --
+ * the same guarantee that catches seven pages drifting to different reds
+ * also means a second live selector block here, with its own values for
+ * background, border, accent-hover and accent-soft, reads as the SAME
+ * names drifting, which is exactly the defect that test exists to catch.
+ * So the day-mode values are documented, not declared:
+ * see docs/BRAND.md "Light mode / dark mode" for the full table. Promote
+ * them to a real [data-theme="light"] block -- here and in that test's
+ * parsing -- only alongside the toggle feature that would actually use
+ * them; a value nothing reads is exactly the defect CLAUDE.md's
+ * feature-flag rule warns about, in CSS instead of SQL. */

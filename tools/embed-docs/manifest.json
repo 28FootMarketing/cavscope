@@ -3,6 +3,7 @@
   "docs": {
     "docs/SCAN-RULES.md": "public",
     "docs/GLOSSARY.md": "public",
+    "docs/BRAND.md": "public",
     "docs/BACKEND.md": "internal",
     "docs/BRAND-CUTOVER.md": "internal",
     "docs/CUTOVER.md": "internal",

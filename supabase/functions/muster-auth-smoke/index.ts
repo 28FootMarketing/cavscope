@@ -288,7 +288,7 @@ Deno.serve(async (req: Request) => {
       // Markers common to all six files in supabase/auth-email-templates/. If
       // these are missing, the dashboard is still serving GoTrue's stock
       // template and the pasted-from-repo step never happened.
-      const branded = html.includes("muster-emblem.png") &&
+      const branded = html.includes("cavscope-emblem.png") &&
         html.includes("CavScope is website assurance by");
 
       // Pull the redirect target out of the rendered confirmation link.
