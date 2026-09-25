@@ -13,10 +13,11 @@
 project_id = "hjowfnzpomzxazmzywxw"
 
 # Every function is declared, including the ones whose settings match the
-# default. verify_jwt defaults to TRUE when a function is omitted, and four of
+# default. verify_jwt defaults to TRUE when a function is omitted, and most of
 # these need FALSE -- an omitted entry is not a neutral choice, it is a wrong
 # one that only shows up as 401s in production. Values below are the live
-# settings on both projects, verified 2026-09-08.
+# settings, verified 2026-09-08 and re-read 2026-09-25 when the four functions
+# at the bottom were found deployed but undeclared here.
 
 [functions.muster-scan]
 verify_jwt = true
@@ -78,3 +79,30 @@ entrypoint = "./functions/muster-embed-docs/index.ts"
 # an account-takeover primitive -- the in-function check is the whole gate.
 verify_jwt = false
 entrypoint = "./functions/muster-auth-smoke/index.ts"
+
+[functions.muster-set-password]
+# The caller's own session JWT is the credential: the function re-verifies it
+# with getUser() before touching the account. The gateway check is a first
+# line, not the only one.
+verify_jwt = true
+entrypoint = "./functions/muster-set-password/index.ts"
+
+[functions.muster-beta-notify]
+# Shared secret: x-muster-signal against vault muster_beta_notify_secret. Called
+# by the muster_beta_signups insert trigger through pg_net, which presents no
+# Supabase JWT. Posts the Telegram alert.
+verify_jwt = false
+entrypoint = "./functions/muster-beta-notify/index.ts"
+
+[functions.muster-beta-confirm]
+# Same trigger, same x-muster-signal secret. Sends the confirmation email via
+# Resend. With verify_jwt true the trigger's call is refused 401 and no email
+# goes out, silently -- the row still inserts.
+verify_jwt = false
+entrypoint = "./functions/muster-beta-confirm/index.ts"
+
+[functions.muster-telegram-debug]
+# Retired: answers 410 to everything. Kept only because the MCP has no delete
+# for edge functions; remove it with the CLI, then drop this entry and the dir.
+verify_jwt = false
+entrypoint = "./functions/muster-telegram-debug/index.ts"
