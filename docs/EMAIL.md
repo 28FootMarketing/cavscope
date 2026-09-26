@@ -302,11 +302,14 @@ Additional Edge Function secret:
 `risk_opened` and `sitrep_ready` are currently the **only** categories the outbox accepts — the
 table's check constraint permits nothing else. `sitrep_ready` was added 2026-09-26 (`muster_110`):
 `public.muster_engine_sitrep()` enqueues it after every scan's SITREP is generated, gated behind
-the `sitrep_ready_email` flag (off by default -- see `docs/EMAIL-INVENTORY.md`). A subscription-
-activated email or a welcome email are not "configuration"; each still needs a migration to widen
-that constraint plus something that actually enqueues rows, and in the subscription case, an
-existing-org upgrade path that does not exist yet either. See `docs/EMAIL-INVENTORY.md`'s "Real
-gaps, not yet built" for what is and is not there.
+`organizations.sitrep_ready_alerts_enabled` (off by default -- `muster_111` replaced an initial
+feature-flag-based gate with this plain column once it turned out `feature_flag_overrides` is
+writable only from the super-admin console, so nothing let a tenant turn it on themselves). An
+executive toggles it, and sets `sitrep_recipients`, from **Team & Settings** in `app.html` -- see
+`docs/EMAIL-INVENTORY.md`. A subscription-activated email or a welcome email are not
+"configuration"; each still needs a migration to widen that constraint plus something that actually
+enqueues rows, and in the subscription case, an existing-org upgrade path that does not exist yet
+either. See `docs/EMAIL-INVENTORY.md`'s "Real gaps, not yet built" for what is and is not there.
 
 ## Password reset, end to end
 

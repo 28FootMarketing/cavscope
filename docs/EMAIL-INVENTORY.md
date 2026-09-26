@@ -19,7 +19,7 @@ Routing and configuration: [`docs/EMAIL.md`](EMAIL.md). Auth template sources:
 | Email-address change | user changes their address in Supabase Auth | both old and new address | **GoTrue** | `04-change-email.html` |
 | Reauthentication code | GoTrue reauthentication | signed-in user | **GoTrue** | `06-reauthentication.html` |
 | Critical/high risk opened | `muster.autotriage()` opens a risk → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | org's alert recipients | **CavScope** (Resend REST API) | `alertHtml()` in the function |
-| SITREP ready | `public.muster_engine_sitrep()` generates a SITREP after every scan → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | `organizations.sitrep_recipients`, falling back to executive/risk_owner members | **CavScope** (Resend REST API) | `alertHtml()` in the function, `sitrep_ready` category |
+| SITREP ready | `public.muster_engine_sitrep()` generates a SITREP after every scan → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min. Gated on `organizations.sitrep_ready_alerts_enabled`, off by default. Toggle and recipients are set from **Team & Settings** in `app.html` (`muster_set_sitrep_alert_preference`, `muster_set_sitrep_recipients`). | `organizations.sitrep_recipients`, falling back to executive/risk_owner members | **CavScope** (Resend REST API) | `alertHtml()` in the function, `sitrep_ready` category |
 
 ## Deliberately not sent by CavScope
 
@@ -48,12 +48,19 @@ alike -- so "a scan finished" and "a SITREP is ready" are the same event. Buildi
 exactly the one-owner-per-event failure this document exists to prevent; `sitrep_ready` is the one
 category for it.
 
-`sitrep_ready` ships with `sitrep_ready_email` **off by default** (`default_enabled = false`).
-Websites default to a 1440-minute (daily) scan cadence and there is no workspace-settings UI yet
-for an org to turn a daily email off itself -- shipping it on for everyone with no way to stop it
-is the "digest nobody can turn off is a complaint generator" problem this table used to describe.
-Enable it per org with a `feature_flag_overrides` row (or flip `default_enabled` once a settings
-toggle exists) once observed correct against a real org, same discipline as SEC-014/AVAIL-004.
+`sitrep_ready` shipped in `muster_110` gated behind a NEW feature flag, `sitrep_ready_email`
+(`default_enabled = false`) -- and `muster_111` retired that flag one migration later.
+`feature_flag_overrides` is writable only from the super-admin console (every `muster_admin_*`
+write RPC checks `muster.is_super_admin()` itself, backed by RLS); there was no code path for an
+ordinary executive to flip an override on their own org, so "enable it per org" was a switch only a
+super admin could reach -- not actually wired to a page. `muster_111` replaced it with a plain
+column, `organizations.sitrep_ready_alerts_enabled`, the same shape as the sibling
+`critical_alerts_enabled` (a per-org preference an executive/contributor+ flips themselves via
+`muster.can_write_org`), rather than a second admin-only flag stacked under a category-specific
+preference. It still defaults **false**: websites default to a 1440-minute (daily) scan cadence,
+and shipping this on for every existing org with no prior warning is the "digest nobody can turn
+off is a complaint generator" problem this table used to describe. `email_alerts` is unaffected and
+still gates the outbox claim for every category, including this one.
 
 | Event | Who is unserved today | What it needs |
 |---|---|---|
