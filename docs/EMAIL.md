@@ -299,16 +299,21 @@ Additional Edge Function secret:
 |---|---|---|
 | `RESEND_WEBHOOK_SECRET` | **yes, for tracking** | the `whsec_...` Resend shows when the endpoint is created. Without it the function answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. |
 
-`risk_opened` and `sitrep_ready` are currently the **only** categories the outbox accepts — the
-table's check constraint permits nothing else. `sitrep_ready` was added 2026-09-26 (`muster_110`):
+`category` is a foreign key into `muster.notification_categories` (added `muster_112`) rather than a
+hardcoded CHECK -- adding a category is a registry insert plus a `CATEGORY_META` entry in
+`muster-alert-dispatch`, not a constraint edit; see `docs/EMAIL-INVENTORY.md`'s "Architecture"
+section. Four are registered today: `risk_opened`, `sitrep_ready`, `workspace_created`,
+`website_added`. `sitrep_ready` was added 2026-09-26 (`muster_110`):
 `public.muster_engine_sitrep()` enqueues it after every scan's SITREP is generated, gated behind
 `organizations.sitrep_ready_alerts_enabled` (off by default -- `muster_111` replaced an initial
 feature-flag-based gate with this plain column once it turned out `feature_flag_overrides` is
 writable only from the super-admin console, so nothing let a tenant turn it on themselves). An
 executive toggles it, and sets `sitrep_recipients`, from **Team & Settings** in `app.html` -- see
-`docs/EMAIL-INVENTORY.md`. A subscription-activated email or a welcome email are not
-"configuration"; each still needs a migration to widen that constraint plus something that actually
-enqueues rows, and in the subscription case, an existing-org upgrade path that does not exist yet
+`docs/EMAIL-INVENTORY.md`. `workspace_created` and `website_added` (`muster_112`, same day) enqueue
+from `muster.do_onboard()` and `muster.do_add_website()` respectively -- the latter suppressed for
+onboarding's own internal call, so adding a website during onboarding does not also fire a second
+email for the same action. A subscription-activated email is not "configuration"; it still needs an
+existing-org upgrade path that does not exist yet
 either. See `docs/EMAIL-INVENTORY.md`'s "Real gaps, not yet built" for what is and is not there.
 
 ## Password reset, end to end

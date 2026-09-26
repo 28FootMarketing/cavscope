@@ -8,6 +8,44 @@ provider already sends.
 Routing and configuration: [`docs/EMAIL.md`](EMAIL.md). Auth template sources:
 [`supabase/auth-email-templates/`](../supabase/auth-email-templates/).
 
+## Architecture
+
+Every CavScope-owned (as opposed to GoTrue- or Stripe-owned) transactional email goes through one
+pipeline: an event handler inserts a row into `muster.notification_outbox`, `muster-alert-dispatch`
+claims up to 20 pending rows every 5 minutes and sends each through the Resend REST API, and
+`muster-resend-webhook` records what Resend later reports. This is deliberately the **only** such
+pipeline — a second one-off `fetch("https://api.resend.com/emails")` anywhere else in the codebase
+is a bug, not a shortcut.
+
+- **Categories are a registry, not a CHECK constraint** (`muster.notification_categories`, added
+  `muster_112`). Adding a category is one insert there plus a `CATEGORY_META` entry in
+  `muster-alert-dispatch`, not a migration editing a literal-equality constraint — the same
+  discipline this codebase already applies to `muster.frameworks` and `muster.feature_flags`.
+- **Templates are one function, `alertHtml()`, keyed by category** (`CATEGORY_META`: eyebrow text,
+  CTA label/link, recipient-note copy). Body copy itself is built by whatever enqueues the row
+  (SQL, mostly) and passed through as `body_text`, paragraph-split and escaped — never raw HTML from
+  a caller.
+- **Delivery logging**: `muster.email_events` (Resend webhook, keyed by Svix message id) plus
+  `delivery_status`/`delivered_at` on the outbox row itself. See `docs/EMAIL.md`.
+- **Retry-safe**: `muster_engine_resolve_alert` requeues a failed send to `pending` for up to 5
+  attempts, then dead-letters to `failed`; the Resend call itself carries an `Idempotency-Key` keyed
+  on the outbox row id, and a `X-Entity-Ref-ID` header so Gmail does not collapse distinct alerts
+  into one thread.
+- **Configuration is environment variables**: `RESEND_API_KEY`, `MUSTER_ALERT_FROM`,
+  `MUSTER_APP_URL`, `MUSTER_SITREP_URL`, `MUSTER_SUPPORT_EMAIL`, `MUSTER_ALERT_REPLY_TO` — see
+  `docs/EMAIL.md`.
+- **Light/dark rendering**: the template ships `color-scheme`/`supported-color-schemes` meta tags
+  and a `<style>` block with `@media (prefers-color-scheme: dark)` overrides (`!important`, since
+  that is the only thing that beats an inline style's specificity in an email client). Clients that
+  honor it (Apple/iOS/Android Mail, Gmail's app) get a dark card; clients that ignore media queries
+  (Outlook desktop) get the light card unchanged — no regression either way.
+- **Transactional vs. marketing**: hard-separated already. Marketing lives in GHL against the
+  `src:`/`product:`/`intent:` tag taxonomy, a different sending identity and a different suppression
+  list. Nothing in this pipeline shares either with GHL.
+- **Suppression**: a permanent bounce or spam complaint on any Resend send (any category) writes
+  `muster.email_suppressions`; `muster_engine_claim_alerts` drops a suppressed address from every
+  future recipient list, regardless of category.
+
 ## Implemented and wired
 
 | Event | Trigger | Recipient | Owner | Template |
@@ -20,6 +58,8 @@ Routing and configuration: [`docs/EMAIL.md`](EMAIL.md). Auth template sources:
 | Reauthentication code | GoTrue reauthentication | signed-in user | **GoTrue** | `06-reauthentication.html` |
 | Critical/high risk opened | `muster.autotriage()` opens a risk → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | org's alert recipients | **CavScope** (Resend REST API) | `alertHtml()` in the function |
 | SITREP ready | `public.muster_engine_sitrep()` generates a SITREP after every scan → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min. Gated on `organizations.sitrep_ready_alerts_enabled`, off by default. Toggle and recipients are set from **Team & Settings** in `app.html` (`muster_set_sitrep_alert_preference`, `muster_set_sitrep_recipients`). | `organizations.sitrep_recipients`, falling back to executive/risk_owner members | **CavScope** (Resend REST API) | `alertHtml()` in the function, `sitrep_ready` category |
+| Workspace ready | `muster.do_onboard()` creates a new organization | the creating user | **CavScope** (Resend REST API) | `alertHtml()`, `workspace_created` category |
+| Website added | `muster.do_add_website()` adds a website, except when called from onboarding (folded into Workspace ready instead — see below) | org's alert recipients (executive/risk_owner) | **CavScope** (Resend REST API) | `alertHtml()`, `website_added` category |
 
 ## Deliberately not sent by CavScope
 
@@ -37,10 +77,8 @@ event, which is the failure this table exists to prevent.
 
 ## Real gaps, not yet built
 
-Named rather than quietly implemented, because each needs a migration to widen
-`notification_outbox`'s category constraint plus something that actually enqueues rows. The
-constraint now permits `risk_opened` and `sitrep_ready` (added 2026-09-26, `muster_110`); nothing
-else, on purpose.
+Named rather than quietly implemented. `muster.notification_categories` (above) currently registers
+`risk_opened`, `sitrep_ready`, `workspace_created` and `website_added`; nothing else, on purpose.
 
 **"Scan complete" is not a separate row in this table.** `public.muster_engine_sitrep()` runs
 synchronously, unconditionally, right after every scan -- scheduled, manual and admin-sandbox
@@ -64,7 +102,72 @@ still gates the outbox claim for every category, including this one.
 
 | Event | Who is unserved today | What it needs |
 |---|---|---|
-| Subscription activated for an **existing** user | A user who already has an account and upgrades gets no email at all. A new user gets the GoTrue invite, so only this case is unserved. | Not just an email: `muster.do_onboard` is the only place a pending commercial grant is ever applied to an organization's plan, and it only runs when a **new** org is created. There is no code path that applies a grant to an **existing** org yet, so an "activated" email at checkout time would claim a plan change the schema cannot confirm happened. Build the existing-org upgrade path first; widen `category` to `subscription_activated` and enqueue from it once that path is real. |
+| Subscription activated for an **existing** user | A user who already has an account and upgrades gets no email at all. A new user gets the GoTrue invite, so only this case is unserved. | Not just an email: `muster.do_onboard` is the only place a pending commercial grant is ever applied to an organization's plan, and it only runs when a **new** org is created. There is no code path that applies a grant to an **existing** org yet, so an "activated" email at checkout time would claim a plan change the schema cannot confirm happened. Build the existing-org upgrade path first; widen the registry to `subscription_activated` and enqueue from it once that path is real. |
+| Website down / restored | Nothing tells anyone a site went unreachable or came back, in near-real time. | Real new infrastructure, not just an email: see "Website down / restored" below -- the platform has no continuous uptime monitor to hang this off of today. |
+
+### 2026-09-26 request reconciliation: 14 proposed transactional emails
+
+A 14-item transactional-email spec was requested that (understandably, without deep knowledge of
+what this repo already builds and has already decided) re-proposes several emails this document
+already assigns elsewhere, and two more that assume monitoring infrastructure that does not exist.
+Reconciled here rather than built blind, because several of these are "GoTrue already sends this"
+or "Stripe already owns this" -- building a second sender is the exact one-owner-per-event failure
+this whole document exists to prevent, and getting it wrong here means a real customer gets two
+emails (or, for billing, two receipts) for one event.
+
+| # | Requested event | Verdict | Why |
+|---|---|---|---|
+| 1 | Verify Your Email | **Already GoTrue's**, and mostly moot | Self-serve signup is paused (`signin.html` has no signup form); every real account today arrives via a GoTrue invite (`muster-stripe-webhook` → `inviteUserByEmail`, or a manual dashboard invite) or admin provisioning, not a self-serve signup that needs its own confirmation. `01-confirm-signup.html` exists in `supabase/auth-email-templates/` for if/when self-serve returns; CavScope building a second one would either duplicate GoTrue's or ship for a flow the product doesn't have. |
+| 2 | Welcome to CavScope | **Already listed, GoTrue's invite** | This table has said so since it was written: "the invite email *is* the welcome... A separate welcome would arrive within seconds of it." Unchanged. |
+| 3 | Password Reset | **GoTrue's**, fully wired | `docs/EMAIL.md`'s entire "Password reset, end to end" section documents this working today via `resetPasswordForEmail` / `05-reset-password.html`. CavScope cannot intercept or duplicate this — GoTrue sends it, not this codebase. |
+| 4 | Password Changed | **GoTrue's, and off — that's a standing decision, not an oversight** | CLAUDE.md is explicit: `mailer_notifications_password_changed_enabled` is one of "the seven security-notification emails," currently `false`, and turning it on is called out by name as **the owner's call** — a customer-facing security-posture decision, not a code change. This is not CavScope's to send even if GoTrue's were switched on; it is GoTrue's own template (still stock at ~190 characters) that would need writing first. Flagging for a decision, not building around it. |
+| 5 | Workspace Ready | **Built** | `workspace_created` category, above. |
+| 6 | Website Added | **Built** | `website_added` category, above -- suppressed specifically for the onboarding trigger so it does not double up with Workspace Ready for the same action. |
+| 7 | Initial Assurance Scan Complete | **Already `sitrep_ready`** | Identical trigger point to SITREP ready (`muster_engine_sitrep`, unconditional after every scan) — see "scan complete is not a separate row" above. `sitrep_ready`'s copy already names posture band/score; if a visually distinct "first scan" variant is wanted, that is a copy change inside the existing `sitrep_ready` category (e.g. detect `version = 1` and vary the subject), not a second category and a second email for the same scan. |
+| 8 | SITREP Ready | **Already built**, before this request arrived | `sitrep_ready`, this session. The requested field list (assurance status, critical/high/medium counts, resolved-since-last count) is richer than the current `body_text` (posture band/score + headline only) — worth a follow-up pass to pull those counts from `muster.sitreps.sections`/`citations`, but that is a copy change to the existing category, not a new one. |
+| 9 | Critical Finding Detected | **Already `risk_opened`**, narrower scope requested | `muster.autotriage()` already emails the moment a critical **or** high risk opens, gated on `critical_alerts_enabled`, to executives/risk owners — same trigger, same "avoid alert fatigue" intent, already excludes medium/low/informational by construction (`notification_outbox_severity_check` only permits `critical`/`high`/`info`). The request asks for critical-only; that is a one-line filter change inside the existing `autotriage()` enqueue condition, not a second, competing alert for the same finding. |
+| 10 | Website Down | **Needs new infrastructure, not an email** | See below. |
+| 11 | Website Restored | **Needs new infrastructure, not an email** | See below. |
+| 12 | Payment Successful | **Already Stripe's, by deliberate decision** | "Payment receipt / invoice: Stripe... CavScope holds no line items and no tax detail, so anything it sent would be a worse duplicate," above. Reversing this is a real option (a branded receipt strategy is legitimate), but it is a product decision that also needs new Stripe webhook subscriptions (today only `checkout.session.completed` is consumed — see `muster-stripe-webhook`), not something to build silently under an unrelated request. |
+| 13 | Payment Failed | **Already Stripe's, by deliberate decision** | Same table, "Stripe owns dunning, the retry schedule, and the hosted payment-update page." Needs `invoice.payment_failed` subscribed and handled — does not exist today. |
+| 14 | Subscription Canceled | **Already Stripe's, by deliberate decision, and a known unhandled gap** | Same table: "CavScope is not told the difference between a cancel-at-period-end and an immediate cancel unless it subscribes to more events than it currently does." CLAUDE.md independently flags `customer.subscription.deleted` as unhandled by `muster-stripe-webhook` today. Building this email requires building that webhook handler first — real, but separate, work. |
+
+**Net new work done in this pass:** `workspace_created`, `website_added`, the category-registry
+architecture, and light/dark rendering support. **Deliberately not done:** anything above marked
+GoTrue's/Stripe's (5 items) or already-covered (3 items) — building those would ship a duplicate or
+a false claim. **Needs a decision before building:** password-changed notifications (GoTrue
+template + the owner's sign-off), billing emails (new Stripe webhook subscriptions + confirming
+CavScope wants a second, branded receipt alongside Stripe's), and website down/restored (see next).
+
+### Website down / restored
+
+Not built, and not safely buildable as "an email" alone. The platform has **no continuous uptime
+monitor** — the only availability signal comes from the scan engine's own `AVAIL-001`/`AVAIL-003`/
+`AVAIL-004` rules, evaluated once per scan, on a cadence that defaults to 1440 minutes (daily; see
+`muster.website_scan_settings.cadence_minutes`). There is no polling loop, no consecutive-failure
+counter distinct from scan-to-scan comparison, and no cron job for it (the five `muster-*` cron
+schedules are `scan-due`, `autotriage`, `alert-dispatch`, `watchdog` — platform self-health, not
+website uptime — and `embedding-backfill`).
+
+Sending a "Website Down"/"Website Restored" email off today's data would say things the platform
+cannot back up: a "detection time," a "current outage duration," and "respect the existing
+multiple-failed-check confirmation logic" all describe near-real-time monitoring semantics this
+product does not have. A site scanned once daily could be down anywhere from one minute to nearly
+24 hours before an `AVAIL-*` finding ever fires, and "restored" would only be noticed on the next
+scan — up to a day later. That is precisely the class of bug `docs/CLAUDE.md`'s AVAIL-001/AVAIL-003/
+AVAIL-004 history is about: a confident, specific-sounding claim ("detected at 14:32", "down for 3
+hours") about something the engine never actually measured that way. Two honest paths forward,
+neither of which is "just add the email":
+
+1. **Build real, frequent uptime polling** as new infrastructure (a dedicated cron + a
+   consecutive-failure counter per website, independent of the scan cadence) — a genuine feature,
+   not a notification bolt-on, and the only way the requested copy ("detection time," "outage
+   duration," "multiple failed checks") would be true.
+2. **Derive it from scan-to-scan `AVAIL-*` transitions only**, with copy that says what actually
+   happened — "as of the scan run at ..., this site did not respond" rather than "detected at" — at
+   the cost of being accurate only to within one scan cadence, which for most orgs is a day.
+
+This needs the owner's call before either is built.
 
 ## Support contact
 

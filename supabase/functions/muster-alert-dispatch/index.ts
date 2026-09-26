@@ -87,11 +87,12 @@ const SEVERITY_COLOR: Record<string, string> = {
 };
 
 // Per-category chrome. One outbox, one send loop, one alertHtml() -- adding a
-// category means one entry here, not a second copy of the template. Falls
-// back to risk_opened's chrome for anything unrecognised, which cannot
-// actually happen: the category is a NOT NULL check-constrained column, so
-// this is defensive against a future category being added here late, not
-// against bad data.
+// category means one entry here plus a row in muster.notification_categories
+// (see muster_112), not a second copy of the template. Falls back to
+// risk_opened's chrome for anything unrecognised, which cannot actually
+// happen: category is a foreign key into that registry table, so this is
+// defensive against a future category being added here late, not against
+// bad data.
 const CATEGORY_META: Record<string, { eyebrow: (row: OutboxRow) => string; ctaText: string; ctaHref: string; recipientNote: string }> = {
   risk_opened: {
     eyebrow: (row) => `${row.severity} · new risk opened`,
@@ -104,6 +105,18 @@ const CATEGORY_META: Record<string, { eyebrow: (row: OutboxRow) => string; ctaTe
     ctaText: "View your SITREP",
     ctaHref: SITREP_URL,
     recipientNote: "You are receiving this because you are listed as a SITREP recipient for your CavScope organization. SITREP recipients are managed in your workspace settings.",
+  },
+  workspace_created: {
+    eyebrow: () => "workspace ready",
+    ctaText: "Open Workspace",
+    ctaHref: APP_URL,
+    recipientNote: "You are receiving this because you created this CavScope workspace.",
+  },
+  website_added: {
+    eyebrow: () => "website added",
+    ctaText: "View Website",
+    ctaHref: APP_URL,
+    recipientNote: "You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.",
   },
 };
 
@@ -128,7 +141,7 @@ function alertHtml(row: OutboxRow): string {
     .map((block) => block.trim())
     .filter((block) => block.length > 0)
     .map((block) =>
-      `            <p style="margin-top:0; margin-bottom:16px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#3a4a63;">${
+      `            <p class="cs-copy" style="margin-top:0; margin-bottom:16px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#3a4a63;">${
         esc(block).replace(/\n/g, "<br>")
       }</p>`
     )
@@ -140,10 +153,31 @@ function alertHtml(row: OutboxRow): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <title>${esc(row.subject)}</title>
+<style>
+  /* Light-mode colors are the inline styles below (the default, and what
+     every client that ignores media queries -- Outlook desktop chief among
+     them -- will render). These !important overrides are the only thing
+     strong enough to beat an inline style's specificity, which is the
+     standard technique for a table-based, inline-styled email that still
+     wants to respect prefers-color-scheme: dark on clients that honor it
+     (Apple Mail, iOS/Android Mail, Gmail's app). Nothing here changes the
+     accent bar or the CTA button -- both are already a saturated color on
+     a dark or light card either way. */
+  @media (prefers-color-scheme: dark) {
+    .cs-body-bg { background-color: #0b0f1a !important; }
+    .cs-card-bg { background-color: #111a2c !important; }
+    .cs-heading { color: #f1f6ff !important; }
+    .cs-copy { color: #c3cede !important; }
+    .cs-muted { color: #8fa0bd !important; }
+    .cs-border { border-top-color: #26314a !important; }
+  }
+</style>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f6fa;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f6fa" style="background-color:#f4f6fa;">
+<body class="cs-body-bg" style="margin:0; padding:0; background-color:#f4f6fa;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f6fa" class="cs-body-bg" style="background-color:#f4f6fa;">
   <tr>
     <td align="center" style="padding-top:32px; padding-bottom:32px; padding-left:12px; padding-right:12px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
@@ -168,11 +202,11 @@ function alertHtml(row: OutboxRow): string {
         </tr>
 
         <tr>
-          <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; padding-top:30px; padding-bottom:30px; padding-left:28px; padding-right:28px;">
+          <td bgcolor="#ffffff" align="left" class="cs-card-bg" style="background-color:#ffffff; padding-top:30px; padding-bottom:30px; padding-left:28px; padding-right:28px;">
 
             <p style="margin-top:0; margin-bottom:14px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:${accent};">${esc(meta.eyebrow(row))}</p>
 
-            <p style="margin-top:0; margin-bottom:20px; font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:28px; font-weight:700; color:#0c1527;">${esc(row.subject)}</p>
+            <p class="cs-heading" style="margin-top:0; margin-bottom:20px; font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:28px; font-weight:700; color:#0c1527;">${esc(row.subject)}</p>
 
 ${paragraphs}
 
@@ -188,18 +222,18 @@ ${paragraphs}
         </tr>
 
         <tr>
-          <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
-            <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
+          <td bgcolor="#ffffff" align="left" class="cs-card-bg cs-border" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
+            <p class="cs-muted" style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
               ${esc(meta.recipientNote)}
             </p>${
               SUPPORT_EMAIL
                 ? `
-            <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
+            <p class="cs-muted" style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
               Questions about this finding? Reply to this email, or write to <a href="mailto:${esc(SUPPORT_EMAIL)}" style="color:#2f7a6d;">${esc(SUPPORT_EMAIL)}</a>.
             </p>`
                 : ""
             }
-            <p style="margin-top:0; margin-bottom:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8e9fb8;">
+            <p class="cs-muted" style="margin-top:0; margin-bottom:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8e9fb8;">
               CavScope is website assurance by 28 Foot Systems, After Today, LLC &middot; Hanover, PA
             </p>
           </td>
