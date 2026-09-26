@@ -99,29 +99,45 @@ const SEVERITY_COLOR: Record<string, string> = {
 // happen: category is a foreign key into that registry table, so this is
 // defensive against a future category being added here late, not against
 // bad data.
-const CATEGORY_META: Record<string, { eyebrow: (row: OutboxRow) => string; ctaText: string; ctaHref: string; recipientNote: string }> = {
+//
+// ctaHref is a function of the row, not a static string, so the button goes
+// to the thing the email is actually about rather than the workspace root
+// for every category alike:
+//   - risk_opened links to app.html's Risk Register view (#risks). There is
+//     no per-risk detail view or URL in the product yet, so this is as
+//     specific as a link can honestly be today; loadWorkspace() reads a
+//     plain view-name fragment (see app.html) and opens that view once on
+//     load, the same way it already consumes #tenant=<id> for a super admin.
+//   - sitrep_ready links straight to the report sitrep.html already knows
+//     how to open by id (?sitrep_id=), no app.html change needed for this one.
+//   - workspace_created and website_added stay on bare APP_URL on purpose:
+//     app.html has no multi-website switcher (this.website is always the
+//     org's first site) and no per-organization landing beyond the org
+//     switcher itself, so a fragment here would claim a destination that
+//     doesn't exist rather than actually reach the new site or org.
+const CATEGORY_META: Record<string, { eyebrow: (row: OutboxRow) => string; ctaText: string; ctaHref: (row: OutboxRow) => string; recipientNote: string }> = {
   risk_opened: {
     eyebrow: (row) => `${row.severity} · new risk opened`,
     ctaText: "Open the risk register",
-    ctaHref: APP_URL,
+    ctaHref: () => `${APP_URL}#risks`,
     recipientNote: "You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.",
   },
   sitrep_ready: {
     eyebrow: () => "sitrep ready",
     ctaText: "View your SITREP",
-    ctaHref: SITREP_URL,
+    ctaHref: (row) => `${SITREP_URL}?sitrep_id=${row.entity_id}`,
     recipientNote: "You are receiving this because you are listed as a SITREP recipient for your CavScope organization. SITREP recipients are managed in your workspace settings.",
   },
   workspace_created: {
     eyebrow: () => "workspace ready",
     ctaText: "Open Workspace",
-    ctaHref: APP_URL,
+    ctaHref: () => APP_URL,
     recipientNote: "You are receiving this because you created this CavScope workspace.",
   },
   website_added: {
     eyebrow: () => "website added",
     ctaText: "View Website",
-    ctaHref: APP_URL,
+    ctaHref: () => APP_URL,
     recipientNote: "You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.",
   },
 };
@@ -219,7 +235,7 @@ ${paragraphs}
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px; margin-bottom:6px;">
               <tr>
                 <td bgcolor="#36e2c9" align="center" style="background-color:#36e2c9; border-radius:8px;">
-                  <a href="${esc(meta.ctaHref)}" style="display:block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:20px; font-weight:700; color:#06201d; text-decoration:none; padding-top:14px; padding-bottom:14px; padding-left:32px; padding-right:32px;">${esc(meta.ctaText)}</a>
+                  <a href="${esc(meta.ctaHref(row))}" style="display:block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:20px; font-weight:700; color:#06201d; text-decoration:none; padding-top:14px; padding-bottom:14px; padding-left:32px; padding-right:32px;">${esc(meta.ctaText)}</a>
                 </td>
               </tr>
             </table>

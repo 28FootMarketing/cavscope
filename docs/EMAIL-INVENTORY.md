@@ -40,6 +40,15 @@ is a bug, not a shortcut.
   CTA label/link, recipient-note copy). Body copy itself is built by whatever enqueues the row
   (SQL, mostly) and passed through as `body_text`, paragraph-split and escaped — never raw HTML from
   a caller.
+- **CTA links go to the resource the email is about, not just the workspace root, where that
+  resource actually has a destination.** `CATEGORY_META.ctaHref` is a function of the outbox row
+  (added 2026-09-26; every category's link was `APP_URL` before this). `sitrep_ready` links straight
+  to the report via `sitrep.html`'s existing `?sitrep_id=` param. `risk_opened` links to `app.html`'s
+  Risk Register view (`#risks`) — `loadWorkspace()` now consumes a plain view-name fragment the same
+  way it already consumed `#tenant=<id>` for a super admin, once per page load. `workspace_created`
+  and `website_added` still land on bare `APP_URL`, deliberately: `app.html` has no per-organization
+  landing beyond the org switcher and no multi-website switcher (`this.website` is always the org's
+  first site), so a fragment for either would name a destination the app cannot actually open.
 - **Delivery logging**: `muster.email_events` (Resend webhook, keyed by Svix message id) plus
   `delivery_status`/`delivered_at` on the outbox row itself. See `docs/EMAIL.md`.
 - **Retry-safe**: `muster_engine_resolve_alert` requeues a failed send to `pending` for up to 5
