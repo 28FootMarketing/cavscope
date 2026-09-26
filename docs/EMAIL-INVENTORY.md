@@ -8,6 +8,21 @@ provider already sends.
 Routing and configuration: [`docs/EMAIL.md`](EMAIL.md). Auth template sources:
 [`supabase/auth-email-templates/`](../supabase/auth-email-templates/).
 
+**2026-09-26: the SITREP itself, and the risk_opened alert, still said "MUSTER."** Found by sending
+real rendered samples of every category for review and reading them, not by grep. `muster.q_brand()`
+-- what every non-white-labeled SITREP, workspace header, and report footer reads its product name
+from -- still returned `brand_name: 'MUSTER'`, `brand_mark: 'MU'`, and a "Prepared under the MUSTER
+Assurance Framework" disclaimer as its default. `muster.autotriage()`'s risk_opened email still said
+`[MUSTER] New ... risk` and `MUSTER opened a new risk`. Fixed (`muster_114`, `muster_115`,
+`muster_116`) along with the same word in `generate_sitrep`, the jurisdiction section, the control
+register, finding-promotion text, brand-settings plan-gate errors, the beta-signup deadline message,
+and the MCP agent tool catalog -- everywhere a real reader (customer or AI agent) sees it. The
+lowercase sentinel `'mode': 'muster'` and the `hide_muster_attribution` key name are unchanged on
+purpose: `app.html` compares against those literal strings, so they are the internal identifiers
+CLAUDE.md's brand note is about, not display text. `tests/migrations/cavscope-branding.test.ts`
+guards the two functions that were retyped by hand (`q_brand`, `autotriage`) against regression, and
+pins `muster_116`'s fix-list for the rest.
+
 ## Architecture
 
 Every CavScope-owned (as opposed to GoTrue- or Stripe-owned) transactional email goes through one
