@@ -129,6 +129,23 @@ test("a flag claiming no enforcement is not secretly gated in SQL", () => {
   }
 });
 
+test("sitrep_ready_email (added after muster_052, in its own migration) declares real sql enforcement", () => {
+  // enforcementClaims() only parses muster_052's two data blocks, so a flag
+  // added by a later migration -- this is the first one, muster_110 -- is
+  // invisible to every test above. That is fine for muster_052's own claims,
+  // but a flag inserted afterward still needs the same "enforcement is not a
+  // lie" check, just pointed at the migration that actually declares it.
+  const migration = readFileSync(
+    join(migrationsDir, "20260926010259_muster_110_sitrep_ready_email.sql"),
+    "utf8",
+  );
+  assert.match(migration, /'sitrep_ready_email'[\s\S]*?array\['sql'\]/, "sitrep_ready_email must declare sql enforcement");
+  assert.ok(
+    new RegExp(`(has_flag|flag_state_for_org)\\s*\\([^)]*'sitrep_ready_email'`).test(allMigrations),
+    "sitrep_ready_email claims sql enforcement but no migration passes it to has_flag/flag_state_for_org",
+  );
+});
+
 test("the four flags muster_053 wired are gated where it says they are", () => {
   const wiring = readFileSync(join(migrationsDir, "20260916022923_muster_056_wire_the_dead_feature_flags.sql"), "utf8");
   // scheduled_scans gates the due-scan CTE only -- not the manual/api catch-up

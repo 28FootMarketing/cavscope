@@ -299,10 +299,14 @@ Additional Edge Function secret:
 |---|---|---|
 | `RESEND_WEBHOOK_SECRET` | **yes, for tracking** | the `whsec_...` Resend shows when the endpoint is created. Without it the function answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. |
 
-`risk_opened` is currently the **only** category the outbox accepts — the table's check
-constraint permits nothing else. A SITREP-ready notification, a scan-complete digest, or a
-welcome email are not "configuration"; each needs a migration to widen that constraint plus
-something that actually enqueues rows. None exist yet, and none are pretended to.
+`risk_opened` and `sitrep_ready` are currently the **only** categories the outbox accepts — the
+table's check constraint permits nothing else. `sitrep_ready` was added 2026-09-26 (`muster_110`):
+`public.muster_engine_sitrep()` enqueues it after every scan's SITREP is generated, gated behind
+the `sitrep_ready_email` flag (off by default -- see `docs/EMAIL-INVENTORY.md`). A subscription-
+activated email or a welcome email are not "configuration"; each still needs a migration to widen
+that constraint plus something that actually enqueues rows, and in the subscription case, an
+existing-org upgrade path that does not exist yet either. See `docs/EMAIL-INVENTORY.md`'s "Real
+gaps, not yet built" for what is and is not there.
 
 ## Password reset, end to end
 

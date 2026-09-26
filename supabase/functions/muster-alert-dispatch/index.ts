@@ -57,6 +57,11 @@ const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
 // and the workspace host has changed once already.
 const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://app.muster.partners/app";
 
+// Where "View your SITREP" points, for the sitrep_ready category. Separate from
+// APP_URL because sitrep.html -- the signed-in, tenant-scoped SITREP viewer --
+// lives on muster.partners, not on the app host. See docs/EMAIL.md.
+const SITREP_URL = Deno.env.get("MUSTER_SITREP_URL") ?? "https://muster.partners/sitrep";
+
 // The address CavScope shows tenants as its support desk, and the default
 // Reply-To. Unset by default, and that default is load-bearing: an advertised
 // address that cannot receive is worse than no address, because the tenant
@@ -78,6 +83,28 @@ const ALERT_REPLY_TO = Deno.env.get("MUSTER_ALERT_REPLY_TO") || SUPPORT_EMAIL;
 const SEVERITY_COLOR: Record<string, string> = {
   critical: "#f43f5e",
   high: "#fbbf24",
+  info: "#36e2c9",
+};
+
+// Per-category chrome. One outbox, one send loop, one alertHtml() -- adding a
+// category means one entry here, not a second copy of the template. Falls
+// back to risk_opened's chrome for anything unrecognised, which cannot
+// actually happen: the category is a NOT NULL check-constrained column, so
+// this is defensive against a future category being added here late, not
+// against bad data.
+const CATEGORY_META: Record<string, { eyebrow: (row: OutboxRow) => string; ctaText: string; ctaHref: string; recipientNote: string }> = {
+  risk_opened: {
+    eyebrow: (row) => `${row.severity} · new risk opened`,
+    ctaText: "Open the risk register",
+    ctaHref: APP_URL,
+    recipientNote: "You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.",
+  },
+  sitrep_ready: {
+    eyebrow: () => "sitrep ready",
+    ctaText: "View your SITREP",
+    ctaHref: SITREP_URL,
+    recipientNote: "You are receiving this because you are listed as a SITREP recipient for your CavScope organization. SITREP recipients are managed in your workspace settings.",
+  },
 };
 
 function esc(v: string): string {
@@ -95,6 +122,7 @@ function esc(v: string): string {
 // so scanner-supplied strings in a finding title cannot inject markup.
 function alertHtml(row: OutboxRow): string {
   const accent = SEVERITY_COLOR[row.severity] ?? "#36e2c9";
+  const meta = CATEGORY_META[row.category] ?? CATEGORY_META.risk_opened;
   const paragraphs = row.body_text
     .split(/\n{2,}/)
     .map((block) => block.trim())
@@ -142,7 +170,7 @@ function alertHtml(row: OutboxRow): string {
         <tr>
           <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; padding-top:30px; padding-bottom:30px; padding-left:28px; padding-right:28px;">
 
-            <p style="margin-top:0; margin-bottom:14px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:${accent};">${esc(row.severity)} &middot; new risk opened</p>
+            <p style="margin-top:0; margin-bottom:14px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:${accent};">${esc(meta.eyebrow(row))}</p>
 
             <p style="margin-top:0; margin-bottom:20px; font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:28px; font-weight:700; color:#0c1527;">${esc(row.subject)}</p>
 
@@ -151,7 +179,7 @@ ${paragraphs}
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px; margin-bottom:6px;">
               <tr>
                 <td bgcolor="#36e2c9" align="center" style="background-color:#36e2c9; border-radius:8px;">
-                  <a href="${esc(APP_URL)}" style="display:block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:20px; font-weight:700; color:#06201d; text-decoration:none; padding-top:14px; padding-bottom:14px; padding-left:32px; padding-right:32px;">Open the risk register</a>
+                  <a href="${esc(meta.ctaHref)}" style="display:block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:20px; font-weight:700; color:#06201d; text-decoration:none; padding-top:14px; padding-bottom:14px; padding-left:32px; padding-right:32px;">${esc(meta.ctaText)}</a>
                 </td>
               </tr>
             </table>
@@ -162,7 +190,7 @@ ${paragraphs}
         <tr>
           <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
             <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
-              You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.
+              ${esc(meta.recipientNote)}
             </p>${
               SUPPORT_EMAIL
                 ? `

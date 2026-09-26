@@ -19,6 +19,7 @@ Routing and configuration: [`docs/EMAIL.md`](EMAIL.md). Auth template sources:
 | Email-address change | user changes their address in Supabase Auth | both old and new address | **GoTrue** | `04-change-email.html` |
 | Reauthentication code | GoTrue reauthentication | signed-in user | **GoTrue** | `06-reauthentication.html` |
 | Critical/high risk opened | `muster.autotriage()` opens a risk → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | org's alert recipients | **CavScope** (Resend REST API) | `alertHtml()` in the function |
+| SITREP ready | `public.muster_engine_sitrep()` generates a SITREP after every scan → row in `muster.notification_outbox` → `muster-alert-dispatch` every 5 min | `organizations.sitrep_recipients`, falling back to executive/risk_owner members | **CavScope** (Resend REST API) | `alertHtml()` in the function, `sitrep_ready` category |
 
 ## Deliberately not sent by CavScope
 
@@ -38,13 +39,25 @@ event, which is the failure this table exists to prevent.
 
 Named rather than quietly implemented, because each needs a migration to widen
 `notification_outbox`'s category constraint plus something that actually enqueues rows. The
-constraint currently permits `risk_opened` and nothing else, on purpose.
+constraint now permits `risk_opened` and `sitrep_ready` (added 2026-09-26, `muster_110`); nothing
+else, on purpose.
+
+**"Scan complete" is not a separate row in this table.** `public.muster_engine_sitrep()` runs
+synchronously, unconditionally, right after every scan -- scheduled, manual and admin-sandbox
+alike -- so "a scan finished" and "a SITREP is ready" are the same event. Building both would be
+exactly the one-owner-per-event failure this document exists to prevent; `sitrep_ready` is the one
+category for it.
+
+`sitrep_ready` ships with `sitrep_ready_email` **off by default** (`default_enabled = false`).
+Websites default to a 1440-minute (daily) scan cadence and there is no workspace-settings UI yet
+for an org to turn a daily email off itself -- shipping it on for everyone with no way to stop it
+is the "digest nobody can turn off is a complaint generator" problem this table used to describe.
+Enable it per org with a `feature_flag_overrides` row (or flip `default_enabled` once a settings
+toggle exists) once observed correct against a real org, same discipline as SEC-014/AVAIL-004.
 
 | Event | Who is unserved today | What it needs |
 |---|---|---|
-| Subscription activated for an **existing** user | A user who already has an account and upgrades gets no email at all. A new user gets the GoTrue invite, so only this case is unserved. | Widen `category` to `subscription_activated`, enqueue from `muster_engine_record_commercial_grant` **only when the auth user already existed**, and make `alertHtml()` category-aware. |
-| SITREP ready | Nobody is told a SITREP has been generated. | Widen `category`, enqueue from the SITREP generator. |
-| Scan complete / weekly digest | No digest exists. | Widen `category`, plus a schedule and a per-org preference, since a digest nobody can turn off is a complaint generator. |
+| Subscription activated for an **existing** user | A user who already has an account and upgrades gets no email at all. A new user gets the GoTrue invite, so only this case is unserved. | Not just an email: `muster.do_onboard` is the only place a pending commercial grant is ever applied to an organization's plan, and it only runs when a **new** org is created. There is no code path that applies a grant to an **existing** org yet, so an "activated" email at checkout time would claim a plan change the schema cannot confirm happened. Build the existing-org upgrade path first; widen `category` to `subscription_activated` and enqueue from it once that path is real. |
 
 ## Support contact
 
