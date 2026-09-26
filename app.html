@@ -5811,16 +5811,27 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         // sign-in would mean an extra RPC before every redirect, for every user,
         // to branch for the handful who are super admins.
         let pendingTenant = null;
-        if (this.ws.is_super_admin && !this._landed) {
+        let pendingView = null;
+        if (!this._landed) {
           this._landed = true;
           const hash = location.hash.slice(1);
-          const m = /^tenant=(\d+)$/.exec(hash);
+          const m = this.ws.is_super_admin ? /^tenant=(\d+)$/.exec(hash) : null;
           if (m) {
             pendingTenant = Number(m[1]);
             history.replaceState(null, '', location.pathname + location.search);
-          } else if (!hash) {
+          } else if (this.ws.is_super_admin && !hash) {
             location.replace(location.origin + '/admin');
             return;
+          } else if (hash && /^[a-z]+$/i.test(hash) && document.querySelector(`#mainNav button[data-view="${hash}"]`)) {
+            // A deep link into a specific workspace view -- a transactional
+            // email's CTA (risk_opened points here at #risks, see
+            // muster-alert-dispatch/index.ts) or this page's own "CavScope"
+            // link when a super admin came from the Platform Console.
+            // Consumed once, same as #tenant= above, so a later refresh (or
+            // switching orgs) doesn't keep re-navigating away from whatever
+            // view the user is actually on.
+            pendingView = hash;
+            history.replaceState(null, '', location.pathname + location.search);
           }
         }
         const orgs = this.ws.organizations || [];
@@ -5832,6 +5843,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         for (const o of orgs) multiTenantStore['live-' + o.id] = this.tenantFromOrg(o);
         await this.activateOrg(this.org);
         if (pendingTenant != null && pendingTenant !== this.org.id) await this.openTenant(pendingTenant);
+        else if (pendingView) showView(pendingView);
       },
       tenantFromOrg(o) {
         const site = (o.websites || [])[0];
