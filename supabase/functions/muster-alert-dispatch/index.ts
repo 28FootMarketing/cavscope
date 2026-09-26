@@ -38,11 +38,17 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const RESEND_API_BASE = "https://api.resend.com";
 
-// CavScope sends from its own domain now that muster.partners is the product's
-// home. mail.muster.partners is verified in Resend with sending enabled
-// (confirmed 2026-09-07). The previous mail.28footsystems.com is also still
-// verified, so nothing breaks in either direction -- but alerts about a CavScope
-// tenant should not arrive from the parent company's domain.
+// The display name has said "CavScope Alerts" since this function existed,
+// but the domain underneath it still said mail.muster.partners -- and a
+// mail client showing the raw address (not just the friendly name) reads
+// that as an email from Muster, which is exactly the wrong signal for a
+// product mid-rebrand. mail.cavscope.28footsystems.com is fully verified in
+// Resend (DKIM, SPF and MX all "verified", confirmed 2026-09-26) and is not
+// tied to the main site's own DNS cutover (docs/BRAND-CUTOVER.md's step 1,
+// pointing cavscope.28footsystems.com at Vercel) -- these are independent DNS
+// records, so this domain is usable today regardless of that step's status.
+// mail.muster.partners stays verified and receiving-enabled in Resend, so
+// nothing breaks if this ever needs to roll back.
 //
 // Overridable by env so this same code is correct on both Supabase projects
 // during the move to hjowfnzpomzxazmzywxw, and so a domain change later is a
@@ -50,12 +56,17 @@ const RESEND_API_BASE = "https://api.resend.com";
 // unverified domain outright, so a typo here fails loudly at send time and the
 // row is recorded as failed with the API's message -- it does not vanish.
 const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
-  ?? "CavScope Alerts <alerts@mail.muster.partners>";
+  ?? "CavScope Alerts <alerts@mail.cavscope.28footsystems.com>";
 
 // Where "Open the risk register" points. Overridable for the same reason as
 // the from-address: this code runs on two Supabase projects during the move,
 // and the workspace host has changed once already.
 const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://app.muster.partners/app";
+
+// Where "View your SITREP" points, for the sitrep_ready category. Separate from
+// APP_URL because sitrep.html -- the signed-in, tenant-scoped SITREP viewer --
+// lives on muster.partners, not on the app host. See docs/EMAIL.md.
+const SITREP_URL = Deno.env.get("MUSTER_SITREP_URL") ?? "https://muster.partners/sitrep";
 
 // The address CavScope shows tenants as its support desk, and the default
 // Reply-To. Unset by default, and that default is load-bearing: an advertised
@@ -78,6 +89,41 @@ const ALERT_REPLY_TO = Deno.env.get("MUSTER_ALERT_REPLY_TO") || SUPPORT_EMAIL;
 const SEVERITY_COLOR: Record<string, string> = {
   critical: "#f43f5e",
   high: "#fbbf24",
+  info: "#36e2c9",
+};
+
+// Per-category chrome. One outbox, one send loop, one alertHtml() -- adding a
+// category means one entry here plus a row in muster.notification_categories
+// (see muster_112), not a second copy of the template. Falls back to
+// risk_opened's chrome for anything unrecognised, which cannot actually
+// happen: category is a foreign key into that registry table, so this is
+// defensive against a future category being added here late, not against
+// bad data.
+const CATEGORY_META: Record<string, { eyebrow: (row: OutboxRow) => string; ctaText: string; ctaHref: string; recipientNote: string }> = {
+  risk_opened: {
+    eyebrow: (row) => `${row.severity} · new risk opened`,
+    ctaText: "Open the risk register",
+    ctaHref: APP_URL,
+    recipientNote: "You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.",
+  },
+  sitrep_ready: {
+    eyebrow: () => "sitrep ready",
+    ctaText: "View your SITREP",
+    ctaHref: SITREP_URL,
+    recipientNote: "You are receiving this because you are listed as a SITREP recipient for your CavScope organization. SITREP recipients are managed in your workspace settings.",
+  },
+  workspace_created: {
+    eyebrow: () => "workspace ready",
+    ctaText: "Open Workspace",
+    ctaHref: APP_URL,
+    recipientNote: "You are receiving this because you created this CavScope workspace.",
+  },
+  website_added: {
+    eyebrow: () => "website added",
+    ctaText: "View Website",
+    ctaHref: APP_URL,
+    recipientNote: "You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.",
+  },
 };
 
 function esc(v: string): string {
@@ -95,12 +141,13 @@ function esc(v: string): string {
 // so scanner-supplied strings in a finding title cannot inject markup.
 function alertHtml(row: OutboxRow): string {
   const accent = SEVERITY_COLOR[row.severity] ?? "#36e2c9";
+  const meta = CATEGORY_META[row.category] ?? CATEGORY_META.risk_opened;
   const paragraphs = row.body_text
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter((block) => block.length > 0)
     .map((block) =>
-      `            <p style="margin-top:0; margin-bottom:16px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#3a4a63;">${
+      `            <p class="cs-copy" style="margin-top:0; margin-bottom:16px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#3a4a63;">${
         esc(block).replace(/\n/g, "<br>")
       }</p>`
     )
@@ -112,10 +159,31 @@ function alertHtml(row: OutboxRow): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <title>${esc(row.subject)}</title>
+<style>
+  /* Light-mode colors are the inline styles below (the default, and what
+     every client that ignores media queries -- Outlook desktop chief among
+     them -- will render). These !important overrides are the only thing
+     strong enough to beat an inline style's specificity, which is the
+     standard technique for a table-based, inline-styled email that still
+     wants to respect prefers-color-scheme: dark on clients that honor it
+     (Apple Mail, iOS/Android Mail, Gmail's app). Nothing here changes the
+     accent bar or the CTA button -- both are already a saturated color on
+     a dark or light card either way. */
+  @media (prefers-color-scheme: dark) {
+    .cs-body-bg { background-color: #0b0f1a !important; }
+    .cs-card-bg { background-color: #111a2c !important; }
+    .cs-heading { color: #f1f6ff !important; }
+    .cs-copy { color: #c3cede !important; }
+    .cs-muted { color: #8fa0bd !important; }
+    .cs-border { border-top-color: #26314a !important; }
+  }
+</style>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f6fa;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f6fa" style="background-color:#f4f6fa;">
+<body class="cs-body-bg" style="margin:0; padding:0; background-color:#f4f6fa;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f6fa" class="cs-body-bg" style="background-color:#f4f6fa;">
   <tr>
     <td align="center" style="padding-top:32px; padding-bottom:32px; padding-left:12px; padding-right:12px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
@@ -140,18 +208,18 @@ function alertHtml(row: OutboxRow): string {
         </tr>
 
         <tr>
-          <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; padding-top:30px; padding-bottom:30px; padding-left:28px; padding-right:28px;">
+          <td bgcolor="#ffffff" align="left" class="cs-card-bg" style="background-color:#ffffff; padding-top:30px; padding-bottom:30px; padding-left:28px; padding-right:28px;">
 
-            <p style="margin-top:0; margin-bottom:14px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:${accent};">${esc(row.severity)} &middot; new risk opened</p>
+            <p style="margin-top:0; margin-bottom:14px; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:${accent};">${esc(meta.eyebrow(row))}</p>
 
-            <p style="margin-top:0; margin-bottom:20px; font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:28px; font-weight:700; color:#0c1527;">${esc(row.subject)}</p>
+            <p class="cs-heading" style="margin-top:0; margin-bottom:20px; font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:28px; font-weight:700; color:#0c1527;">${esc(row.subject)}</p>
 
 ${paragraphs}
 
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px; margin-bottom:6px;">
               <tr>
                 <td bgcolor="#36e2c9" align="center" style="background-color:#36e2c9; border-radius:8px;">
-                  <a href="${esc(APP_URL)}" style="display:block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:20px; font-weight:700; color:#06201d; text-decoration:none; padding-top:14px; padding-bottom:14px; padding-left:32px; padding-right:32px;">Open the risk register</a>
+                  <a href="${esc(meta.ctaHref)}" style="display:block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:20px; font-weight:700; color:#06201d; text-decoration:none; padding-top:14px; padding-bottom:14px; padding-left:32px; padding-right:32px;">${esc(meta.ctaText)}</a>
                 </td>
               </tr>
             </table>
@@ -160,18 +228,18 @@ ${paragraphs}
         </tr>
 
         <tr>
-          <td bgcolor="#ffffff" align="left" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
-            <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
-              You are receiving this because you are listed as an alert recipient for your CavScope organization. Alert recipients are managed in your workspace settings.
+          <td bgcolor="#ffffff" align="left" class="cs-card-bg cs-border" style="background-color:#ffffff; border-bottom-left-radius:10px; border-bottom-right-radius:10px; border-top-width:1px; border-top-style:solid; border-top-color:#e3e8f0; padding-top:20px; padding-bottom:24px; padding-left:28px; padding-right:28px;">
+            <p class="cs-muted" style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
+              ${esc(meta.recipientNote)}
             </p>${
               SUPPORT_EMAIL
                 ? `
-            <p style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
+            <p class="cs-muted" style="margin-top:0; margin-bottom:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#5d708e;">
               Questions about this finding? Reply to this email, or write to <a href="mailto:${esc(SUPPORT_EMAIL)}" style="color:#2f7a6d;">${esc(SUPPORT_EMAIL)}</a>.
             </p>`
                 : ""
             }
-            <p style="margin-top:0; margin-bottom:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8e9fb8;">
+            <p class="cs-muted" style="margin-top:0; margin-bottom:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8e9fb8;">
               CavScope is website assurance by 28 Foot Systems, After Today, LLC &middot; Hanover, PA
             </p>
           </td>

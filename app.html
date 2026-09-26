@@ -6140,6 +6140,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           </div>` : ''}`;
 
         this.renderAgentsPanel();
+        this.renderSitrepDeliveryPanel();
         this.renderLlmPanel().catch(e => this.fail(e));
       },
       renderAgentsPanel() {
@@ -6218,6 +6219,53 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
             </form>
             <div id="liveKeyOut" hidden></div>
           </div>`;
+      },
+      // SITREP delivery: who gets emailed when a scan finishes and a new
+      // SITREP is generated, and whether that email sends at all.
+      // organizations.sitrep_recipients and .sitrep_ready_alerts_enabled ride
+      // along in the workspace payload for free (muster.q_organization does
+      // to_jsonb(o), which includes every column), so this reads straight off
+      // this.org like the critical-alerts checkbox above it -- no extra
+      // fetch. sitrep_ready_alerts_enabled defaults false: scans default to a
+      // daily cadence, so this is an opt-in, not an opt-out, until an org
+      // turns it on here.
+      renderSitrepDeliveryPanel() {
+        const o = this.org; if (!o) return;
+        const el = this.panel('liveSitrepDeliveryPanel', 'teamSettings');
+        const recipients = o.sitrep_recipients || [];
+        el.innerHTML = `
+          <div class="panel-head">
+            <div>
+              <h3>SITREP delivery</h3>
+              <p>Who gets emailed when a new SITREP is generated, and whether that email sends at all.</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <label class="live-muted" style="display:flex; align-items:center; gap:8px;" data-tooltip="When on, CavScope emails your SITREP recipients below every time a scan finishes and a new SITREP is generated. Scans run on a daily cadence by default, so this is roughly one email a day per website unless you turn it off.">
+              <input type="checkbox" ${o.sitrep_ready_alerts_enabled ? 'checked' : ''} onchange="Live.setSitrepAlertPreference(this.checked)"> Email SITREP recipients when a new SITREP is ready
+            </label>
+            <form onsubmit="Live.saveSitrepRecipients(event)" style="display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:end; margin-top:14px;">
+              <div class="form-group" style="margin:0;">
+                <label data-tooltip="Comma-separated email addresses. Leave empty to fall back to every executive and risk owner on this workspace.">SITREP recipients</label>
+                <input name="recipients" placeholder="you@company.com, ciso@company.com" value="${escapeHtml(recipients.join(', '))}">
+              </div>
+              <button type="submit" class="btn-ghost" style="padding:8px 12px;font-size:11.5px;" data-tooltip="Saves this recipient list. An empty list falls back to executives and risk owners automatically.">Save</button>
+            </form>
+          </div>`;
+      },
+      async setSitrepAlertPreference(enabled) {
+        try { await this.rpc('muster_set_sitrep_alert_preference', { p_organization_id: this.org.id, p_enabled: enabled }); showToast(`SITREP-ready emails ${enabled ? 'enabled' : 'disabled'}.`); await this.loadWorkspace(); }
+        catch (e) { this.fail(e); }
+      },
+      async saveSitrepRecipients(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        const emails = String(f.get('recipients') || '').split(',').map(s => s.trim()).filter(Boolean);
+        try {
+          await this.rpc('muster_set_sitrep_recipients', { p_organization_id: this.org.id, p_emails: emails });
+          showToast('SITREP recipients saved.');
+          await this.loadWorkspace();
+        } catch (err) { this.fail(err); }
       },
       // The tenant's own LLM. muster.org_llm_config has held the endpoint, model
       // and a Vault-stored key since migration 069, muster_set_llm_config has
