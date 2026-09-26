@@ -50,6 +50,10 @@ on:
         type: choice
         options: ['skip', 'report', 'apply']
         default: 'skip'
+      smtp_sender_name:
+        description: 'SMTP sender display name to set (e.g. CavScope). Empty = report the current value and change nothing.'
+        type: string
+        default: ''
 
 concurrency:
   group: auth-config
@@ -156,6 +160,55 @@ jobs:
             echo "A magic link still has to be sent and followed to call this done end to end."
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::site_url is now $AFTER, confirmed by readback."
+
+      # smtp_sender_name is the SMTP "From" display name -- distinct from
+      # smtp_admin_email, which does not change with the rebrand (see
+      # docs/BRAND-CUTOVER.md). Independent of `apply`: it only fires when the
+      # input is non-empty, so a dispatch that leaves it blank reports the
+      # current value and writes nothing, same contract as `templates: skip`.
+      # smtp_pass and other provider secrets live on the same response body and
+      # are never echoed here, same rule as every other step in this file.
+      - name: SMTP sender name
+        if: inputs.smtp_sender_name != ''
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          WANT: ${{ inputs.smtp_sender_name }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+
+          get_sender() {
+            curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" | jq -r '.smtp_sender_name // "(unset)"'
+          }
+
+          BEFORE=$(get_sender)
+          echo "smtp_sender_name before : $BEFORE"
+          echo "requested                : $WANT"
+
+          curl -sS -f -X PATCH "$API" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            --data "$(jq -nc --arg n "$WANT" '{smtp_sender_name:$n}')" > /dev/null
+
+          AFTER=$(get_sender)
+          echo "smtp_sender_name after  : $AFTER"
+
+          {
+            echo "### SMTP sender name"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| before | \`$BEFORE\` |"
+            echo "| after | \`$AFTER\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$AFTER" != "$WANT" ]; then
+            echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'. Sender name is NOT set."
+            echo "| result | **FAILED -- readback disagrees, value not applied** |" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "| result | **applied and verified by readback** |" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::smtp_sender_name is now '$AFTER', confirmed by readback."
 
       # Sending a link is a separate job from setting the field, deliberately.
       # Setting Site URL and delivering a working link are different claims, and
