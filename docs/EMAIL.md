@@ -12,7 +12,7 @@ the way this breaks silently.
 | Reaches Resend via | **custom SMTP** (`smtp.resend.com`) | **Resend REST API** (`POST /emails`) |
 | Templates live in | Supabase project config — sourced from [`supabase/auth-email-templates/`](../supabase/auth-email-templates/) | the edge function (`alertHtml()`) |
 | Links controlled by | Supabase **Site URL** + **redirect allowlist** | `MUSTER_APP_URL` env |
-| From | `noreply@mail.muster.partners` | `alerts@mail.muster.partners` (`MUSTER_ALERT_FROM`) |
+| From | `noreply@mail.muster.partners` | `alerts@mail.cavscope.28footsystems.com` (`MUSTER_ALERT_FROM`) |
 
 **The trap:** magic-link and password-reset emails are *not* sent by this codebase and cannot be
 made to use a Resend template. GoTrue renders and sends them itself. A Resend template named
@@ -230,7 +230,7 @@ Edge Function secrets (Supabase dashboard → Edge Functions → Secrets):
 | Secret | Required | Default |
 |---|---|---|
 | `RESEND_API_KEY` | **yes** | none — without it every claimed row resolves `failed` with that exact reason, nothing is lost |
-| `MUSTER_ALERT_FROM` | no | `MUSTER Alerts <alerts@mail.muster.partners>` |
+| `MUSTER_ALERT_FROM` | no | `CavScope Alerts <alerts@mail.cavscope.28footsystems.com>` (2026-09-26 — was `mail.muster.partners`; a real recipient asked why an email display-named "CavScope Alerts" was arriving from a `muster.partners` address. Switched once `mail.cavscope.28footsystems.com` came back fully verified in Resend, independent of the main site's own DNS cutover.) |
 | `MUSTER_APP_URL` | no | `https://app.muster.partners/app` |
 | `MUSTER_ALERT_REPLY_TO` | no | unset — falls back to `MUSTER_SUPPORT_EMAIL` |
 | `MUSTER_SUPPORT_EMAIL` | no | unset — the alert footer then names no support address at all |

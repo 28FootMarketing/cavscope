@@ -38,11 +38,17 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const RESEND_API_BASE = "https://api.resend.com";
 
-// CavScope sends from its own domain now that muster.partners is the product's
-// home. mail.muster.partners is verified in Resend with sending enabled
-// (confirmed 2026-09-07). The previous mail.28footsystems.com is also still
-// verified, so nothing breaks in either direction -- but alerts about a CavScope
-// tenant should not arrive from the parent company's domain.
+// The display name has said "CavScope Alerts" since this function existed,
+// but the domain underneath it still said mail.muster.partners -- and a
+// mail client showing the raw address (not just the friendly name) reads
+// that as an email from Muster, which is exactly the wrong signal for a
+// product mid-rebrand. mail.cavscope.28footsystems.com is fully verified in
+// Resend (DKIM, SPF and MX all "verified", confirmed 2026-09-26) and is not
+// tied to the main site's own DNS cutover (docs/BRAND-CUTOVER.md's step 1,
+// pointing cavscope.28footsystems.com at Vercel) -- these are independent DNS
+// records, so this domain is usable today regardless of that step's status.
+// mail.muster.partners stays verified and receiving-enabled in Resend, so
+// nothing breaks if this ever needs to roll back.
 //
 // Overridable by env so this same code is correct on both Supabase projects
 // during the move to hjowfnzpomzxazmzywxw, and so a domain change later is a
@@ -50,7 +56,7 @@ const RESEND_API_BASE = "https://api.resend.com";
 // unverified domain outright, so a typo here fails loudly at send time and the
 // row is recorded as failed with the API's message -- it does not vanish.
 const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
-  ?? "CavScope Alerts <alerts@mail.muster.partners>";
+  ?? "CavScope Alerts <alerts@mail.cavscope.28footsystems.com>";
 
 // Where "Open the risk register" points. Overridable for the same reason as
 // the from-address: this code runs on two Supabase projects during the move,
