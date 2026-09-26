@@ -42,9 +42,10 @@ them, same reasoning as the `*.muster.28footsystems.com` hosts. This step **adds
   stable for a while, not on the same day DNS is cut over. When it does move: `index.html`'s
   `setWorkspaceCtaHref()` and `MUSTER_AUTH_HOST` forwarder both have comments pointing at this
   file for the follow-up change they'll need.
-- **Sender name**: Authentication → Emails → SMTP Settings currently has Sender name
-  literally `MUSTER` (see `docs/EMAIL.md`). Change it to `CavScope`. Sender email
-  (`noreply@mail.muster.partners`) does not need to change -- the domain is verified in
+- **Sender name: done, 2026-09-26.** `smtp_sender_name` on `hjowfnzpomzxazmzywxw` was
+  `MUSTER`, PATCHed to `CavScope` via `.github/workflows/auth-config.yml`'s
+  `smtp_sender_name` input, verified by readback (run 36215770285). Sender email
+  (`noreply@mail.muster.partners`) is unchanged, as intended -- the domain is verified in
   Resend and mail keeps sending from it regardless of the product name.
 
 ## 3. Auth email templates — apply the already-updated repo copies
