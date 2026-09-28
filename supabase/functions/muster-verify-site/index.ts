@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
   let html = "";
   try {
-    const res = await fetch(site.url, { headers: { "User-Agent": "MUSTER-Verify/1.0 (+https://muster.partners)" }, redirect: "follow" });
+    const res = await fetch(site.url, { headers: { "User-Agent": "CavScope-Verify/1.0 (+https://muster.partners)" }, redirect: "follow" });
     html = (await res.text()).slice(0, 200_000);
   } catch (e) {
     return json({ ok: false, reason: "fetch_failed", detail: String(e) }, 200);

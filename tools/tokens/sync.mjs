@@ -28,6 +28,7 @@ export const PAGES = [
   "sitrep-sample.html",
   "admin.html",
   "privacy.html",
+  "beta.html",
 ];
 
 const START = "/* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */";

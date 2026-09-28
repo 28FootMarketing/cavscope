@@ -5,7 +5,7 @@ what it means in plain English, how to clear it, and what it maps to.
 
 ```bash
 pip install reportlab
-python3 render.py codes.json MUSTER-defect-codes.pdf
+python3 render.py codes.json CavScope-defect-codes.pdf
 ```
 
 `codes.json` is the catalog; `export.sql` regenerates its rule rows from

@@ -105,10 +105,15 @@ test("admin.html pricing panel defaults Partner on when visible is missing", () 
 });
 
 test("migration seeds Partner-only visibility", () => {
-  const sql = read("supabase/migrations/20260911002553_muster_049_public_pricing_tier_visibility.sql");
-  assert.match(sql, /show_muster boolean not null default false/);
-  assert.match(sql, /show_muster_partner boolean not null default true/);
-  assert.match(sql, /show_enterprise boolean not null default false/);
+  // 20260911002553_muster_049 never applied -- it was a draft superseded by
+  // this migration (20260916012445_muster_053) before it landed; see
+  // supabase/migrations/README.md's "049 was never applied" section. 053
+  // carries the same defaults, aligned with extra spaces for its longer
+  // column list, hence \s+ rather than a single space.
+  const sql = read("supabase/migrations/20260916012445_muster_053_pricing_cta_admin_control.sql");
+  assert.match(sql, /show_muster\s+boolean not null default false/);
+  assert.match(sql, /show_muster_partner\s+boolean not null default true/);
+  assert.match(sql, /show_enterprise\s+boolean not null default false/);
   assert.match(sql, /muster_admin_set_pricing_visibility/);
   assert.match(sql, /'visible', jsonb_build_object/);
 });

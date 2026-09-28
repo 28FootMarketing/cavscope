@@ -130,6 +130,144 @@ off by three.** The version prefix is the real ordering and always was.
 The sequence numbers are a reading aid, not an identifier. Nothing keys on them:
 `supabase_migrations.schema_migrations` keys on the version, and so does the CLI.
 
+## `083` and `084` were missing from every branch, found while building a scan-rule audit log
+
+On 2026-09-23, `28footmarketing@gmail.com` applied two migrations straight against
+`hjowfnzpomzxazmzywxw` -- `20260923042421` (adds `GOV-006`..`GOV-008`, the AIO-readiness rules
+for `llms.txt`, JSON-LD structured data, and script-rendered homepages, all three inactive) and
+`20260923042540` (`public.muster_rule_status`, a read-only RPC that looks up named rules' active
+state) -- and neither reached `main` or any branch. This surfaced not from `tests/migrations/
+ledger.test.ts` or `tools/migrations/check.mjs` (nobody ran either against a fresh dump that day),
+but from `muster.scan_rules` itself: a session auditing the rule catalog's own lifecycle found
+three `inactive` rows -- `GOV-006`, `GOV-007`, `GOV-008` -- that matched no `insert` anywhere in
+this directory, and a live ledger version `084` that collided with a same-numbered file already
+in progress on another branch.
+
+Both were recovered here unmodified from `supabase_migrations.schema_migrations.statements`,
+verified against that table's own `md5(array_to_string(statements,''))` before being written --
+same standard as the `076`–`078` recovery. The live ledger had named them `muster_083` and
+`muster_084`, and by version they genuinely are: `20260923042421` and `20260923042540` both
+precede `20260923044416`, the already-committed, already-applied `muster_083_catalogue_applies_
+when`. Keeping that file's own claim to `083` would have left three files with version order that
+disagreed with sequence order -- exactly what `tests/migrations/ledger.test.ts`'s
+`sequence_out_of_order` check exists to catch, and it did, the first time this was tried.
+
+So `catalogue_applies_when` is renumbered `085`, the two recovered files take their true `083`
+and `084`, and this is the `055`–`057` situation again in miniature: `catalogue_applies_when`'s own
+content still opens `-- MUSTER 083:` and cannot be corrected without disagreeing with what
+Postgres recorded, so **the filename is authoritative and that header is off by two.**
+`CLAUDE.md`'s prose reference to it has been corrected to `085`, because prose is not a frozen
+ledger entry and leaving it wrong there would be the "a number written in prose is a snapshot
+that rots" mistake CLAUDE.md itself names elsewhere.
+
+One thing this recovery could not do: neither `GOV-006`..`GOV-008` nor `muster_rule_status` has
+any engine code. The three rules are inactive with nothing in `supabase/functions/muster-scan/`
+that could ever emit them, and the RPC is a live-status lookup, not a history. Recovering the
+migration file closes the "applied with no file" gap; it does not mean the feature is built.
+
+## Five more, from a week earlier, found the same way
+
+The same pass turned up five more versions with no file, all from 2026-09-16 and all older than
+anything above: `20260916053301`/`20260916053307` (`public.muster_org_scans`, a paginated
+org-wide scan-history read path -- real, applied, and until now invisible to this repo),
+`20260916192324` (the five `ai_governance` rules: `ai-admt-policy-silent`,
+`ai-chatbot-present-undisclosed`, `ai-vendor-undisclosed`, `ai-generated-content-undisclosed`,
+`ai-crawler-directives-missing`), and `20260916194544` / `20260916195204` (jurisdiction and
+jurisdiction-law seed data for AI-governance tracking). None used the `muster_NNN_` naming
+convention, so none needed renumbering -- `tools/migrations/ledger.mjs`'s `SEQ` pattern only
+fires on that literal prefix, and a file without one is explicitly not a defect (`README`, above).
+All five recovered unmodified and verified against `schema_migrations`'s own md5 first.
+
+**`20260916192324` inserted three of its five rules as `active` with no code that can ever
+evaluate them**, and this recovery surfaced it rather than caused it: `ai-chatbot-present-
+undisclosed` and `ai-vendor-undisclosed` are `check_type = 'browser'`, `ai-generated-content-
+undisclosed` is `check_type = 'manual'`, and this engine is HTTP-native only -- `docs/
+SCAN-RULES.md`'s own accessibility section says as much for the browser engine ("0/10 and is not
+checked"). All three have sat `active` since 2026-09-16 with `updated_at` unchanged since
+`created_at`: nobody has revisited them. That means every scan since has had these three
+controls score **met** by the absence of findings the engine was never able to produce -- the
+exact failure `muster_062` held `SEC-014`/`SEC-015`/`EMAIL-008` inactive to prevent, now found to
+already exist, live, for AI-governance findings a client may be reading as clean. This recovery
+does not deactivate them; that changes real client posture scores and is a call for whoever owns
+the product, made on purpose, not fixed in passing while recovering a file.
+
+Also found and, at the time, deliberately **not** recovered: thirteen more versions from later on
+2026-09-23 (`create_muster_beta_signups` through `muster_notify_include_industry` -- this note
+originally said twelve, which was wrong the moment it was written), a beta signup/notification
+feature with its own edge functions (`muster-beta-signup`, `muster-beta-confirm`,
+`muster-beta-export`, `muster-asset-admin`), entirely unrelated to the scan engine. See "Thirteen
+more, recovered two days later" below for why the delay mattered and how they were finally
+recovered.
+
+And one file here claimed a version the ledger has never seen: `20260911002553_muster_049_
+public_pricing_tier_visibility.sql`. `public.muster_public_pricing` exists live and answers, so
+whatever created it works -- but it did not get there through `supabase_migrations.schema_
+migrations` under this version. See "`049` was never applied -- superseded before it landed"
+below for how that was resolved.
+
+## Thirteen more, recovered two days later, three of them holding live secrets in plaintext
+
+The thirteen 2026-09-23 beta-signup migrations named above were recovered on 2026-09-25, in the
+same audit pass that applied `086`-`089` (the SEC-016..020/AUTH-006/audit-log work) and forced the
+renumbering below. Nine of the thirteen recovered exactly as `083`/`084` did: unmodified, verified
+byte-for-byte against `schema_migrations`'s own md5 first.
+
+**Four did not, and were not going to.** Reading their statement text before writing anything
+showed three of the thirteen calling `vault.create_secret()` or `vault.update_secret()` with a
+**literal plaintext credential as an argument** -- a real Telegram bot token
+(`20260923135747`, whose own comment says it was "copied from hub aiva_telegram_bot_token", so it
+may be shared with AIVA elsewhere in the 28FS stack and not MUSTER-only), and two successive
+generations of a real Resend API key (`20260923152339`, then superseded within two hours by
+`20260923153852`, then superseded again by `20260923155750` -- the one actually live today).
+Recovering those four verbatim would have written three still-meaningful, currently-live
+credentials into git history, readable by anyone with clone access forever, which is a security
+incident and not a historical-accuracy question. The rule this directory otherwise lives by --
+a file's bytes must match what Postgres recorded, exactly -- yields to a stronger one here: never
+commit a live secret. All four are recovered with the credential replaced by a bracketed
+`[REDACTED -- see this file's header comment]` marker and a comment explaining exactly what was
+redacted and why; `tools/migrations/check.mjs` reports all four as **diverged** against a fresh
+ledger dump, and that divergence is permanent and correct, not a to-do. `20260923140345` and
+`20260923160521` also call `vault.create_secret()` but pass `encode(gen_random_bytes(24), 'hex')`
+-- a value generated at apply time, never a literal -- so both recovered unmodified.
+
+These three credentials have sat in `supabase_migrations.schema_migrations` in plaintext inside
+the live database itself since 2026-09-23, which is its own exposure independent of git: anyone
+who can query that table (or `vault.secrets`' history) can already read them. Whether to rotate
+the Telegram bot token, and whether MUSTER should get its own dedicated bot token rather than
+sharing AIVA's, is the owner's call and is not decided here.
+
+**Recovering these thirteen forced a renumbering**, the same way `083`/`084` did. By version they
+fall between `085` (`20260923044416`) and what this repo had been calling `090`
+(`20260925005911`, in progress the same day as the recovery): keeping `090`-`095`'s numbers would
+have put thirteen chronologically-earlier files at `096`-`108`, after them, which is exactly the
+`sequence_out_of_order` defect `tests/migrations/ledger.test.ts` exists to catch. So the thirteen
+take `086`-`098` in version order, and the six files this session had been calling `090`-`095`
+move to `099`-`104` -- filenames only; their SQL bytes are untouched and still match the ledger
+exactly, because renaming a file changes nothing the ledger compares.
+
+Two of those six files' own SQL bodies had, minutes earlier, written their *own* provisional
+names into live data: `muster.scan_rule_history.migration_ref` for SEC-019's retirement recorded
+`muster_088`, and the ai_governance backfill recorded `muster_090`. Unlike frozen migration SQL,
+that column's whole purpose is pointing at a real file, so a follow-up migration (`105`) corrects
+both rows to `muster_102` and `muster_099` in place -- this is this session's own just-written
+data, not deep history, so correcting it is not the "editing history to look tidier" mistake
+`muster_023`'s note above warns against.
+
+## `049` was never applied -- superseded before it landed
+
+`20260911002553_muster_049_public_pricing_tier_visibility.sql`'s own header already said its
+filename was provisional, pending the real version once applied. It never got one: comparing its
+content against the live `public.muster_public_pricing()` definition shows the live function has
+a `cta` object `049` never had, and matches `20260916012445_muster_053_pricing_cta_admin_control.sql`
+exactly -- already in this directory, already matched against the ledger. `053` (2026-09-16)
+reimplements everything `049` (2026-09-11) proposed -- the same `show_muster`/`show_muster_partner`/
+`show_enterprise` columns, the same `muster_public_pricing()` and
+`muster_admin_set_pricing_visibility()` functions -- plus CTA-destination management, a
+self-serve-pause interlock and destination validation `049` never had. `049` was superseded by a
+more complete design before it was ever applied, and the file sat in this directory for two weeks
+as a forward reference nobody had traced. It is removed, not renamed: there is no version to
+rename it to, because it never ran.
+
 ## How to check this directory against the ledger
 
 Neither the numbering collision above nor the two-byte edits were caught by anything;

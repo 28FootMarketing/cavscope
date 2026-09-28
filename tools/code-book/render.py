@@ -1,6 +1,6 @@
-"""MUSTER defect-code book: every rule the engine can raise, by audit area.
+"""CavScope defect-code book: every rule the engine can raise, by audit area.
 
-    python3 render.py codes.json MUSTER-defect-codes.pdf
+    python3 render.py codes.json CavScope-defect-codes.pdf
 
 Composes nothing. Severity, category, title, plain English, remediation and
 framework references all come from muster.scan_rules. The one derived field is
@@ -68,7 +68,7 @@ def sevhex(s): return SEV[s].hexval().replace("0x", "#")
 
 story = []; A = story.append
 
-A(Paragraph("MUSTER &#183; DEFECT CODE BOOK", S["kicker"]))
+A(Paragraph("CavScope &#183; DEFECT CODE BOOK", S["kicker"]))
 A(Spacer(1, 3))
 A(Paragraph("Every code the engine can raise", S["title"]))
 A(Paragraph(f"{len(RULES)} rules, all active &#183; read from <font face='Courier' size='9'>muster.scan_rules</font> "
@@ -211,7 +211,7 @@ A(Paragraph(
     "default; the engine lowers confidence, and in one case severity, on client-rendered pages where the "
     "HTTP engine can only see the initial HTML.", S["small"]))
 A(Spacer(1, 6))
-A(Paragraph("MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. "
+A(Paragraph("CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. "
             "Framework references indicate where a finding is relevant to a control, not that any "
             "certification has been achieved.", S["small"]))
 
@@ -220,17 +220,17 @@ def furniture(canvas, doc):
     canvas.setStrokeColor(RULE); canvas.setLineWidth(0.6)
     canvas.line(20*mm, 15*mm, w - 20*mm, 15*mm)
     canvas.setFont("Helvetica", 7); canvas.setFillColor(INK_DIM)
-    canvas.drawString(20*mm, 11*mm, f"MUSTER defect code book  |  {len(RULES)} rules  |  {READ_AT}")
+    canvas.drawString(20*mm, 11*mm, f"CavScope defect code book  |  {len(RULES)} rules  |  {READ_AT}")
     canvas.drawRightString(w - 20*mm, 11*mm, f"Page {doc.page}")
     canvas.setFont("Helvetica", 6)
-    canvas.drawString(20*mm, 7.6*mm, "MUSTER by 28 Foot Systems (After Today, LLC)")
+    canvas.drawString(20*mm, 7.6*mm, "CavScope by 28 Foot Systems (After Today, LLC)")
     canvas.restoreState()
 
 doc = BaseDocTemplate(OUT, pagesize=LETTER, leftMargin=20*mm, rightMargin=20*mm,
                       topMargin=18*mm, bottomMargin=22*mm,
-                      title=f"MUSTER defect code book - {len(RULES)} rules",
-                      author="MUSTER by 28 Foot Systems (After Today, LLC)",
-                      subject="Every defect code the MUSTER scan engine can raise, by audit area")
+                      title=f"CavScope defect code book - {len(RULES)} rules",
+                      author="CavScope by 28 Foot Systems (After Today, LLC)",
+                      subject="Every defect code the CavScope scan engine can raise, by audit area")
 doc.addPageTemplates([PageTemplate(id="m",
     frames=[Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id="f")], onPage=furniture)])
 doc.build(story)

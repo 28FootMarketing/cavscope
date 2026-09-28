@@ -20,7 +20,7 @@ the table below is for humans, and the two are kept in step by hand, so change b
 files had sat here since 2026-09-08 while production served GoTrue stock: the report showed all
 six `custom_contents` false and bodies of 124 to 270 characters against roughly 4,700 here. The
 README said to paste them, nothing checked whether anyone had, and nobody had. A paying
-customer's first contact with MUSTER would have been an unbranded "Confirm your signup" from a
+customer's first contact with CavScope would have been an unbranded "Confirm your signup" from a
 security vendor.
 
 That is the reason this is a workflow now. An instruction to paste is an instruction someone has
@@ -28,12 +28,12 @@ to remember; a job that reads the result back is evidence.
 
 | File | Dashboard template | Subject line |
 |---|---|---|
-| `01-confirm-signup.html` | Confirm signup | `Confirm your MUSTER email address` |
-| `02-invite-user.html` | Invite user | `You have been invited to MUSTER` |
-| `03-magic-link.html` | Magic Link | `Your secure MUSTER sign-in link` |
-| `04-change-email.html` | Change Email Address | `Confirm your new MUSTER email address` |
-| `05-reset-password.html` | Reset Password | `Reset your MUSTER password` |
-| `06-reauthentication.html` | Reauthentication | `Your MUSTER verification code` |
+| `01-confirm-signup.html` | Confirm signup | `Confirm your CavScope email address` |
+| `02-invite-user.html` | Invite user | `You have been invited to CavScope` |
+| `03-magic-link.html` | Magic Link | `Your secure CavScope sign-in link` |
+| `04-change-email.html` | Change Email Address | `Confirm your new CavScope email address` |
+| `05-reset-password.html` | Reset Password | `Reset your CavScope password` |
+| `06-reauthentication.html` | Reauthentication | `Your CavScope verification code` |
 
 Variables used are GoTrue's own: `{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .NewEmail }}`,
 `{{ .Token }}`. They are **not** Resend template variables and do not use Resend's

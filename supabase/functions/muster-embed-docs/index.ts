@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Embeds MUSTER's own documentation so the agent can search it (muster_047/048).
+// Embeds CavScope's own documentation so the agent can search it (muster_047/048).
 //
 // Split of responsibility, on purpose: the caller (tools/embed-docs/sync.ts) reads
 // the repository and does the chunking, which needs no credential at all; this
@@ -54,7 +54,7 @@ async function embedText(text: string): Promise<number[]> {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
       "http-referer": "https://muster.partners",
-      "x-title": "MUSTER doc embedding",
+      "x-title": "CavScope doc embedding",
     },
     body: JSON.stringify({ model: "openai/text-embedding-3-small", input: text, encoding_format: "float" }),
     signal: AbortSignal.timeout(15000),

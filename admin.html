@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="description" content="MUSTER Super Admin Console — platform-wide view of every organization, assessment, risk and system check." />
-  <title>MUSTER — Super Admin Console</title>
+  <meta name="description" content="CavScope Super Admin Console — platform-wide view of every organization, assessment, risk and system check." />
+  <title>CavScope — Super Admin Console</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -64,6 +64,76 @@
       --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
 
@@ -259,6 +329,10 @@
 
     .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
     .kpi { padding: 14px 14px 15px; display: flex; gap: 11px; min-width: 0; }
+    .kpi[data-section] { cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease; }
+    .kpi[data-section]:hover { border-color: var(--teal); transform: translateY(-1px); }
+    .kpi[data-section]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .kpi-ico {
       width: 38px; height: 38px; flex: none;
       border-radius: var(--radius-md);
@@ -689,23 +763,23 @@
 <div id="gateDenied" class="gate" hidden>
   <h2>Not a super admin</h2>
   <p id="gateDeniedMsg">This console is platform-wide and only opens for a super admin. Your own workspace is where your organization's data lives.</p>
-  <a href="/app" data-tooltip="Opens the MUSTER workspace for the organizations you belong to.">Go to your workspace</a>
+  <a href="/app" data-tooltip="Opens the CavScope workspace for the organizations you belong to.">Go to your workspace</a>
 </div>
 
 <div class="shell" id="shell" hidden>
 
   <aside class="rail">
     <div class="brand">
-      <img src="/assets/muster-emblem.png" alt="" width="40" height="40">
+      <img src="/assets/cavscope-emblem.png" alt="" width="40" height="40">
       <div>
-        <div class="brand-word">MUSTER</div>
+        <div class="brand-word">CavScope</div>
         <div class="brand-sub">Trust · Readiness · Progress</div>
       </div>
     </div>
 
     <nav class="nav" id="nav" aria-label="Super admin sections"></nav>
 
-    <div class="rail-promo" data-tooltip="MUSTER's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it." tabindex="0">
+    <div class="rail-promo" data-tooltip="CavScope's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it." tabindex="0">
       <h4>Build a more<br>assured internet.</h4>
       <p>AI readiness. Real protection. Measurable trust.</p>
     </div>
@@ -741,7 +815,7 @@
         <div class="avatar" id="whoInitials" aria-hidden="true">··</div>
         <div>
           <div class="who-name" id="whoName">Super Admin</div>
-          <div class="who-org" id="whoEmail">MUSTER</div>
+          <div class="who-org" id="whoEmail">CavScope</div>
         </div>
       </div>
     </header>
@@ -762,14 +836,14 @@
       <!-- #overview, not bare /app: app.html sends a super admin who arrives
            with no fragment straight back here, and the fragment is how this
            link says it meant to go to the workspace. -->
-      <a class="strip-cta" href="/app#overview" data-tooltip="Leaves the platform console and opens your own workspace in the app.">MUSTER →</a>
+      <a class="strip-cta" href="/app#overview" data-tooltip="Leaves the platform console and opens your own workspace in the app.">CavScope →</a>
     </div>
 
   </div>
 </div>
 
 <script>
-  // MUSTER Super Admin Console -- the only one.
+  // CavScope Super Admin Console -- the only one.
   //
   // Until 2026-09-23 there were two: this page, and a "Platform Super Admin
   // Console" view inside app.html that owned every write (plans, roles,
@@ -876,8 +950,9 @@
   const SECTIONS = [
     { id: 'overview',          icon: '▦', label: 'Overview',           tip: 'Platform-wide snapshot: headline counts, 30-day scan activity, live risk and what needs doing.' },
     { id: 'organizations',     icon: '▣', label: 'Organizations',      tip: 'Every tenant on the platform, its plan, its worst site score and when it last scanned. Change a plan or open its workspace here.' },
+    { id: 'client-access',     icon: '◧', label: 'Client Access',      tip: 'One card per tenant: its plan, and every Partner-tier entitlement -- white-label branding, custom domain, and the rest -- with a switch for each. Same per-org override the Settings registry uses, organized by client instead of by flag.' },
     { id: 'workspaces',        icon: '◫', label: 'Workspaces',         tip: 'Not a separate object in this schema — an organization is the workspace.', stub: true },
-    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every MUSTER user, their platform role and when they last signed in. Change a role here.' },
+    { id: 'users',             icon: '◉', label: 'Users & Roles',      tip: 'Every CavScope user, their platform role and when they last signed in. Change a role here.' },
     { id: 'support',           icon: '◐', label: 'Support Access',     tip: 'See what one user sees, read-only, for a bounded time and a stated reason the tenant can read. Every session is logged.' },
     { id: 'audit-queue',       icon: '▤', label: 'Audit Queue',        tip: 'Scans the engine has run, with status, trigger and the resulting site score.' },
     { id: 'website-assurance', icon: '◍', label: 'Website Assurance',  tip: 'Every registered site, its posture score, open findings and verification state.' },
@@ -896,6 +971,7 @@
     const k = DATA.kpi || {};
     switch (id) {
       case 'organizations': return (k.organizations || {}).total;
+      case 'client-access': return (k.organizations || {}).total;
       case 'users': return (DATA.users || []).length;
       case 'website-assurance': return (DATA.websites || []).length;
       case 'audit-queue': return (DATA.recent_scans || []).length;
@@ -927,42 +1003,42 @@
 
     const tiles = [
       {
-        cls: 'amber', icon: '▣', label: 'Active Organizations',
+        cls: 'amber', icon: '▣', label: 'Active Organizations', go: 'organizations',
         value: num(org.total),
         delta: org.new_30d > 0 ? { dir: 'up', text: '+' + org.new_30d } : { dir: 'flat', text: 'no change' },
         foot: `${num(org.new_30d)} new in 30 days · ${num(org.sandbox)} internal sandbox excluded`,
         tip: 'Organizations provisioned on the platform, excluding the internal sandbox that ad-hoc admin URL scans are parked in. The sandbox is not a tenant and is never counted as one.',
       },
       {
-        cls: 'teal', icon: '▶', label: 'Assessments Running',
+        cls: 'teal', icon: '▶', label: 'Assessments Running', go: 'audit-queue',
         value: num((asmt.queued || 0) + (asmt.running || 0)),
         delta: { dir: 'flat', text: num(asmt.queued) + ' queued' },
         foot: `${num(asmt.complete_24h)} completed · ${num(asmt.failed_24h)} failed in 24h`,
         tip: 'Scans queued or running on the live engine right now. A number that never falls means the scan worker is not draining the queue — check muster-scan-due under System Health.',
       },
       {
-        cls: 'rose', icon: '⚠', label: 'High-Risk Alerts',
+        cls: 'rose', icon: '⚠', label: 'High-Risk Alerts', go: 'website-assurance',
         value: num(risk.open),
         delta: risk.new_24h > 0 ? { dir: 'down', text: '+' + risk.new_24h + ' new' } : { dir: 'flat', text: 'none new' },
         foot: `${num(risk.critical)} critical · ${num(risk.high)} high · across ${num(risk.orgs_affected)} org${risk.orgs_affected === 1 ? '' : 's'}`,
         tip: 'Open or reopened findings at critical or high severity — the ones the alert dispatcher emails a tenant about. Sandbox findings are excluded.',
       },
       {
-        cls: 'teal', icon: '◈', label: 'Control Effectiveness',
+        cls: 'teal', icon: '◈', label: 'Control Effectiveness', go: 'compliance',
         value: comp.rate == null ? '—' : comp.rate + '%',
         delta: { dir: comp.not_met > 0 ? 'down' : 'flat', text: num(comp.not_met) + ' not met' },
         foot: comp.total ? `${num(comp.met)} met of ${num(comp.total)} · ${num(comp.partial)} partial` : 'no controls derived yet',
         tip: 'Share of derived controls assessed "met". Partial is deliberately not rounded up to met — a half-implemented control is exactly what an auditor asks about. This is scanner evidence, never a certification of compliance.',
       },
       {
-        cls: 'amber', icon: '◱', label: 'Monthly Revenue',
+        cls: 'amber', icon: '◱', label: 'Monthly Revenue', go: 'billing',
         value: money(rev.mrr_cents),
         delta: { dir: 'flat', text: 'plan-implied' },
         foot: `${num(rev.paying_orgs)} priced · ${num(rev.unpriced_orgs)} on internal or unpriced plans`,
         tip: 'What the current plan assignments price out to at each organization’s commercial stage. It is NOT billed revenue: nothing in this platform reads Stripe invoices, and customer.subscription.deleted is unhandled, so a cancelled customer still prices in until their plan is changed by hand.',
       },
       {
-        cls: 'purple', icon: '⌨', label: 'API Usage',
+        cls: 'purple', icon: '⌨', label: 'API Usage', go: 'integrations',
         value: api.instrumented ? num(api.requests_30d) : 'Not metered',
         delta: { dir: 'flat', text: num(api.keys_active) + ' active keys' },
         foot: `${num(api.keys_used_24h)} key${api.keys_used_24h === 1 ? '' : 's'} used in 24h · ${num(api.keys_total)} issued`,
@@ -971,8 +1047,16 @@
       },
     ];
 
+    // Each tile opens the section it summarises. It is a div with role=button
+    // rather than a <button>, because a button may hold only phrasing content
+    // and the tile is three blocks; the delegated click handler already routes
+    // any [data-section], and the keydown handler below covers Enter and Space
+    // so a keyboard user gets the same door. The tooltip says so, per the
+    // tooltip rule, and the visually hidden span says so to a screen reader
+    // without replacing the live figure as an aria-label would.
     return `<div class="kpis">${tiles.map((t) => `
-      <div class="card kpi" data-tooltip="${escapeHtml(t.tip)}" tabindex="0">
+      <div class="card kpi" role="button" tabindex="0" data-section="${t.go}" data-tooltip="${escapeHtml(t.tip)} Click to open ${escapeHtml(sectionLabel(t.go))}.">
+
         <div class="kpi-ico ${t.cls}" aria-hidden="true">${t.icon}</div>
         <div class="kpi-body">
           <div class="kpi-label">${escapeHtml(t.label)}</div>
@@ -981,8 +1065,14 @@
             <span class="delta ${t.delta.dir}">${escapeHtml(t.delta.text)}</span>
           </div>
           <div class="kpi-foot">${escapeHtml(t.foot)}</div>
+          <span class="sr-only"> Opens ${escapeHtml(sectionLabel(t.go))}.</span>
         </div>
       </div>`).join('')}</div>`;
+  }
+
+  function sectionLabel(id) {
+    const s = SECTIONS.find((x) => x.id === id);
+    return s ? s.label : id;
   }
 
   // Stacked bars, drawn as plain SVG. A chart library would be the only
@@ -1220,11 +1310,11 @@
       <div class="page-head">
         <div>
           <h1>Super Admin Console</h1>
-          <p>Manage the entire MUSTER platform across all organizations.</p>
+          <p>Manage the entire CavScope platform across all organizations.</p>
         </div>
         <div class="motto">
           <em>“Safer organizations. A more trusted world.”</em>
-          <span>— MUSTER</span>
+          <span>— CavScope</span>
         </div>
       </div>
       ${kpiRow()}
@@ -1303,12 +1393,103 @@
         </tr>`).join('')}</tbody></table>` : '<div class="empty">No organizations match.</div>');
   }
 
+  // ---- client access --------------------------------------------------------
+  //
+  // Added 2026-09-25. Organizations changes a plan; Settings has the full flag
+  // registry, every category, every plan, one flag per row with every org's
+  // overrides underneath it. Neither answers "what is this one client actually
+  // allowed to do" without cross-referencing both. This section is that
+  // cross-reference, organized by client instead of by flag -- one card per
+  // organization, its plan, and a switch for every Partner-tier entitlement:
+  // white_label_enabled, custom_domain_enabled and the rest of `partner`.
+  //
+  // It adds nothing new underneath. Every switch here is
+  // muster_admin_set_flag / muster_admin_clear_flag_override, the same RPCs
+  // the flag registry already calls to set or clear a per-org override --
+  // this card just resolves and writes them per client instead of per flag.
+  // An unwired entitlement (client_management_enabled, commercial_use_enabled,
+  // custom_branding_enabled, partner_dashboard_enabled -- see Settings for
+  // why each one is unwired) renders the same disabled, "read by nothing"
+  // treatment as the registry: a switch that changes nothing is worse than a
+  // missing one.
+  //
+  // What a tenant fills in for itself once it has an entitlement -- the brand
+  // name, colors, logo, the custom domain string, what it bills its own
+  // client -- stays exactly where it already lives, in the tenant's own Team
+  // & Settings (muster_save_brand, app.html). This card controls only whether
+  // they are allowed to; it does not read or duplicate brand_profiles.
+
+  function planDefaultForOrg(f, o) {
+    if (f.kill_switch) return false;
+    return !!(f.enabled_by_plan || {})[o.plan];
+  }
+
+  function resolvedForOrg(f, o) {
+    const override = (f.overrides || []).find((x) =>
+      x.target_kind === 'organization' && Number(x.organization_id) === Number(o.id) && !x.expired) || null;
+    const planDefault = planDefaultForOrg(f, o);
+    return { state: override ? !!override.enabled : planDefault, override, planDefault };
+  }
+
+  function clientEntitlementRow(f, o) {
+    const wired = !!f.wired;
+    const { state, override, planDefault } = resolvedForOrg(f, o);
+    const key = escapeHtml(f.key);
+    const switchTip = !wired
+      ? 'Disabled: nothing reads this key, so this switch would be theatre. See Settings for why.'
+      : override
+        ? `Overridden ${override.enabled ? 'on' : 'off'} for ${escapeHtml(o.name)}: "${escapeHtml(override.reason || 'no reason recorded')}". Toggling back to the plan default clears this override; toggling elsewhere asks for a new reason.`
+        : `Resolves from the ${escapeHtml(o.plan)} plan (${planDefault ? 'on' : 'off'}). Toggling sets an explicit exception for ${escapeHtml(o.name)} alone.`;
+    return `<div class="flag-row${wired ? '' : ' unwired'}" style="grid-template-columns: minmax(0,1.5fr) 120px minmax(0,1fr);">
+      <div>
+        <code>${key}</code><br><small class="muted">${escapeHtml(f.surface || f.description || '')}</small>
+      </div>
+      <div><label class="switch" data-tooltip="${escapeHtml(switchTip)}" tabindex="0">
+        <input type="checkbox" data-act="client-flag" data-key="${key}" data-org="${Number(o.id)}" data-org-name="${escapeHtml(o.name)}"
+               data-override-id="${override ? Number(override.id) : ''}" data-plan-default="${planDefault ? 'true' : 'false'}"
+               aria-label="${key} for ${escapeHtml(o.name)}"${state ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span>
+      </label></div>
+      <div style="font-size:11.5px;">
+        ${override
+          ? `<span class="pill ${override.enabled ? 'low' : 'high'}" data-tooltip="${escapeHtml(override.reason || 'no reason recorded')}" tabindex="0">override for this client</span>`
+          : (wired ? '<span class="muted">plan default</span>'
+                   : `<span class="pill high" data-tooltip="${escapeHtml(f.wiring_note || 'Nothing reads this key.')}" tabindex="0">read by nothing</span>`)}
+      </div>
+    </div>`;
+  }
+
+  function clientAccessCard(o, partnerFlags) {
+    return panel(
+      o.name,
+      `${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${o.is_admin_sandbox ? 'sandbox, not a customer' : escapeHtml(o.onboarding_status)}`,
+      `<div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; flex-wrap:wrap;">
+         <div>${planSelect(o)} <small class="muted">${escapeHtml(o.stage || '')}</small></div>
+         <a class="link-more" href="/app#tenant=${Number(o.id)}"
+            data-tooltip="Opens ${escapeHtml(o.name)}'s own workspace, where the tenant sets its brand name, colors, logo, custom domain string and what it bills its own client under Team &amp; Settings. This card controls only whether they're allowed to.">Open workspace ↗</a>
+       </div>
+       <div class="flag-head" style="grid-template-columns: minmax(0,1.5fr) 120px minmax(0,1fr);"><span>Entitlement</span><span>Enabled</span><span>Source</span></div>
+       ${partnerFlags.map((f) => clientEntitlementRow(f, o)).join('') || '<div class="empty">No Partner-tier entitlements defined.</div>'}`,
+      { tip: `Partner-tier entitlements for ${escapeHtml(o.name)} only. Full registry, every category, every plan, every client's overrides: Settings.` }
+    );
+  }
+
+  function renderClientAccess() {
+    const intro = head('Client Access', 'One card per client: its plan, and every Partner-tier entitlement it does or does not have. The full flag registry -- every category, every plan -- is under Settings; this is the same overrides, organized by client.');
+    if (sideError('registry')) {
+      return intro + panel('Client Access unavailable', '', sideErrorPanel('registry', 'the flag registry, so per-client entitlements are not shown'));
+    }
+    const partnerFlags = (EXTRA.registry.flags || []).filter((f) => f.category === 'partner');
+    const orgs = (DATA.organizations || []).filter((o) => inOrg(o.id) && matches(o.name, o.plan, o.jurisdiction, o.onboarding_status));
+    if (!orgs.length) return intro + panel('Client Access', '', '<div class="empty">No organizations match.</div>');
+    return intro + orgs.map((o) => clientAccessCard(o, partnerFlags)).join('');
+  }
+
   // Platform roles, as muster_admin_set_user_role accepts them.
   const ROLES = ['user', 'admin', 'super_admin'];
 
   function renderUsers() {
     const rows = (DATA.users || []).filter((u) => matches(u.name, u.email, u.role));
-    return head('Users & Roles', 'Every MUSTER user. Role here is the platform role, and can be changed here; what a user can see inside an organization is decided by RLS, not by this page.') +
+    return head('Users & Roles', 'Every CavScope user. Role here is the platform role, and can be changed here; what a user can see inside an organization is decided by RLS, not by this page.') +
       panel('User roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>User</th>
@@ -1773,8 +1954,8 @@
     // no price object at all, which is why price is optional below.
     const visible = pricing.visible || {};
     const tiers = [
-      { key: 'muster', name: 'MUSTER', price: (pricing.muster || {}).monthly_price_cents },
-      { key: 'muster_partner', name: 'MUSTER Partner', price: (pricing.muster_partner || {}).monthly_price_cents,
+      { key: 'muster', name: 'CavScope', price: (pricing.muster || {}).monthly_price_cents },
+      { key: 'muster_partner', name: 'CavScope Partner', price: (pricing.muster_partner || {}).monthly_price_cents,
         note: (pricing.muster_partner || {}).included_client_orgs != null
           ? `${pricing.muster_partner.included_client_orgs} client orgs included` : null },
       { key: 'enterprise', name: 'Enterprise', price: null, note: 'contact sales' },
@@ -2364,6 +2545,7 @@
   const RENDER = {
     overview: renderOverview,
     organizations: renderOrganizations,
+    'client-access': renderClientAccess,
     users: renderUsers,
     'audit-queue': renderAuditQueue,
     'website-assurance': renderWebsiteAssurance,
@@ -2614,6 +2796,34 @@
     if (saved) { delete drafts['override:' + key]; render(); }
   }
 
+  // The Client Access card's per-client switch. Unlike the registry's own
+  // add-override form, this is one control per (client, entitlement): flipping
+  // it to whatever the client's plan already gives clears any override and
+  // falls back cleanly; flipping it away from the plan default asks for a
+  // reason -- same discipline the registry's form requires, just not a form,
+  // because that page already knows which client and which flag.
+  async function toggleClientFlag(box) {
+    const key = box.dataset.key;
+    const orgId = Number(box.dataset.org);
+    const orgName = box.dataset.orgName;
+    const overrideId = box.dataset.overrideId ? Number(box.dataset.overrideId) : null;
+    const planDefault = box.dataset.planDefault === 'true';
+    const next = box.checked;
+
+    if (next === planDefault) {
+      if (!overrideId) { render(); return; }
+      if (!window.confirm(`Clear the override on ${key} for ${orgName}?\n\nIt falls back to the ${orgName} plan default (${planDefault ? 'on' : 'off'}) immediately.`)) { render(); return; }
+      await write('muster_admin_clear_flag_override', { p_id: overrideId }, `Override on ${key} for ${orgName} cleared -- back to the plan default.`);
+      return;
+    }
+    const reason = window.prompt(`Reason for ${next ? 'granting' : 'revoking'} ${key} for ${orgName}\n\nRequired -- an override with no stated reason is indistinguishable from a mistake six months later.`, '');
+    if (reason === null) { render(); return; }
+    if (reason.trim().length < 8) { flash('warn', 'Not saved: give a reason of at least 8 characters.'); render(); return; }
+    await write('muster_admin_set_flag', {
+      p_key: key, p_enabled: next, p_organization_id: orgId, p_reason: reason.trim(),
+    }, `${key} ${next ? 'granted to' : 'revoked from'} ${orgName}.`);
+  }
+
   async function clearFlagOverride(btn) {
     const id = Number(btn.dataset.id), key = btn.dataset.key;
     if (!window.confirm(`Revoke this override on ${key}? The organization falls back to the plan gate and the default immediately.`)) return;
@@ -2709,7 +2919,7 @@
 
     const email = session.user && session.user.email;
     MY_EMAIL = email || '';
-    document.getElementById('whoEmail').textContent = email || 'MUSTER';
+    document.getElementById('whoEmail').textContent = email || 'CavScope';
     document.getElementById('whoInitials').textContent = initials(email);
     document.getElementById('whoName').textContent = 'Super Admin';
 
@@ -2817,11 +3027,20 @@
       case 'flag-plan': setFlagPlan(e.target); break;
       case 'flag-default': setFlagDefault(e.target); break;
       case 'flag-kill': killSwitch(e.target); break;
+      case 'client-flag': toggleClientFlag(e.target); break;
       default: break;
     }
   });
 
   document.addEventListener('keydown', (e) => {
+    // A role=button element is only a button if Enter and Space activate it.
+    // Space is prevented so the page does not also scroll.
+    const tile = e.target && e.target.closest && e.target.closest('[role="button"][data-section]');
+    if (tile && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      go(tile.getAttribute('data-section'));
+      return;
+    }
     if (e.target && e.target.id === 'runUrl' && e.key === 'Enter') {
       e.preventDefault();
       if (!run.busy) runUrlScan();

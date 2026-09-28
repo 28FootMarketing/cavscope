@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER SITREP — a complete fictional sample covering every audit area and severity, with cited evidence, so you can see the shape of a real report." />
-  <title>MUSTER — Sample SITREP</title>
+  <meta name="description" content="CavScope SITREP — a complete fictional sample covering every audit area and severity, with cited evidence, so you can see the shape of a real report." />
+  <title>CavScope — Sample SITREP</title>
   <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
        pointing at a URL that redirects is worse than none. -->
-  <link rel="canonical" href="https://www.muster.partners/sitrep/sample">
+  <link rel="canonical" href="https://cavscope.28footsystems.com/sitrep/sample">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -65,6 +65,76 @@
       --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
 
@@ -196,7 +266,7 @@
 
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SAMPLE SITREP</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/cavscope-emblem.png" alt="" width="160" height="160">CavScope <small>/ SAMPLE SITREP</small></div>
       <div class="sample-banner" data-tooltip="Every finding, evidence row, and score on this page is fictional, built to show the full range of what a SITREP covers. It is not a real assessment of any organization." tabindex="0">⚠ ILLUSTRATIVE SAMPLE — NOT A REAL ASSESSMENT</div>
       <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this sample.">▣ Print / PDF</button>
     </div>
@@ -403,7 +473,7 @@
           </div>
           <div>
             <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now." tabindex="0">● ${band.toUpperCase()} POSTURE</div>
-            <div class="band-desc">${board.open} open findings across every area MUSTER checks: security, email authentication, availability, accessibility, privacy, governance, and third party.</div>
+            <div class="band-desc">${board.open} open findings across every area CavScope checks: security, email authentication, availability, accessibility, privacy, governance, and third party.</div>
           </div>
         </div>
 
@@ -472,9 +542,9 @@
         </div>
       </section>
 
-      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body." tabindex="0">
-        MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
-        <br>This document is a fictional composite sample built to demonstrate every finding category and severity level MUSTER can surface. It does not describe a real organization.
+      <footer class="disclaimer" data-tooltip="CavScope assesses technical and policy signals; it is not a lawyer, auditor, or certifying body." tabindex="0">
+        CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
+        <br>This document is a fictional composite sample built to demonstrate every finding category and severity level CavScope can surface. It does not describe a real organization.
       </footer>
     `;
   }

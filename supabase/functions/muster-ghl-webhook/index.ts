@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // GHL checkout wiring, phase 1 (sales-assisted): payment is collected inside
-// GHL itself (native invoicing / Stripe-connect), not a separate MUSTER-owned
+// GHL itself (native invoicing / Stripe-connect), not a separate CavScope-owned
 // Stripe account. Once a deal is marked won, a GHL workflow's outbound
 // Webhook action calls this function to provision the real tenant on the
 // correct paid plan -- skipping the trial state self-serve signups start in.

@@ -1,6 +1,6 @@
 # Retrieval Search for muster-agent
 
-MUSTER uses pgvector for semantic search over findings and evidence, enabling Claude to gather context and verify claims during narrative generation.
+CavScope uses pgvector for semantic search over findings and evidence, enabling Claude to gather context and verify claims during narrative generation.
 
 ## How It Works
 
@@ -188,7 +188,7 @@ Monthly recurring cost depends on new findings/evidence volume.
 
 ## Documentation retrieval (`search_docs`)
 
-A third corpus, added 2026-09-08: MUSTER's own `docs/`. Findings say what is wrong with a site and
+A third corpus, added 2026-09-08: CavScope's own `docs/`. Findings say what is wrong with a site and
 evidence says what the scanner saw; neither says what any of it *means*. An agent asked "what does
 `EMAIL-003` actually cost us" had the finding text and nothing else, and the gap between holding a
 finding and being able to explain it is where a model starts composing.
@@ -201,7 +201,7 @@ finding and being able to explain it is where a model starts composing.
 section is already the unit a person would quote, it has a heading that names it, and it has a
 GitHub anchor, so a retrieved chunk can be cited as `docs/SCAN-RULES.md#email-authentication--7-rules`
 and the reader lands on the exact text the agent read. Chunking by token count instead would retrieve
-fragments nobody can go verify, which is the opposite of how the rest of MUSTER cites.
+fragments nobody can go verify, which is the opposite of how the rest of CavScope cites.
 
 Details that are load-bearing:
 
@@ -223,7 +223,7 @@ Details that are load-bearing:
 | `internal` | a **platform-scoped** key (`organization_id` null) that also carries `admin` | everything else |
 
 An org-scoped key with the `admin` scope is an admin of **one organization**. That does not make
-MUSTER's own infrastructure notes theirs to read, and `muster_engine_search_docs` requires both
+CavScope's own infrastructure notes theirs to read, and `muster_engine_search_docs` requires both
 conditions, not either. Verified live: a tenant key carrying `read` **and** `admin` searching for
 the exact text of `docs/EMAIL.md` gets back only `SCAN-RULES.md` sections.
 
