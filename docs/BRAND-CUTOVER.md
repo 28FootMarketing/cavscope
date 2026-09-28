@@ -22,45 +22,59 @@ as the primary domain, in the order that keeps nothing broken partway through.
   `/robots.txt` (should serve `robots-cavscope.txt`'s content), `/sitemap.xml` and
   `/.well-known/security.txt`.
 
-## 2. Supabase Auth — only once step 1 is verified live
+## 2. Supabase Auth — done, 2026-09-28
 
-`muster.partners` stays the Site URL and stays on the redirect allowlist indefinitely --
-magic-link and invite emails already delivered point there, and retiring it would strand
-them, same reasoning as the `*.muster.28footsystems.com` hosts. This step **adds**
-`cavscope.28footsystems.com`, it does not replace anything.
+`muster.partners` stays on the redirect allowlist indefinitely -- magic-link and invite
+emails already delivered point there, and retiring it would strand them, same reasoning as
+the `*.muster.28footsystems.com` hosts. Nothing below removed anything; every step here only
+ever added.
 
-- **Redirect allowlist** (Authentication → URL Configuration, project `hjowfnzpomzxazmzywxw`):
-  add `https://cavscope.28footsystems.com/**` and, if serving it,
-  `https://www.cavscope.28footsystems.com/**`. Cross-check against `middleware.js` the same
-  way `docs/CUTOVER.md` had to the first time -- an un-allowlisted `redirect_to` is not an
-  error, GoTrue silently substitutes Site URL, and the failure is invisible until someone
-  actually clicks a link from the new domain.
-- **Site URL**: leave it on `https://app.muster.partners/app` for now. Changing Site URL to
-  the new domain is a bigger decision (it is the fallback for any link minted without an
-  explicit `redirect_to` -- see `index.html`'s stray-auth-fragment forwarder and
-  `docs/EMAIL.md`) and should only happen once `cavscope.28footsystems.com` has been live and
-  stable for a while, not on the same day DNS is cut over. When it does move: `index.html`'s
-  `setWorkspaceCtaHref()` and `MUSTER_AUTH_HOST` forwarder both have comments pointing at this
-  file for the follow-up change they'll need.
+- **Redirect allowlist: done.** `https://cavscope.28footsystems.com/app`,
+  `.../reset`, `.../**`, and `https://www.cavscope.28footsystems.com/**` were merged in via
+  `.github/workflows/auth-config.yml`'s new `add_redirect_urls` input (union, not replace --
+  the job fails if the readback is missing anything that was already there or anything just
+  requested). Verified by readback: 11 entries before, 15 after, all 11 original entries
+  still present (run 36440705061).
+- **Site URL: done.** Moved from `https://app.muster.partners` to
+  `https://cavscope.28footsystems.com`, via the same workflow's `site_url` input with
+  `apply: true`. Proven the way `docs/EMAIL.md` says this has to be proven -- not by reading
+  the readback of the value itself, but by the `allowlist:control` probe in
+  `muster-auth-smoke`, which asks for a host that must be rejected and reports where GoTrue
+  actually falls back to: `https://cavscope.28footsystems.com/#<fragment>` (run against
+  `sentinel-qa-verify@28footmarketing.com`, `checked_at` 2026-09-28T15:05:38Z). The other
+  smoke-test steps still report `app.muster.partners` because they explicitly request that
+  host by name to prove it is *still* honoured -- that is correct and expected, not a sign
+  the move didn't take.
+- **The prerequisite this needed first, also done:** `index.html`'s stray-auth-fragment
+  forwarder was hardcoded to send every arrival to `app.muster.partners`. Since
+  `cavscope.28footsystems.com` has no separate app host (`setWorkspaceCtaHref()` right below
+  it in the same file, and `middleware.js`), a link falling back to that root now needs a
+  same-origin `/signin` redirect, not a cross-origin hop to the legacy host -- otherwise
+  moving Site URL here would have quietly bounced every stray fragment straight back to
+  `app.muster.partners` regardless, undoing the point of the change. Fixed and covered by two
+  new cases in `tests/auth/landing-auth-fragment.test.ts`; all prior assertions, including the
+  loop guard, still pass unmodified.
 - **Sender name: done, 2026-09-26.** `smtp_sender_name` on `hjowfnzpomzxazmzywxw` was
-  `MUSTER`, PATCHed to `CavScope` via `.github/workflows/auth-config.yml`'s
-  `smtp_sender_name` input, verified by readback (run 36215770285). Sender email
-  (`noreply@mail.muster.partners`) is unchanged, as intended -- the domain is verified in
-  Resend and mail keeps sending from it regardless of the product name.
+  `MUSTER`, PATCHed to `CavScope` via the same workflow's `smtp_sender_name` input, verified
+  by readback (run 36215770285). Sender email (`noreply@mail.muster.partners`) is unchanged,
+  as intended -- the domain is verified in Resend and mail keeps sending from it regardless
+  of the product name.
 
-## 3. Auth email templates — apply the already-updated repo copies
+**Not yet done, and not attempted here:** `muster-auth-smoke`'s own hardcoded app-host
+constant still targets `app.muster.partners` for the steps that ask for a redirect by name.
+That is a deliberate, narrower follow-up -- updating what the smoke test itself proves,
+now that Site URL has actually moved -- not a gap in the move itself.
 
-`supabase/auth-email-templates/*.html` and `manifest.json` now say CavScope (subjects,
-body copy, the emblem alt text). The **live** GoTrue templates on
-`hjowfnzpomzxazmzywxw` still have whatever `.github/workflows/auth-config.yml` last
-pushed, which was the MUSTER copy. Dispatch that workflow with `templates: apply` to push
-the six updated templates and subjects and have it verify the readback by checksum, the
-same way it did for the original templates on 2026-09-17.
+## 3. Auth email templates — done, confirmed 2026-09-26
 
-Until this runs, `muster-auth-smoke`'s template-identity check (`html.includes("CavScope is
-website assurance by")`) will correctly report the live template as **not** matching the
-repo's -- that is the intended signal that this step is still outstanding, not a bug in the
-smoke test.
+`supabase/auth-email-templates/*.html` and `manifest.json` say CavScope (subjects, body
+copy, the emblem alt text), and the **live** GoTrue templates on `hjowfnzpomzxazmzywxw`
+match: a read-only `templates: report` dispatch of `auth-config.yml` (run 36214625077) read
+back `mailer_subjects_magic_link => Your secure CavScope sign-in link`,
+`mailer_subjects_recovery => Reset your CavScope password`,
+`mailer_subjects_invite => You have been invited to CavScope`, and the rest of the six, all
+CavScope-branded. This paragraph previously said this step was still outstanding; it was
+stale -- a `templates: apply` run had already landed it before that stale text was written.
 
 ## 4. Things that do not need to change
 
