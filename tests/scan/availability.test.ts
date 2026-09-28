@@ -92,7 +92,7 @@ test("AVAIL-004 keeps critical severity, and says why the score is not a pass", 
 
 test("the engine version is past the one this rule shipped in", () => {
   // A floor, not an equality: the equality pin belongs to the newest rule's
-  // test (tests/scan/login.test.ts since 1.7.0), so a later bump edits one
+  // test (tests/scan/aio.test.ts since 1.8.0), so a later bump edits one
   // file instead of every rule's. What this change established is that the
   // version reached 1.6.0 and its changelog line says why.
   const m = engine.match(/const ENGINE_VERSION = "http-native-(\d+)\.(\d+)\.(\d+)";/);
