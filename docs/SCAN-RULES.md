@@ -232,21 +232,26 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `A11Y-006` | medium | Form fields without an accessible label | 1.3.1, 4.1.2 |
 | `A11Y-007` | medium | Links with no discernible text | 2.4.4, 4.1.2 |
 
-## Privacy — 4 rules (3 active, 1 inactive)
+## Privacy — 4 rules, all active
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
 | `PRIV-001` | medium | No privacy policy link found | GDPR Art. 13, CCPA 1798.130, CalOPPA |
 | `PRIV-002` | low | Third-party trackers loaded before consent could be verified | GDPR Art. 6 & 7, ePrivacy, CCPA opt-out |
 | `PRIV-003` | medium | Form submits to an insecure or external endpoint | GDPR Art. 32, NIST PR.DS-2 |
-| `PRIV-004` | low | No Terms of Service link found (inactive) | Consumer contract terms |
+| `PRIV-004` | low | No Terms of Service link found | Consumer contract terms |
 
 `PRIV-004` mirrors `PRIV-001` exactly -- an anchor's text or href containing "terms" or
 "tos" is enough to credit it -- but is scored lower, because no privacy law requires a
 Terms of Service link the way GDPR/CCPA require a privacy policy link; this is a
 consumer-trust signal, not a compliance mandate. Added inactive by migration
-`20260928170144`, same discipline as every rule before it: it waits for a scan to report
-`http-native-1.11.0` or later before a follow-up migration activates it.
+`20260928170144` and **activated by `20260928213241`** once the proof was in hand, by
+`skipped_inactive` arithmetic on CavScope's own site: `1.10.0` held 4 findings (GOV-006,
+GOV-007 and two older held rules); after GOV-006..008 were activated, `1.11.0` held 3
+rather than the 2 that activation alone predicts, and PRIV-004 is the only rule `1.11.0`
+added inactive. The first scan after activation (scan 187) dropped `skipped_inactive` to 2
+and opened PRIV-004 against `cavscope.28footsystems.com`, whose Terms of Service are still
+pending publication. That finding is correct.
 
 **The same migration adds a jurisdiction signal, unrelated to scoring.**
 `supabase/functions/muster-scan/legal.ts`'s `extractUsState()` reads a US state a site
