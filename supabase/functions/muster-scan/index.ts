@@ -15,6 +15,7 @@ import {
 import { EXPOSURE_PROBES, evaluateExposure, exposureHit, type ExposureProbeResult } from "./exposure.ts";
 import { PROBE_ORIGIN, evaluateCors } from "./cors.ts";
 import { evaluateCspQuality } from "./csp.ts";
+import { extractUsState, type StateSignal } from "./legal.ts";
 
 // CavScope scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -122,7 +123,20 @@ import { evaluateCspQuality } from "./csp.ts";
 // branch originally took 1.8.0; 1.9.0 (SEC-016..020/AUTH-006, above) landed on
 // main while it was open, so this moves to the value after main's, not the one
 // the branch started at -- see the 1.4.0 note above for why that is not optional.
-const ENGINE_VERSION = "http-native-1.10.0";
+//
+// 1.11.0 adds PRIV-004 (no Terms of Service link found, mirroring PRIV-001's
+// privacy-link check) and a jurisdiction signal: legal.ts's extractUsState()
+// reads a governing-law clause or postal address off the homepage, or off a
+// same-origin privacy/terms page it follows once, and reports the US state a
+// site states about ITSELF. muster.q_sitrep_jurisdiction had read only the
+// scanning workspace's own organizations.region_code, which is one fixed
+// state (PA, After Today LLC's own) for every site ever parked in the admin
+// sandbox org via "Run a URL scan" -- a YMCA actually in Hanover, PA and an
+// unrelated SaaS with no PA presence got the same PA Act 35 citation, because
+// nothing had ever asked what state the site itself claims. No match writes
+// null, never a default -- see legal.ts's own header for why guessing here
+// would be worse than saying nothing.
+const ENGINE_VERSION = "http-native-1.11.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -513,6 +527,9 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   // 4. HTML content rules
   const html = primary.body || "";
   const isHtml = reachable && /text\/html|application\/xhtml/i.test(primary.contentType ?? "") && html.length > 0;
+  // Set inside the isHtml block below, read after it closes when building
+  // scanMeta -- see legal.ts and the 1.11.0 note above ENGINE_VERSION.
+  let legalState: StateSignal = { code: null, name: null, reason: "homepage is not HTML" };
   if (isHtml) {
     const snippets: string[] = [];
     // Client-rendered apps ship almost no markup; content rules then carry low confidence until the browser engine runs.
@@ -588,8 +605,36 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
 
     // Privacy policy link
     const anchors = [...html.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)];
-    const privacy = anchors.some((m) => /privacy/i.test(attr(m[0].match(/^<a\b[^>]*>/i)?.[0] ?? "", "href") ?? "") || /privacy/i.test(stripTags(m[1])));
+    const privacyHref = (m: RegExpMatchArray) => attr(m[0].match(/^<a\b[^>]*>/i)?.[0] ?? "", "href") ?? "";
+    const privacy = anchors.some((m) => /privacy/i.test(privacyHref(m)) || /privacy/i.test(stripTags(m[1])));
     if (!privacy) add({ rule_id: "PRIV-001", severity: clientRendered ? "low" : "medium", title: "No privacy policy link found", detail: `Scanned ${anchors.length} links on the homepage; none contained "privacy" in its text or href.` + csrNote, location: "homepage links", confidence: csrConf("medium"), evidence_keys: ["primary"] });
+
+    // Terms of Service link, credited the same way PRIV-001 credits a privacy
+    // policy: presence in an anchor's text or href is enough. Word-boundaried
+    // so "terminal" or "terminate" do not match "term".
+    const termsAnchor = anchors.find((m) => /\bterms\b|\btos\b/i.test(privacyHref(m)) || /\bterms\b|\btos\b/i.test(stripTags(m[1])));
+    if (!termsAnchor) add({ rule_id: "PRIV-004", severity: "low", title: "No Terms of Service link found", detail: `Scanned ${anchors.length} links on the homepage; none contained "terms" or "tos" in its text or href.` + csrNote, location: "homepage links", confidence: csrConf("medium"), evidence_keys: ["primary"] });
+
+    // Jurisdiction signal: which US state, if any, this site states about
+    // itself -- never the scanning workspace's own state. Try the homepage
+    // first (a footer address is often there); if nothing matches, follow one
+    // same-origin privacy/terms link once and try again. Evidence is written
+    // whenever that follow-up page is fetched, whatever the verdict, which is
+    // what proves this code ran on a scan that shows no state either.
+    legalState = extractUsState(html);
+    if (!legalState.code) {
+      const legalHref = privacy ? privacyHref(anchors.find((m) => /privacy/i.test(privacyHref(m)) || /privacy/i.test(stripTags(m[1])))!)
+        : termsAnchor ? privacyHref(termsAnchor) : null;
+      if (legalHref) {
+        let legalUrl: URL | null = null;
+        try { legalUrl = new URL(legalHref, finalUrl); } catch { legalUrl = null; }
+        if (legalUrl && legalUrl.hostname.toLowerCase() === host) {
+          const legalPage = await fetchOnce(legalUrl.toString(), "GET");
+          await ev({ key: "legal_page", kind: "html_excerpt", url: legalUrl.toString(), http_status: legalPage.status, content_type: legalPage.contentType, response_ms: legalPage.ms, headers: null, excerpt: legalPage.body.slice(0, 4000), byte_length: legalPage.bytes }, legalPage.body || String(legalPage.status));
+          if (legalPage.status === 200 && legalPage.body) legalState = extractUsState(legalPage.body);
+        }
+      }
+    }
 
     // Scripts, trackers, mixed content
     const scriptSrcs = [...html.matchAll(/<script\b[^>]*\ssrc\s*=\s*["']([^"']+)["']/gi)].map((m) => m[1]);
@@ -967,7 +1012,10 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     })) add(f);
   }
 
-  const scanMeta = { final_url: finalUrl, http_status: primary.status, response_ms: primary.ms, engine_version: ENGINE_VERSION };
+  const scanMeta = {
+    final_url: finalUrl, http_status: primary.status, response_ms: primary.ms, engine_version: ENGINE_VERSION,
+    detected_country_code: legalState.code ? "US" : null, detected_region_code: legalState.code,
+  };
   const { data: ingest, error: ingestErr } = await db.rpc("muster_engine_ingest", { p_scan_id: job.scan_id, p_scan: scanMeta, p_evidence: evidence, p_findings: findings });
   if (ingestErr) throw new Error("ingest failed: " + ingestErr.message);
   const { data: sitrep, error: sitrepErr } = await db.rpc("muster_engine_sitrep", { p_scan_id: job.scan_id });

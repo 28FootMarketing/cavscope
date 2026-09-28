@@ -8,8 +8,9 @@
 // crediting a site with a file it does not have (an SPA's catch-all 200), and
 // accusing a site of lacking one it has.
 //
-// This file owns the ENGINE_VERSION equality pin (CLAUDE.md: the newest rule's
-// test owns it); login.test.ts and the AVAIL-* tests assert floors.
+// tests/scan/legal.test.ts now owns the ENGINE_VERSION equality pin
+// (CLAUDE.md: the newest rule's test owns it); this file asserts a floor,
+// same as login.test.ts and the AVAIL-* tests.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -114,8 +115,13 @@ test("end to end: a bare SPA raises all three; a prepared site raises none", asy
   }
 });
 
-test("the engine version moved with the rule set", () => {
-  // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.10\.0";/);
+test("the engine version is past the one GOV-006..008 shipped in", () => {
+  // A floor, not an equality: the pin belongs to the newest rule's test
+  // (tests/scan/legal.test.ts, now that PRIV-004 and the jurisdiction signal
+  // are the newest rules).
+  const m = engine.match(/const ENGINE_VERSION = "http-native-(\d+)\.(\d+)\.(\d+)";/);
+  assert.ok(m, "ENGINE_VERSION is not in the expected http-native-x.y.z form");
+  const [major, minor] = [Number(m[1]), Number(m[2])];
+  assert.ok(major > 1 || (major === 1 && minor >= 10), `GOV-006..008 shipped in 1.10.0; found ${m[0]}`);
   assert.match(engine, /1\.10\.0 adds GOV-006 \(no llms\.txt\), GOV-007/);
 });
