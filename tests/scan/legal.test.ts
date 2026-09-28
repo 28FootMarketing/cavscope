@@ -63,13 +63,17 @@ test("PRIV-004 mirrors PRIV-001: same anchors, same csrNote, same evidence key",
   assert.match(section, /\\bterms\\b\|\\btos\\b/);
 });
 
-test("the jurisdiction follow-up only fetches a same-origin legal page", () => {
+test("the jurisdiction follow-up only fetches same-origin pages, bounded", () => {
   const start = engine.indexOf("// Jurisdiction signal");
   const end = engine.indexOf("// Scripts, trackers, mixed content");
   assert.ok(start > 0 && end > start);
   const section = engine.slice(start, end);
-  assert.match(section, /legalUrl\.hostname\.toLowerCase\(\) === host/);
-  assert.match(section, /key: "legal_page", kind: "html_excerpt"/);
+  assert.match(section, /legalUrl\.hostname\.toLowerCase\(\) !== host/);
+  assert.match(section, /key: `legal_page_\$\{followups\}`, kind: "html_excerpt"/);
+  assert.match(section, /JURISDICTION_MAX_FOLLOWUPS = 3/);
+  assert.match(section, /findHref\(\/\\babout\\b\/i\)/);
+  assert.match(section, /findHref\(\/\\bcontact\\b\/i\)/);
+  assert.match(section, /"\/about", "\/contact"/);
 });
 
 test("end to end: no legal links and no state info raises PRIV-001 and PRIV-004, and reports no jurisdiction", async () => {
@@ -114,7 +118,7 @@ test("end to end: a terms link to a same-origin page with a governing-law clause
     const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
     const ids = new Set(result.findings.map((f) => f.rule_id));
     assert.ok(!ids.has("PRIV-004"), "PRIV-004 must not fire when a terms link is present");
-    assert.ok(result.evidence.some((e) => e.key === "legal_page"), "legal_page evidence must be written when the follow-up page is fetched");
+    assert.ok(result.evidence.some((e) => e.key.startsWith("legal_page_")), "legal_page_N evidence must be written when a follow-up page is fetched");
     assert.equal(result.scan.detected_country_code, "US");
     assert.equal(result.scan.detected_region_code, "TX");
   } finally {
@@ -122,8 +126,9 @@ test("end to end: a terms link to a same-origin page with a governing-law clause
   }
 });
 
-test("a legal link to a different origin is never followed", async () => {
-  const server = createServer((_req, res) => {
+test("a legal link to a different origin is never followed, even though same-origin /about and /contact still are", async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/about" || req.url === "/contact") { res.writeHead(404); return res.end(); }
     res.writeHead(200, { "content-type": "text/html" });
     res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><a href="https://example.com/terms">Terms of Service</a><p>${"body copy ".repeat(40)}</p></body></html>`);
   });
@@ -135,8 +140,90 @@ test("a legal link to a different origin is never followed", async () => {
         Promise<{ evidence: Array<{ key: string; url: string }>; scan: { detected_region_code: string | null } }>;
     };
     const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
-    assert.ok(!result.evidence.some((e) => e.key === "legal_page"), "a cross-origin legal link must never be fetched");
+    assert.ok(!result.evidence.some((e) => e.url.startsWith("https://example.com")), "a cross-origin legal link must never be fetched");
+    // The fixed /about and /contact fallback still runs, same-origin, and finds nothing (404s).
+    const legalFetches = result.evidence.filter((e) => e.key.startsWith("legal_page_"));
+    assert.equal(legalFetches.length, 2);
+    assert.ok(legalFetches.every((e) => new URL(e.url).hostname === "127.0.0.1"));
     assert.equal(result.scan.detected_region_code, null);
+  } finally {
+    server.close();
+  }
+});
+
+test("end to end: an about link with a postal address is found when no privacy/terms link exists", async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/about") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<!doctype html><html><body><p>We are headquartered at 500 Pike St, Seattle, WA 98101.</p></body></html>`);
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><a href="/about">About Us</a><p>${"body copy ".repeat(40)}</p></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const mod = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ evidence: Array<{ key: string; url: string }>; scan: { detected_region_code: string | null } }>;
+    };
+    const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
+    assert.equal(result.scan.detected_region_code, "WA");
+    assert.ok(result.evidence.some((e) => e.url.endsWith("/about")), "the about page must be fetched and recorded as evidence");
+  } finally {
+    server.close();
+  }
+});
+
+test("end to end: the conventional /contact path is tried directly when no anchor points to it", async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/contact") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<!doctype html><html><body><p>Reach us: 10 Elm St, Austin, TX 78701.</p></body></html>`);
+    }
+    // No <a> anywhere pointing at /contact -- only the fixed-path fallback finds it.
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><p>${"body copy ".repeat(40)}</p></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const mod = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ scan: { detected_region_code: string | null } }>;
+    };
+    const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
+    assert.equal(result.scan.detected_region_code, "TX");
+  } finally {
+    server.close();
+  }
+});
+
+test("end to end: the follow-up is bounded at 3 fetches even with more candidates available", async () => {
+  let fetched: string[] = [];
+  const server = createServer((req, res) => {
+    fetched.push(req.url ?? "");
+    if (req.url === "/privacy" || req.url === "/about" || req.url === "/contact") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<!doctype html><html><body><p>No state mentioned here at all.</p></body></html>`);
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    // Privacy, about and contact links all present -- that alone is 3
+    // candidates before the fixed /about and /contact paths even apply.
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><a href="/privacy">Privacy</a><a href="/about">About</a><a href="/contact">Contact</a><p>${"body copy ".repeat(40)}</p></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const mod = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ evidence: Array<{ key: string }>; scan: { detected_region_code: string | null } }>;
+    };
+    fetched = [];
+    const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
+    assert.equal(result.scan.detected_region_code, null);
+    const legalFetches = result.evidence.filter((e) => e.key.startsWith("legal_page_"));
+    assert.equal(legalFetches.length, 3, "must stop at JURISDICTION_MAX_FOLLOWUPS, not fetch every candidate");
   } finally {
     server.close();
   }
@@ -144,6 +231,6 @@ test("a legal link to a different origin is never followed", async () => {
 
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.11\.0";/);
-  assert.match(engine, /1\.11\.0 adds PRIV-004 \(no Terms of Service link found/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.12\.0";/);
+  assert.match(engine, /1\.12\.0 widens the jurisdiction signal's follow-up/);
 });

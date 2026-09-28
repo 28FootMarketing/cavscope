@@ -136,7 +136,18 @@ import { extractUsState, type StateSignal } from "./legal.ts";
 // nothing had ever asked what state the site itself claims. No match writes
 // null, never a default -- see legal.ts's own header for why guessing here
 // would be worse than saying nothing.
-const ENGINE_VERSION = "http-native-1.11.0";
+//
+// 1.12.0 widens the jurisdiction signal's follow-up beyond one privacy/terms
+// link: it now also tries a same-origin "about" or "contact" link, then the
+// conventional /about and /contact paths directly, bounded at
+// JURISDICTION_MAX_FOLLOWUPS (3) fetches so a site with none of this
+// anywhere costs a fixed amount rather than five speculative requests.
+// Confirmed live on real sandbox sites on 2026-09-28: 1.11.0's single-link
+// follow-up found a state for exactly one of fourteen ad-hoc audited sites
+// (Clairen Haus, GA, matched directly on the homepage); the other thirteen,
+// including several with no plausible reason to share the sandbox org's own
+// Pennsylvania jurisdiction, detected nothing and fell back to it silently.
+const ENGINE_VERSION = "http-native-1.12.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -617,22 +628,41 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
 
     // Jurisdiction signal: which US state, if any, this site states about
     // itself -- never the scanning workspace's own state. Try the homepage
-    // first (a footer address is often there); if nothing matches, follow one
-    // same-origin privacy/terms link once and try again. Evidence is written
-    // whenever that follow-up page is fetched, whatever the verdict, which is
+    // first (a footer address is often there); if nothing matches, try up to
+    // JURISDICTION_MAX_FOLLOWUPS same-origin pages, in this order: a
+    // privacy/terms link, an "about" link, a "contact" link, then the
+    // conventional /about and /contact paths directly for a site that has
+    // neither link but does have the page. Stops at the first match. Bounded
+    // (not "every candidate") for the same reason LOGIN_HOPS and MAX_HOPS
+    // are bounded elsewhere in this file: a site with none of this anywhere
+    // must not turn one scan into five speculative fetches. Evidence is
+    // written for every page actually fetched, whatever the verdict, which is
     // what proves this code ran on a scan that shows no state either.
     legalState = extractUsState(html);
     if (!legalState.code) {
-      const legalHref = privacy ? privacyHref(anchors.find((m) => /privacy/i.test(privacyHref(m)) || /privacy/i.test(stripTags(m[1])))!)
-        : termsAnchor ? privacyHref(termsAnchor) : null;
-      if (legalHref) {
+      const JURISDICTION_MAX_FOLLOWUPS = 3;
+      const findHref = (re: RegExp) => {
+        const m = anchors.find((a) => re.test(privacyHref(a)) || re.test(stripTags(a[1])));
+        return m ? privacyHref(m) : null;
+      };
+      const legalHref = privacy ? findHref(/privacy/i) : (termsAnchor ? privacyHref(termsAnchor) : null);
+      const candidates = [legalHref, findHref(/\babout\b/i), findHref(/\bcontact\b/i), "/about", "/contact"]
+        .filter((c): c is string => !!c);
+
+      const tried = new Set<string>();
+      let followups = 0;
+      for (const href of candidates) {
+        if (legalState.code || followups >= JURISDICTION_MAX_FOLLOWUPS) break;
         let legalUrl: URL | null = null;
-        try { legalUrl = new URL(legalHref, finalUrl); } catch { legalUrl = null; }
-        if (legalUrl && legalUrl.hostname.toLowerCase() === host) {
-          const legalPage = await fetchOnce(legalUrl.toString(), "GET");
-          await ev({ key: "legal_page", kind: "html_excerpt", url: legalUrl.toString(), http_status: legalPage.status, content_type: legalPage.contentType, response_ms: legalPage.ms, headers: null, excerpt: legalPage.body.slice(0, 4000), byte_length: legalPage.bytes }, legalPage.body || String(legalPage.status));
-          if (legalPage.status === 200 && legalPage.body) legalState = extractUsState(legalPage.body);
-        }
+        try { legalUrl = new URL(href, finalUrl); } catch { continue; }
+        if (legalUrl.hostname.toLowerCase() !== host) continue;
+        const key = legalUrl.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+        if (tried.has(key)) continue;
+        tried.add(key);
+        followups += 1;
+        const legalPage = await fetchOnce(legalUrl.toString(), "GET");
+        await ev({ key: `legal_page_${followups}`, kind: "html_excerpt", url: legalUrl.toString(), http_status: legalPage.status, content_type: legalPage.contentType, response_ms: legalPage.ms, headers: null, excerpt: legalPage.body.slice(0, 4000), byte_length: legalPage.bytes }, legalPage.body || String(legalPage.status));
+        if (legalPage.status === 200 && legalPage.body) legalState = extractUsState(legalPage.body);
       }
     }
 
