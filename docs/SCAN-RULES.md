@@ -250,18 +250,29 @@ consumer-trust signal, not a compliance mandate. Added inactive by migration
 
 **The same migration adds a jurisdiction signal, unrelated to scoring.**
 `supabase/functions/muster-scan/legal.ts`'s `extractUsState()` reads a governing-law
-clause or postal address a site states about *itself* -- from the homepage, or from one
-same-origin privacy/terms page it follows when the homepage has neither -- and writes it
-to `websites.detected_country_code` / `detected_region_code`. `q_sitrep_jurisdiction` now
-prefers those columns over the scanning organization's own `country_code`/`region_code`,
-falling back to the organization's when a website has not detected one. This fixes a real
-defect, not a hypothetical one: every site parked in the admin sandbox org via "Run a URL
-scan" shared that org's single `region_code` (`PA`), so a YMCA actually in Hanover, PA and
-an unrelated SaaS with no Pennsylvania presence at all got the identical PA Act 35 citation
-in their jurisdiction section. No match ever writes a guess -- `code: null` stays null, and
-the fallback to the organization's own jurisdiction is deliberate, not a default to "PA" or
-"US". `tests/scan/legal.test.ts` pins the extraction rules, the same-origin-only follow, and
-the never-guess behavior end to end.
+clause or postal address a site states about *itself* -- from the homepage, then, if
+neither is there, up to `JURISDICTION_MAX_FOLLOWUPS` (3) same-origin pages it tries in
+order: a privacy/terms link, an "about" link, a "contact" link, then the conventional
+`/about` and `/contact` paths directly for a site that has the page but no link to it --
+and writes the result to `websites.detected_country_code` / `detected_region_code`.
+`q_sitrep_jurisdiction` now prefers those columns over the scanning organization's own
+`country_code`/`region_code`, falling back to the organization's when a website has not
+detected one. This fixes a real defect, not a hypothetical one: every site parked in the
+admin sandbox org via "Run a URL scan" shared that org's single `region_code` (`PA`), so a
+YMCA actually in Hanover, PA and an unrelated SaaS with no Pennsylvania presence at all got
+the identical PA Act 35 citation in their jurisdiction section. No match ever writes a
+guess -- `code: null` stays null, and the fallback to the organization's own jurisdiction
+is deliberate, not a default to "PA" or "US". `tests/scan/legal.test.ts` pins the
+extraction rules, the same-origin-only follow, the 3-fetch bound, and the never-guess
+behavior end to end.
+
+**Confirmed against real sites, not just the test suite.** Rescanning all fourteen
+websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/terms-link
+version) found a state for exactly one: Clairen Haus, Georgia, matched directly on its
+homepage. The other thirteen -- several with no plausible reason to share the sandbox
+org's own Pennsylvania jurisdiction -- detected nothing and fell back to it silently,
+which is why `1.12.0` widened the follow-up to about/contact pages rather than stopping at
+one link.
 
 ## Governance — 8 rules, all active
 
