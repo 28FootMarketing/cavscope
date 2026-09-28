@@ -12,7 +12,7 @@ the way this breaks silently.
 | Reaches Resend via | **custom SMTP** (`smtp.resend.com`) | **Resend REST API** (`POST /emails`) |
 | Templates live in | Supabase project config — sourced from [`supabase/auth-email-templates/`](../supabase/auth-email-templates/) | the edge function (`alertHtml()`) |
 | Links controlled by | Supabase **Site URL** + **redirect allowlist** | `MUSTER_APP_URL` env |
-| From | `noreply@mail.muster.partners` | `alerts@mail.muster.partners` (`MUSTER_ALERT_FROM`) |
+| From | `noreply@mail.muster.partners` | `alerts@mail.cavscope.28footsystems.com` (`MUSTER_ALERT_FROM`) |
 
 **The trap:** magic-link and password-reset emails are *not* sent by this codebase and cannot be
 made to use a Resend template. GoTrue renders and sends them itself. A Resend template named
@@ -230,7 +230,7 @@ Edge Function secrets (Supabase dashboard → Edge Functions → Secrets):
 | Secret | Required | Default |
 |---|---|---|
 | `RESEND_API_KEY` | **yes** | none — without it every claimed row resolves `failed` with that exact reason, nothing is lost |
-| `MUSTER_ALERT_FROM` | no | `MUSTER Alerts <alerts@mail.muster.partners>` |
+| `MUSTER_ALERT_FROM` | no | `CavScope Alerts <alerts@mail.cavscope.28footsystems.com>` (2026-09-26 — was `mail.muster.partners`; a real recipient asked why an email display-named "CavScope Alerts" was arriving from a `muster.partners` address. Switched once `mail.cavscope.28footsystems.com` came back fully verified in Resend, independent of the main site's own DNS cutover.) |
 | `MUSTER_APP_URL` | no | `https://app.muster.partners/app` |
 | `MUSTER_ALERT_REPLY_TO` | no | unset — falls back to `MUSTER_SUPPORT_EMAIL` |
 | `MUSTER_SUPPORT_EMAIL` | no | unset — the alert footer then names no support address at all |
@@ -299,10 +299,22 @@ Additional Edge Function secret:
 |---|---|---|
 | `RESEND_WEBHOOK_SECRET` | **yes, for tracking** | the `whsec_...` Resend shows when the endpoint is created. Without it the function answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. |
 
-`risk_opened` is currently the **only** category the outbox accepts — the table's check
-constraint permits nothing else. A SITREP-ready notification, a scan-complete digest, or a
-welcome email are not "configuration"; each needs a migration to widen that constraint plus
-something that actually enqueues rows. None exist yet, and none are pretended to.
+`category` is a foreign key into `muster.notification_categories` (added `muster_112`) rather than a
+hardcoded CHECK -- adding a category is a registry insert plus a `CATEGORY_META` entry in
+`muster-alert-dispatch`, not a constraint edit; see `docs/EMAIL-INVENTORY.md`'s "Architecture"
+section. Four are registered today: `risk_opened`, `sitrep_ready`, `workspace_created`,
+`website_added`. `sitrep_ready` was added 2026-09-26 (`muster_110`):
+`public.muster_engine_sitrep()` enqueues it after every scan's SITREP is generated, gated behind
+`organizations.sitrep_ready_alerts_enabled` (off by default -- `muster_111` replaced an initial
+feature-flag-based gate with this plain column once it turned out `feature_flag_overrides` is
+writable only from the super-admin console, so nothing let a tenant turn it on themselves). An
+executive toggles it, and sets `sitrep_recipients`, from **Team & Settings** in `app.html` -- see
+`docs/EMAIL-INVENTORY.md`. `workspace_created` and `website_added` (`muster_112`, same day) enqueue
+from `muster.do_onboard()` and `muster.do_add_website()` respectively -- the latter suppressed for
+onboarding's own internal call, so adding a website during onboarding does not also fire a second
+email for the same action. A subscription-activated email is not "configuration"; it still needs an
+existing-org upgrade path that does not exist yet
+either. See `docs/EMAIL-INVENTORY.md`'s "Real gaps, not yet built" for what is and is not there.
 
 ## Password reset, end to end
 

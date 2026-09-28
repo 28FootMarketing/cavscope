@@ -119,14 +119,21 @@ test("the links to the console are hidden until a super admin is confirmed", () 
 
 test("a super admin landing on /app goes to the console, but a fragment keeps them", () => {
   const lw = app.slice(app.indexOf("async loadWorkspace() {"), app.indexOf("tenantFromOrg(o) {"));
-  assert.match(lw, /if \(this\.ws\.is_super_admin && !this\._landed\)/, "the redirect must run once, not on every reload");
-  assert.match(lw, /const m = \/\^tenant=\(\\d\+\)\$\/\.exec\(hash\);/);
-  assert.match(lw, /\} else if \(!hash\) \{\n\s*location\.replace\(location\.origin \+ '\/admin'\);/);
+  assert.match(lw, /if \(!this\._landed\)/, "the fragment check must run once, not on every reload");
+  assert.match(lw, /const m = this\.ws\.is_super_admin \? \/\^tenant=\(\\d\+\)\$\/\.exec\(hash\) : null;/);
+  assert.match(lw, /\} else if \(this\.ws\.is_super_admin && !hash\) \{\n\s*location\.replace\(location\.origin \+ '\/admin'\);/);
   assert.match(lw, /await this\.openTenant\(pendingTenant\)/);
   // admin.html's two ways back into the app both carry a fragment, so neither
   // bounces straight back here.
   assert.match(admin, /href="\/app#tenant=\$\{Number\(o\.id\)\}"/);
   assert.match(admin, /class="strip-cta" href="\/app#overview"/);
+});
+
+test("an ordinary view fragment (from a transactional email CTA) opens that view once on load", () => {
+  const lw = app.slice(app.indexOf("async loadWorkspace() {"), app.indexOf("tenantFromOrg(o) {"));
+  assert.match(lw, /hash && \/\^\[a-z\]\+\$\/i\.test\(hash\) && document\.querySelector\(`#mainNav button\[data-view="\$\{hash\}"\]`\)/);
+  assert.match(lw, /pendingView = hash;/);
+  assert.match(lw, /else if \(pendingView\) showView\(pendingView\);/);
 });
 
 test("changes that reach other people ask first", () => {

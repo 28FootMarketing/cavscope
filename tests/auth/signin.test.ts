@@ -180,7 +180,7 @@ test("the magic-link request never creates an account", () => {
 test("both link types end on the same neutral confirmation", () => {
   const src = html.slice(html.indexOf("function showSent"), html.indexOf("function startResendCooldown"));
   assert.match(src, /Check your email for your secure sign-in link/);
-  assert.match(src, /has a MUSTER account/);
+  assert.match(src, /has a CavScope account/);
 });
 
 test("request failures are swallowed rather than reported to the user", () => {

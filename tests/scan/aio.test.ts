@@ -116,6 +116,6 @@ test("end to end: a bare SPA raises all three; a prepared site raises none", asy
 
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.8\.0";/);
-  assert.match(engine, /1\.8\.0 adds GOV-006 \(no llms\.txt\), GOV-007/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.10\.0";/);
+  assert.match(engine, /1\.10\.0 adds GOV-006 \(no llms\.txt\), GOV-007/);
 });

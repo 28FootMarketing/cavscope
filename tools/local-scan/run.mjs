@@ -1,5 +1,5 @@
 /**
- * Run the MUSTER scan engine against a URL from a terminal, with no database.
+ * Run the CavScope scan engine against a URL from a terminal, with no database.
  *
  *   node --experimental-strip-types tools/local-scan/run.mjs https://example.com
  *   node --experimental-strip-types tools/local-scan/run.mjs https://example.com --json out.json
@@ -72,7 +72,7 @@ const band = postureBand(score);
 const counts = countBySeverity(findings);
 
 const pad = (s, n) => String(s).padEnd(n);
-console.log(`MUSTER local scan  engine ${engine.ENGINE_VERSION}`);
+console.log(`CavScope local scan  engine ${engine.ENGINE_VERSION}`);
 console.log(`target       ${url.href}`);
 console.log(`final url    ${result.final_url}`);
 console.log(`http         ${result.scan.http_status ?? "no response"}  ${result.scan.response_ms} ms`);

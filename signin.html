@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Sign in to your MUSTER workspace." />
-  <title>MUSTER — Sign In</title>
+  <meta name="description" content="Sign in to your CavScope workspace." />
+  <title>CavScope — Sign In</title>
   <link rel="canonical" href="https://app.muster.partners/">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
@@ -64,6 +64,76 @@
       --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
 
@@ -172,7 +242,7 @@
 
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SIGN IN</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/cavscope-emblem.png" alt="" width="160" height="160">CavScope <small>/ SIGN IN</small></div>
     </div>
   </div>
 
@@ -201,7 +271,7 @@
         </form>
         <p class="signin-alt"><a href="#" onclick="showResetRequest(); return false;" data-tooltip="Emails you a link to choose a new password. Use this if you have a password but cannot remember it.">Forgot your password?</a></p>
         <div class="signin-footer">
-          <p>New to MUSTER? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=MUSTER%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
+          <p>New to CavScope? Self-serve signup is paused right now — <a href="mailto:sales@28footsystems.com?subject=CavScope%20Interest" data-tooltip="Emails us to get your organization provisioned.">contact us</a> to get set up.</p>
           <p><a href="/app" data-tooltip="Opens the workspace with sample data, no sign-in required.">Just exploring? Continue with demo data →</a></p>
         </div>
       </div>
@@ -210,7 +280,7 @@
     <div id="resetState" hidden>
       <div class="signin-card">
         <h1>Reset your password</h1>
-        <p class="signin-desc">Enter the email address on your MUSTER account. We will send you a link that lets you choose a new password. The link is single-use and expires.</p>
+        <p class="signin-desc">Enter the email address on your CavScope account. We will send you a link that lets you choose a new password. The link is single-use and expires.</p>
         <form id="resetForm" onsubmit="return submitResetRequest(event)">
           <label for="rsEmail">Work email</label>
           <input type="email" id="rsEmail" required autocomplete="email" placeholder="you@company.com"
@@ -247,7 +317,7 @@
 
     <div id="sentState" class="center-msg" hidden>
       <h1>Check your email</h1>
-      <p id="sentMsg">If that address has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.</p>
+      <p id="sentMsg">If that address has a CavScope account, a sign-in link is on its way. Open it on this device to finish signing in.</p>
       <p id="resendMsg" role="status" aria-live="polite" style="margin-top:12px; font-size:12.5px; color:var(--text-dim);" hidden></p>
       <p style="margin-top:14px;">
         <button type="button" id="resendLink" class="btn-linklike" onclick="resendLast()" data-tooltip="Send the link again. Nothing arrives instantly; give it a minute and check spam before resending.">Resend link</button>
@@ -553,12 +623,12 @@
 
   // One message for every outcome. Whether the address exists, was rate
   // limited, or was never registered, the page says the same thing -- so this
-  // form cannot be used to test which addresses have MUSTER accounts.
+  // form cannot be used to test which addresses have CavScope accounts.
   function showSent(kind, email) {
     lastRequest = { kind, email };
     document.getElementById('sentMsg').textContent = kind === 'reset'
-      ? `Check your email for your password-reset link. If ${email} has a MUSTER account, one is on its way. Open it on this device to choose a new password.`
-      : `Check your email for your secure sign-in link. If ${email} has a MUSTER account, one is on its way. Open it on this device to finish signing in.`;
+      ? `Check your email for your password-reset link. If ${email} has a CavScope account, one is on its way. Open it on this device to choose a new password.`
+      : `Check your email for your secure sign-in link. If ${email} has a CavScope account, one is on its way. Open it on this device to finish signing in.`;
     showState('sentState');
     startResendCooldown();
   }

@@ -63,7 +63,7 @@ const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  *
  *   - The success case mints a session, which is immediately revoked below.
  *   - The failure case (the good case) records a failed password attempt for
- *     this account, from this function's IP rather than the user's. At MUSTER's
+ *     this account, from this function's IP rather than the user's. At CavScope's
  *     size that is nothing; if GoTrue's token-endpoint rate limit is ever
  *     tightened, this is the call that will hit it first.
  *

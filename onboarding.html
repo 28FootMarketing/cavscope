@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER guided onboarding — a server-enforced, seven-step setup for your workspace." />
-  <title>MUSTER — Guided Onboarding</title>
+  <meta name="description" content="CavScope guided onboarding — a server-enforced, seven-step setup for your workspace." />
+  <title>CavScope — Guided Onboarding</title>
   <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
        pointing at a URL that redirects is worse than none. -->
-  <link rel="canonical" href="https://www.muster.partners/onboarding">
+  <link rel="canonical" href="https://cavscope.28footsystems.com/onboarding">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -66,6 +66,76 @@
       --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
 
@@ -208,7 +278,7 @@
 
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ GUIDED ONBOARDING</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/cavscope-emblem.png" alt="" width="160" height="160">CavScope <small>/ GUIDED ONBOARDING</small></div>
     </div>
   </div>
 
@@ -220,13 +290,13 @@
 
     <div id="noSessionState" class="center-msg" hidden>
       <h1>Onboarding link required</h1>
-      <p>Open the invite link from your email to begin. If you've lost it, contact whoever set up your MUSTER workspace.</p>
+      <p>Open the invite link from your email to begin. If you've lost it, contact whoever set up your CavScope workspace.</p>
     </div>
 
     <div id="noOnboardingState" class="center-msg" hidden>
       <h1>Nothing to onboard</h1>
       <p>Your onboarding is already complete, or there's no guided setup in progress for this account.</p>
-      <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+      <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real CavScope workspace.">Go to your workspace →</a>
     </div>
 
     <div id="fatalState" class="center-msg" hidden>
@@ -236,7 +306,7 @@
 
     <div id="onboardingRoot" hidden>
       <div class="onboarding-grid">
-        <aside class="stepper" id="stepper" data-tooltip="Your progress. Each step unlocks only once the one before it is verified server-side — this isn't a checklist you can skip ahead on."></aside>
+        <aside class="stepper" id="stepper" data-tooltip="Your progress. Each step unlocks only once the one before it is verified server-side — this isn't a checklist you can skip ahead on." tabindex="0"></aside>
         <div class="step-panel" id="stepPanel"></div>
       </div>
     </div>
@@ -331,7 +401,7 @@
       const isCurrent = cur && cur.key === s.key;
       const status = done ? 'done' : (isCurrent ? 'current' : 'locked');
       const tip = done ? 'Completed.' : (isCurrent ? 'You are here.' : 'Locked until the earlier steps are complete.');
-      return `<div class="stepper-item stepper-${status}" data-tooltip="${escapeHtml(tip)}">
+      return `<div class="stepper-item stepper-${status}" data-tooltip="${escapeHtml(tip)}" tabindex="0">
         <span class="stepper-dot">${done ? '✓' : s.step_no}</span>
         <span class="stepper-label">${escapeHtml(s.title)}</span>
       </div>`;
@@ -424,7 +494,7 @@
       <div class="step-card">
         <h2>Step 3 of 7 — Verify you own the website</h2>
         <p class="step-desc">Paste this exact tag into the <code>&lt;head&gt;</code> of <strong>${escapeHtml(w.url || '')}</strong>, then click Verify. Scanning stays off until this passes.</p>
-        <div class="code-block" data-tooltip="Copy this tag exactly, including the quotes, into your site's <head>.">
+        <div class="code-block" data-tooltip="Copy this tag exactly, including the quotes, into your site's <head>." tabindex="0">
           <code id="verifyTag">${escapeHtml(tag)}</code>
           <button type="button" class="btn-ghost" onclick="copyVerifyTag()" data-tooltip="Copies the tag above to your clipboard.">⧉ Copy</button>
         </div>
@@ -470,7 +540,7 @@
     return `
       <div class="step-card">
         <h2>Step 4 of 7 — Set your risk appetite</h2>
-        <p class="step-desc">This defines what MUSTER treats as acceptable exposure for your organization.</p>
+        <p class="step-desc">This defines what CavScope treats as acceptable exposure for your organization.</p>
         <form onsubmit="return submitAppetite(event)">
           <label for="raStatement">Risk appetite statement <span class="hint" id="raCount">(min 40 characters)</span></label>
           <textarea id="raStatement" rows="4" required
@@ -558,7 +628,7 @@
       <div class="step-card">
         <h2>Step 6 of 7 — Run your first scan</h2>
         <p class="step-desc" id="scanStatus">Queuing your first scan…</p>
-        <div class="scan-pulse" data-tooltip="MUSTER is fetching and checking your site right now. This usually takes under two minutes."></div>
+        <div class="scan-pulse" data-tooltip="CavScope is fetching and checking your site right now. This usually takes under two minutes." tabindex="0"></div>
       </div>`;
   }
   function clearScanPoll() {
@@ -611,7 +681,7 @@
             ${['critical', 'high', 'medium', 'low', 'info'].filter(s => bySev[s]).map(s => `<span class="sev-chip sev-${s}">${bySev[s]} ${s}</span>`).join('') || '<span class="sev-chip sev-low">0 open findings</span>'}
           </div>
           ${board && board.claims && board.claims.length ? `<div class="claim-list">${board.claims.slice(0, 5).map(c => `<div class="claim">${escapeHtml(c.text)}</div>`).join('')}</div>` : ''}
-          <p class="step-desc" style="margin-top:4px;" data-tooltip="One number from 0-100 summarizing exposure across all open findings. Higher is safer.">Posture score: <strong style="color:var(--text);">${sitrep.posture_score ?? '—'}/100</strong> (${escapeHtml(sitrep.posture_band || 'unknown')})</p>
+          <p class="step-desc" style="margin-top:4px;" data-tooltip="One number from 0-100 summarizing exposure across all open findings. Higher is safer." tabindex="0">Posture score: <strong style="color:var(--text);">${sitrep.posture_score ?? '—'}/100</strong> (${escapeHtml(sitrep.posture_band || 'unknown')})</p>
         ` : `<p class="step-desc">Scan complete — ${summary.new ?? 0} new finding(s), ${summary.resolved ?? 0} resolved. Your full report is generating; it will be in your workspace shortly.</p>`}
         <label class="ack-row"><input type="checkbox" id="ackBox"> I've read this SITREP</label>
         <div class="step-msg" id="sitrepMsg"></div>
@@ -629,7 +699,7 @@
       <div class="step-card done-card">
         <h2>You're all set</h2>
         <p class="step-desc">Onboarding is complete. Your workspace is live and scanning on the cadence you set.</p>
-        <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real MUSTER workspace.">Go to your workspace →</a>
+        <a class="btn-primary" href="https://app.muster.partners/app" data-tooltip="Opens your real CavScope workspace.">Go to your workspace →</a>
       </div>`;
   }
 

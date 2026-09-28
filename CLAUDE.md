@@ -1,4 +1,27 @@
-# MUSTER — standing rules for this repo
+# CavScope (repo/internal codename: MUSTER) — standing rules for this repo
+
+## Brand: CavScope is the product; MUSTER is the internal codename
+
+This repo builds the product now marketed as **CavScope, Web Assurance by 28 Foot
+Systems**, at `https://cavscope.28footsystems.com/`. `MUSTER` was the product's previous
+customer-facing name and is now the internal codename this repo, its Postgres schema,
+every `muster_*` RPC and `muster-*` edge function, its migration filenames, and the
+`muster.partners` / `*.muster.28footsystems.com` hostnames are still built and named
+after -- deliberately, not as an oversight. Renaming those would touch live production
+data, deployed API contracts (`x-muster-api-key`, `mk_` key prefixes), and DNS/Supabase
+config with no customer-visible benefit; see `docs/BRAND-CUTOVER.md` for the full
+reasoning, what already changed in this repo, and the handful of things that still need
+a dashboard, DNS or Notion change outside it.
+
+**Reading the rest of this file:** every rule below was written under the MUSTER name and
+is left as originally written, because it is a historical and technical record --
+migration headers, verified live-config values (a Site URL, an SMTP sender name, an
+`ENGINE_VERSION` string) and war stories about what actually shipped and when. Where you
+see `MUSTER` used as the product's customer-facing name in prose below, read it as
+`CavScope` -- the two files documenting the actual current split are `docs/BRAND-CUTOVER.md`
+(what changed, what didn't, why) and this section. Where `MUSTER` appears as part of an
+identifier (`muster.foo`, `muster_bar`, `muster-baz`, a hostname, a migration filename), it
+is unchanged and still means exactly what it always meant.
 
 ## Tooltips are mandatory on every page
 
@@ -18,6 +41,21 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   accessible (keyboard focus, Escape to dismiss, `aria-describedby`) delegated-event tooltip system with
   no external library.
 - Verify with `node --check` after editing (extract the inline `<script>` block first) before committing.
+- **A `data-tooltip` only reaches a keyboard or screen-reader user if the element it sits on is
+  focusable.** The engine shows on `focusin` as well as `mouseover`, but a plain `<span>`, `<div>`,
+  `<td>`, `<p>`, `<h2>`, `<aside>`, `<summary>` or `<footer>` is not part of the tab order on its
+  own, so tabbing through the page skips straight over it. An end-to-end keyboard sweep on
+  2026-09-23 found 148 such elements across every page except `signin.html` — a defect nothing
+  caught because every existing test read the source for the attribute's presence, not for whether
+  the tag carrying it could ever receive focus, and because a page like `admin.html` never
+  render-completes without a live Supabase client, so a browser-only check that only inspects the
+  DOM after load never sees the template-generated rows that carried most of them. **A new
+  `data-tooltip` on a non-interactive tag needs `tabindex="0"`** unless the element is genuinely
+  `disabled` (correctly out of the tab order regardless) or it is a `<label for="...">` — there,
+  move the tooltip onto the labelled control itself (see `signin.html`'s inputs, or `sitrep.html`'s
+  `authEmail`/`authPassword` fields after the fix) rather than adding a redundant tab stop right
+  before it. `tests/ui/tooltip-reachability.test.ts` pins this by scanning every page's raw source,
+  including inside template-literal-generated rows, for exactly that shape.
 
 ## Right-click is suppressed on every page, and it is not a security control
 
@@ -577,12 +615,56 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   not a statement that the site is secure. For a product whose whole case is not
   overclaiming, having the scope boundary anywhere except the deliverable was the
   largest gap in it.
-  **Still unrendered, deliberately:** `muster.q_sitrep_jurisdiction` runs on every
-  generation and its output is stored in `sections.jurisdiction` -- 13 laws for
-  website 11, 6 needing attention, scoped to US-PA, carrying its own counsel
-  disclaimer -- and **nothing renders it**, not the markdown and not the viewer. That
-  is the most sellable content in the payload sitting dark. It is a product decision
-  rather than a rendering bug, so it was left alone rather than shipped unasked.
+  **The jurisdiction section renders as of 2026-09-23** (migration `20260923015214`, `muster_082`).
+  `muster.q_sitrep_jurisdiction` had run on every report since `046` and nothing displayed it. It
+  could not be printed as-is: its `status` says `clear` for "no open finding on a mapped rule",
+  and six of the YMCA's thirteen laws (CAN-SPAM, TCPA, C2PA, ISO 42001, the OECD principles, PA
+  Act 35) map to **no rule at all**, so "CAN-SPAM: clear" would have been a pass on something
+  the engine cannot look at. Each law now carries an `assessment` -- `open_findings`,
+  `no_open_findings`, or `not_assessed` (no mapped rule, **or** an unread scan) -- decided once
+  by `muster.sitrep_jurisdiction_assess` and stored in `sections.jurisdiction`. Both the
+  markdown (`muster.sitrep_jurisdiction_md`) and `sitrep.html` read that field and never derive
+  a bucket from `status`; `tests/sitrep/jurisdiction.test.ts` runs the viewer's real renderer
+  against the negative cases. Every law is shown with its "applies when" condition and the
+  payload's own disclaimer leads the section, because a list of statutes under a client's name
+  reads as a determination that they apply. **Never render the word "clear" or "compliant"
+  here**, and never add a law to the "no open findings" bucket that has no mapped rule.
+  `sitrep.html` also gained the scope note ("What This Scan Did Not Check") in the same change;
+  it had been in the markdown since `077` and missing from the viewer, which is the rule above
+  broken in the other direction. Rendering it exposed two catalogue defects, repaired by
+  `20260923044416` (`muster_085` -- renumbered from `083` on 2026-09-23 when two migrations
+  applied directly against the live project, with no file here, turned out to have the true claim
+  to `083`/`084` by version; see `supabase/migrations/README.md`): all 83 AI-governance rows
+  carried `applies_when` as a raw tag
+  list ("Covers: highrisk, companion, text, media"), now one plain sentence each saying the law
+  applies **only if** the organization uses AI in that way; and BPINA's reference URL ended in a
+  stray period. The four tags are defined nowhere in the repo, so their meaning was read off the
+  laws carrying them and the mapping is in that migration's header. **`text` means general AI
+  use**, confirmed by the owner on 2026-09-23 -- which is why it also tags algorithmic-pricing
+  laws, and why it is rendered as broad public-facing AI use rather than "generates text". The
+  migration header still calls this an inference; it predates the confirmation and cannot be
+  edited, because the file must match what the ledger recorded. A new catalogue row must be written as a sentence -- the migration
+  asserts no `Covers:` value survives, but nothing stops one being inserted later.
+- **The report is a template emitted by Postgres, and every page renders it.** As of 2026-09-25
+  (migration `20260925200050`, `muster_109`) `sections.report` on every SITREP carries the header
+  block, the metrics, control coverage (`muster.sitrep_controls`), the section list each report
+  shows in order (`profiles.client`, `profiles.board`) and the disclaimer. `app.html`'s Plain
+  English (client) and Board & Committee (company) reports are one renderer, `renderReport()`,
+  walking a profile's section list; `sitrep.html` reads the same payload; the markdown gained
+  `## Controls` in the same migration. **A page decides how a section looks, never which
+  sections a report has.** To add a section: emit it from `generate_sitrep`, name it in the
+  profile(s) in `sitrep_report_model`, add a `case` to `renderReportSection` in `app.html`, a
+  block in `sitrep.html` and a heading in the markdown -- `tests/sitrep/report-template.test.ts`
+  fails on any of those left out, and a key the template names that `app.html` cannot draw renders
+  as a visible notice rather than nothing. Until this change the two workspace reports were demo
+  scaffolds with hardcoded copy ("Q3 Standing Brief") and different headers, a signed-in tenant got
+  a findings list under one and raw markdown under the other, and the client report printed as an
+  empty page because its print rule named `#plainReportView`, an id that never existed. Demo mode
+  renders `SAMPLE_SITREP` (fictional, Northstar Fintech) through the same renderer, and the test
+  pins its profiles to SQL's, so a prospect sees the document shape a customer gets. Branding comes
+  from `getActiveBrand()` into the report's own header and footer; white-label hides the MUSTER
+  line, co-branded says "with MUSTER". The finding status and promote controls in the client
+  report's Findings table are workspace actions, marked `.no-print`, and never reach paper.
 - **A tenant's own LLM is resolved from the website being narrated, never from the API key.**
   `muster.org_llm_config` (migrations `069`/`070`, wired by `071`) holds one endpoint, model and
   Vault-stored key per organization, and `muster-agent` uses it for `ai_narrative` and the agent

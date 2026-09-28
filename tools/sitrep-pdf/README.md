@@ -10,7 +10,7 @@ reader can trace any sentence back to the evidence it was derived from.
 ```bash
 pip install reportlab
 psql "$MUSTER_DB_URL" -At -f export.sql -v sitrep_id=16 > sitrep-16.json
-python3 render.py sitrep-16.json MUSTER-SITREP.pdf
+python3 render.py sitrep-16.json CavScope-SITREP.pdf
 ```
 
 `export.sql` is the query; it takes `:sitrep_id` and emits the exact JSON shape

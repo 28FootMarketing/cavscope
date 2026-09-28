@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="What MUSTER collects, who processes it, and why — written from what the code actually does." />
-  <title>Privacy — MUSTER</title>
-  <link rel="canonical" href="https://www.muster.partners/privacy">
+  <meta name="description" content="What CavScope collects, who processes it, and why — written from what the code actually does." />
+  <title>Privacy — CavScope</title>
+  <link rel="canonical" href="https://cavscope.28footsystems.com/privacy">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -62,6 +62,76 @@
       --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
     * { box-sizing: border-box; }
@@ -175,17 +245,17 @@
 <div class="wrap">
 
   <header class="masthead">
-    <a class="brand" href="/" data-tooltip="Back to the MUSTER home page.">MUSTER</a>
-    <div class="kicker" data-tooltip="Operated by After Today, LLC, doing business as 28 Foot Systems, in Hanover, Pennsylvania.">After Today, LLC — DBA 28 Foot Systems</div>
+    <a class="brand" href="/" data-tooltip="Back to the CavScope home page.">CavScope</a>
+    <div class="kicker" data-tooltip="Operated by After Today, LLC, doing business as 28 Foot Systems, in Hanover, Pennsylvania." tabindex="0">After Today, LLC — DBA 28 Foot Systems</div>
   </header>
 
   <h1>Privacy</h1>
-  <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does.">Last updated 8 September 2026</p>
+  <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does." tabindex="0">Last updated 8 September 2026</p>
 
-  <p class="lead">This describes what MUSTER collects, who else it passes through, and why. It is written from what the software actually does, not from a template.</p>
+  <p class="lead">This describes what CavScope collects, who else it passes through, and why. It is written from what the software actually does, not from a template.</p>
 
   <div class="note">
-    <div class="note-title" data-tooltip="Read this before relying on this page for a compliance answer.">Scope of this page</div>
+    <div class="note-title" data-tooltip="Read this before relying on this page for a compliance answer." tabindex="0">Scope of this page</div>
     <p>This is a factual disclosure of current data practices. It is <strong>not</strong> a lawyer-reviewed privacy policy and it does not attempt to state your rights under GDPR, UK GDPR, CCPA or any other regime. If you need a contractual or regulatory answer — a DPA, a subprocessor list with contractual guarantees, a retention commitment, a data-subject request procedure — ask us and we will route it to counsel rather than answer it here.</p>
   </div>
 
@@ -196,9 +266,9 @@
     <table>
       <thead><tr><th>Who</th><th>Why your browser contacts them</th></tr></thead>
       <tbody>
-        <tr><td data-tooltip="Google Fonts serves the typefaces this page uses.">Google Fonts</td><td>The stylesheet and font files for the typefaces on this page.</td></tr>
-        <tr><td data-tooltip="jsDelivr is a public CDN. It serves the Supabase JavaScript client used to read live pricing.">jsDelivr</td><td>The Supabase JavaScript client bundle.</td></tr>
-        <tr><td data-tooltip="Vercel hosts and serves these pages, so it necessarily handles the request.">Vercel</td><td>Hosts and serves these pages. Standard server request logs.</td></tr>
+        <tr><td data-tooltip="Google Fonts serves the typefaces this page uses." tabindex="0">Google Fonts</td><td>The stylesheet and font files for the typefaces on this page.</td></tr>
+        <tr><td data-tooltip="jsDelivr is a public CDN. It serves the Supabase JavaScript client used to read live pricing." tabindex="0">jsDelivr</td><td>The Supabase JavaScript client bundle.</td></tr>
+        <tr><td data-tooltip="Vercel hosts and serves these pages, so it necessarily handles the request." tabindex="0">Vercel</td><td>Hosts and serves these pages. Standard server request logs.</td></tr>
       </tbody>
     </table>
   </div>
@@ -209,7 +279,7 @@
   <p>We do not ask for, and the software has no field for, a date of birth, a government identifier, a physical address, or a phone number.</p>
 
   <h2>What a scan collects</h2>
-  <p>MUSTER assesses a website you tell it to assess. It requests pages the same way any anonymous visitor would, identifying itself as <code>MUSTER-Scanner/1.0</code>, and it resolves public DNS records for the domain. It does not sign in, does not submit forms, and does not attempt to access anything a visitor could not reach.</p>
+  <p>CavScope assesses a website you tell it to assess. It requests pages the same way any anonymous visitor would, identifying itself as <code>CavScope-Scanner/1.0</code>, and it resolves public DNS records for the domain. It does not sign in, does not submit forms, and does not attempt to access anything a visitor could not reach.</p>
   <p>What it stores as evidence for each finding:</p>
   <ul>
     <li>HTTP response headers and status codes</li>
@@ -224,17 +294,17 @@
     <table>
       <thead><tr><th>Processor</th><th>What it handles</th></tr></thead>
       <tbody>
-        <tr><td data-tooltip="Supabase hosts the Postgres database, authentication, and the edge functions that run the scan engine.">Supabase</td><td>Database, authentication, and the scan engine. Findings, evidence and account records live here.</td></tr>
-        <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts.">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
-        <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours.">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
-        <tr><td data-tooltip="Vercel hosts the web pages.">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
-        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP.">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP.</td></tr>
+        <tr><td data-tooltip="Supabase hosts the Postgres database, authentication, and the edge functions that run the scan engine." tabindex="0">Supabase</td><td>Database, authentication, and the scan engine. Findings, evidence and account records live here.</td></tr>
+        <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts." tabindex="0">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
+        <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours." tabindex="0">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
+        <tr><td data-tooltip="Vercel hosts the web pages." tabindex="0">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
+        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP." tabindex="0">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP.</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="note">
-    <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure.">Worth stating plainly</div>
+    <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure." tabindex="0">Worth stating plainly</div>
     <p>Generating the narrative section of a SITREP sends the findings for that scan — rule identifiers, severities, page URLs and the evidence excerpts they cite — to a language model through OpenRouter. If that is unacceptable for a given engagement, say so and we will turn narrative generation off for your organization; every finding, score and SITREP is produced by the deterministic engine and stands without it.</p>
   </div>
 
@@ -246,12 +316,12 @@
 
   <h2>Contact</h2>
   <ul>
-    <li>Privacy and data questions: <a href="mailto:support@mail.muster.partners" data-tooltip="Reaches the MUSTER support inbox.">support@mail.muster.partners</a></li>
-    <li>Security vulnerability reports: <a href="mailto:security@mail.muster.partners" data-tooltip="Reaches the MUSTER security inbox. See also /.well-known/security.txt.">security@mail.muster.partners</a> — see <a href="/.well-known/security.txt" data-tooltip="Our machine-readable vulnerability disclosure policy, per RFC 9116.">our disclosure policy</a></li>
+    <li>Privacy and data questions: <a href="mailto:support@mail.muster.partners" data-tooltip="Reaches the CavScope support inbox.">support@mail.muster.partners</a></li>
+    <li>Security vulnerability reports: <a href="mailto:security@mail.muster.partners" data-tooltip="Reaches the CavScope security inbox. See also /.well-known/security.txt.">security@mail.muster.partners</a> — see <a href="/.well-known/security.txt" data-tooltip="Our machine-readable vulnerability disclosure policy, per RFC 9116.">our disclosure policy</a></li>
   </ul>
 
   <footer>
-    MUSTER is operated by After Today, LLC (DBA 28 Foot Systems), Hanover, Pennsylvania. MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion.
+    CavScope is operated by After Today, LLC (DBA 28 Foot Systems), Hanover, Pennsylvania. CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion.
   </footer>
 
 </div>

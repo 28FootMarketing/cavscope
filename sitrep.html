@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MUSTER SITREP Viewer — sign in to view your organization's cited situation reports on screen." />
-  <title>MUSTER — SITREP Viewer</title>
+  <meta name="description" content="CavScope SITREP Viewer — sign in to view your organization's cited situation reports on screen." />
+  <title>CavScope — SITREP Viewer</title>
   <!-- The apex 301s to www, so www is the URL that actually serves. A canonical
        pointing at a URL that redirects is worse than none. -->
-  <link rel="canonical" href="https://www.muster.partners/sitrep">
+  <link rel="canonical" href="https://cavscope.28footsystems.com/sitrep">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -66,6 +66,76 @@
       --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
       --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
       --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
     }
     /* muster:tokens:end */
 
@@ -179,6 +249,22 @@
 
     .overflow-x { overflow-x: auto; }
 
+    .scope-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; color: var(--text-muted); font-size: 13.5px; }
+    .law-lede { color: var(--text-muted); font-size: 13.5px; max-width: 72ch; margin: 0 0 6px; }
+    .law-disclaimer { color: var(--text); font-size: 13.5px; font-weight: 600; margin: 0 0 10px; }
+    .law-group { margin-top: 22px; }
+    .law-group h3 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 8px; }
+    .law-group-note { color: var(--text-dim); font-size: 12.5px; margin: 0 0 10px; max-width: 72ch; }
+    .law { padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+    .law:last-child { border-bottom: none; }
+    .law-name { color: var(--text); font-weight: 600; font-size: 14px; }
+    .law-where { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); margin-left: 6px; }
+    .law-summary { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
+    .law-meta { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+    .law-open { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--text-muted); }
+    .law-open li { margin-top: 3px; }
+    .law a { color: var(--teal); }
+
     .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
     .empty-state h2 { font-family: var(--font-serif); color: var(--text); margin-bottom: 8px; }
 
@@ -215,7 +301,7 @@
 
   <div class="topbar" id="topbar" hidden>
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="/assets/muster-emblem.png" alt="" width="160" height="160">MUSTER <small>/ SITREP VIEWER</small></div>
+      <div class="brand"><img class="brand-mark" src="/assets/cavscope-emblem.png" alt="" width="160" height="160">CavScope <small>/ SITREP VIEWER</small></div>
       <div class="topbar-right">
         <select class="picker" id="websitePicker" onchange="onWebsiteChange(this.value)" data-tooltip="Switch which of your organization's websites this report covers." hidden></select>
         <select class="picker" id="historyPicker" onchange="onHistoryChange(this.value)" data-tooltip="View a previous SITREP for this website, to compare posture over time." hidden></select>
@@ -229,12 +315,12 @@
 
     <div class="auth-gate" id="authGate">
       <h1>SITREP Viewer</h1>
-      <p>Sign in with your MUSTER account to view your organization's situation reports on screen.</p>
+      <p>Sign in with your CavScope account to view your organization's situation reports on screen.</p>
       <form class="auth-form" id="authForm" onsubmit="return submitAuth(event)">
-        <label for="authEmail" data-tooltip="The email address your MUSTER account uses.">Email</label>
-        <input type="email" id="authEmail" placeholder="you@company.com" required>
-        <label for="authPassword" data-tooltip="Optional — leave blank to receive a one-time magic sign-in link instead.">Password (optional)</label>
-        <input type="password" id="authPassword" placeholder="Leave blank for a magic link">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" placeholder="you@company.com" required data-tooltip="The email address your CavScope account uses.">
+        <label for="authPassword">Password (optional)</label>
+        <input type="password" id="authPassword" placeholder="Leave blank for a magic link" data-tooltip="Optional — leave blank to receive a one-time magic sign-in link instead.">
         <div class="auth-actions">
           <button type="submit" class="btn-primary" data-tooltip="Sign in with a password, or send a magic link if the password field is empty.">Sign In →</button>
         </div>
@@ -295,7 +381,7 @@
         // The result is deliberately not inspected. "Signups not allowed" and a
         // rate-limit refusal both disclose whether the address has an account,
         // so every outcome gets the same confirmation.
-        msg.textContent = `If ${email} has a MUSTER account, a sign-in link is on its way. Open it on this device to finish signing in.`;
+        msg.textContent = `If ${email} has a CavScope account, a sign-in link is on its way. Open it on this device to finish signing in.`;
         return false;
       }
       const { error } = await sb.auth.signInWithPassword({ email, password });
@@ -322,7 +408,7 @@
     const websites = (workspace.organizations || []).flatMap(o => (o.websites || []).map(w => ({ ...w, orgName: o.name })));
     const picker = document.getElementById('websitePicker');
     if (!websites.length) {
-      renderEmpty('No websites yet', 'Add a website inside the MUSTER workspace to start generating SITREPs.');
+      renderEmpty('No websites yet', 'Add a website inside the CavScope workspace to start generating SITREPs.');
       return;
     }
     picker.hidden = false;
@@ -354,7 +440,7 @@
       const sitrep = await rpc('muster_latest_sitrep', { p_website_id: currentWebsiteId });
       await loadHistory(currentWebsiteId, sitrep ? sitrep.id : null);
       if (!sitrep) {
-        renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the MUSTER workspace.');
+        renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the CavScope workspace.');
         return;
       }
       renderSitrep(sitrep);
@@ -395,6 +481,10 @@
   }
   function renderError(msg) { renderEmpty('Something went wrong', msg); }
 
+  // What every rendering of a report ends with. The report model carries the
+  // same sentence; this copy exists only for reports generated before it did.
+  const DEFAULT_DISCLAIMER = "CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.";
+
   function renderSitrep(sitrep) {
     const root = document.getElementById('reportRoot');
     root.hidden = false;
@@ -404,6 +494,12 @@
     const plain = (s.plain_english || {}).items || [];
     const findings = s.top_findings || [];
     const evidence = s.evidence_index || [];
+    const scope = (s.scope_note || {}).items || [];
+    // Both come from the report model (migration 20260925200050, muster_109).
+    // A report generated before it has neither; the Controls block is then
+    // omitted and the disclaimer falls back to the sentence the model carries.
+    const report = s.report || {};
+    const controls = report.controls || null;
     const score = sitrep.posture_score;
     const band = sitrep.posture_band;
     const color = bandColor(band);
@@ -414,10 +510,10 @@
       <div class="report-head">
         <p class="eyebrow">SITREP · ${escapeHtml((sitrep.generator || 'deterministic').toUpperCase())}</p>
         <h1>${escapeHtml(sitrep.headline || 'Situation Report')}</h1>
-        <div class="report-meta" data-tooltip="When this SITREP was generated, from which scan.">Generated ${sitrep.generated_at ? new Date(sitrep.generated_at).toLocaleString() : '—'} · Scan #${escapeHtml(String(sitrep.scan_id || '—'))}</div>
+        <div class="report-meta" data-tooltip="When this SITREP was generated, from which scan." tabindex="0">Generated ${sitrep.generated_at ? new Date(sitrep.generated_at).toLocaleString() : '—'} · Scan #${escapeHtml(String(sitrep.scan_id || '—'))}</div>
 
         <div class="score-row">
-          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer.">
+          <div class="gauge" data-tooltip="Posture score: one number from 0-100 summarizing exposure across all open findings. Higher is safer." tabindex="0">
             <svg viewBox="0 0 96 96">
               <circle cx="48" cy="48" r="42" fill="none" stroke="#1f3358" stroke-width="8"></circle>
               <circle cx="48" cy="48" r="42" fill="none" stroke="${color}" stroke-width="8"
@@ -426,22 +522,30 @@
             <div class="gauge-value"><span class="num" style="color:${color}">${escapeHtml(String(score ?? '—'))}</span><span class="of100">/ 100</span></div>
           </div>
           <div>
-            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now.">● ${escapeHtml(String(band || 'unknown').toUpperCase())} POSTURE</div>
+            <div class="band-label" style="color:${color}" data-tooltip="Green: no material gaps. Amber: gaps present, no critical breach. Red: critical exposure needs action now." tabindex="0">● ${escapeHtml(String(band || 'unknown').toUpperCase())} POSTURE</div>
             <div class="band-desc">${(board.open || 0)} open findings — ${board.critical || 0} critical, ${board.high || 0} high, ${board.medium || 0} medium, ${board.low || 0} low, ${(board.info || 0)} informational.</div>
           </div>
         </div>
       </div>
 
       <section class="block">
-        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below.">Board Report</h2>
+        <h2 data-tooltip="The high-level narrative for leadership, built entirely from cited findings and evidence below." tabindex="0">Board Report</h2>
         <div class="claim-list">
           ${claims.map(c => `<div class="claim">${escapeHtml(c.text)}${citeBadge(c)}</div>`).join('') || '<p style="color:var(--text-dim);">No claims recorded for this scan.</p>'}
         </div>
       </section>
 
+      ${scope.length ? `
+      <section class="block">
+        <h2 data-tooltip="The limits of this scan, stated up front: what it cannot see, so a clean result is not read as more than it is." tabindex="0">What This Scan Did Not Check</h2>
+        <ul class="scope-list">
+          ${scope.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
+        </ul>
+      </section>` : ''}
+
       ${plain.length ? `
       <section class="block">
-        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each.">Plain English</h2>
+        <h2 data-tooltip="The same findings translated into plain language, with a concrete fix for each." tabindex="0">Plain English</h2>
         <div class="plain-list">
           ${plain.map(p => `<div class="plain-item">${escapeHtml(p.text)}</div>`).join('')}
         </div>
@@ -449,13 +553,13 @@
 
       ${findings.length ? `
       <section class="block">
-        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity.">Top Findings</h2>
+        <h2 data-tooltip="Every open finding this scan surfaced, ranked by severity." tabindex="0">Top Findings</h2>
         <div class="overflow-x">
           <table class="data-table">
             <thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Remediation</th></tr></thead>
             <tbody>
               ${findings.map(f => `<tr>
-                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding.">${escapeHtml(f.rule_id || '')}</td>
+                <td class="mono-cell" data-tooltip="Internal rule code that produced this finding." tabindex="0">${escapeHtml(f.rule_id || '')}</td>
                 <td>${escapeHtml(f.title || '')}<div style="color:var(--text-dim); font-size:11.5px; margin-top:3px;">${escapeHtml(f.detail || '')}</div></td>
                 <td><span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></td>
                 <td style="color:var(--text-muted);">${escapeHtml(f.remediation || '')}</td>
@@ -465,9 +569,26 @@
         </div>
       </section>` : ''}
 
+      ${controls ? `
+      <section class="block">
+        <h2 data-tooltip="Framework controls derived from this site's findings. A citation to a framework is not a test of it; this is not an audit opinion." tabindex="0">Controls</h2>
+        <p class="law-lede">${controls.met || 0} of ${controls.total || 0} derived controls met, ${controls.partial || 0} partial, ${controls.not_met || 0} not met, ${controls.not_assessed || 0} not assessed. Controls are derived from findings against the frameworks each rule cites; a citation is not a test of the framework, and this is not an audit opinion.</p>
+        ${(controls.items || []).length ? `<div class="overflow-x"><table class="data-table">
+          <thead><tr><th>Framework</th><th>Reference</th><th>Assessment</th></tr></thead>
+          <tbody>${(controls.items || []).map(i => `<tr>
+            <td>${escapeHtml(i.framework_label || i.framework || '')}</td>
+            <td class="mono-cell">${escapeHtml(i.reference || '')}</td>
+            <td><span class="sev-chip sev-${i.assessment === 'not_met' ? 'high' : 'medium'}">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
+          </tr>`).join('')}</tbody>
+        </table></div>` : '<p class="law-lede">Every derived control is met or not assessed.</p>'}
+        ${(controls.items || []).length < (Number(controls.not_met) || 0) + (Number(controls.partial) || 0) ? `<p class="law-lede">Showing ${(controls.items || []).length} of ${(Number(controls.not_met) || 0) + (Number(controls.partial) || 0)} controls that are not fully met; the rest are in the CavScope workspace under Controls.</p>` : ''}
+      </section>` : ''}
+
+      ${renderJurisdiction(s.jurisdiction)}
+
       ${evidence.length ? `
       <section class="block">
-        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites.">Evidence Index</h2>
+        <h2 data-tooltip="The raw captured proof (HTTP responses, headers, page content) every finding above cites." tabindex="0">Evidence Index</h2>
         <div class="overflow-x">
           <table class="data-table">
             <thead><tr><th>Kind</th><th>URL</th><th>HTTP</th><th>Captured</th><th>SHA-256</th></tr></thead>
@@ -477,26 +598,102 @@
                 <td style="word-break:break-all;">${escapeHtml(e.url || '')}</td>
                 <td class="mono-cell">${escapeHtml(String(e.http_status ?? ''))}</td>
                 <td class="mono-cell">${e.captured_at ? new Date(e.captured_at).toLocaleString() : ''}</td>
-                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture.">${escapeHtml((e.sha256 || '').slice(0, 12))}…</td>
+                <td class="mono-cell" data-tooltip="Cryptographic hash proving this evidence hasn't been altered since capture." tabindex="0">${escapeHtml((e.sha256 || '').slice(0, 12))}…</td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>
       </section>` : ''}
 
-      <footer class="disclaimer" data-tooltip="MUSTER assesses technical and policy signals; it is not a lawyer, auditor, or certifying body.">
-        MUSTER's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.
-        ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation.">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
+      <footer class="disclaimer" data-tooltip="CavScope assesses technical and policy signals; it is not a lawyer, auditor, or certifying body." tabindex="0">
+        ${escapeHtml(report.disclaimer || DEFAULT_DISCLAIMER)}
+        ${sitrep.content_sha256 ? `<div style="margin-top:10px;" data-tooltip="SHA-256 of this exact report's content. Recompute it from a saved copy to prove the report hasn't been altered since generation." tabindex="0">Content integrity: ${escapeHtml(sitrep.content_sha256)}</div>` : ''}
       </footer>
     `;
   }
+
+  // Laws and Standards. Mirrors muster.sitrep_jurisdiction_md (migration 082) and
+  // reads the same stored `assessment` on each law, so the viewer and the markdown
+  // cannot bucket a law differently. It never derives a verdict from `status`
+  // itself: `clear` on a law with no mapped check means "never looked", and only
+  // the SQL side decides that.
+  function renderJurisdiction(j) {
+    if (!j) return '';
+    const head = '<h2 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice." tabindex="0">Laws and Standards</h2>';
+    if (j.available === false) {
+      return `<section class="block">${head}<p class="law-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
+    }
+    const laws = Array.isArray(j.laws) ? j.laws : [];
+    if (!laws.length) {
+      return `<section class="block">${head}<p class="law-lede">No laws are recorded for this location.</p></section>`;
+    }
+    // Reports generated before migration 082 carry the raw payload with no
+    // assessment. Guessing one here is exactly the defect 082 fixed, so say so.
+    if (laws.some(l => !l.assessment)) {
+      return `<section class="block">${head}<p class="law-lede">This report was generated before laws were assessed against its checks. The report from the next scan of this site lists them.</p></section>`;
+    }
+    const names = {};
+    (j.jurisdictions || []).forEach(x => { names[x.code] = x.name; });
+    const place = (j.jurisdictions || []).filter(x => x.kind === 'region' || x.kind === 'country')
+      .sort((a, b) => (a.kind === 'region' ? 0 : 1) - (b.kind === 'region' ? 0 : 1)).map(x => x.name).join(', ');
+    const where = l => escapeHtml(names[l.jurisdiction_code] || l.jurisdiction_code || '');
+    const safeLink = url => /^https:\/\//i.test(url || '')
+      ? ` · <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The official text or guidance this entry is summarized from. Opens in a new tab.">Reference</a>` : '';
+    const applies = l => `<span data-tooltip="Whether this applies depends on facts the scan cannot see. Confirm with counsel." tabindex="0">Applies when:</span> ${escapeHtml(l.applies_when || 'not stated')}`;
+    const byName = (a, b) => String(a.short_name || '').localeCompare(String(b.short_name || ''));
+
+    const open = laws.filter(l => l.assessment === 'open_findings')
+      .sort((a, b) => ((b.status === 'exposed') - (a.status === 'exposed')) || byName(a, b));
+    const none = laws.filter(l => l.assessment === 'no_open_findings').sort(byName);
+    const na = laws.filter(l => l.assessment === 'not_assessed').sort(byName);
+
+    const openHtml = open.length ? `
+      <div class="law-group">
+        <h3 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached." tabindex="0">Open findings touch these (${open.length})</h3>
+        ${open.map(l => `<div class="law">
+          <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
+          <div class="law-summary">${escapeHtml(l.summary || '')}</div>
+          <div class="law-meta">${applies(l)}${safeLink(l.reference_url)}</div>
+          <ul class="law-open">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="sev-chip sev-${escapeHtml((f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span> <span class="cite" data-tooltip="The open finding this entry is cited to." tabindex="0">[F${escapeHtml(String(f.finding_id))}]</span></li>`).join('')}</ul>
+        </div>`).join('')}
+      </div>` : '';
+
+    const noneHtml = none.length ? `
+      <div class="law-group">
+        <h3 data-tooltip="Every check CavScope maps to these passed on this date. That is evidence about those checks, not a determination of compliance." tabindex="0">No open findings on the mapped checks (${none.length})</h3>
+        <p class="law-group-note">The checks CavScope maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>
+        ${none.map(l => `<div class="law">
+          <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
+          <div class="law-meta"><span data-tooltip="The CavScope checks mapped to this entry." tabindex="0">Checks:</span> <span class="mono-cell">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}</div>
+        </div>`).join('')}
+      </div>` : '';
+
+    const naHtml = na.length ? `
+      <div class="law-group">
+        <h3 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do." tabindex="0">Not assessed by this scan (${na.length})</h3>
+        <p class="law-group-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so laws whose checks depend on it are listed here rather than as passed.' : ''}</p>
+        ${na.map(l => `<div class="law">
+          <span class="law-name">${escapeHtml(l.short_name)}</span><span class="law-where">${where(l)}</span>
+          <div class="law-meta">${l.not_assessed_reason === 'no_mapped_check' ? 'No CavScope check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}</div>
+        </div>`).join('')}
+      </div>` : '';
+
+    return `
+      <section class="block">
+        ${head}
+        <p class="law-disclaimer" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one." tabindex="0">${escapeHtml(j.disclaimer || 'Informational only. This is not legal advice. Confirm applicability with counsel.')}</p>
+        <p class="law-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}. These are laws and standards commonly relevant to an organization in this location. Whether each one applies depends on facts this scan cannot see, such as who the site serves and what it collects, so each is shown with the condition under which it applies. A finding listed against a law means a check mapped to it is open. It is not a finding that the law was breached.</p>
+        ${openHtml}${noneHtml}${naHtml}
+      </section>`;
+  }
+  // end renderJurisdiction
 
   function citeBadge(claim) {
     const fs = (claim.finding_ids || []).map(id => `F${id}`);
     const es = (claim.evidence_ids || []).map(id => `E${id}`);
     const all = [...fs, ...es];
     if (!all.length) return '';
-    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to — nothing here is asserted without a source.">[${all.join('][')}]</span>`;
+    return `<span class="cite" data-tooltip="Finding and evidence IDs this statement is cited to — nothing here is asserted without a source." tabindex="0">[${all.join('][')}]</span>`;
   }
 
   function escapeHtml(str) {

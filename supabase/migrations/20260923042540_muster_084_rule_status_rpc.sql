@@ -1,23 +1,3 @@
--- MUSTER 084: public.muster_rule_status(text[]) -- which rules a scan could have raised.
---
--- WHY
---
--- The workspace's AIO view scores a check as passed when its rule has no open
--- finding. That is only true if the rule was evaluated. A rule held inactive
--- (muster_063: ingest drops its findings) or a scan from an engine older than
--- the rule has no findings by construction, and scoring that as a pass is the
--- absence-of-findings-as-a-pass defect this project has refused everywhere else.
---
--- The page could see the scan's engine_version but not whether a rule was
--- active: scan_rules is in the muster schema, which PostgREST does not expose.
--- This returns exactly that and nothing more. It is reference data -- the same
--- rule catalog for every tenant, holding no tenant's data -- so it needs no org
--- check, but it is still granted to signed-in users only.
---
--- Grants: authenticated only. anon revoked BY NAME, because Supabase's default
--- privileges grant EXECUTE on every new public function to anon and
--- authenticated, and "revoke ... from public" does not undo that.
-
 create or replace function public.muster_rule_status(p_rule_ids text[])
 returns jsonb
 language sql

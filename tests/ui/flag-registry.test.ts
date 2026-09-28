@@ -129,6 +129,33 @@ test("a flag claiming no enforcement is not secretly gated in SQL", () => {
   }
 });
 
+test("sitrep_ready_email was retired cleanly (muster_111 deletes what muster_110 inserted)", () => {
+  // muster_110 shipped sitrep_ready gated behind a NEW feature flag override,
+  // which turned out to be unreachable by an ordinary tenant --
+  // feature_flag_overrides is writable only from the super-admin console, so
+  // "enable per org" was a switch nobody but a super admin could flip.
+  // muster_111 replaced it with a plain organizations column
+  // (sitrep_ready_alerts_enabled, mirroring critical_alerts_enabled) that an
+  // executive can flip themselves via muster_set_sitrep_alert_preference. The
+  // flag row and any override for it must both be gone, not just unused --
+  // a registry row nothing reads any more is exactly the "reports a control
+  // that does not exist" problem muster_052 itself was written to prevent.
+  const migration = readFileSync(
+    join(migrationsDir, "20260926020703_muster_111_sitrep_ready_org_preference_and_ui_rpcs.sql"),
+    "utf8",
+  );
+  assert.match(migration, /delete from muster\.feature_flags where key = 'sitrep_ready_email'/);
+  assert.match(migration, /delete from muster\.feature_flag_overrides where flag_key = 'sitrep_ready_email'/);
+  // The LATEST muster_engine_sitrep (this migration's own CREATE OR REPLACE,
+  // which is what actually runs -- migrations are append-only, so an earlier
+  // file's body, muster_110's, still literally contains the old
+  // flag_state_for_org('sitrep_ready_email') call and always will) must read
+  // the new column instead, not the retired flag.
+  const latestBody = migration.slice(migration.indexOf("CREATE OR REPLACE FUNCTION public.muster_engine_sitrep"));
+  assert.doesNotMatch(latestBody, /'sitrep_ready_email'/, "the current muster_engine_sitrep still reads the retired flag");
+  assert.match(latestBody, /v_org_row\.sitrep_ready_alerts_enabled/, "the current muster_engine_sitrep must gate on the new column");
+});
+
 test("the four flags muster_053 wired are gated where it says they are", () => {
   const wiring = readFileSync(join(migrationsDir, "20260916022923_muster_056_wire_the_dead_feature_flags.sql"), "utf8");
   // scheduled_scans gates the due-scan CTE only -- not the manual/api catch-up

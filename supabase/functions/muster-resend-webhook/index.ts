@@ -6,7 +6,7 @@ import {
   isPermanentBounce,
 } from "./core.ts";
 
-// Inbound Resend webhook for MUSTER application email.
+// Inbound Resend webhook for CavScope application email.
 //
 // This is what makes the difference between "accepted for sending" and
 // "delivered" observable. muster-alert-dispatch records the id Resend returns
@@ -27,7 +27,7 @@ import {
 //      account also carries BRD, GFFH and the 28FS domains, so most deliveries
 //      reaching this URL are about somebody else's mail. Those are answered 200
 //      and written nowhere: the RPC matches on provider_message_id against
-//      MUSTER's own outbox and returns matched=false for everything else.
+//      CavScope's own outbox and returns matched=false for everything else.
 //
 // Retry contract with Resend: 2xx means "do not send this again". So anything
 // that is merely uninteresting (a foreign message, an unmapped event type, a
