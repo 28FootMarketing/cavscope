@@ -3337,6 +3337,24 @@
     // hand-written mockup that diverges from what a customer gets.
     // ===================================================================
 
+    // How a law's workspace status reads. The keys come from
+    // q_compliance_posture; the words are chosen here so that no law is ever
+    // shown as "clear", "compliant" or an "Effective" control. 'clear' only
+    // means no open finding on the checks mapped to it, and a law with no
+    // mapped check was never looked at.
+    const LAW_STATUS_LABEL = {
+      evidence_gap: 'Open findings',
+      clear: 'No open findings',
+      not_scanned: 'Not scanned yet',
+      manual_review: 'Not assessed',
+    };
+    const LAW_STATUS_TIP = {
+      evidence_gap: 'A check mapped to this law has an open finding. That is not a finding that the law was breached.',
+      clear: 'The checks mapped to this law have no open findings. That is evidence about those checks, not a determination of compliance.',
+      not_scanned: 'This site has no completed scan yet, so its mapped checks have not run.',
+      manual_review: 'No CavScope check maps to this law, so the scan says nothing about it either way.',
+    };
+
     const REPORT_PROFILE_VIEWS = { client: 'plainReportDoc', board: 'boardDoc' };
 
     function renderReports() {
@@ -5887,9 +5905,13 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         try {
           const adv = await this.rpc('muster_jurisdiction_advisory', { p_country_code: code, p_region_code: region, p_depth: 'full' });
           const laws = (adv.laws || []);
-          box.innerHTML = `<h5>What applies to you (${adv.law_count} laws${adv.profile_available ? '' : ', global baseline only'})</h5>` +
+          // "Commonly relevant", never "applies to you": this list is chosen by
+          // the location you picked, and laws also reach a business through
+          // where its customers live. residency_note is written by SQL.
+          box.innerHTML = `<h5 data-tooltip="Laws commonly relevant to an organization based where you selected. Whether each applies to you depends on facts this form cannot see." tabindex="0">Commonly relevant where you are based (${adv.law_count} laws${adv.profile_available ? '' : ', global baseline only'})</h5>` +
             (adv.jurisdictions || []).map(j => `<p><strong>${escapeHtml(j.name)}.</strong> ${escapeHtml(j.advisory)}</p>`).join('') +
             (laws.length ? `<div>${laws.map(l => `<span class="law" title="${escapeHtml(l.full_name)}">${escapeHtml(l.short_name)}</span>`).join('')}</div>` : '') +
+            (adv.residency_note ? `<p data-tooltip="Which laws apply can depend on where your customers live, not only where you are based." tabindex="0">${escapeHtml(adv.residency_note)}</p>` : '') +
             `<small>${escapeHtml(adv.disclaimer)} Full obligations, mapped to your scan evidence, appear inside the workspace.</small>`;
           box.hidden = false;
         } catch (e) { this.fail(e); }
@@ -6091,7 +6113,9 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         }));
         base.controls = laws.map(l => ({
           id: `LAW-${l.law_id}`, framework: l.jurisdiction_code, code: l.short_name, title: l.full_name, description: l.applies_when, owner: 'Executive',
-          status: ({ evidence_gap: 'Deficient', clear: 'Effective', not_scanned: 'Under Review', manual_review: 'Under Review' })[l.status] || 'Under Review'
+          // A law is not a control that can be "Effective": 'clear' only means no
+          // open finding on its mapped checks. Same labels as the obligations panel.
+          status: LAW_STATUS_LABEL[l.status] || 'Not assessed'
         }));
         const evIndex = (sitrep && sitrep.sections && sitrep.sections.evidence_index) || [];
         base.evidence = evIndex.map(e => ({
@@ -6429,8 +6453,9 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         comp.innerHTML = `
           <div class="panel-head">
             <div>
-              <h3>Jurisdiction Obligations</h3>
+              <h3 data-tooltip="Laws and standards commonly relevant to where this organization is based, and what this site's scans found on the checks mapped to each. Informational, not legal advice." tabindex="0">Laws and Standards</h3>
               <p>${escapeHtml((ov && ov.compliance && ov.compliance.disclaimer) || 'Set a country on the organization to see obligations.')}</p>
+              ${ov && ov.compliance && ov.compliance.residency_note ? `<p data-tooltip="Which laws apply can depend on where your customers live, not only where you are based. The scan cannot see that, so this list may be missing laws that apply to you." tabindex="0">${escapeHtml(ov.compliance.residency_note)}</p>` : ''}
             </div>
           </div>
           ${laws.length ? `
@@ -6444,7 +6469,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
             <div class="table-row grid-live-jurisdictions">
               <div><strong style="color:#fff;">${escapeHtml(l.short_name)}</strong><br><span class="live-muted">${escapeHtml(l.jurisdiction_code)} · ${escapeHtml(l.category)}</span></div>
               <div class="live-muted">${(l.obligations || []).map(o => escapeHtml(o)).join(' · ')}</div>
-              <div><span class="pill ${l.status === 'evidence_gap' ? 'pill-high' : (l.status === 'clear' ? 'pill-low' : 'pill-pending')}">${l.status.replace('_', ' ')}${l.open_findings ? ` (${l.open_findings})` : ''}</span></div>
+              <div><span class="pill ${l.status === 'evidence_gap' ? 'pill-high' : (l.status === 'clear' ? 'pill-low' : 'pill-pending')}" data-tooltip="${escapeHtml(LAW_STATUS_TIP[l.status] || LAW_STATUS_TIP.manual_review)}" tabindex="0">${escapeHtml(LAW_STATUS_LABEL[l.status] || 'Not assessed')}${l.open_findings ? ` (${l.open_findings})` : ''}</span></div>
             </div>`).join('')}
           </div>` : ''}`;
 

@@ -315,3 +315,48 @@ test("app.html prints the same note on every path, and its demo sample carries S
   // listed opener, shared middle, listed closer
   assert.equal(sample[1], parts[0] + parts[2] + parts[3]);
 });
+
+// --- the workspace says the same thing (migration 20260928220554) -------------
+//
+// The workspace listed the same laws two more ways, and both read as a
+// determination the SITREP is forbidden to make: the obligations panel printed
+// the raw status ("clear") and a disclaimer quoting it, and onboarding headed
+// its preview "What applies to you". The workspace export went further and
+// listed each law as a control that was "Effective".
+
+const workspaceSql = readFileSync(join(migrationsDir, "20260928220554_workspace_jurisdiction_wording.sql"), "utf8");
+const app = readFileSync(join(repoRoot, "app.html"), "utf8");
+
+test("the compliance posture disclaimer no longer quotes 'clear', and both payloads carry the residency note", () => {
+  const disclaimer = workspaceSql.match(/'disclaimer', '([^']*(?:''[^']*)*)'/);
+  assert.ok(disclaimer, "no disclaimer found");
+  assert.doesNotMatch(disclaimer[1], /\bclear\b|\bcompliant\b/i);
+  assert.match(disclaimer[1], /not a determination of compliance/);
+  assert.match(workspaceSql, /'residency_note', cavscope\.jurisdiction_residency_note\(jsonb_array_length\(v_laws\) > 0\)/);
+  assert.match(workspaceSql, /a \|\| jsonb_build_object\('residency_note',/);
+});
+
+test("the workspace maps every law status to words, and none of them is a verdict", () => {
+  const block = app.slice(app.indexOf("const LAW_STATUS_LABEL = {"), app.indexOf("const REPORT_PROFILE_VIEWS"));
+  // deno-lint-ignore no-explicit-any
+  const { LAW_STATUS_LABEL, LAW_STATUS_TIP } = new Function(`${block}\nreturn { LAW_STATUS_LABEL, LAW_STATUS_TIP };`)() as any;
+  for (const k of ["evidence_gap", "clear", "not_scanned", "manual_review"]) {
+    assert.ok(LAW_STATUS_LABEL[k] && LAW_STATUS_TIP[k], `no label for ${k}`);
+    assert.doesNotMatch(LAW_STATUS_LABEL[k], /\b(clear|compliant|effective|deficient)\b/i);
+  }
+  assert.match(LAW_STATUS_TIP.clear, /not a determination of compliance/);
+});
+
+test("the obligations panel and the export render labels, never the raw status or 'Effective'", () => {
+  assert.doesNotMatch(app, /\$\{l\.status\.replace\(/, "the raw status is printed again");
+  assert.doesNotMatch(app, /clear: 'Effective'/);
+  assert.match(app, /status: LAW_STATUS_LABEL\[l\.status\] \|\| 'Not assessed'/);
+  assert.match(app, /escapeHtml\(LAW_STATUS_LABEL\[l\.status\] \|\| 'Not assessed'\)/);
+  assert.match(app, /escapeHtml\(ov\.compliance\.residency_note\)/);
+});
+
+test("onboarding says 'commonly relevant', not 'applies to you', and prints the note", () => {
+  assert.doesNotMatch(app, /What applies to you/);
+  assert.match(app, /Commonly relevant where you are based/);
+  assert.match(app, /escapeHtml\(adv\.residency_note\)/);
+});
