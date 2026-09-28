@@ -585,6 +585,24 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   **Still open:** `q_compliance_posture` reads the org's own location and ignores
   `websites.detected_region_*`, so for a site that states a different state than its org record
   the panel and that site's SITREP list different laws.
+- **The Overview's four tiles show a live workspace its own numbers, as of 2026-09-28.** Until then
+  they were fixed HTML: every signed-in tenant saw the sample's posture 82, "1 active critical
+  risk", control coverage 80% ("4 of 5 mapped"), evidence readiness 75% ("3 approved artifacts")
+  and remediation 65% on the first screen of their workspace, and `stampScoreTimestamps()` labelled
+  each "As of" the current minute, so the fiction read as fresh. Nothing replaced them and no test
+  noticed, because every test read the source rather than running what a tenant runs.
+  `renderOverviewKpis()` now fills them from the workspace payload -- posture and band from
+  Postgres, control coverage from the latest SITREP's own figures, remediation from the risk
+  register -- and **Evidence is a count, not a percentage**, because nothing tracks whether an
+  auditor reviewed anything; a readiness figure would be invented. Scan evidence in the library is
+  `Captured` / `Not reviewed`, no longer `Approved` by "CavScope engine". Each tile's explainer is
+  built from the same data (`liveScoreExplainer()`), and the modal hides the sample's "80 is Good"
+  benchmark for it, because CavScope's real bands are green at 85, amber from 60. Demo mode restores
+  the sample and stamps it "Sample data". `tests/ui/overview-kpis.test.ts` runs the real renderer
+  against a fake DOM built from the tiles' own markup, and fails all nine cases on the old file.
+  **Other hardcoded demo figures remain** outside the Overview row (the WCAG "84 / 100" explainer and
+  the sample governance exceptions among them); treat any fixed number in `app.html` as suspect
+  until a live path is shown to replace it.
 - **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
   *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
   with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,
