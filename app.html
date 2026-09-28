@@ -3578,11 +3578,16 @@
       const locationSource = src => (src && src.note)
         ? `<p class="rd-lede" data-tooltip="Where this location came from. A governing-law clause or published address is the site's own statement; a description is marketing copy and the weakest signal." tabindex="0">${escapeHtml(src.note)}${/^https:\/\//i.test(src.source_url || '') ? ` <a href="${escapeHtml(src.source_url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The page this location was read from. Opens in a new tab.">Source</a>` : ''}</p>`
         : '';
+      // Where customers live can bring in laws a location-based list misses.
+      // Printed verbatim from q_sitrep_jurisdiction, on every path.
+      const residency = j.residency_note
+        ? `<p class="rd-lede" data-tooltip="Which laws apply can depend on where your customers live, not only where you are based. The scan cannot see that, so this list may be missing laws that apply to you." tabindex="0">${escapeHtml(j.residency_note)}</p>`
+        : '';
       if (j.available === false) {
-        return `<section class="rd-block">${head}<p class="rd-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
+        return `<section class="rd-block">${head}<p class="rd-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p>${residency}</section>`;
       }
       const laws = Array.isArray(j.laws) ? j.laws : [];
-      if (!laws.length) return `<section class="rd-block">${head}<p class="rd-lede">No laws are recorded for this location.</p></section>`;
+      if (!laws.length) return `<section class="rd-block">${head}<p class="rd-lede">No laws are recorded for this location.</p>${residency}</section>`;
       if (laws.some(l => !l.assessment)) {
         return `<section class="rd-block">${head}<p class="rd-lede">This report was generated before laws were assessed against its checks. The report from the next scan of this site lists them.</p></section>`;
       }
@@ -3605,6 +3610,7 @@
         <p class="rd-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}.</p>
         ${locationSource(j.location_source)}
         <p class="rd-lede">These are laws and standards commonly relevant to an organization in this location. Whether each applies depends on facts a website scan cannot see.</p>
+        ${residency}
         ${open.length ? `<h4 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached." tabindex="0">Open findings touch these (${open.length})</h4>${open.map(l => law(l, `${applies(l)}${safeLink(l.reference_url)}<ul class="rd-list">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="rd-sev rd-sev-${escapeHtml(String(f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></li>`).join('')}</ul>`)).join('')}` : ''}
         ${none.length ? `<h4 data-tooltip="Every check CavScope maps to these passed on this date. That is evidence about those checks, not a determination of compliance." tabindex="0">No open findings on the mapped checks (${none.length})</h4><p class="rd-law-note">The checks CavScope maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>${none.map(l => law(l, `<span data-tooltip="The CavScope checks mapped to this entry." tabindex="0">Checks:</span> <span class="rd-mono">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}${safeLink(l.reference_url)}`)).join('')}` : ''}
         ${na.length ? `<h4 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do." tabindex="0">Not assessed by this scan (${na.length})</h4><p class="rd-law-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so its checks could not run.' : ''}</p>${na.map(l => law(l, `${l.not_assessed_reason === 'no_mapped_check' ? 'No CavScope check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}${safeLink(l.reference_url)}`)).join('')}` : ''}
@@ -3658,6 +3664,7 @@
         ],
         jurisdiction: {
           available: true, country_code: 'US', region_code: 'US-NY', law_count: 3, open_findings_count: 1, no_open_findings_count: 1, not_assessed_count: 1,
+          residency_note: "Location is not the whole picture. This list is chosen by where the organization is located, but many privacy and consumer-protection laws apply according to where the people whose data a site collects live. For example, California's CCPA can reach a business based elsewhere that meets its thresholds for California residents, and the EU's GDPR can reach an organization outside the EU that offers goods or services to people in the EU or monitors their behavior. CavScope cannot see where this site's visitors or customers are, so laws that could apply through them are not listed here.",
           disclaimer: 'This section lists laws and standards commonly relevant to an organization in the recorded location. It is informational, not legal advice, and it is not a determination that any law applies or was breached.',
           jurisdictions: [{ code: 'US', name: 'United States', kind: 'country' }, { code: 'US-NY', name: 'New York', kind: 'region' }],
           laws: [

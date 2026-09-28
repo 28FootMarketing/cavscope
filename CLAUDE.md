@@ -565,6 +565,17 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   corrected engine's null never reached the row and the wrong `WA` survived the scan that disproved
   it. `20260928205820` writes the latest answer unconditionally. The local-scan adapter has no
   database, so a persistence bug is invisible to `tests/scan/`; rescan and read the row.
+  **A location-based law list is not the list of laws that apply, and every report says so**
+  (`20260928215356`). The section picks laws by one place, where the organization is, while much
+  privacy law reaches a business through where its customers live: a Pennsylvania site's list has
+  no CCPA and no GDPR, and read cold that absence reads as "these do not apply". That is
+  absence-as-a-determination again. `cavscope.jurisdiction_residency_note()` writes one of two
+  fixed paragraphs (laws listed / none listed), `q_sitrep_jurisdiction` emits it as
+  `residency_note` on **every** return path, including both that list nothing, because an empty
+  section is the one most easily read as "nothing applies", and the markdown, `sitrep.html` and
+  `app.html` print it verbatim before the law lists. Its CCPA and GDPR examples say "can reach"
+  with the condition that makes them reach; never reword either into a determination.
+  `SAMPLE_SITREP` carries SQL's exact words and a test compares them.
 - **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
   *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
   with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,

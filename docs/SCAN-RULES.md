@@ -306,6 +306,18 @@ no laws at all**: before this, it fell back to the admin sandbox org's own `PA`,
 After Today LLC's address and says nothing about the site. A real tenant's site still falls
 back to the tenant's own record, and says so.
 
+**Every report also says the list is chosen by location, not by where customers live**
+(migration `20260928215356`). Whatever the location's basis, the section lists laws commonly
+relevant to an organization *based* there. Much privacy law instead reaches a business through
+the people whose data it collects: California's CCPA can reach a business based elsewhere that
+meets its thresholds for California residents, and the EU's GDPR (Art. 3(2)) can reach an
+organization outside the EU that offers goods or services to people in the EU. A Pennsylvania
+site's list carries neither, and the engine has no way to see where a site's visitors are.
+`cavscope.jurisdiction_residency_note()` holds the paragraph in two forms, one for a list and
+one for a section that lists nothing ("no laws being listed does not mean none apply"), and
+`q_sitrep_jurisdiction` emits it as `residency_note` on every return path. The markdown,
+`sitrep.html` and `app.html` print it verbatim, ahead of the law lists it qualifies.
+
 **Confirmed against real sites, not just the test suite, four times.** Rescanning all
 fourteen websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/
 terms-link version) found a state for exactly one: Clairen Haus, Georgia, matched directly

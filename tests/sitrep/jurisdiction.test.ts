@@ -188,11 +188,15 @@ test("the viewer renders the scope note after the Board Report and the laws befo
 // prints it verbatim. And a sandbox site with nothing detected no longer
 // inherits the sandbox organization's own state.
 
+// The newest definition of q_sitrep_jurisdiction, wherever it lives: the rules
+// below must survive every later redefinition, not just the one that added them.
 const provenanceSql = (() => {
   const files = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql"))
     .filter((f) => /create or replace function (muster|cavscope)\.q_sitrep_jurisdiction/i.test(readFileSync(join(migrationsDir, f), "utf8"))).sort();
   return readFileSync(join(migrationsDir, files[files.length - 1]), "utf8");
 })();
+// The markdown patch is insert-only in the migration that made it.
+const provenancePatchSql = readFileSync(join(migrationsDir, "20260928213959_jurisdiction_provenance_and_no_sandbox_fallback.sql"), "utf8");
 
 test("a sandbox site with nothing detected lists no laws instead of the sandbox org's state", () => {
   const i = provenanceSql.indexOf("if not v_detected and v_sandbox then");
@@ -211,9 +215,9 @@ test("every basis has its own sentence, and the weakest one says it is the weake
 });
 
 test("the markdown is patched in place, insert-only, at an anchor that must occur exactly once", () => {
-  assert.match(provenanceSql, /anchor not found exactly once; refusing to patch/);
-  assert.match(provenanceSql, /refusing to patch twice/);
-  assert.match(provenanceSql, /p_jur->'location_source'->>'note'/);
+  assert.match(provenancePatchSql, /anchor not found exactly once; refusing to patch/);
+  assert.match(provenancePatchSql, /refusing to patch twice/);
+  assert.match(provenancePatchSql, /p_jur->'location_source'->>'note'/);
 });
 
 test("the viewer prints the location note verbatim, links only an https source, and escapes it", () => {
@@ -240,4 +244,74 @@ test("app.html's report renderer prints the same note", () => {
   assert.match(src, /\$\{locationSource\(j\.location_source\)\}/);
   assert.match(src, /escapeHtml\(src\.note\)/);
   assert.match(src, /\/\^https:\\\/\\\/\/i\.test\(src\.source_url/);
+});
+
+// --- where the customers live (migration 20260928215356) ---------------------
+//
+// The list is chosen by ONE place: where the organization is. A large share of
+// privacy law is keyed to where the people whose data is collected live. A
+// Pennsylvania site's list carries no CCPA and no GDPR, and read cold that
+// absence reads as "these do not apply". Every report now says otherwise, on
+// every path, including the ones that list no laws at all.
+
+const residencySql = readFileSync(join(migrationsDir, "20260928215356_jurisdiction_residency_note.sql"), "utf8");
+const residencyFn = (() => {
+  const at = residencySql.indexOf("create or replace function cavscope.jurisdiction_residency_note");
+  return residencySql.slice(at, residencySql.indexOf("$function$;", at));
+})();
+const LISTED = "Location is not the whole picture.";
+const UNLISTED = "No laws being listed does not mean none apply.";
+
+test("the note is written once in SQL, in a listed and an unlisted form, and never claims a law applies", () => {
+  assert.match(residencyFn, new RegExp(LISTED.replace(/\./g, "\\.")));
+  assert.match(residencyFn, new RegExp(UNLISTED.replace(/\./g, "\\.")));
+  // Examples are stated with the condition that makes them reach, never as a verdict.
+  assert.match(residencyFn, /CCPA can reach a business based elsewhere that meets its thresholds/);
+  assert.match(residencyFn, /GDPR can reach an organization outside the EU that offers goods or services/);
+  assert.doesNotMatch(residencyFn, /\b(applies to you|you must|you are subject|compliant|clear)\b/i);
+});
+
+test("every return path of the newest q_sitrep_jurisdiction carries the note", () => {
+  const fn = provenanceSql.slice(provenanceSql.indexOf("create or replace function cavscope.q_sitrep_jurisdiction"));
+  const returns = fn.slice(0, fn.indexOf("$function$;")).split("return jsonb_build_object(").slice(1);
+  assert.equal(returns.length, 3, "expected three return paths: sandbox, no country, listed");
+  assert.match(returns[0], /'residency_note', cavscope\.jurisdiction_residency_note\(false\)/);
+  assert.match(returns[1], /'residency_note', cavscope\.jurisdiction_residency_note\(false\)/);
+  assert.match(returns[2], /'residency_note', cavscope\.jurisdiction_residency_note\(true\)/);
+});
+
+test("the markdown patch covers both branches and refuses to run twice", () => {
+  assert.match(residencySql, /refusing to patch twice/);
+  assert.match(residencySql, /unavailable-branch anchor not found exactly once/);
+  assert.match(residencySql, /listed-branch anchor not found exactly once/);
+  assert.match(residencySql, /markdown invents a residency note for a payload without one/);
+});
+
+test("the viewer prints the note escaped, before the law lists, and on the paths that list nothing", () => {
+  const note = `${LISTED} <b>x</b>`;
+  const out = renderJurisdiction({ ...YMCA, residency_note: note });
+  assert.match(out, /Location is not the whole picture\. &lt;b&gt;x&lt;\/b&gt;/);
+  assert.ok(out.indexOf(LISTED) < out.indexOf("Open findings touch these"), "the note must precede the lists it qualifies");
+  const none = renderJurisdiction({ available: false, reason: "No location.", residency_note: UNLISTED });
+  assert.match(none, /No laws being listed does not mean none apply\./);
+  const empty = renderJurisdiction(payload([], { residency_note: LISTED }));
+  assert.match(empty, /Location is not the whole picture\./);
+});
+
+test("a report generated before the note existed prints nothing new", () => {
+  const out = renderJurisdiction(YMCA) + renderJurisdiction({ available: false, reason: "r" });
+  assert.doesNotMatch(out, /whole picture|does not mean none apply/);
+});
+
+test("app.html prints the same note on every path, and its demo sample carries SQL's exact words", () => {
+  const app = readFileSync(join(repoRoot, "app.html"), "utf8");
+  const src = app.slice(app.indexOf("function renderReportJurisdiction(j) {"), app.indexOf("// end renderReportJurisdiction"));
+  assert.match(src, /escapeHtml\(j\.residency_note\)/);
+  assert.equal((src.match(/\$\{residency\}/g) || []).length, 3, "unavailable, empty and listed paths");
+  const sample = app.match(/residency_note: "([^"]+)"/);
+  assert.ok(sample, "SAMPLE_SITREP carries no residency_note");
+  const sqlListed = residencyFn.slice(residencyFn.indexOf("when p_listed then") + "when p_listed then".length);
+  const parts = [...sqlListed.matchAll(/'((?:[^']|'')*)'/g)].map((m) => m[1].replace(/''/g, "'"));
+  // listed opener, shared middle, listed closer
+  assert.equal(sample[1], parts[0] + parts[2] + parts[3]);
 });
