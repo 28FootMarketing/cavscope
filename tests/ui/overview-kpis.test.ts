@@ -97,10 +97,13 @@ const SAMPLE_LITERALS = ["1 active critical risk", "Target: 95%+", "4 of 5 mappe
 const LIVE = {
   overview: {
     posture_score: 61, posture_band: "amber", open_by_severity: { critical: 1, high: 1, medium: 1, low: 0, info: 2 },
-    latest_scan: { status: "complete", finished_at: "2026-09-28T07:29:40Z" },
+    // The count lives on the scan summary. The SITREP's evidence_index lists
+    // only what the report cites (2 of 18 on org 3's real scan 126), so reading
+    // it undercounted -- the first version of this tile did exactly that.
+    latest_scan: { status: "complete", finished_at: "2026-09-28T07:29:40Z", summary: { evidence: 23 } },
     latest_sitrep: { generated_at: "2026-09-28T07:30:06Z", sections: {
       report: { controls: { met: 57, total: 94, rate: 61, partial: 32, not_met: 5, not_assessed: 0, as_of: "2026-09-28T07:30:06Z" } },
-      evidence_index: Array.from({ length: 23 }, (_, i) => ({ evidence_id: i })) } },
+      evidence_index: [{ evidence_id: 1 }, { evidence_id: 2 }] } },
   },
   risks: [
     { status: "open", target_date: "2000-01-01" }, { status: "open", target_date: "2999-01-01" },
@@ -180,4 +183,15 @@ test("renderOverview fills the tiles, and scan evidence is never labelled Approv
   assert.match(app, /function renderOverview\(\) \{\n      renderOverviewKpis\(\);/);
   assert.doesNotMatch(app, /reviewer: 'CavScope engine', status: 'Approved'/);
   assert.match(app, /reviewer: 'Not reviewed', status: 'Captured'/);
+});
+
+test("a report whose sections did not load says so, never 'No report yet'", () => {
+  // muster_website_overview returns latest_sitrep as a stub with no sections;
+  // until 2026-09-28 app.html never fetched the rest, so a real tenant's tile
+  // said "No report yet" beside a report that existed.
+  const stub = { ...LIVE, overview: { ...LIVE.overview, latest_sitrep: { id: 129, headline: "x", posture_score: 71 } } };
+  const { text } = run(true, stub);
+  assert.equal(text("kpiControlCoverage"), "—");
+  assert.equal(text("kpiControlsMet"), "Report did not load");
+  assert.equal(text("kpiEvidenceReadiness"), "23", "evidence comes from the scan, not the report");
 });

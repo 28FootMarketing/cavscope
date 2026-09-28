@@ -265,6 +265,11 @@
       text-decoration: none;
       transition: all 0.2s ease;
     }
+    /* A class that sets display (flex, grid, block) outranks the browser's own
+       [hidden] rule, so hidden="" on such an element did nothing: the sample
+       client presets stayed on a live tenant's AIO screen for exactly this
+       reason. One rule for every element, rather than one per class. */
+    [hidden] { display: none !important; }
     .nav a.nav-out[hidden] { display: none; }
     .nav a.nav-out:hover { background: var(--surface-hover); color: #fff; }
 
@@ -1691,7 +1696,7 @@
     <!-- Left Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <div class="brand-mark" id="sidebarBrandMark">MU</div>
+        <div class="brand-mark" id="sidebarBrandMark">CS</div>
         <div class="brand-text">
           <span class="eyebrow" id="sidebarBrandEyebrow">28 Foot Systems</span>
           <strong id="sidebarBrandName">CavScope</strong>
@@ -1783,7 +1788,7 @@
         </div>
 
         <div class="user-badge">
-          <div class="user-avatar" id="sidebarUserAvatar">MU</div>
+          <div class="user-avatar" id="sidebarUserAvatar">CS</div>
           <div class="user-info">
             <strong id="sidebarUserName">CavScope</strong>
             <span>Executive Assurance Lead</span>
@@ -1894,16 +1899,16 @@
               <div class="metric-value" style="color: var(--cyan);" id="subclientCount">3</div>
               <small style="color: var(--text-muted);">Active client web properties</small>
             </div>
-            <div class="card metric-card" data-tooltip="Average audit score across all your clients. 80 or higher is the benchmark." tabindex="0">
-              <label>Fleet Conformance Average</label>
+            <div class="card metric-card" id="subclientAvgCard" data-tooltip="Average audit score across all your clients. 80 or higher is the benchmark." tabindex="0">
+              <label id="subclientAvgLabel">Fleet Conformance Average</label>
               <div class="metric-value" style="color: var(--teal);" id="subclientAvgHealth">86%</div>
-              <small style="color: var(--text-muted);">80+ Benchmark Achieved</small>
+              <small style="color: var(--text-muted);" id="subclientAvgSub">80+ Benchmark Achieved</small>
               <small class="score-asof" data-asof></small>
             </div>
-            <div class="card metric-card" data-tooltip="Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs." tabindex="0">
+            <div class="card metric-card" id="subclientDeliverablesCard" data-tooltip="Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs." tabindex="0">
               <label>Deliverables Generated</label>
-              <div class="metric-value" style="color: var(--emerald);">12</div>
-              <small style="color: var(--text-muted);">WCAG, AIO & Plain English Briefs</small>
+              <div class="metric-value" style="color: var(--emerald);" id="subclientDeliverables">12</div>
+              <small style="color: var(--text-muted);" id="subclientDeliverablesSub">WCAG, AIO & Plain English Briefs</small>
             </div>
             <div class="card metric-card" data-tooltip="When ON, agency clients see their own branding on reports instead of CavScope's." tabindex="0">
               <label>White-Label Status</label>
@@ -2146,10 +2151,10 @@
           <div class="panel" style="padding: 24px; margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
               <div>
-                <span class="eyebrow" style="color: var(--emerald);">Overall Accessibility Health Index</span>
+                <span class="eyebrow" style="color: var(--emerald);" id="wcagIndexLabel">Overall Accessibility Health Index</span>
                 <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
                   <div style="font-size: 42px; font-weight: 800; color: #fff; font-family: var(--font-sans);" id="wcagOverallScore">84</div>
-                  <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;">/ 100</span>
+                  <span style="font-size: 20px; color: var(--text-dim); font-weight: 600;" id="wcagIndexDenom">/ 100</span>
                   <span class="benchmark-badge benchmark-good" id="wcagOverallBadge" data-tooltip="Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class." tabindex="0">80+ Good · 90+ is Better</span>
                 </div>
                 <small class="score-asof" data-asof></small>
@@ -2163,7 +2168,7 @@
             </div>
 
             <!-- 12 Accessibility Pillars Grid -->
-            <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.08em; margin-bottom: 12px;">
+            <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.08em; margin-bottom: 12px;" id="wcagPillarsHeading">
               12 Accessibility Architectural Dimensions (Rated 0–10)
             </h4>
             <div class="grid-4" id="wcagPillarsGrid">
@@ -2289,7 +2294,7 @@
 
             <!-- Live Audit Telemetry Stream -->
             <div id="aioTerminal" class="scan-terminal">
-              <div class="terminal-line"><span class="terminal-time">[SYSTEMS]</span> <span>AIO Audit Engine Ready. Enter client URL and launch inspection.</span></div>
+              <div class="terminal-line"><span class="terminal-time">[SYSTEMS]</span> <span id="aioTerminalReady">AIO Audit Engine Ready. Enter client URL and launch inspection.</span></div>
             </div>
           </div>
 
@@ -2655,7 +2660,7 @@
                   <span class="eyebrow" style="color: var(--teal);">Policy Statement</span>
                   <h3 style="font-size: 17px; margin-top: 4px; color: #fff;">Risk Appetite & Tolerance</h3>
                 </div>
-                <span class="pill pill-approved" id="govAppetiteStatus">Formally Approved</span>
+                <span class="pill pill-approved" id="govAppetiteStatus" data-tooltip="Recorded as approved in this sample workspace." tabindex="0">Formally Approved</span>
               </div>
 
               <p style="font-size: 13.5px; color: #cbd7eb; line-height: 1.6; margin-bottom: 20px;" id="govAppetiteText">
@@ -2708,16 +2713,16 @@
           <div class="panel">
             <div class="panel-head">
               <div>
-                <h3>Control Testing Records</h3>
-                <p>Formal assessments of control operating effectiveness</p>
+                <h3 id="testsPanelTitle">Control Testing Records</h3>
+                <p id="testsPanelDesc">Formal assessments of control operating effectiveness</p>
               </div>
               <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openModal('test')" data-tooltip="Schedule a check that a compliance control actually works in practice.">＋ Plan Test</button>
             </div>
             <div class="table-header grid-tests">
-              <span>Control Test Name</span>
+              <span id="testsColName">Control Test Name</span>
               <span>Test Period</span>
               <span>Tester / Assessor</span>
-              <span>Effectiveness Result</span>
+              <span id="testsColResult">Effectiveness Result</span>
               <span style="text-align: right;">Action</span>
             </div>
             <div id="testsTableBody" class="list">
@@ -3338,6 +3343,28 @@
     // hand-written mockup that diverges from what a customer gets.
     // ===================================================================
 
+    // Fixed text in the page markup that a live workspace must replace. The
+    // first write records the sample's own text, tooltip and class, so demo mode
+    // can put them back; passing null restores. Until 2026-09-28 a dozen of these
+    // (the WCAG summary, the appetite verdict, the tolerance figures, the client
+    // fleet average) were never written by anything, so every tenant read the
+    // sample's claims about a fictional site as claims about their own.
+    const sampleCopy = Object.create(null);
+    function liveCopy(id, text, tip, cls) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      // The sample is restored as the page's own markup (it can carry <code>);
+      // live text is only ever set as text.
+      if (!(id in sampleCopy)) sampleCopy[id] = { html: el.innerHTML, tip: el.getAttribute('data-tooltip'), cls: el.className };
+      const orig = sampleCopy[id];
+      if (text == null) el.innerHTML = orig.html; else el.textContent = text;
+      if (tip !== undefined) {
+        const t = tip == null ? orig.tip : tip;
+        if (t == null) el.removeAttribute('data-tooltip'); else el.setAttribute('data-tooltip', t);
+      }
+      if (cls !== undefined) el.className = cls == null ? orig.cls : cls;
+    }
+
     // How a law's workspace status reads. The keys come from
     // q_compliance_posture; the words are chosen here so that no law is ever
     // shown as "clear", "compliant" or an "Effective" control. 'clear' only
@@ -3404,6 +3431,9 @@
 
     function renderReport(profile, sitrep, brand, opts) {
       opts = opts || {};
+      if (!sitrep.sections) {
+        return `<div class="rd-block rd-missing" data-tooltip="The report exists but its contents did not load into this page." tabindex="0">This report's contents did not load. Open it at /sitrep, or reload this page.</div>`;
+      }
       const s = sitrep.sections || {};
       const r = s.report;
       if (!r || !r.profiles || !r.profiles[profile]) {
@@ -3734,7 +3764,7 @@
         isCustom: false,
         mode: "muster",
         name: "CavScope",
-        mark: "MU",
+        mark: "CS", // matches the database default since migration 115; was MUSTER's "MU"
         eyebrow: "28 Foot Systems",
         color: "#36e2c9",
         disclaimer: "Prepared under the CavScope Assurance Framework by 28 Foot Systems. All rights reserved."
@@ -3794,6 +3824,12 @@
       if (plainFooter) plainFooter.textContent = b.disclaimer;
       if (boardEyebrow) boardEyebrow.textContent = `Executive Assurance Briefing — ${b.name}`;
       if (aioEyebrow) aioEyebrow.textContent = `${b.name} — AI Optimization Framework`;
+      // These two were left out, so a white-label workspace's first screen still
+      // said "Executive Line of Sight — CavScope".
+      const overviewEyebrow = document.getElementById('lblOverviewBrandEyebrow');
+      if (overviewEyebrow) overviewEyebrow.textContent = `Executive Line of Sight — ${b.name}`;
+      const wcagEyebrow = document.getElementById('lblWcagBrandEyebrow');
+      if (wcagEyebrow) wcagEyebrow.textContent = `${b.name} — Digital Accessibility Architecture`;
       if (aioReportBrand) aioReportBrand.textContent = `${b.name} Client Deliverable`;
       // The two reports carry the brand in their own header and footer, so a
       // brand change re-renders them rather than poking ids inside them.
@@ -4755,6 +4791,9 @@
         ? 'Share of the AI-readiness checks this scan could assess that passed. Checks it could not assess are left out, not counted as passes.'
         : 'Benchmark: 80 is Good, 90 is Better, 95 and up is World-Class.';
       setText('aioScoreSummary', aio.summary || '');
+      liveCopy('aioTerminalReady', live ? `Ready to scan ${aio.domain || 'this workspace\'s website'}. A live audit runs against the website registered to this workspace.` : null);
+      liveCopy('aioPrizeTitle', live && aio.prize ? aio.prize.title : null);
+      liveCopy('aioPrizeText', live && aio.prize ? aio.prize.text : null);
       setText('aioBlockerTitle', (aio.blocker && aio.blocker.title) || '');
       setText('aioBlockerText', (aio.blocker && aio.blocker.text) || '');
       if (aio.blocker && aio.blocker.fields) registerLlmPrompt('blocker', { id: aio.blocker.id, fields: aio.blocker.fields });
@@ -5096,6 +5135,27 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       const countEl = document.getElementById('subclientCount');
       if (countEl) countEl.textContent = subClients.length;
 
+      // Live: the average is of posture scores the engine produced, over the
+      // sites that have one. The sample's "86%" and "12 deliverables" were fixed
+      // text every tenant saw; nothing counts deliverables, so live says so.
+      const live = isLiveWorkspace();
+      const scored = subClients.filter(c => c.score != null);
+      const avg = scored.length ? Math.round(scored.reduce((a, c) => a + c.score, 0) / scored.length) : null;
+      const green = scored.filter(c => c.score >= 85).length;
+      liveCopy('subclientAvgLabel', live ? 'Average Posture' : null);
+      liveCopy('subclientAvgHealth', live ? (avg == null ? '—' : `${avg}/100`) : null);
+      liveCopy('subclientAvgSub', live ? (scored.length ? `${green} of ${scored.length} scanned site${scored.length === 1 ? '' : 's'} green (85+)` : 'No site scanned yet') : null);
+      const avgCard = document.getElementById('subclientAvgCard');
+      if (avgCard) avgCard.setAttribute('data-tooltip', live
+        ? 'Average posture score across this workspace\'s scanned websites. A site with no completed scan has no score and is left out.'
+        : 'Average audit score across all your clients. 80 or higher is the benchmark.');
+      liveCopy('subclientDeliverables', live ? '—' : null);
+      liveCopy('subclientDeliverablesSub', live ? 'Not counted yet' : null);
+      const delCard = document.getElementById('subclientDeliverablesCard');
+      if (delCard) delCard.setAttribute('data-tooltip', live
+        ? 'CavScope does not count generated deliverables yet, so no number is shown. Each scan writes a SITREP, listed under Reports.'
+        : 'Reports produced for clients: WCAG audits, AIO roadmaps, and plain-English briefs.');
+
       const badgeSub = document.getElementById('badgeSubClients');
       if (badgeSub) badgeSub.textContent = subClients.length;
 
@@ -5127,7 +5187,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.industry)}</span></div>
           <div><span class="pill pill-medium">${escapeHtml(c.scope)}</span></div>
           <div>
-            <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13px; color: ${c.score >= 80 ? 'var(--emerald)' : 'var(--amber)'};">${c.score}/100</span>
+            <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13px; color: ${c.score == null ? 'var(--text-dim)' : (c.score >= 80 ? 'var(--emerald)' : 'var(--amber)')};">${c.score == null ? 'Not scanned' : c.score + '/100'}</span>
           </div>
           <div style="text-align: right; display: flex; gap: 6px; justify-content: flex-end;">
             <button class="btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="applyMasterUrl('${c.domain}', '${c.name}', '${c.industry}'); runUniversalAudit();" data-tooltip="Makes this client the active target and runs the full audit now.">⚡ Audit</button>
@@ -5138,8 +5198,18 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
 
     function renderAccessibilityView() {
       const a11y = state.accessibility;
+      const live = isLiveWorkspace() && !!a11y.live;
       const scoreEl = document.getElementById('wcagOverallScore');
-      if (scoreEl) scoreEl.textContent = a11y.overallScore;
+      if (scoreEl) scoreEl.textContent = a11y.overallScore == null ? '—' : a11y.overallScore;
+      liveCopy('wcagIndexLabel', live ? 'Automated Accessibility Checks Passed' : null);
+      liveCopy('wcagIndexDenom', live ? (a11y.overallScore == null ? '' : '%') : null);
+      liveCopy('wcagOverallBadge', live ? 'Automated checks only' : null,
+        live ? 'Share of the automated accessibility checks this scan could assess that passed. It is not a WCAG conformance rating: keyboard, focus, contrast and screen-reader behaviour need a browser engine CavScope has not enabled.' : null);
+      liveCopy('wcagScoreSummary', live ? a11y.summary : null);
+      liveCopy('wcagPillarsHeading', live ? a11y.pillarsHeading : null);
+      const a11yScan = live && (a11y.checks || []).length ? ((Live.overview && Live.overview.recent_scans) || []).find(s => s.status === 'complete') : null;
+      const a11yStamp = document.querySelector('#accessibility [data-asof]');
+      if (a11yStamp && live) a11yStamp.textContent = a11yScan ? `Scan #${a11yScan.id} of ${String(a11yScan.finished_at || a11yScan.created_at).slice(0, 16).replace('T', ' ')} UTC` : '';
 
       const pillarsGrid = document.getElementById('wcagPillarsGrid');
       if (pillarsGrid) {
@@ -5147,13 +5217,15 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           <div style="background: rgba(8, 16, 36, 0.7); border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 14px 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <strong style="color: #fff; font-size: 12.5px;">${escapeHtml(p.name)}</strong>
-              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: ${p.score >= 9 ? 'var(--emerald)' : (p.score >= 8 ? 'var(--cyan)' : 'var(--rose)')};">${p.score}/10</span>
+              ${p.score == null
+                ? `<span style="font-family: var(--font-mono); font-weight: 800; font-size: 11.5px; color: var(--text-dim);" data-tooltip="This scan could not assess this area, so it is left out of the index rather than counted as a pass." tabindex="0">Not assessed</span>`
+                : `<span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: ${p.score >= 9 ? 'var(--emerald)' : (p.score >= 8 ? 'var(--cyan)' : 'var(--rose)')};">${live ? (p.score === 10 ? 'Pass' : 'Fail') : p.score + '/10'}</span>`}
             </div>
             <p style="font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <small style="color: var(--teal); font-weight: 700;">+${p.pointsToTen} pts</small>
+              <small style="color: var(--teal); font-weight: 700;">${p.pointsToTen ? '+' + p.pointsToTen + ' pts' : ''}</small>
               <button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('wcag_' + p.id, { id: p.id, fields: [
-                ['Accessibility area', p.name], ['CavScope score', p.score + '/10'],
+                ['Accessibility area', p.name], ['CavScope result', p.score == null ? 'Not assessed' : (live ? (p.score === 10 ? 'Pass' : 'Fail') : p.score + '/10')],
                 ['What CavScope observed', p.rationale], ['Points available', '+' + p.pointsToTen],
               ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this accessibility area.">🤖 Copy Fix</button>
             </div>
@@ -5165,7 +5237,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       if (table) {
         table.innerHTML = a11y.defects.map(d => `
           <div class="table-row grid-wcag-defects">
-            <div><span class="pill ${d.severity === 'P0' ? 'pill-critical' : 'pill-high'}">${d.severity}</span></div>
+            <div><span class="pill ${d.severity === 'P0' || d.severity === 'P1' ? 'pill-critical' : (d.severity === 'P2' ? 'pill-high' : 'pill-medium')}">${d.severity}</span></div>
             <div>
               <span class="pill pill-medium" style="font-size: 9.5px;">${d.criterion}</span>
               <strong style="display: block; font-size: 12px; color: #fff; margin-top: 3px;">${escapeHtml(d.criterionName)}</strong>
@@ -5315,10 +5387,10 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           <div><span class="pill pill-medium">${escapeHtml(e.type)}</span></div>
           <div>
             <span style="font-size: 12px; color: #e2e8f0; display: block;">${escapeHtml(e.reviewer)}</span>
-            <span class="pill ${e.source === 'system' ? 'pill-system' : 'pill-client'}" style="margin-top: 4px; font-size: 9px;" data-tooltip="${e.source === 'system' ? 'Captured directly by the CavScope scan engine.' : 'Uploaded or attested by a person. CavScope has not independently verified this claim.'}" tabindex="0">${e.source === 'system' ? 'System-verified' : 'Client-submitted'}</span>
+            <span class="pill ${e.source === 'system' ? 'pill-system' : 'pill-client'}" style="margin-top: 4px; font-size: 9px;" data-tooltip="${e.source === 'system' ? 'Captured directly by the CavScope scan engine.' : 'Uploaded or attested by a person. CavScope has not independently verified this claim.'}" tabindex="0">${e.source === 'system' ? 'Engine-captured' : 'Client-submitted'}</span>
           </div>
           <div><span class="pill ${e.status === 'Approved' ? 'pill-approved' : 'pill-pending'}">${e.status}</span></div>
-          <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Artifact reviewed.')" data-tooltip="Marks this document as reviewed. Does not change its approval status yet.">Verify</button></div>
+          <div style="text-align: right;">${isLiveWorkspace() ? '' : `<button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Artifact reviewed.')" data-tooltip="Sample walkthrough: marks this document as reviewed. A live workspace does not record evidence review yet, so it has no such button.">Verify</button>`}</div>
         </div>
       `).join('');
     }
@@ -5359,8 +5431,10 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
     //   posture     - posture_score / posture_band / open_by_severity (Postgres)
     //   controls    - the latest SITREP's derived control coverage, the same
     //                 figures the report prints
-    //   evidence    - the count the latest SITREP's evidence index holds. No
-    //                 percentage: nothing tracks whether an auditor reviewed it
+    //   evidence    - how many items the latest completed scan captured (its
+    //                 summary.evidence). Not the SITREP's evidence index, which
+    //                 lists only what the report cites. No percentage: nothing
+    //                 tracks whether an auditor reviewed any of it
     //   remediation - the risk register: mitigated share, overdue, in progress
     // Demo mode puts the sample figures back and labels them "Sample data".
     const POSTURE_WEIGHTS = { critical: 25, high: 10, medium: 4, low: 1 };
@@ -5432,24 +5506,24 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       } else {
         set('kpiControlCoverage', '—');
         bar('kpiControlBar', 0);
-        set('kpiControlsMet', 'No report yet');
+        set('kpiControlsMet', !sitrep ? 'No report yet' : !sitrep.sections ? 'Report did not load' : 'Report predates control coverage');
         tone('kpiControlsMet', false);
         set('kpiControlsDetail', 'Derived from findings');
         asof('kpiControlCoverage', '');
       }
 
       // --- evidence: a count, never a readiness percentage ---
-      const ev = Array.isArray(sections.evidence_index) ? sections.evidence_index : null;
+      const evCount = scanned && scan.summary && scan.summary.evidence != null ? Number(scan.summary.evidence) : null;
       set('kpiEvidenceLabel', 'Evidence Captured');
       set('kpiEvidenceDenom', 'items');
       const evBar = $('kpiEvidenceBar');
       if (evBar && evBar.parentElement) evBar.parentElement.hidden = true;
       tip('kpiEvidenceReadiness', 'Responses and records the latest scan captured, each with a SHA-256 so it can be shown unaltered later. CavScope does not track whether an auditor has reviewed or accepted any of it, so there is no readiness percentage. Click to open the Evidence library.');
-      set('kpiEvidenceReadiness', ev ? String(ev.length) : '—');
-      set('kpiEvidenceCount', ev ? 'Captured on the latest scan' : 'No report yet');
+      set('kpiEvidenceReadiness', evCount == null ? '—' : String(evCount));
+      set('kpiEvidenceCount', evCount == null ? 'No completed scan yet' : 'Captured on the latest scan');
       tone('kpiEvidenceCount', false);
       set('kpiEvidenceReview', 'Auditor review not tracked');
-      asof('kpiEvidenceReadiness', sitrep && sitrep.generated_at ? `Report of ${when(sitrep.generated_at)}` : '');
+      asof('kpiEvidenceReadiness', evCount == null ? '' : `Scan of ${when(scan.finished_at || scan.created_at)}`);
 
       // --- remediation: the risk register ---
       const risks = Array.isArray(Live.risks) ? Live.risks : [];
@@ -5498,6 +5572,23 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           </div>`,
         };
       }
+      if (key === 'wcagOverall') {
+        const a = state.accessibility || {};
+        if (!a.live) return null;
+        const label = c => c.state === 'pass' ? 'Pass' : c.state === 'fail' ? 'Fail' : 'Not assessed';
+        return {
+          title: 'Automated Accessibility Checks',
+          html: `<div class="explainer-card">
+            <h4>${a.overallScore == null ? 'Not assessed yet' : escapeHtml(String(a.overallScore)) + '% of assessed checks pass'}</h4>
+            <div class="explainer-section"><label>How it is calculated</label>
+              <p>Each automated check passes when the latest scan could run it and found nothing. A check the scan could not run is left out rather than counted as a pass. The share is passes over assessed checks.</p></div>
+            <div class="explainer-section"><label>Checks on this scan</label>
+              ${(a.checks || []).map(c => row(`${c.label}: ${c.note}`, label(c))).join('')}</div>
+            <div class="explainer-section"><label>What this is not</label>
+              <p>Not a WCAG conformance rating. Keyboard operation, focus, contrast and screen-reader behaviour need a browser engine CavScope has not enabled, and they are most of what WCAG asks.</p></div>
+          </div>`,
+        };
+      }
       if (key === 'controls') {
         const c = ((ov.latest_sitrep || {}).sections || {}).report ? (ov.latest_sitrep.sections.report.controls || {}) : {};
         return {
@@ -5512,11 +5603,12 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         };
       }
       if (key === 'evidence') {
-        const ev = ((ov.latest_sitrep || {}).sections || {}).evidence_index || [];
+        const scan = ov.latest_scan || {};
+        const n = scan.status === 'complete' && scan.summary && scan.summary.evidence != null ? Number(scan.summary.evidence) : null;
         return {
           title: 'Evidence Captured',
           html: `<div class="explainer-card">
-            <h4>${ev.length} item${ev.length === 1 ? '' : 's'} captured on the latest scan</h4>
+            <h4>${n == null ? 'No completed scan yet' : `${n} item${n === 1 ? '' : 's'} captured on the latest scan`}</h4>
             <div class="explainer-section"><label>What this counts</label>
               <p>Each response and record the scan read, stored with a SHA-256 so it can be shown unaltered later.</p></div>
             <div class="explainer-section"><label>What it does not</label>
@@ -5541,8 +5633,36 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       return null;
     }
 
+    // The Overview's appetite panel. It said "Within Tolerance" above the
+    // sample's own policy sentence for every tenant, whatever their register
+    // held. Live, it compares open critical and high risks with the thresholds
+    // saved under Governance.
+    function renderOverviewAppetite() {
+      if (!isLiveWorkspace()) {
+        liveCopy('overviewAppetiteStatus', null, null, null);
+        liveCopy('overviewAppetiteSummary', null);
+        return;
+      }
+      const a = Live.appetite;
+      if (!a) {
+        liveCopy('overviewAppetiteStatus', 'Not set', 'No risk appetite is saved for this workspace, so there is nothing to compare against.', 'pill pill-pending');
+        liveCopy('overviewAppetiteSummary', 'No risk appetite saved yet. Set one under Governance.');
+        return;
+      }
+      const openRisks = (Live.risks || []).filter(r => r.status === 'open' || r.status === 'in_progress');
+      const crit = openRisks.filter(r => r.severity === 'critical').length;
+      const high = openRisks.filter(r => r.severity === 'high').length;
+      const critTol = Number(a.critical_threshold) || 0, highTol = Number(a.high_threshold) || 0;
+      const within = crit <= critTol && high <= highTol;
+      liveCopy('overviewAppetiteStatus', within ? 'Within Tolerance' : 'Outside Tolerance',
+        `${crit} open critical risk${crit === 1 ? '' : 's'} (${critTol} allowed) and ${high} open high risk${high === 1 ? '' : 's'} (${highTol} allowed), from the risk register against the appetite saved under Governance.`,
+        within ? 'pill pill-approved' : 'pill pill-critical');
+      liveCopy('overviewAppetiteSummary', a.statement || 'No policy statement saved.');
+    }
+
     function renderOverview() {
       renderOverviewKpis();
+      renderOverviewAppetite();
       const priorityContainer = document.getElementById('overviewPriorityRisks');
       if (priorityContainer) {
         priorityContainer.innerHTML = state.risks.slice(0, 3).map(r => `
@@ -5592,6 +5712,16 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       const g = state.governance;
       const appText = document.getElementById('govAppetiteText');
       if (appText) appText.textContent = g.appetite.statement;
+      // These four were fixed text until 2026-09-28: a tenant whose thresholds
+      // were not the sample's 0 / 2 / Quarterly read the sample's anyway.
+      const setGov = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+      setGov('govCritTol', `${g.appetite.criticalTolerance ?? 0} Allowed`);
+      setGov('govHighTol', `${g.appetite.highTolerance ?? 0} Allowed`);
+      setGov('govCadence', g.appetite.cadence || 'Not set');
+      const live = isLiveWorkspace();
+      liveCopy('govAppetiteStatus', g.appetite.status || '',
+        live ? 'When this appetite was last saved. CavScope records the save, not a formal approval.' : 'Recorded as approved in this sample workspace.',
+        live ? 'pill pill-pending' : null);
 
       const excContainer = document.getElementById('govExceptionsList');
       if (excContainer) {
@@ -5606,6 +5736,13 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
     }
 
     function renderAssurance() {
+      // Live, these rows are the site's recent scans. Nothing in the schema
+      // records a control test, so the panel says what the rows are.
+      const live = isLiveWorkspace();
+      liveCopy('testsPanelTitle', live ? 'Automated Scan Runs' : null);
+      liveCopy('testsPanelDesc', live ? 'Each scan re-runs the automated checks. A completed scan is not a finding that any control is effective; CavScope does not record control tests yet.' : null);
+      liveCopy('testsColName', live ? 'Scan' : null);
+      liveCopy('testsColResult', live ? 'Result' : null);
       const table = document.getElementById('testsTableBody');
       if (!table) return;
       table.innerHTML = state.assurance.tests.map(t => `
@@ -5616,19 +5753,25 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           </div>
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(t.period)}</span></div>
           <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(t.tester)}</span></div>
-          <div><span class="pill ${t.result === 'Effective' ? 'pill-approved' : 'pill-critical'}">${t.result}</span></div>
-          <div style="text-align: right;"><button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Test documentation opened.')" data-tooltip="Opens the full test record and the evidence that was inspected.">Details</button></div>
+          <div><span class="pill ${t.result === 'Effective' || t.result === 'Scan completed' ? 'pill-approved' : (t.result === 'In progress' ? 'pill-pending' : 'pill-critical')}">${escapeHtml(t.result)}</span></div>
+          <div style="text-align: right;">${isLiveWorkspace() ? '' : `<button class="btn-ghost" style="padding: 4px 8px; font-size: 11px;" onclick="showToast('Test documentation opened.')" data-tooltip="Sample walkthrough: opens the full test record and the evidence that was inspected.">Details</button>`}</div>
         </div>
       `).join('');
     }
 
+    // Sample figures are labelled as sample data, never "As of" the current
+    // minute, which made the fiction read as fresh. A live view that has a
+    // better date (the scan it came from) overwrites its own stamp afterwards.
     function stampScoreTimestamps() {
-      const label = 'As of ' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+      const label = isLiveWorkspace()
+        ? 'As of ' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+        : 'Sample data';
       document.querySelectorAll('[data-asof]').forEach(el => { el.textContent = label; });
     }
 
     function refreshAll() {
       stampScoreTimestamps();
+      if (typeof syncDemoOnlyControls === 'function') syncDemoOnlyControls();
       renderTenantDropdown();
       renderOverview();
       renderSubClientsView();
@@ -6041,6 +6184,14 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         showToast('Signed out. Demo workspace restored.');
       },
       restoreDemo() {
+        // Live panels are inserted into views and demo blocks hidden while live
+        // is showing. Until 2026-09-28 switching to the sample left both as they
+        // were, so a screen labelled "sample data" showed the tenant's real SITREP,
+        // laws and team. Put the page back the way a fresh demo load has it.
+        document.querySelectorAll('.live-panel').forEach(el => el.remove());
+        ['teamSettingsDemoBlocks', 'controlsDemoBlocks'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = false; });
+        const aioResults = document.getElementById('aioResultsContainer');
+        if (aioResults) aioResults.style.display = 'none';
         if (!this.demoStore) return;
         Object.keys(multiTenantStore).forEach(k => { if (k.startsWith('live-')) delete multiTenantStore[k]; });
         Object.assign(multiTenantStore, this.demoStore);
@@ -6215,12 +6366,26 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         this.website = (o.websites || [])[0] || null;
         const tenant = multiTenantStore['live-' + o.id];
         this.overview = this.website ? await this.rpc('muster_website_overview', { p_website_id: this.website.id }) : null;
+        // The overview's latest_sitrep is a stub -- id, headline, score. The
+        // workspace reports, the evidence library and the Overview tiles need its
+        // sections, which only muster_latest_sitrep returns (the RPC sitrep.html
+        // reads). Until 2026-09-28 nothing here fetched it, so both workspace
+        // reports told every tenant their report "was generated before the report
+        // template existed". A failure is marked rather than left as a stub that
+        // reads like an old report.
+        if (this.overview && this.overview.latest_sitrep) {
+          try {
+            const full = await this.rpc('muster_latest_sitrep', { p_website_id: this.website.id });
+            if (full && full.sections) this.overview.latest_sitrep = full;
+            else this.overview.latest_sitrep.load_failed = true;
+          } catch (e) { this.overview.latest_sitrep.load_failed = true; this.fail(e); }
+        }
         this.risks = this.website ? await this.rpc('muster_risks', { p_website_id: this.website.id }) : [];
         this.appetite = await this.rpc('muster_risk_appetite', { p_organization_id: o.id });
         this.pendingInvites = await this.rpc('muster_pending_invites', { p_organization_id: o.id });
         // Which AIO rules can have fired. Settles on its own: if it fails, the
         // AIO checks read "not assessed" rather than the workspace failing to load.
-        try { this.ruleStatus = await this.rpc('muster_rule_status', { p_rule_ids: this.aioChecks.map(c => c.rule) }); }
+        try { this.ruleStatus = await this.rpc('muster_rule_status', { p_rule_ids: [...this.aioChecks.map(c => c.rule), ...this.a11yChecks.map(([r]) => r)] }); }
         catch (_) { this.ruleStatus = null; }
         tenant.data = this.buildState(o, this.overview);
         activeTenantId = tenant.id;
@@ -6300,7 +6465,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         };
         base.subClients = (o.websites || []).map(w => ({
           id: `WEB-${w.id}`, name: w.name, domain: this.host(w.url), industry: o.industry || '', tier: (o.plan_detail && o.plan_detail.name) || o.plan,
-          scope: 'HTTP-native scan', score: w.posture_score ?? 0,
+          scope: 'HTTP-native scan', score: w.posture_score ?? null,
           contact: w.latest_scan ? `Last scan ${String(w.latest_scan.finished_at || w.latest_scan.created_at).slice(0, 16).replace('T', ' ')} (${w.latest_scan.status})` : 'No scan yet',
           addedAt: (w.created_at || '').slice(0, 10), websiteId: w.id
         }));
@@ -6343,7 +6508,10 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         if (appetite) {
           base.governance.appetite = {
             statement: appetite.statement, criticalTolerance: appetite.critical_threshold, highTolerance: appetite.high_threshold,
-            cadence: cadenceLabel[appetite.review_cadence] || appetite.review_cadence, status: 'Formally Approved',
+            // The appetite table records when it was saved, not who approved it,
+            // so "Formally Approved" -- which this used to say -- was invented.
+            cadence: cadenceLabel[appetite.review_cadence] || appetite.review_cadence,
+            status: appetite.updated_at ? `Last saved ${String(appetite.updated_at).slice(0, 10)}` : 'Saved',
             nextReview: appetite.next_review_at ? String(appetite.next_review_at).slice(0, 10) : ''
           };
         }
@@ -6354,20 +6522,20 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         }));
         base.assurance.tests = ((ov && ov.recent_scans) || []).slice(0, 6).map(s => ({
           id: `SCAN-${s.id}`, name: `Scan #${s.id} (${s.engine_version || 'engine'})`, period: String(s.created_at).slice(0, 10), tester: 'CavScope engine',
-          result: s.status === 'complete' ? 'Effective' : (s.status === 'failed' ? 'Exceptions Noted' : 'In progress'),
+          // A completed scan is a scan that ran, not a control found effective.
+          result: s.status === 'complete' ? 'Scan completed' : (s.status === 'failed' ? 'Scan failed' : 'In progress'),
           evidenceSummary: s.summary && s.summary.evidence != null ? `${s.summary.evidence} evidence rows, ${s.summary.new} new findings` : (s.error_message || 'Pending')
         }));
-        // Accessibility view: one pillar per HTTP-native rule; browser engine pillars marked pending.
-        const a11yRules = [['A11Y-001', 'Page language'], ['A11Y-002', 'Page title'], ['A11Y-003', 'Image alt text'], ['A11Y-004', 'Pinch zoom'], ['A11Y-005', 'Top-level heading'], ['A11Y-006', 'Form labels'], ['A11Y-007', 'Link text']];
-        const openByRule = {};
-        findings.forEach(f => { openByRule[f.rule_id] = f; });
-        base.accessibility.overallScore = posture ?? 0;
-        base.accessibility.pillars = a11yRules.map(([rid, name], i) => {
-          const f = openByRule[rid];
-          return { id: rid, name: `${i + 1}. ${name}`, score: f ? 4 : 10, rationale: f ? f.detail : `No open finding for rule ${rid}.`, pointsToTen: f ? 6 : 0 };
-        }).concat([{ id: 'browser', name: '8. Browser engine (keyboard, contrast, ARIA)', score: 0, rationale: 'Pending: the headless browser engine is behind the browser_wcag_engine flag and not yet enabled.', pointsToTen: 10 }]);
+        // Accessibility: one check per HTTP-native rule, scored like the AIO view.
+        // Until 2026-09-28 the "Health Index" here was the site's security posture
+        // relabelled, every rule with no open finding scored 10/10 whether or not
+        // it could have run, and the summary sentence described the sample's
+        // fictional keyboard trap.
+        Object.assign(base.accessibility, this.buildAccessibility(ov));
         base.accessibility.defects = findings.filter(f => f.category === 'accessibility').map(f => ({
-          id: `F${f.id}`, severity: f.severity === 'critical' ? 'P0' : (f.severity === 'high' ? 'P0' : 'P1'), criterion: `WCAG ${(f.framework_refs && f.framework_refs.WCAG) || ''}`.trim(),
+          // Engine severity to the register's P0-P4 scale. This used to send
+          // every medium, low and informational finding to "P1 Critical".
+          id: `F${f.id}`, severity: ({ critical: 'P0', high: 'P1', medium: 'P2', low: 'P3', info: 'P4' })[f.severity] || 'P4', criterion: `WCAG ${(f.framework_refs && f.framework_refs.WCAG) || ''}`.trim(),
           criterionName: f.title, component: f.location || 'homepage', impact: f.plain_english, rootCause: f.detail, fix: f.remediation, location: f.page_url,
           validation: `HTTP engine · evidence ${(f.evidence_ids || []).map(i => 'E' + i).join(', ')}`, status: f.status === 'open' ? 'Open' : f.status
         }));
@@ -6387,6 +6555,48 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       // Until 2026-09-23 this view scored the pillars with the site's overall
       // security posture, credited llms.txt and structured data that the engine
       // never requested, and passed checks whose rule had never run.
+      a11yChecks: [
+        ['A11Y-001', 'Page language'], ['A11Y-002', 'Page title'], ['A11Y-003', 'Image alt text'], ['A11Y-004', 'Pinch zoom'],
+        ['A11Y-005', 'Top-level heading'], ['A11Y-006', 'Form labels'], ['A11Y-007', 'Link text'],
+      ],
+      // Same rule as the AIO checks below: a check with no open finding is a
+      // pass only if its rule could have fired -- enabled, and a scan that read
+      // the homepage. Everything else is "not assessed" and out of the index.
+      buildAccessibility(ov) {
+        const findings = (ov && ov.findings) || [];
+        const byRule = {};
+        findings.forEach(f => { byRule[f.rule_id] = f; });
+        const scan = ((ov && ov.recent_scans) || []).find(s => s.status === 'complete') || null;
+        const active = {};
+        (this.ruleStatus || []).forEach(r => { active[r.rule_id] = r.active; });
+        const unread = ['AVAIL-001', 'AVAIL-003', 'AVAIL-004'].find(r => byRule[r]);
+        const checks = this.a11yChecks.map(([rule, label]) => {
+          const f = byRule[rule];
+          if (!scan) return { rule, label, state: 'na', note: 'No completed scan yet.' };
+          if (unread) return { rule, label, state: 'na', note: `The engine could not read the homepage on scan #${scan.id} (${unread}), so nothing on it was assessed.` };
+          if (!this.ruleStatus) return { rule, label, state: 'na', note: 'Could not read which rules are enabled, so this is not scored.' };
+          if (!active[rule]) return { rule, label, state: 'na', note: `Rule ${rule} is not enabled.` };
+          return f ? { rule, label, state: 'fail', note: f.detail } : { rule, label, state: 'pass', note: `No open ${rule} finding on scan #${scan.id}.` };
+        });
+        const assessed = checks.filter(c => c.state !== 'na');
+        const passed = assessed.filter(c => c.state === 'pass');
+        const pillars = checks.map((c, i) => ({
+          id: c.rule, name: `${i + 1}. ${c.label}`,
+          score: c.state === 'pass' ? 10 : c.state === 'fail' ? 0 : null,
+          rationale: c.note, pointsToTen: 0,
+        })).concat([{ id: 'browser', name: `${checks.length + 1}. Keyboard, focus, contrast and screen readers`, score: null, pointsToTen: 0,
+          rationale: 'Not assessed. These need a browser engine that runs the page, which CavScope has not enabled. They are most of what WCAG asks, so this view is not a conformance rating.' }]);
+        const summary = !scan
+          ? 'No completed scan yet. Run a scan to assess this site.'
+          : !assessed.length
+            ? `Nothing was assessed on scan #${scan.id}. ${checks[0].note}`
+            : `${passed.length} of ${assessed.length} automated checks pass on scan #${scan.id}. Keyboard, focus, contrast and screen-reader behaviour are not assessed: they need a browser engine CavScope has not enabled. This is not a WCAG conformance rating.`;
+        return {
+          live: true, checks, pillars, summary,
+          overallScore: assessed.length ? Math.round((100 * passed.length) / assessed.length) : null,
+          pillarsHeading: `${checks.length} automated checks, plus browser checks not yet run`,
+        };
+      },
       aioChecks: [
         { rule: 'GOV-008', pillar: 'crawl',  label: 'Homepage content served in the HTML', floor: '1.8.0' },
         { rule: 'GOV-001', pillar: 'crawl',  label: 'robots.txt present' },
@@ -6501,8 +6711,19 @@ Only the name and address MUSTER holds for this workspace are filled in. Add log
 
 Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list the pages that matter with one line each.`;
 
+        // "The Prize" panel was fixed text promising "Default AI Citation for
+        // Category Queries" to every tenant. Live, it names this site's own
+        // failing checks, and never promises an outcome no provider publishes.
+        const failingLabels = checks.filter(c => c.state === 'fail').map(c => c.label);
+        const prize = failingLabels.length
+          ? { title: `What closing ${failingLabels.length === 1 ? 'this gap' : `these ${failingLabels.length} gaps`} is worth`,
+              text: `Fixing ${failingLabels.join(', ')} makes more of this site readable to AI crawlers. AI providers decide what they cite and how they rank it; CavScope measures readiness, not the outcome.` }
+          : assessed.length
+            ? { title: 'No AI-readiness gaps on this scan', text: `Every check scan #${scan.id} could assess passes. AI providers decide what they cite and how they rank it; CavScope measures readiness, not the outcome.` }
+            : { title: 'Nothing assessed yet', text: 'Run an audit to see which AI-readiness checks this site passes.' };
+
         return {
-          ...demo, live: true, domain: host, clientName: o.name, scan, checks,
+          ...demo, live: true, domain: host, clientName: o.name, scan, checks, prize,
           overallScore: assessed.length ? Math.round(100 * passed.length / assessed.length) : null,
           badge: assessed.length ? `${passed.length} of ${assessed.length} checks pass` : 'Not assessed yet',
           summary, blocker, pillars, findings: aioFindings, jsonLd, llmsTxt,
@@ -6642,7 +6863,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
                 ${[[60, 'Hourly'], [360, 'Every 6h'], [1440, 'Daily'], [10080, 'Weekly']].map(([m, label]) => `<option value="${m}" ${(ov && ov.scan_settings && ov.scan_settings.cadence_minutes) === m ? 'selected' : ''}>${label}</option>`).join('')}
               </select>
               <button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="Live.requestScan()" data-tooltip="Queues a new scan and regenerates the SITREP when it completes.">⚡ Run scan</button>
-              ${sitrep ? `<button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
+              ${sitrep && sitrep.content_md ? `<button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
             </div>
           </div>
 `;
@@ -7030,6 +7251,27 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         if (currentModalType === 'appetite') { e.preventDefault(); closeModal(); Live.saveRiskAppetite(payload); return; }
       }
       return _handleFormSubmit(e);
+    };
+    // Forms with no backend behind them. In a live workspace they used to fall
+    // through to the sample's handler: the record appeared, a toast said it was
+    // added, and it was gone on reload, never having reached the database. A
+    // live workspace now hides their buttons, and refuses them if one is reached
+    // anyway. Branding, websites, onboarding and risk appetite do save, above.
+    const DEMO_ONLY_MODALS = ['risk', 'control', 'evidence', 'exception', 'remediation', 'test', 'objective'];
+    function syncDemoOnlyControls() {
+      const live = isLiveWorkspace();
+      document.querySelectorAll('[onclick*="openModal("]').forEach(el => {
+        const m = /openModal\('([a-z_]+)'\)/.exec(el.getAttribute('onclick') || '');
+        if (m && DEMO_ONLY_MODALS.includes(m[1])) el.hidden = live;
+      });
+    }
+    const _openModal = openModal;
+    openModal = function (type) {
+      if (isLiveWorkspace() && DEMO_ONLY_MODALS.includes(type)) {
+        showToast('Not available in a live workspace yet: nothing would be saved. Findings, risks and evidence come from scans.');
+        return;
+      }
+      return _openModal(type);
     };
     const _switchTenant = switchTenant;
     switchTenant = function (tenantId) {

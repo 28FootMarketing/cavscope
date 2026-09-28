@@ -600,9 +600,34 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   benchmark for it, because CavScope's real bands are green at 85, amber from 60. Demo mode restores
   the sample and stamps it "Sample data". `tests/ui/overview-kpis.test.ts` runs the real renderer
   against a fake DOM built from the tiles' own markup, and fails all nine cases on the old file.
-  **Other hardcoded demo figures remain** outside the Overview row (the WCAG "84 / 100" explainer and
-  the sample governance exceptions among them); treat any fixed number in `app.html` as suspect
-  until a live path is shown to replace it.
+  **That change shipped a regression, fixed the same day:** the Controls and Evidence tiles read
+  `latest_sitrep.sections`, and the overview payload's `latest_sitrep` is a stub with no sections,
+  so a real tenant read "No report yet" beside a report that existed. The test fed an assumed
+  payload shape. Evidence now counts `latest_scan.summary.evidence` (18 on org 3's scan 126),
+  not the SITREP's evidence index, which lists only what the report cites (2).
+- **A live workspace is checked by rendering it, not by reading it (`tools/live-sweep/`).** On
+  2026-09-28 every workspace view was rendered in Chromium in demo mode, as a live tenant fed that
+  tenant's real payloads, and in demo again, and the two diffed. What it found, none of it visible
+  to a test that reads source: **both workspace reports were broken for every tenant** -- nothing
+  fetched `muster_latest_sitrep`, so each said the report "was generated before the report template
+  existed" (the section above describing `renderReport()` was true only in demo); the
+  **Accessibility "Health Index" was the security posture relabelled**, every rule with no finding
+  scored 10/10 whether or not it ran, and the summary described the sample's fictional keyboard
+  trap; "Within Tolerance", "Formally Approved" (the appetite table records a save, never an
+  approval), the Governance tolerance figures, "Fleet Conformance 86%" and "Deliverables 12" were
+  fixed text **nothing ever wrote**; scans were listed as "Effective" control tests; six record
+  forms (risk, control, evidence, exception, remediation action, control test) updated page state,
+  toasted success and saved nothing; `hidden` did nothing on any element whose class sets
+  `display`, which is why the sample client presets stayed on a live AIO screen; and "Show demo"
+  left the tenant's real SITREP, laws and team on a screen labelled sample data. Each is fixed:
+  accessibility is scored like AIO (pass only if the rule could have fired, browser-only areas
+  "not assessed", never a conformance rating), the no-backend forms are hidden and refused in live
+  (`DEMO_ONLY_MODALS`), and fixed text a live view replaces goes through `liveCopy()`, which
+  restores the sample's own markup in demo. The mechanical rule that found half of these is now a
+  test: **every id-bearing element with visible text inside a workspace view must be written by a
+  script**, three named headings excepted (`tests/ui/live-sweep.test.ts`, which fails all fifteen
+  cases on the old file). **Rerun `tools/live-sweep/` after changing any workspace view.** Its
+  fixture is a real tenant's findings and is gitignored; never commit it.
 - **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
   *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
   with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,
