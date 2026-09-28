@@ -160,7 +160,18 @@ import { extractUsState, type StateSignal } from "./legal.ts";
 // two-letter code, which is far too easy to mistake for something else in
 // prose), and "Washington, D.C." is checked before the general name loop so
 // it is not misread as the state of Washington.
-const ENGINE_VERSION = "http-native-1.13.0";
+//
+// 1.14.0 fixes a false positive 1.13.0 shipped: rescanning the sandbox sites
+// on it mislabelled After Today's own site (anthonywashingtonsr.com) as
+// Washington STATE, because its /about meta description reads "Anthony
+// Washington Sr. is an Army and National Guard veteran..." -- the state name
+// is also the site owner's surname. legal.ts now excludes a state name match
+// immediately followed by a generational suffix (Sr./Jr./II/III/IV), which is
+// unambiguously a person rather than a place. This is a targeted guard for a
+// confirmed failure, not exhaustive protection against every name collision
+// a meta description could produce -- "Denzel Washington" with no suffix
+// still matches, and legal.ts's own comment says so.
+const ENGINE_VERSION = "http-native-1.14.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;

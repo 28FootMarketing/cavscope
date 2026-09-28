@@ -276,18 +276,28 @@ consulted only once the two stronger signals have both come back empty. It also 
 credits a bare two-letter code (`"in AL, GA, and FL"` matches nothing): a spelled-out name
 is a real word match, an abbreviation in prose is exactly the kind of thing that produces a
 false positive. `"Washington, D.C."` is checked before the general name loop, so it is read
-as the district rather than the state of Washington.
+as the district rather than the state of Washington. A state name immediately followed by a
+generational suffix (`Sr.`/`Jr.`/`II`/`III`/`IV`) is excluded -- unambiguously a person, not
+a place -- **a targeted guard for a confirmed failure, not exhaustive protection against
+every name collision a meta description could produce**: "Denzel Washington" with no
+suffix still matches, and `legal.ts`'s own comment says so rather than claiming otherwise.
 
-**Confirmed against real sites, not just the test suite, twice.** Rescanning all fourteen
-websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/terms-link
-version) found a state for exactly one: Clairen Haus, Georgia, matched directly on its
-homepage. The other thirteen -- several with no plausible reason to share the sandbox
-org's own Pennsylvania jurisdiction -- detected nothing and fell back to it silently, which
-is why `1.12.0` widened the follow-up to about/contact pages. Rescanning again on `1.12.0`
-found no *new* hits from that wider follow-up, but did surface `thesavvypointe.com`'s
-`/about` meta description naming "Central Alabama" in copy a human reader would recognise
-instantly and neither the clause nor address check could -- which is why `1.13.0` added
-the third tier above.
+**Confirmed against real sites, not just the test suite, three times.** Rescanning all
+fourteen websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/
+terms-link version) found a state for exactly one: Clairen Haus, Georgia, matched directly
+on its homepage. The other thirteen -- several with no plausible reason to share the
+sandbox org's own Pennsylvania jurisdiction -- detected nothing and fell back to it
+silently, which is why `1.12.0` widened the follow-up to about/contact pages. Rescanning
+again on `1.12.0` found no *new* hits from that wider follow-up, but did surface
+`thesavvypointe.com`'s `/about` meta description naming "Central Alabama" in copy a human
+reader would recognise instantly and neither the clause nor address check could -- which is
+why `1.13.0` added the third tier above. Rescanning a third time on `1.13.0` confirmed that
+catch (`thesavvypointe.com` now resolves `US-AL`) **and produced a real false positive**:
+`anthonywashingtonsr.com` -- After Today LLC's own site, actually in Hanover, PA -- was
+mislabelled Washington state, because its `/about` meta description reads "Anthony
+Washington Sr. is an Army and National Guard veteran..." and the state name is also the
+site owner's surname. `1.14.0`'s suffix guard fixes exactly this case; the sandbox rescan
+that caught it is the reason the guard exists.
 
 ## Governance — 8 rules, all active
 

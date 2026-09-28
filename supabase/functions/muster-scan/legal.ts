@@ -86,7 +86,16 @@ export function extractUsState(html: string): StateSignal {
       return { code: "DC", name: "district of columbia", reason: `Meta description: "${desc.slice(0, 160)}".` };
     }
     for (const [name, code] of Object.entries(US_STATE_NAMES)) {
-      if (new RegExp(`\\b${name.replace(/ /g, "\\s+")}\\b`, "i").test(desc)) {
+      // Several state names are also common surnames or given names
+      // (Washington, Georgia, Virginia). A name followed by a generational
+      // suffix -- "Anthony Washington Sr.", live on anthonywashingtonsr.com's
+      // own /about page and the reason this exclusion exists -- is
+      // unambiguously a person, never a place, so it is excluded here
+      // rather than credited as that state. This is a targeted guard for a
+      // confirmed failure, not exhaustive protection against every possible
+      // name collision: "Denzel Washington" with no suffix still matches.
+      const re = new RegExp(`\\b${name.replace(/ /g, "\\s+")}\\b(?!\\s+(?:Sr|Jr|II|III|IV)\\.?\\b)`, "i");
+      if (re.test(desc)) {
         return { code, name, reason: `Meta description: "${desc.slice(0, 160)}".` };
       }
     }

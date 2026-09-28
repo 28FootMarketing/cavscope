@@ -282,8 +282,45 @@ test("end to end: an about page with only a meta-description state name is credi
   }
 });
 
+test("a state name immediately followed by a generational suffix is a person, not a place", () => {
+  // The exact live text that mislabelled anthonywashingtonsr.com's own site
+  // as Washington state on 1.13.0.
+  const v = extractUsState(`<meta name="description" content="Anthony Washington Sr. is an Army and National Guard veteran, a coach of 20+ years, and the founder of After Today, LLC. This is the definitive account of his background, expertise, and the platforms he has built.">`);
+  assert.equal(v.code, null);
+});
+
+test("the suffix exclusion is narrow: it does not suppress a real place mention nearby", () => {
+  assert.equal(extractUsState(`<meta name="description" content="Central Alabama wedding officiant and certified planner.">`).code, "AL");
+  assert.equal(extractUsState(`<meta name="description" content="Serving the greater Washington state region.">`).code, "WA");
+  assert.equal(extractUsState(`<meta name="description" content="Serving clients across Washington, D.C. and the metro area.">`).code, "DC");
+});
+
+test("end to end: a bio naming the owner's surname after a state is not credited as that state", async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/about") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<!doctype html><html><head><meta name="description" content="Anthony Washington Sr. is an Army and National Guard veteran and the founder of After Today, LLC."></head><body><p>Read more.</p></body></html>`);
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><a href="/about">About</a><p>${"body copy ".repeat(40)}</p></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const mod = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ scan: { detected_country_code: string | null; detected_region_code: string | null } }>;
+    };
+    const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
+    assert.equal(result.scan.detected_country_code, null);
+    assert.equal(result.scan.detected_region_code, null);
+  } finally {
+    server.close();
+  }
+});
+
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.13\.0";/);
-  assert.match(engine, /1\.13\.0 adds a third, weaker jurisdiction tier/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.14\.0";/);
+  assert.match(engine, /1\.14\.0 fixes a false positive 1\.13\.0 shipped/);
 });
