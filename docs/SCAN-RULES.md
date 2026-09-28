@@ -249,12 +249,14 @@ consumer-trust signal, not a compliance mandate. Added inactive by migration
 `http-native-1.11.0` or later before a follow-up migration activates it.
 
 **The same migration adds a jurisdiction signal, unrelated to scoring.**
-`supabase/functions/muster-scan/legal.ts`'s `extractUsState()` reads a governing-law
-clause or postal address a site states about *itself* -- from the homepage, then, if
-neither is there, up to `JURISDICTION_MAX_FOLLOWUPS` (3) same-origin pages it tries in
-order: a privacy/terms link, an "about" link, a "contact" link, then the conventional
-`/about` and `/contact` paths directly for a site that has the page but no link to it --
-and writes the result to `websites.detected_country_code` / `detected_region_code`.
+`supabase/functions/muster-scan/legal.ts`'s `extractUsState()` reads a US state a site
+states about *itself*, in three tiers of decreasing strength: a governing-law clause,
+then a postal address, then -- weakest, and tried only when neither of those matched
+anywhere -- a full state name in `<meta name="description">`. It reads the homepage
+first, then, if nothing matched, up to `JURISDICTION_MAX_FOLLOWUPS` (3) same-origin pages
+in order: a privacy/terms link, an "about" link, a "contact" link, then the conventional
+`/about` and `/contact` paths directly for a site that has the page but no link to it.
+The result is written to `websites.detected_country_code` / `detected_region_code`.
 `q_sitrep_jurisdiction` now prefers those columns over the scanning organization's own
 `country_code`/`region_code`, falling back to the organization's when a website has not
 detected one. This fixes a real defect, not a hypothetical one: every site parked in the
@@ -266,13 +268,26 @@ is deliberate, not a default to "PA" or "US". `tests/scan/legal.test.ts` pins th
 extraction rules, the same-origin-only follow, the 3-fetch bound, and the never-guess
 behavior end to end.
 
-**Confirmed against real sites, not just the test suite.** Rescanning all fourteen
+**Why the meta-description tier is last, and why it only reads a full name.** A
+governing-law clause or a postal address is the site stating a fact about where it is; a
+meta description is marketing copy, and "Central Alabama wedding officiant" states a
+service area, which is usually but not always the same as a legal home -- so it is
+consulted only once the two stronger signals have both come back empty. It also never
+credits a bare two-letter code (`"in AL, GA, and FL"` matches nothing): a spelled-out name
+is a real word match, an abbreviation in prose is exactly the kind of thing that produces a
+false positive. `"Washington, D.C."` is checked before the general name loop, so it is read
+as the district rather than the state of Washington.
+
+**Confirmed against real sites, not just the test suite, twice.** Rescanning all fourteen
 websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/terms-link
 version) found a state for exactly one: Clairen Haus, Georgia, matched directly on its
 homepage. The other thirteen -- several with no plausible reason to share the sandbox
-org's own Pennsylvania jurisdiction -- detected nothing and fell back to it silently,
-which is why `1.12.0` widened the follow-up to about/contact pages rather than stopping at
-one link.
+org's own Pennsylvania jurisdiction -- detected nothing and fell back to it silently, which
+is why `1.12.0` widened the follow-up to about/contact pages. Rescanning again on `1.12.0`
+found no *new* hits from that wider follow-up, but did surface `thesavvypointe.com`'s
+`/about` meta description naming "Central Alabama" in copy a human reader would recognise
+instantly and neither the clause nor address check could -- which is why `1.13.0` added
+the third tier above.
 
 ## Governance — 8 rules, all active
 

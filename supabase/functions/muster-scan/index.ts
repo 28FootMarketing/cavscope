@@ -147,7 +147,20 @@ import { extractUsState, type StateSignal } from "./legal.ts";
 // (Clairen Haus, GA, matched directly on the homepage); the other thirteen,
 // including several with no plausible reason to share the sandbox org's own
 // Pennsylvania jurisdiction, detected nothing and fell back to it silently.
-const ENGINE_VERSION = "http-native-1.12.0";
+//
+// 1.13.0 adds a third, weaker jurisdiction tier: legal.ts's extractUsState()
+// now also reads a full US state name out of <meta name="description">
+// when no governing-law clause or postal address was found anywhere. Rescanning
+// the same fourteen sandbox sites on 1.12.0 (about/contact pages, still no new
+// hits beyond Clairen Haus) surfaced thesavvypointe.com's /about meta
+// description -- "Central Alabama wedding officiant..." -- naming its state
+// in copy a human reader would recognise instantly and the address/clause
+// checks could not. A meta description is marketing copy, not a legal
+// statement, so it is tried last and only as a full name (never a bare
+// two-letter code, which is far too easy to mistake for something else in
+// prose), and "Washington, D.C." is checked before the general name loop so
+// it is not misread as the state of Washington.
+const ENGINE_VERSION = "http-native-1.13.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
