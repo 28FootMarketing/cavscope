@@ -539,13 +539,32 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   behind them. Now a live workspace's button calls `muster_request_scan` on its registered website,
   polls to a terminal status, and reports each check; the sample walkthrough labels every scripted
   line `[SAMPLE]`. The pillars are nine checks over nine rules, three of them new (`GOV-006`
-  llms.txt, `GOV-007` JSON-LD, `GOV-008` client-rendered homepage; engine `http-native-1.8.0`,
-  added inactive by `20260923042421`). **A check with no finding is a pass only if its rule could
+  llms.txt, `GOV-007` JSON-LD, `GOV-008` client-rendered homepage; added inactive by
+  `20260923042421`, shipped in engine `http-native-1.10.0` when PR #129 finally merged on
+  2026-09-28 -- written as `1.8.0`, but `1.8.0` and `1.9.0` were taken while it sat open --
+  and activated by `20260928164840`). **A check with no finding is a pass only if its rule could
   have fired**: active per `public.muster_rule_status` (`20260923042540`), a scan on an engine at or
   past the rule's floor, and a homepage the engine actually read. Otherwise it is "not assessed" and
   excluded from the index -- the same absence-of-findings-is-not-a-pass rule as everywhere else.
   Citability is never scored; no provider publishes how it picks citations. Pinned by
   `tests/ui/aio-view.test.ts` and `tests/scan/aio.test.ts`; table in `docs/SCAN-RULES.md`.
+- **A SITREP's jurisdiction is the scanned site's state, not the scanning workspace's, as of
+  2026-09-28.** `q_sitrep_jurisdiction` read `organizations.region_code` only, so every URL parked
+  in the admin sandbox org inherited its one `PA` and got PA Act 35, whatever the site was.
+  `supabase/functions/muster-scan/legal.ts` now reads a state the site states about **itself**
+  (governing-law clause, postal address, then -- weakest -- a full state name in the meta
+  description) off the homepage and up to three same-origin legal/about/contact pages, into
+  `websites.detected_country_code`/`detected_region_code`, which the query prefers over the org's.
+  No match stays null, never a guess. `PRIV-004` (no Terms of Service link) shipped alongside it
+  and was activated by `20260928213241`. Two things generalise, both found only by rescanning the
+  real sandbox sites after each deploy, and neither catchable by the test suite alone:
+  **a looser signal will eventually match something it shouldn't** -- the meta-description tier
+  labelled After Today's own site Washington state off "Anthony Washington Sr.", fixed in `1.14.0`
+  with a narrow suffix guard that is documented as narrow -- and **a persistence guard can outlive
+  the thing it protected**: `engine_ingest` refused to overwrite a detection with null, so the
+  corrected engine's null never reached the row and the wrong `WA` survived the scan that disproved
+  it. `20260928205820` writes the latest answer unconditionally. The local-scan adapter has no
+  database, so a persistence bug is invisible to `tests/scan/`; rescan and read the row.
 - **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
   *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
   with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,
@@ -579,7 +598,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   headers or cookies at all. Activation put it back to 53 red. Same number the bug produced, and now
   it is true.
   And **one test owns the `ENGINE_VERSION` equality pin** -- the newest rule's, today
-  `tests/scan/aio.test.ts` (it was `login.test.ts` from `1.7.0`, and `availability.test.ts` before that). `tests/scan/avail-refused.test.ts` was pinning the exact value
+  `tests/scan/legal.test.ts` (it was `aio.test.ts` from `1.10.0`, `login.test.ts` from `1.7.0`, and `availability.test.ts` before that). `tests/scan/avail-refused.test.ts` was pinning the exact value
   too, so `1.6.0` broke a test about `AVAIL-003`; it now asserts a floor plus its own changelog
   line. If every rule's test pinned the value, one bump would edit all of them and the pressure
   would be to loosen the check rather than move it.
