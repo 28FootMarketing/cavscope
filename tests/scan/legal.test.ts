@@ -47,10 +47,39 @@ test("an address with an unrecognised two-letter code is not credited as a state
   assert.equal(extractUsState("Reference: ZZ 90210").code, null);
 });
 
-test("no governing-law clause or address returns null, never a guess", () => {
+test("no governing-law clause, address or meta description returns null, never a guess", () => {
   const v = extractUsState("<p>Welcome to our site. We sell widgets.</p>");
   assert.equal(v.code, null);
   assert.equal(v.name, null);
+});
+
+test("a full state name in the meta description is read only when there is nothing stronger", () => {
+  const v = extractUsState(`<head><meta name="description" content="Central Alabama wedding officiant and certified planner."></head>`);
+  assert.equal(v.code, "AL");
+  assert.match(v.reason, /Meta description/);
+});
+
+test("the meta description tier never fires when a governing-law clause or address already matched", () => {
+  const v = extractUsState(`<head><meta name="description" content="A New York studio."></head><body>governed by the laws of the State of Texas.</body>`);
+  assert.equal(v.code, "TX");
+});
+
+test("the meta description content attribute is found regardless of attribute order", () => {
+  const v = extractUsState(`<meta content="A reversed-order New York studio." name="description">`);
+  assert.equal(v.code, "NY");
+});
+
+test("Washington, D.C. in a meta description is read as the district, not the state of Washington", () => {
+  assert.equal(extractUsState(`<meta name="description" content="Serving clients across Washington, D.C. and the metro area.">`).code, "DC");
+  assert.equal(extractUsState(`<meta name="description" content="Serving the greater Washington state region.">`).code, "WA");
+});
+
+test("a bare two-letter code in a meta description is never credited -- only a full state name is", () => {
+  // The weakest tier is deliberately weaker still than the address tier: no
+  // ZIP-anchored requirement exists here, so a bare abbreviation is exactly
+  // the false-positive marketing copy produces ("in AL" could mean a dozen
+  // things). Only a spelled-out name counts.
+  assert.equal(extractUsState(`<meta name="description" content="Available in AL, GA, and FL.">`).code, null);
 });
 
 test("PRIV-004 mirrors PRIV-001: same anchors, same csrNote, same evidence key", () => {
@@ -229,8 +258,32 @@ test("end to end: the follow-up is bounded at 3 fetches even with more candidate
   }
 });
 
+test("end to end: an about page with only a meta-description state name is credited via the weakest tier", async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/about") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<!doctype html><html><head><meta name="description" content="Central Alabama wedding officiant and certified planner."></head><body><p>Book a consultation.</p></body></html>`);
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><a href="/about">About Us</a><p>${"body copy ".repeat(40)}</p></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const mod = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ scan: { detected_country_code: string | null; detected_region_code: string | null } }>;
+    };
+    const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
+    assert.equal(result.scan.detected_country_code, "US");
+    assert.equal(result.scan.detected_region_code, "AL");
+  } finally {
+    server.close();
+  }
+});
+
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.12\.0";/);
-  assert.match(engine, /1\.12\.0 widens the jurisdiction signal's follow-up/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.13\.0";/);
+  assert.match(engine, /1\.13\.0 adds a third, weaker jurisdiction tier/);
 });
