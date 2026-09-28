@@ -232,13 +232,36 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `A11Y-006` | medium | Form fields without an accessible label | 1.3.1, 4.1.2 |
 | `A11Y-007` | medium | Links with no discernible text | 2.4.4, 4.1.2 |
 
-## Privacy — 3 rules
+## Privacy — 4 rules (3 active, 1 inactive)
 
 | Code | Sev | Title | Maps to |
 |---|---|---|---|
 | `PRIV-001` | medium | No privacy policy link found | GDPR Art. 13, CCPA 1798.130, CalOPPA |
 | `PRIV-002` | low | Third-party trackers loaded before consent could be verified | GDPR Art. 6 & 7, ePrivacy, CCPA opt-out |
 | `PRIV-003` | medium | Form submits to an insecure or external endpoint | GDPR Art. 32, NIST PR.DS-2 |
+| `PRIV-004` | low | No Terms of Service link found (inactive) | Consumer contract terms |
+
+`PRIV-004` mirrors `PRIV-001` exactly -- an anchor's text or href containing "terms" or
+"tos" is enough to credit it -- but is scored lower, because no privacy law requires a
+Terms of Service link the way GDPR/CCPA require a privacy policy link; this is a
+consumer-trust signal, not a compliance mandate. Added inactive by migration
+`20260928170144`, same discipline as every rule before it: it waits for a scan to report
+`http-native-1.11.0` or later before a follow-up migration activates it.
+
+**The same migration adds a jurisdiction signal, unrelated to scoring.**
+`supabase/functions/muster-scan/legal.ts`'s `extractUsState()` reads a governing-law
+clause or postal address a site states about *itself* -- from the homepage, or from one
+same-origin privacy/terms page it follows when the homepage has neither -- and writes it
+to `websites.detected_country_code` / `detected_region_code`. `q_sitrep_jurisdiction` now
+prefers those columns over the scanning organization's own `country_code`/`region_code`,
+falling back to the organization's when a website has not detected one. This fixes a real
+defect, not a hypothetical one: every site parked in the admin sandbox org via "Run a URL
+scan" shared that org's single `region_code` (`PA`), so a YMCA actually in Hanover, PA and
+an unrelated SaaS with no Pennsylvania presence at all got the identical PA Act 35 citation
+in their jurisdiction section. No match ever writes a guess -- `code: null` stays null, and
+the fallback to the organization's own jurisdiction is deliberate, not a default to "PA" or
+"US". `tests/scan/legal.test.ts` pins the extraction rules, the same-origin-only follow, and
+the never-guess behavior end to end.
 
 ## Governance — 8 rules (5 active, 3 inactive)
 
