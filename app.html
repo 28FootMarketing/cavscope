@@ -1951,8 +1951,9 @@
             </div>
           </div>
 
-          <!-- Top Level Posture Metric Cards -->
-          <div class="grid-4">
+          <!-- Top Level Posture Metric Cards. Sample figures as written; a live
+               workspace refills every tile from its own data in renderOverviewKpis(). -->
+          <div class="grid-4" id="overviewKpis">
             <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'risks')" onkeydown="navigateCard(event, 'risks')" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue. Click to open the Risk Register.">
               <div class="metric-card-top">
                 <label>Risk Posture Score</label>
@@ -1967,7 +1968,7 @@
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiPostureBar" style="width: 82%;"></div></div>
               <div class="metric-sub">
                 <span id="kpiCriticalCount" class="alert">1 active critical risk</span>
-                <span>Target: 95%+</span>
+                <span id="kpiPostureTarget">Target: 95%+</span>
               </div>
               <div class="card-footer-action">
                 <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('posture')" data-tooltip="See exactly what lowered this score and which fixes raise it most.">Path to 90+ & 100 ›</button>
@@ -1989,7 +1990,7 @@
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiControlBar" style="width: 80%;"></div></div>
               <div class="metric-sub">
                 <span id="kpiControlsMet" class="ok">4 of 5 mapped</span>
-                <span>SOC 2, GDPR, WCAG</span>
+                <span id="kpiControlsDetail">SOC 2, GDPR, WCAG</span>
               </div>
               <div class="card-footer-action">
                 <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('controls')" data-tooltip="See which controls are still unverified and what closes them.">Path to 90+ & 100 ›</button>
@@ -2000,18 +2001,18 @@
 
             <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'evidence')" onkeydown="navigateCard(event, 'evidence')" data-tooltip="How much of the proof an auditor would ask for is already collected and approved. Click to open the Evidence library.">
               <div class="metric-card-top">
-                <label>Evidence Readiness</label>
+                <label id="kpiEvidenceLabel">Evidence Readiness</label>
                 <div class="metric-icon-wrap">⌑</div>
               </div>
               <div class="metric-value">
                 <span id="kpiEvidenceReadiness">75</span>
-                <span class="denom">%</span>
+                <span class="denom" id="kpiEvidenceDenom">%</span>
               </div>
               <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiEvidenceBar" style="width: 75%;"></div></div>
               <div class="metric-sub">
                 <span id="kpiEvidenceCount">3 approved artifacts</span>
-                <span>1 in review</span>
+                <span id="kpiEvidenceReview">1 in review</span>
               </div>
               <div class="card-footer-action">
                 <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('evidence')" data-tooltip="See which proof documents are still missing or awaiting review.">Path to 90+ & 100 ›</button>
@@ -2032,8 +2033,8 @@
               <small class="score-asof" data-asof></small>
               <div class="metric-bar"><div class="metric-bar-fill" id="kpiRemediationBar" style="width: 65%;"></div></div>
               <div class="metric-sub">
-                <span class="ok">0 overdue actions</span>
-                <span>4 treatments active</span>
+                <span class="ok" id="kpiRemediationOverdue">0 overdue actions</span>
+                <span id="kpiRemediationActive">4 treatments active</span>
               </div>
               <div class="card-footer-action">
                 <button class="score-feedback-trigger" onclick="event.stopPropagation(); openScoreExplainer('remediation')" data-tooltip="See which open fixes to prioritize to move this score fastest.">Path to 90+ & 100 ›</button>
@@ -2918,7 +2919,7 @@
         </div>
         <button class="btn-ghost" style="padding: 4px 8px;" onclick="closeScoreExplainer()" aria-label="Close" data-tooltip="Close this breakdown.">✕</button>
       </div>
-      <p class="modal-desc" style="margin-bottom: 18px;">
+      <p class="modal-desc" id="scoreModalBenchmark" style="margin-bottom: 18px;">
         <strong>Benchmark Standard:</strong> 80/100 is Good. 90/100 is Better. 95+ is World-Class.
       </p>
 
@@ -4884,6 +4885,18 @@ ${b.disclaimer}`;
       const titleEl = document.getElementById('scoreModalTitle');
       if (!modal || !container) return;
 
+      const live = isLiveWorkspace() ? liveScoreExplainer(scoreKey) : null;
+      // The generic benchmark line is the sample's marketing scale. A live
+      // explainer states CavScope's real bands itself, so the two never disagree.
+      const benchmark = document.getElementById('scoreModalBenchmark');
+      if (benchmark) benchmark.hidden = !!live;
+      if (live) {
+        titleEl.textContent = live.title;
+        container.innerHTML = live.html;
+        modal.classList.add('open');
+        return;
+      }
+
       if (scoreKey === 'posture') {
         titleEl.textContent = "Risk Posture Index Calculation";
         container.innerHTML = `
@@ -5335,7 +5348,201 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       `).join('');
     }
 
+    // The four Overview tiles. Until 2026-09-28 they were fixed HTML: a signed-in
+    // tenant saw the sample's 82 / 80% / 75% / 65% on the first screen of their
+    // workspace, and stampScoreTimestamps() labelled each one "As of" the current
+    // minute, so fictional figures read as fresh. Nothing on the page ever
+    // replaced them.
+    //
+    // A live workspace now fills each tile from its own payload, and says so when
+    // nothing measures what a tile names:
+    //   posture     - posture_score / posture_band / open_by_severity (Postgres)
+    //   controls    - the latest SITREP's derived control coverage, the same
+    //                 figures the report prints
+    //   evidence    - the count the latest SITREP's evidence index holds. No
+    //                 percentage: nothing tracks whether an auditor reviewed it
+    //   remediation - the risk register: mitigated share, overdue, in progress
+    // Demo mode puts the sample figures back and labels them "Sample data".
+    const POSTURE_WEIGHTS = { critical: 25, high: 10, medium: 4, low: 1 };
+    let demoKpiHtml = null;
+
+    function renderOverviewKpis() {
+      const grid = document.getElementById('overviewKpis');
+      if (!grid) return;
+      if (demoKpiHtml === null) demoKpiHtml = grid.innerHTML;
+      grid.innerHTML = demoKpiHtml;
+      if (!isLiveWorkspace()) {
+        grid.querySelectorAll('[data-asof]').forEach(el => { el.textContent = 'Sample data'; });
+        return;
+      }
+      const $ = id => document.getElementById(id);
+      const set = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+      const bar = (id, pct) => { const el = $(id); if (el) el.style.width = `${Math.max(0, Math.min(100, pct || 0))}%`; };
+      const tip = (id, text) => { const card = ($(id) || {}).closest ? $(id).closest('.metric-card') : null; if (card) card.setAttribute('data-tooltip', text); };
+      const asof = (id, text) => { const card = $(id) && $(id).closest('.metric-card'); const el = card && card.querySelector('[data-asof]'); if (el) el.textContent = text; };
+      const tone = (id, bad) => { const el = $(id); if (el) el.className = bad ? 'alert' : 'ok'; };
+      const when = iso => iso ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+
+      const ov = Live.overview || {};
+      const scan = ov.latest_scan || null;
+      const sitrep = ov.latest_sitrep || null;
+      const sections = (sitrep && sitrep.sections) || {};
+
+      // --- posture ---
+      const score = ov.posture_score;
+      const scanned = scan && scan.status === 'complete' && score != null;
+      tip('kpiPostureScore', 'Starts at 100 and loses 25 for each open critical finding, 10 per high, 4 per medium and 1 per low. Green at 85 or above, amber from 60, red below. Click to open the Risk Register.');
+      if (scanned) {
+        const band = String(ov.posture_band || '').toLowerCase();
+        const crit = Number((ov.open_by_severity || {}).critical) || 0;
+        set('kpiPostureScore', String(score));
+        bar('kpiPostureBar', score);
+        const badge = $('kpiPostureTier');
+        if (badge) {
+          badge.textContent = band ? band.charAt(0).toUpperCase() + band.slice(1) : 'Unbanded';
+          badge.className = 'benchmark-badge ' + (band === 'green' ? 'benchmark-better' : band === 'red' ? 'benchmark-needs-work' : 'benchmark-good');
+          badge.setAttribute('data-tooltip', 'CavScope band: green at 85 or above, amber from 60 to 84, red below 60.');
+        }
+        set('kpiCriticalCount', plural(crit, 'open critical finding'));
+        tone('kpiCriticalCount', crit > 0);
+        set('kpiPostureTarget', 'Green at 85+');
+        asof('kpiPostureScore', `Scan of ${when(scan.finished_at || scan.created_at)}`);
+      } else {
+        set('kpiPostureScore', '—');
+        bar('kpiPostureBar', 0);
+        const badge = $('kpiPostureTier');
+        if (badge) { badge.textContent = 'Not scanned'; badge.className = 'benchmark-badge'; badge.setAttribute('data-tooltip', 'No completed scan yet, so there is no score.'); }
+        set('kpiCriticalCount', 'No completed scan yet');
+        tone('kpiCriticalCount', false);
+        set('kpiPostureTarget', 'Green at 85+');
+        asof('kpiPostureScore', '');
+      }
+
+      // --- controls: the SITREP's own coverage figures ---
+      const c = (sections.report && sections.report.controls) || null;
+      tip('kpiControlCoverage', 'Share of framework controls derived from this site\'s findings that are met, from the latest report. A citation to a framework is not a test of it, and this is not an audit opinion. Click to open Controls.');
+      if (c && Number(c.total) > 0 && c.rate != null) {
+        set('kpiControlCoverage', String(c.rate));
+        bar('kpiControlBar', c.rate);
+        set('kpiControlsMet', `${c.met || 0} of ${c.total} derived controls met`);
+        tone('kpiControlsMet', false);
+        set('kpiControlsDetail', `${c.partial || 0} partial, ${c.not_met || 0} not met`);
+        asof('kpiControlCoverage', c.as_of ? `Report of ${when(c.as_of)}` : '');
+      } else {
+        set('kpiControlCoverage', '—');
+        bar('kpiControlBar', 0);
+        set('kpiControlsMet', 'No report yet');
+        tone('kpiControlsMet', false);
+        set('kpiControlsDetail', 'Derived from findings');
+        asof('kpiControlCoverage', '');
+      }
+
+      // --- evidence: a count, never a readiness percentage ---
+      const ev = Array.isArray(sections.evidence_index) ? sections.evidence_index : null;
+      set('kpiEvidenceLabel', 'Evidence Captured');
+      set('kpiEvidenceDenom', 'items');
+      const evBar = $('kpiEvidenceBar');
+      if (evBar && evBar.parentElement) evBar.parentElement.hidden = true;
+      tip('kpiEvidenceReadiness', 'Responses and records the latest scan captured, each with a SHA-256 so it can be shown unaltered later. CavScope does not track whether an auditor has reviewed or accepted any of it, so there is no readiness percentage. Click to open the Evidence library.');
+      set('kpiEvidenceReadiness', ev ? String(ev.length) : '—');
+      set('kpiEvidenceCount', ev ? 'Captured on the latest scan' : 'No report yet');
+      tone('kpiEvidenceCount', false);
+      set('kpiEvidenceReview', 'Auditor review not tracked');
+      asof('kpiEvidenceReadiness', sitrep && sitrep.generated_at ? `Report of ${when(sitrep.generated_at)}` : '');
+
+      // --- remediation: the risk register ---
+      const risks = Array.isArray(Live.risks) ? Live.risks : [];
+      const today = new Date().toISOString().slice(0, 10);
+      const mitigated = risks.filter(r => r.status === 'mitigated').length;
+      const inProgress = risks.filter(r => r.status === 'in_progress').length;
+      const overdue = risks.filter(r => (r.status === 'open' || r.status === 'in_progress') && r.target_date && String(r.target_date).slice(0, 10) < today).length;
+      tip('kpiRemediationProgress', 'Share of this site\'s risk register marked mitigated. Overdue means past its target date and still open or in progress. Click to open the Remediation schedule.');
+      if (risks.length) {
+        const pct = Math.round((mitigated / risks.length) * 100);
+        set('kpiRemediationProgress', String(pct));
+        bar('kpiRemediationBar', pct);
+        set('kpiRemediationOverdue', plural(overdue, 'overdue risk'));
+        tone('kpiRemediationOverdue', overdue > 0);
+        set('kpiRemediationActive', `${mitigated} of ${risks.length} mitigated, ${inProgress} in progress`);
+      } else {
+        set('kpiRemediationProgress', '—');
+        bar('kpiRemediationBar', 0);
+        set('kpiRemediationOverdue', 'No risks in the register');
+        tone('kpiRemediationOverdue', false);
+        set('kpiRemediationActive', '');
+      }
+      asof('kpiRemediationProgress', `Register as loaded ${when(new Date().toISOString())}`);
+    }
+
+    // What each live tile's "Path to 90+" explainer says. Built from the same
+    // payload as the tile; the sample text below it is for demo mode only.
+    function liveScoreExplainer(key) {
+      const ov = Live.overview || {};
+      const row = (label, tag) => `<div class="points-boost-item"><span>${escapeHtml(label)}</span><span class="points-tag">${escapeHtml(tag)}</span></div>`;
+      if (key === 'posture') {
+        const sev = ov.open_by_severity || {};
+        const lines = Object.entries(POSTURE_WEIGHTS)
+          .map(([k, w]) => ({ k, w, n: Number(sev[k]) || 0 }))
+          .filter(x => x.n > 0);
+        const score = ov.posture_score;
+        return {
+          title: 'Risk Posture Calculation',
+          html: `<div class="explainer-card">
+            <h4>Risk Posture: ${score == null ? 'not scanned' : escapeHtml(String(score)) + ' / 100'}</h4>
+            <div class="explainer-section"><label>How it is calculated</label>
+              <p>Starts at 100 and loses 25 for each open critical finding, 10 per high, 4 per medium and 1 per low, never below 0. Informational findings do not count. Green at 85 or above, amber from 60, red below.</p></div>
+            <div class="explainer-section"><label>Open findings on this site</label>
+              ${lines.length ? lines.map(x => row(`${x.n} ${x.k}`, `-${x.n * x.w} pts`)).join('') : '<p>No open findings that count against the score.</p>'}</div>
+            ${lines.length ? `<div class="explainer-section"><label>What resolving them is worth</label>${lines.map(x => row(`Resolve each ${x.k} finding`, `+${x.w} pts`)).join('')}<p>A finding counts as resolved when the next scan no longer observes it.</p></div>` : ''}
+          </div>`,
+        };
+      }
+      if (key === 'controls') {
+        const c = ((ov.latest_sitrep || {}).sections || {}).report ? (ov.latest_sitrep.sections.report.controls || {}) : {};
+        return {
+          title: 'Control Coverage Calculation',
+          html: `<div class="explainer-card">
+            <h4>Control Coverage: ${c.rate == null ? 'no report yet' : escapeHtml(String(c.rate)) + '%'}</h4>
+            <div class="explainer-section"><label>How it is calculated</label>
+              <p>Each scan rule cites the framework controls it relates to, and each control is scored from the open findings that cite it. Coverage is met controls as a share of all derived controls, the same figure the report prints. A citation to a framework is not a test of it, and this is not an audit opinion.</p></div>
+            <div class="explainer-section"><label>From the latest report</label>
+              ${row('Met', String(c.met || 0))}${row('Partial', String(c.partial || 0))}${row('Not met', String(c.not_met || 0))}${row('Not assessed', String(c.not_assessed || 0))}${row('Total derived', String(c.total || 0))}</div>
+          </div>`,
+        };
+      }
+      if (key === 'evidence') {
+        const ev = ((ov.latest_sitrep || {}).sections || {}).evidence_index || [];
+        return {
+          title: 'Evidence Captured',
+          html: `<div class="explainer-card">
+            <h4>${ev.length} item${ev.length === 1 ? '' : 's'} captured on the latest scan</h4>
+            <div class="explainer-section"><label>What this counts</label>
+              <p>Each response and record the scan read, stored with a SHA-256 so it can be shown unaltered later.</p></div>
+            <div class="explainer-section"><label>What it does not</label>
+              <p>CavScope does not track whether an auditor has reviewed or accepted any of it, so it shows a count rather than a readiness percentage.</p></div>
+          </div>`,
+        };
+      }
+      if (key === 'remediation') {
+        const risks = Array.isArray(Live.risks) ? Live.risks : [];
+        const count = st => risks.filter(r => r.status === st).length;
+        return {
+          title: 'Remediation Progress Calculation',
+          html: `<div class="explainer-card">
+            <h4>${risks.length ? Math.round((count('mitigated') / risks.length) * 100) + '% mitigated' : 'No risks in the register'}</h4>
+            <div class="explainer-section"><label>How it is calculated</label>
+              <p>The share of this site's risk register marked mitigated. Risks are opened from findings automatically and updated by your team.</p></div>
+            <div class="explainer-section"><label>The register</label>
+              ${row('Open', String(count('open')))}${row('In progress', String(count('in_progress')))}${row('Mitigated', String(count('mitigated')))}${row('Accepted', String(count('accepted')))}</div>
+          </div>`,
+        };
+      }
+      return null;
+    }
+
     function renderOverview() {
+      renderOverviewKpis();
       const priorityContainer = document.getElementById('overviewPriorityRisks');
       if (priorityContainer) {
         priorityContainer.innerHTML = state.risks.slice(0, 3).map(r => `
@@ -6119,7 +6326,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         }));
         const evIndex = (sitrep && sitrep.sections && sitrep.sections.evidence_index) || [];
         base.evidence = evIndex.map(e => ({
-          id: `E${e.evidence_id}`, title: `${e.kind.replace(/_/g, ' ')} · ${e.url}`, type: 'Scan / Audit', reviewer: 'CavScope engine', status: 'Approved', source: 'system',
+          id: `E${e.evidence_id}`, title: `${e.kind.replace(/_/g, ' ')} · ${e.url}`, type: 'Scan / Audit', reviewer: 'Not reviewed', status: 'Captured', source: 'system',
           context: `HTTP ${e.http_status ?? 'n/a'} · sha256 ${String(e.sha256 || '').slice(0, 12)} · captured ${String(e.captured_at || '').slice(0, 16).replace('T', ' ')}`
         }));
         // Real remediation actions (muster.remediation_actions), nested under their risk --
