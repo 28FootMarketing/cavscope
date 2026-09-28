@@ -626,13 +626,20 @@
     const locationSource = src => (src && src.note)
       ? `<p class="law-lede" data-tooltip="Where this location came from. A governing-law clause or published address is the site's own statement; a description is marketing copy and the weakest signal." tabindex="0">${escapeHtml(src.note)}${/^https:\/\//i.test(src.source_url || '') ? ` <a href="${escapeHtml(src.source_url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The page this location was read from. Opens in a new tab.">Source</a>` : ''}</p>`
       : '';
+    // Laws picked by location miss laws that reach a site through where its
+    // customers live (CCPA, GDPR). Written by q_sitrep_jurisdiction on every
+    // path, including the ones that list nothing, and printed verbatim.
+    // Reports generated before it existed carry none and print nothing.
+    const residency = j.residency_note
+      ? `<p class="law-lede" data-tooltip="Which laws apply can depend on where your customers live, not only where you are based. The scan cannot see that, so this list may be missing laws that apply to you." tabindex="0">${escapeHtml(j.residency_note)}</p>`
+      : '';
     const head = '<h2 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice." tabindex="0">Laws and Standards</h2>';
     if (j.available === false) {
-      return `<section class="block">${head}<p class="law-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
+      return `<section class="block">${head}<p class="law-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p>${residency}</section>`;
     }
     const laws = Array.isArray(j.laws) ? j.laws : [];
     if (!laws.length) {
-      return `<section class="block">${head}<p class="law-lede">No laws are recorded for this location.</p></section>`;
+      return `<section class="block">${head}<p class="law-lede">No laws are recorded for this location.</p>${residency}</section>`;
     }
     // Reports generated before migration 082 carry the raw payload with no
     // assessment. Guessing one here is exactly the defect 082 fixed, so say so.
@@ -692,6 +699,7 @@
         <p class="law-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}.</p>
         ${locationSource(j.location_source)}
         <p class="law-lede">These are laws and standards commonly relevant to an organization in this location. Whether each one applies depends on facts this scan cannot see, such as who the site serves and what it collects, so each is shown with the condition under which it applies. A finding listed against a law means a check mapped to it is open. It is not a finding that the law was breached.</p>
+        ${residency}
         ${openHtml}${noneHtml}${naHtml}
       </section>`;
   }
