@@ -579,6 +579,15 @@
     // Named and side-effect-free so tests/auth/landing-auth-fragment.test.ts
     // exercises this function rather than a copy of it.
     const MUSTER_AUTH_HOST = 'https://app.muster.partners';
+    // cavscope.28footsystems.com has no separate app host -- see middleware.js
+    // and setWorkspaceCtaHref() below -- so the fix there is a path change on
+    // the SAME origin (signin.html lives at /signin), not a cross-origin hop
+    // to a different host the way the legacy muster.partners hosts need.
+    // Named distinctly from setWorkspaceCtaHref's CAVSCOPE_HOSTS: this is a
+    // separate <script> tag in the same top-level scope, and redeclaring a
+    // const of the same name across script tags is a SyntaxError that breaks
+    // the whole page, not a harmless shadow.
+    const CAVSCOPE_UNIFIED_HOSTS = new Set(['cavscope.28footsystems.com', 'www.cavscope.28footsystems.com']);
 
     function authFragmentTarget(hash, origin) {
       const raw = String(hash == null ? '' : hash).replace(/^#/, '');
@@ -591,10 +600,13 @@
       const isAuth = q.has('access_token') || q.has('refresh_token') ||
                      q.has('error_code') || q.has('error_description');
       if (!isAuth) return null;
+      let host = '';
+      try { host = new URL(origin).hostname; } catch (e) { host = ''; }
+      const target = CAVSCOPE_UNIFIED_HOSTS.has(host) ? origin + '/signin' : MUSTER_AUTH_HOST;
       // Never forward to ourselves. This page is not served on the app host
       // today, and if that ever changes this must not become a redirect loop.
-      if (origin === MUSTER_AUTH_HOST) return null;
-      return MUSTER_AUTH_HOST + '/#' + raw;
+      if (origin === target) return null;
+      return target + '/#' + raw;
     }
 
     (function forwardStrayAuthFragment() {

@@ -28,6 +28,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const html = readFileSync(join(ROOT, "index.html"), "utf8");
 
 const AUTH_HOST = "https://app.muster.partners";
+const CAVSCOPE_ROOT = "https://cavscope.28footsystems.com";
+const CAVSCOPE_WWW = "https://www.cavscope.28footsystems.com";
 
 // Extract the real source rather than reimplementing it: a copy would keep
 // passing after index.html changed, which is the failure this file exists to
@@ -37,13 +39,17 @@ function loadAuthFragmentTarget(): (hash: string | null, origin: string) => stri
   assert.ok(host, "MUSTER_AUTH_HOST not found in index.html");
   assert.equal(host[1], AUTH_HOST, "the forwarder points somewhere unexpected");
 
+  const cavscopeHostsSrc = /const CAVSCOPE_UNIFIED_HOSTS = (new Set\(\[[^\]]+\]\));/.exec(html);
+  assert.ok(cavscopeHostsSrc, "CAVSCOPE_UNIFIED_HOSTS not found in index.html");
+
   const fn = /function authFragmentTarget\(hash, origin\) \{[\s\S]*?\n    \}/.exec(html);
   assert.ok(fn, "authFragmentTarget not found in index.html");
 
   return new Function(
     "MUSTER_AUTH_HOST",
+    "CAVSCOPE_UNIFIED_HOSTS",
     `${fn[0]}\nreturn authFragmentTarget;`,
-  )(AUTH_HOST);
+  )(AUTH_HOST, new Function(`return ${cavscopeHostsSrc[1]};`)());
 }
 
 const authFragmentTarget = loadAuthFragmentTarget();
@@ -113,6 +119,21 @@ test("both the apex and www forms of the marketing host forward", () => {
   for (const origin of ["https://muster.partners", "https://www.muster.partners"]) {
     assert.equal(authFragmentTarget(SUCCESS_HASH, origin), AUTH_HOST + "/" + SUCCESS_HASH);
   }
+});
+
+test("cavscope hosts forward to /signin on the SAME origin, not to the legacy app host", () => {
+  // cavscope.28footsystems.com has no separate app host -- signin.html lives
+  // at /signin on this same origin. Forwarding cross-origin to
+  // app.muster.partners here would undo the point of the domain having its
+  // own auth host once Site URL actually points at it.
+  for (const origin of [CAVSCOPE_ROOT, CAVSCOPE_WWW]) {
+    assert.equal(authFragmentTarget(SUCCESS_HASH, origin), origin + "/signin/" + SUCCESS_HASH);
+  }
+});
+
+test("a cavscope recovery link also forwards to /signin, same origin", () => {
+  const hash = "#access_token=a.b.c&refresh_token=r&type=recovery";
+  assert.equal(authFragmentTarget(hash, CAVSCOPE_ROOT), CAVSCOPE_ROOT + "/signin/" + hash);
 });
 
 test("the forwarder runs in <head>, ahead of the body", () => {

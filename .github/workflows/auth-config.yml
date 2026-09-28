@@ -16,11 +16,21 @@
 # from the commit, with the value read back from the API afterwards and the job
 # failed if the readback disagrees. A green run is evidence; a note is not.
 #
-# This deliberately does NOT touch uri_allow_list. PATCH is partial, so sending
-# only site_url leaves the redirect allowlist alone -- and that list is load
-# bearing (/app, /reset and the onboarding landings all have to be on it, or
-# GoTrue silently substitutes Site URL and the link goes to the wrong place).
-# The run prints the allowlist so a human can eyeball it, and changes nothing.
+# The site_url step deliberately does NOT touch uri_allow_list on its own --
+# PATCH is partial, so sending only site_url leaves the redirect allowlist
+# alone -- and that list is load bearing (/app, /reset and the onboarding
+# landings all have to be on it, or GoTrue silently substitutes Site URL and
+# the link goes to the wrong place). It prints the allowlist so a human can
+# eyeball it, and changes nothing on its own.
+#
+# add_redirect_urls is the opt-in, additive way to grow that list: empty
+# (the default) reads and prints it, unchanged, same contract as
+# smtp_sender_name and templates: skip. A non-empty value is merged in --
+# union, not replace -- and the job fails if the readback is missing anything
+# that was already there or anything just requested. Never remove an entry
+# this way; a removal needs a human reading the full live list first, because
+# an entry pulled out from under a link already delivered strands it exactly
+# the way an un-allowlisted redirect_to does.
 #
 # Run it: Actions -> auth-config -> Run workflow. Leave `apply` unchecked for a
 # read-only report of what is set today; check it to write the value.
@@ -52,6 +62,10 @@ on:
         default: 'skip'
       smtp_sender_name:
         description: 'SMTP sender display name to set (e.g. CavScope). Empty = report the current value and change nothing.'
+        type: string
+        default: ''
+      add_redirect_urls:
+        description: 'Comma or newline separated URLs to ADD to the redirect allowlist. Additive only -- never removes an entry. Empty = report the current list and change nothing.'
         type: string
         default: ''
 
@@ -209,6 +223,73 @@ jobs:
           fi
           echo "| result | **applied and verified by readback** |" >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::smtp_sender_name is now '$AFTER', confirmed by readback."
+
+      - name: Redirect allowlist -- additive merge
+        if: inputs.add_redirect_urls != ''
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          ADD: ${{ inputs.add_redirect_urls }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+
+          get_list() {
+            curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" | jq -r '.uri_allow_list // ""'
+          }
+
+          BEFORE=$(get_list)
+          echo "uri_allow_list before: $BEFORE"
+
+          # Union, not replace. Normalise both sides to one-URL-per-line, drop
+          # blanks, dedupe while preserving first-seen order so the existing
+          # list's order (and anything a human reads off it) does not shuffle.
+          MERGED=$( { echo "$BEFORE" | tr ',' '\n'; echo "$ADD" | tr ',' '\n'; } \
+            | sed 's/^ *//; s/ *$//' | grep -v '^$' | awk '!seen[$0]++' | paste -sd, -)
+
+          echo "requested additions:"
+          echo "$ADD" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$'
+          echo "uri_allow_list merged: $MERGED"
+
+          curl -sS -f -X PATCH "$API" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            --data "$(jq -nc --arg l "$MERGED" '{uri_allow_list:$l}')" > /dev/null
+
+          AFTER=$(get_list)
+          echo "uri_allow_list after: $AFTER"
+
+          {
+            echo "### Redirect allowlist"
+            echo ""
+            echo "Before:"
+            echo '```'
+            echo "$BEFORE"
+            echo '```'
+            echo "After:"
+            echo '```'
+            echo "$AFTER"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail if anything that was there before, or anything just
+          # requested, is missing from the readback -- this step only ever
+          # grows the list, and a readback that dropped something silently
+          # shrank it instead.
+          FAIL=0
+          while read -r url; do
+            [ -z "$url" ] && continue
+            case ",$AFTER," in
+              *",$url,"*) ;;
+              *) echo "::error::'$url' is missing from the readback."; FAIL=1 ;;
+            esac
+          done < <(echo "$MERGED" | tr ',' '\n')
+
+          if [ "$FAIL" = "1" ]; then
+            echo "| result | **FAILED -- readback missing an expected entry** |" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "| result | **merged and verified by readback** |" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Redirect allowlist merged and verified. Nothing was removed."
 
       # Sending a link is a separate job from setting the field, deliberately.
       # Setting Site URL and delivering a working link are different claims, and
