@@ -171,7 +171,18 @@ import { extractUsState, type StateSignal } from "./legal.ts";
 // confirmed failure, not exhaustive protection against every name collision
 // a meta description could produce -- "Denzel Washington" with no suffix
 // still matches, and legal.ts's own comment says so.
-const ENGINE_VERSION = "http-native-1.14.0";
+//
+// 1.15.0 adds a JSON-LD tier and records where every detection came from.
+// extractUsState() now reads address.addressRegion from a top-level or @graph
+// JSON-LD entity, second only to a governing-law clause -- structured data
+// stating the organization's own postal address outranks a regex over page
+// text that could match any address printed on it. areaServed is never read:
+// it names where a business works, not where it is. Every detection now also
+// ships its basis (governing_law / jsonld_address / postal_address /
+// meta_description) and the URL it was read from, so a report can say how
+// much weight its location deserves rather than presenting a meta-description
+// guess with the same confidence as a governing-law clause.
+const ENGINE_VERSION = "http-native-1.15.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -564,7 +575,8 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   const isHtml = reachable && /text\/html|application\/xhtml/i.test(primary.contentType ?? "") && html.length > 0;
   // Set inside the isHtml block below, read after it closes when building
   // scanMeta -- see legal.ts and the 1.11.0 note above ENGINE_VERSION.
-  let legalState: StateSignal = { code: null, name: null, reason: "homepage is not HTML" };
+  let legalState: StateSignal = { code: null, name: null, basis: null, reason: "homepage is not HTML" };
+  let legalSource: string | null = null;
   if (isHtml) {
     const snippets: string[] = [];
     // Client-rendered apps ship almost no markup; content rules then carry low confidence until the browser engine runs.
@@ -663,6 +675,7 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     // written for every page actually fetched, whatever the verdict, which is
     // what proves this code ran on a scan that shows no state either.
     legalState = extractUsState(html);
+    if (legalState.code) legalSource = finalUrl;
     if (!legalState.code) {
       const JURISDICTION_MAX_FOLLOWUPS = 3;
       const findHref = (re: RegExp) => {
@@ -687,6 +700,7 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
         const legalPage = await fetchOnce(legalUrl.toString(), "GET");
         await ev({ key: `legal_page_${followups}`, kind: "html_excerpt", url: legalUrl.toString(), http_status: legalPage.status, content_type: legalPage.contentType, response_ms: legalPage.ms, headers: null, excerpt: legalPage.body.slice(0, 4000), byte_length: legalPage.bytes }, legalPage.body || String(legalPage.status));
         if (legalPage.status === 200 && legalPage.body) legalState = extractUsState(legalPage.body);
+        if (legalState.code) legalSource = legalUrl.toString();
       }
     }
 
@@ -1069,6 +1083,8 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   const scanMeta = {
     final_url: finalUrl, http_status: primary.status, response_ms: primary.ms, engine_version: ENGINE_VERSION,
     detected_country_code: legalState.code ? "US" : null, detected_region_code: legalState.code,
+    detected_region_basis: legalState.code ? legalState.basis : null,
+    detected_region_source: legalState.code ? legalSource : null,
   };
   const { data: ingest, error: ingestErr } = await db.rpc("muster_engine_ingest", { p_scan_id: job.scan_id, p_scan: scanMeta, p_evidence: evidence, p_findings: findings });
   if (ingestErr) throw new Error("ingest failed: " + ingestErr.message);

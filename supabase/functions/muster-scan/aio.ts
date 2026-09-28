@@ -53,6 +53,30 @@ function collectTypes(node: unknown, out: Set<string>, depth = 0): void {
 }
 
 /**
+ * The entities a document's JSON-LD declares: each parsed block's top-level
+ * object(s) and its @graph members, never nested property values. Unparseable
+ * blocks contribute nothing, for the same reason summarizeJsonLd does not
+ * credit them.
+ */
+export function jsonLdEntities(html: string): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  const take = (n: unknown) => {
+    if (Array.isArray(n)) { for (const x of n) take(x); return; }
+    if (n === null || typeof n !== "object") return;
+    const o = n as Record<string, unknown>;
+    out.push(o);
+    if (o["@graph"]) for (const g of Array.isArray(o["@graph"]) ? o["@graph"] : [o["@graph"]]) {
+      if (g && typeof g === "object" && !Array.isArray(g)) out.push(g as Record<string, unknown>);
+    }
+  };
+  for (const m of html.matchAll(LD_BLOCK)) {
+    const raw = m[1].trim().replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "").trim();
+    try { take(JSON.parse(raw)); } catch { /* unparseable: contributes nothing */ }
+  }
+  return out;
+}
+
+/**
  * Every `<script type="application/ld+json">` block in a document: how many
  * there are, how many parse, and the entity types they declare.
  *
