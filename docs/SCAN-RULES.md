@@ -256,10 +256,15 @@ anywhere -- a full state name in `<meta name="description">`. It reads the homep
 first, then, if nothing matched, up to `JURISDICTION_MAX_FOLLOWUPS` (3) same-origin pages
 in order: a privacy/terms link, an "about" link, a "contact" link, then the conventional
 `/about` and `/contact` paths directly for a site that has the page but no link to it.
-The result is written to `websites.detected_country_code` / `detected_region_code`.
-`q_sitrep_jurisdiction` now prefers those columns over the scanning organization's own
-`country_code`/`region_code`, falling back to the organization's when a website has not
-detected one. This fixes a real defect, not a hypothetical one: every site parked in the
+The result is written **unconditionally** to `websites.detected_country_code` /
+`detected_region_code` on every scan, including a null result -- `20260928205820` changed
+this from "only write when non-null" after that exact guard let a wrong detection outlive
+the scan that had already disproved it (see the confirmation history below). A scan's
+answer is this engine's current, best read of the same pages in the same order every time;
+a stale wrong value must never outlive the scan that corrects it. `q_sitrep_jurisdiction`
+prefers those columns over the scanning organization's own `country_code`/`region_code`,
+falling back to the organization's when a website has not detected one. This fixes a real
+defect, not a hypothetical one: every site parked in the
 admin sandbox org via "Run a URL scan" shared that org's single `region_code` (`PA`), so a
 YMCA actually in Hanover, PA and an unrelated SaaS with no Pennsylvania presence at all got
 the identical PA Act 35 citation in their jurisdiction section. No match ever writes a
@@ -282,7 +287,7 @@ a place -- **a targeted guard for a confirmed failure, not exhaustive protection
 every name collision a meta description could produce**: "Denzel Washington" with no
 suffix still matches, and `legal.ts`'s own comment says so rather than claiming otherwise.
 
-**Confirmed against real sites, not just the test suite, three times.** Rescanning all
+**Confirmed against real sites, not just the test suite, four times.** Rescanning all
 fourteen websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/
 terms-link version) found a state for exactly one: Clairen Haus, Georgia, matched directly
 on its homepage. The other thirteen -- several with no plausible reason to share the
@@ -296,8 +301,15 @@ catch (`thesavvypointe.com` now resolves `US-AL`) **and produced a real false po
 `anthonywashingtonsr.com` -- After Today LLC's own site, actually in Hanover, PA -- was
 mislabelled Washington state, because its `/about` meta description reads "Anthony
 Washington Sr. is an Army and National Guard veteran..." and the state name is also the
-site owner's surname. `1.14.0`'s suffix guard fixes exactly this case; the sandbox rescan
-that caught it is the reason the guard exists.
+site owner's surname. `1.14.0`'s suffix guard fixes exactly this case. **Rescanning a
+fourth time, on `1.14.0`, confirmed the engine itself was fixed -- its `/about` refetch
+correctly computed no state -- but surfaced a second, independent bug: `engine_ingest`'s
+old "never overwrite a detection with null" guard silently refused to write that
+correction, so the stale `WA` value survived a scan that had already disproved it.**
+`20260928205820` removed the guard (write unconditionally, including null) and repaired
+the one row already known wrong. Both the engine fix and the persistence fix needed their
+own live rescan to prove; neither would have been caught by the test suite alone, since
+`tests/scan/local-scan.test.ts`'s adapter has no database to persist anything into.
 
 ## Governance — 8 rules, all active
 
