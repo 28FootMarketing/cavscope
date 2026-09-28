@@ -576,6 +576,15 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `app.html` print it verbatim before the law lists. Its CCPA and GDPR examples say "can reach"
   with the condition that makes them reach; never reword either into a determination.
   `SAMPLE_SITREP` carries SQL's exact words and a test compares them.
+  **The workspace says the same thing** (`20260928220554`). Its "Laws and Standards" panel
+  (`q_compliance_posture`) printed each law's raw status, `clear`, under a disclaimer quoting the
+  word; onboarding's preview was headed "What applies to you"; and the workspace export listed
+  every law as a control that was "Effective". Status keys are unchanged, but `app.html` now
+  renders them only through `LAW_STATUS_LABEL` ("No open findings", "Not assessed", ...), both
+  payloads carry `residency_note`, and the preview says "Commonly relevant where you are based".
+  **Still open:** `q_compliance_posture` reads the org's own location and ignores
+  `websites.detected_region_*`, so for a site that states a different state than its org record
+  the panel and that site's SITREP list different laws.
 - **"The engine could not read it" is never reported as "the site is down".** `AVAIL-001` says
   *Site unreachable or returning an error* and tells the reader *Visitors cannot load the site*,
   with remediation pointing at DNS, hosting and TLS. On a site that is actually serving pages,
