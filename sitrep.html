@@ -619,6 +619,13 @@
   // the SQL side decides that.
   function renderJurisdiction(j) {
     if (!j) return '';
+    // Where the location came from. The sentence is written by
+    // q_sitrep_jurisdiction and printed verbatim, so this page, app.html and
+    // the markdown cannot describe the same location differently. Reports
+    // generated before it existed carry no location_source and print nothing.
+    const locationSource = src => (src && src.note)
+      ? `<p class="law-lede" data-tooltip="Where this location came from. A governing-law clause or published address is the site's own statement; a description is marketing copy and the weakest signal." tabindex="0">${escapeHtml(src.note)}${/^https:\/\//i.test(src.source_url || '') ? ` <a href="${escapeHtml(src.source_url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The page this location was read from. Opens in a new tab.">Source</a>` : ''}</p>`
+      : '';
     const head = '<h2 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice." tabindex="0">Laws and Standards</h2>';
     if (j.available === false) {
       return `<section class="block">${head}<p class="law-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
@@ -682,7 +689,9 @@
       <section class="block">
         ${head}
         <p class="law-disclaimer" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one." tabindex="0">${escapeHtml(j.disclaimer || 'Informational only. This is not legal advice. Confirm applicability with counsel.')}</p>
-        <p class="law-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}. These are laws and standards commonly relevant to an organization in this location. Whether each one applies depends on facts this scan cannot see, such as who the site serves and what it collects, so each is shown with the condition under which it applies. A finding listed against a law means a check mapped to it is open. It is not a finding that the law was breached.</p>
+        <p class="law-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}.</p>
+        ${locationSource(j.location_source)}
+        <p class="law-lede">These are laws and standards commonly relevant to an organization in this location. Whether each one applies depends on facts this scan cannot see, such as who the site serves and what it collects, so each is shown with the condition under which it applies. A finding listed against a law means a check mapped to it is open. It is not a finding that the law was breached.</p>
         ${openHtml}${noneHtml}${naHtml}
       </section>`;
   }

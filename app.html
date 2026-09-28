@@ -3573,6 +3573,11 @@
     function renderReportJurisdiction(j) {
       const head = '<h3 data-tooltip="Laws and standards commonly relevant to where this organization is located, and which of this scan\'s checks relate to each. Informational, not legal advice." tabindex="0">Laws and Standards</h3>';
       if (!j) return '';
+      // Where the location came from, printed verbatim from q_sitrep_jurisdiction
+      // so this renderer, sitrep.html and the markdown say the same thing.
+      const locationSource = src => (src && src.note)
+        ? `<p class="rd-lede" data-tooltip="Where this location came from. A governing-law clause or published address is the site's own statement; a description is marketing copy and the weakest signal." tabindex="0">${escapeHtml(src.note)}${/^https:\/\//i.test(src.source_url || '') ? ` <a href="${escapeHtml(src.source_url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The page this location was read from. Opens in a new tab.">Source</a>` : ''}</p>`
+        : '';
       if (j.available === false) {
         return `<section class="rd-block">${head}<p class="rd-lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p></section>`;
       }
@@ -3597,7 +3602,9 @@
       return `<section class="rd-block">
         ${head}
         <p class="rd-law-note" data-tooltip="Stated before anything else in this section, because a list of statutes under your name is easy to read as a legal conclusion. It is not one." tabindex="0">${escapeHtml(j.disclaimer || '')}</p>
-        <p class="rd-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}. These are laws and standards commonly relevant to an organization in this location. Whether each applies depends on facts a website scan cannot see.</p>
+        <p class="rd-lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}.</p>
+        ${locationSource(j.location_source)}
+        <p class="rd-lede">These are laws and standards commonly relevant to an organization in this location. Whether each applies depends on facts a website scan cannot see.</p>
         ${open.length ? `<h4 data-tooltip="A check mapped to each of these has an open finding. That is not a finding that the law was breached." tabindex="0">Open findings touch these (${open.length})</h4>${open.map(l => law(l, `${applies(l)}${safeLink(l.reference_url)}<ul class="rd-list">${(l.open_findings || []).map(f => `<li>${escapeHtml(f.title)} <span class="rd-sev rd-sev-${escapeHtml(String(f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></li>`).join('')}</ul>`)).join('')}` : ''}
         ${none.length ? `<h4 data-tooltip="Every check CavScope maps to these passed on this date. That is evidence about those checks, not a determination of compliance." tabindex="0">No open findings on the mapped checks (${none.length})</h4><p class="rd-law-note">The checks CavScope maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>${none.map(l => law(l, `<span data-tooltip="The CavScope checks mapped to this entry." tabindex="0">Checks:</span> <span class="rd-mono">${(l.rule_ids || []).map(escapeHtml).join(', ')}</span> · ${applies(l)}${safeLink(l.reference_url)}`)).join('')}` : ''}
         ${na.length ? `<h4 data-tooltip="This report says nothing about these either way: no check maps to them, or this scan could not run the checks that do." tabindex="0">Not assessed by this scan (${na.length})</h4><p class="rd-law-note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so its checks could not run.' : ''}</p>${na.map(l => law(l, `${l.not_assessed_reason === 'no_mapped_check' ? 'No CavScope check maps to it.' : 'Its checks could not run on this scan.'} ${applies(l)}${safeLink(l.reference_url)}`)).join('')}` : ''}

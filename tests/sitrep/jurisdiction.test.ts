@@ -179,3 +179,65 @@ test("the viewer renders the scope note after the Board Report and the laws befo
   assert.ok(iBoard > 0 && iScope > iBoard, "scope note must follow the Board Report");
   assert.ok(iLaws > iScope && iEvidence > iLaws, "laws must precede the Evidence Index");
 });
+
+// --- where the location came from (migration 20260928213959) ------------------
+//
+// A governing-law clause and a meta-description guess used to print as the
+// same unqualified "Location on record". q_sitrep_jurisdiction now writes one
+// sentence saying which signal the location came from, and every renderer
+// prints it verbatim. And a sandbox site with nothing detected no longer
+// inherits the sandbox organization's own state.
+
+const provenanceSql = (() => {
+  const files = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql"))
+    .filter((f) => /create or replace function (muster|cavscope)\.q_sitrep_jurisdiction/i.test(readFileSync(join(migrationsDir, f), "utf8"))).sort();
+  return readFileSync(join(migrationsDir, files[files.length - 1]), "utf8");
+})();
+
+test("a sandbox site with nothing detected lists no laws instead of the sandbox org's state", () => {
+  const i = provenanceSql.indexOf("if not v_detected and v_sandbox then");
+  assert.ok(i > 0, "the sandbox rule is missing");
+  assert.ok(i < provenanceSql.indexOf("v_adv := cavscope.q_jurisdiction_advisory"), "the sandbox rule must return before any laws are looked up");
+  assert.match(provenanceSql.slice(i, i + 700), /'available', false/);
+  assert.match(provenanceSql.slice(i, i + 700), /No jurisdiction is assumed/);
+});
+
+test("every basis has its own sentence, and the weakest one says it is the weakest", () => {
+  for (const b of ["governing_law", "jsonld_address", "postal_address", "meta_description"]) {
+    assert.match(provenanceSql, new RegExp(`v_basis = '${b}'`));
+  }
+  assert.match(provenanceSql, /That is the weakest signal CavScope uses/);
+  assert.match(provenanceSql, /Taken from this organization''s own record/);
+});
+
+test("the markdown is patched in place, insert-only, at an anchor that must occur exactly once", () => {
+  assert.match(provenanceSql, /anchor not found exactly once; refusing to patch/);
+  assert.match(provenanceSql, /refusing to patch twice/);
+  assert.match(provenanceSql, /p_jur->'location_source'->>'note'/);
+});
+
+test("the viewer prints the location note verbatim, links only an https source, and escapes it", () => {
+  const out = renderJurisdiction(payload([law({ short_name: "A", assessment: "not_assessed", not_assessed_reason: "no_mapped_check" })], {
+    location_source: { origin: "website", basis: "meta_description", source_url: "https://example.com/about",
+      note: "Read from a state named in this site's description. That is the weakest signal CavScope uses." },
+  }));
+  assert.match(out, /That is the weakest signal CavScope uses\./);
+  assert.match(out, /href="https:\/\/example\.com\/about"/);
+  const risky = renderJurisdiction(payload([law({ short_name: "A", assessment: "not_assessed", not_assessed_reason: "no_mapped_check" })], {
+    location_source: { note: "<b>x</b>", source_url: "javascript:alert(1)" },
+  }));
+  assert.doesNotMatch(risky, /<b>x<\/b>/);
+  assert.doesNotMatch(risky, /href="javascript:/);
+});
+
+test("a report generated before location_source existed prints no provenance line", () => {
+  assert.doesNotMatch(renderJurisdiction(YMCA), /Read from|Taken from this organization/);
+});
+
+test("app.html's report renderer prints the same note", () => {
+  const app = readFileSync(join(repoRoot, "app.html"), "utf8");
+  const src = app.slice(app.indexOf("function renderReportJurisdiction(j) {"), app.indexOf("// end renderReportJurisdiction"));
+  assert.match(src, /\$\{locationSource\(j\.location_source\)\}/);
+  assert.match(src, /escapeHtml\(src\.note\)/);
+  assert.match(src, /\/\^https:\\\/\\\/\/i\.test\(src\.source_url/);
+});

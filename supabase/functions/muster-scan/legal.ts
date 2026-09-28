@@ -15,13 +15,23 @@
 // citation, because nothing had ever asked what state the SITE ITSELF claims.
 //
 // This module only ever reads a state the page states about itself -- a
-// governing-law clause, or a postal address -- and never guesses or defaults.
+// governing-law clause, a JSON-LD or printed postal address, or a state named
+// in the meta description -- and never guesses or defaults.
 // No match is `code: null`, and callers must treat that as "not determined",
 // not as "same state as whoever is asking."
+
+import { jsonLdEntities } from "./aio.ts";
+
+// Which signal a detection came from, strongest first. Stored with the state
+// (websites.detected_region_basis) so a report can say how much weight its
+// location deserves: a governing-law clause is the site making a legal claim;
+// a meta description is ad copy.
+export type StateBasis = "governing_law" | "jsonld_address" | "postal_address" | "meta_description";
 
 export interface StateSignal {
   code: string | null;
   name: string | null;
+  basis: StateBasis | null;
   reason: string;
 }
 
@@ -55,11 +65,45 @@ function metaDescription(html: string): string | null {
   return content ? content[1] : null;
 }
 
-// Reads a US state a page states about ITSELF. Tries a governing-law clause
-// first, since that is the site making a legal statement about which state's
-// law applies; then a postal address in the page (typically a footer); then,
-// weakest, a full state name in the meta description. Returns null for both
-// fields on no match -- this never guesses.
+const US_COUNTRY = new Set(["us", "usa", "u.s.", "u.s.a.", "united states", "united states of america"]);
+
+function usStateCode(value: string): string | null {
+  const v = value.trim();
+  if (US_STATE_CODES.has(v.toUpperCase())) return v.toUpperCase();
+  return US_STATE_NAMES[v.toLowerCase()] ?? null;
+}
+
+// The organization's own postal address, as its structured data declares it:
+// `address.addressRegion` on a top-level or @graph entity. Deliberately NOT
+// `areaServed` -- that is where a business works, not where it is, and is the
+// same weak kind of signal as a meta description. An address whose
+// addressCountry names somewhere other than the US is skipped rather than
+// read as a US state.
+function jsonLdState(html: string): { code: string; region: string } | null {
+  for (const e of jsonLdEntities(html)) {
+    const addrs = Array.isArray(e.address) ? e.address : [e.address];
+    for (const a of addrs) {
+      if (!a || typeof a !== "object" || Array.isArray(a)) continue;
+      const o = a as Record<string, unknown>;
+      const c = o.addressCountry;
+      const country = typeof c === "string" ? c
+        : c && typeof c === "object" ? String((c as Record<string, unknown>).name ?? "") : "";
+      if (country.trim() && !US_COUNTRY.has(country.trim().toLowerCase())) continue;
+      if (typeof o.addressRegion !== "string") continue;
+      const code = usStateCode(o.addressRegion);
+      if (code) return { code, region: o.addressRegion };
+    }
+  }
+  return null;
+}
+
+// Reads a US state a page states about ITSELF, strongest signal first: a
+// governing-law clause (the site making a legal statement about which state's
+// law applies); the postal address in its JSON-LD (structured, and explicitly
+// the organization's own); a postal address in the page text (typically a
+// footer, though it could be any address the page prints); then, weakest, a
+// full state name in the meta description. Returns null on no match -- this
+// never guesses.
 export function extractUsState(html: string): StateSignal {
   const plain = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
 
@@ -69,12 +113,15 @@ export function extractUsState(html: string): StateSignal {
   if (governed) {
     const raw = governed[1].trim().toLowerCase();
     const code = US_STATE_NAMES[raw];
-    if (code) return { code, name: raw, reason: `Governing-law clause: "...${governed[0].trim()}".` };
+    if (code) return { code, name: raw, basis: "governing_law", reason: `Governing-law clause: "...${governed[0].trim()}".` };
   }
+
+  const ld = jsonLdState(html);
+  if (ld) return { code: ld.code, name: null, basis: "jsonld_address", reason: `JSON-LD postal address: addressRegion "${ld.region}".` };
 
   const addr = plain.match(/,\s*([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/);
   if (addr && US_STATE_CODES.has(addr[1])) {
-    return { code: addr[1], name: null, reason: `Postal address in page text: "${addr[0].trim()}".` };
+    return { code: addr[1], name: null, basis: "postal_address", reason: `Postal address in page text: "${addr[0].trim()}".` };
   }
 
   const desc = metaDescription(html);
@@ -83,7 +130,7 @@ export function extractUsState(html: string): StateSignal {
     // Washington -- checked before the general name loop, which would
     // otherwise match the word "Washington" inside it and report WA.
     if (/\bwashington,?\s*d\.?\s*c\.?\b/i.test(desc)) {
-      return { code: "DC", name: "district of columbia", reason: `Meta description: "${desc.slice(0, 160)}".` };
+      return { code: "DC", name: "district of columbia", basis: "meta_description", reason: `Meta description: "${desc.slice(0, 160)}".` };
     }
     for (const [name, code] of Object.entries(US_STATE_NAMES)) {
       // Several state names are also common surnames or given names
@@ -96,10 +143,10 @@ export function extractUsState(html: string): StateSignal {
       // name collision: "Denzel Washington" with no suffix still matches.
       const re = new RegExp(`\\b${name.replace(/ /g, "\\s+")}\\b(?!\\s+(?:Sr|Jr|II|III|IV)\\.?\\b)`, "i");
       if (re.test(desc)) {
-        return { code, name, reason: `Meta description: "${desc.slice(0, 160)}".` };
+        return { code, name, basis: "meta_description", reason: `Meta description: "${desc.slice(0, 160)}".` };
       }
     }
   }
 
-  return { code: null, name: null, reason: "No governing-law clause, US postal address or meta-description state name found." };
+  return { code: null, name: null, basis: null, reason: "No governing-law clause, JSON-LD address, US postal address or meta-description state name found." };
 }

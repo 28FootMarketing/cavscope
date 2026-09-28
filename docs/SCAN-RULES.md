@@ -292,6 +292,20 @@ a place -- **a targeted guard for a confirmed failure, not exhaustive protection
 every name collision a meta description could produce**: "Denzel Washington" with no
 suffix still matches, and `legal.ts`'s own comment says so rather than claiming otherwise.
 
+**A JSON-LD postal address is the second tier, and every detection says where it came
+from** (`1.15.0`, migration `20260928213959`). `address.addressRegion` on a top-level or
+`@graph` JSON-LD entity ranks just below a governing-law clause: it is structured data
+stating the organization's *own* address, where the text regex can match any address a page
+prints. `areaServed` is never read (where a business works, not where it is), and an address
+whose `addressCountry` is not the US is skipped. Each detection now also stores its basis and
+source URL (`websites.detected_region_basis` / `detected_region_source`), and
+`q_sitrep_jurisdiction` emits one sentence saying which signal the location came from, which
+the markdown, `sitrep.html` and `app.html` all print verbatim. A meta-description location
+says outright that it is the weakest signal. **A sandbox site with nothing detected now lists
+no laws at all**: before this, it fell back to the admin sandbox org's own `PA`, which is
+After Today LLC's address and says nothing about the site. A real tenant's site still falls
+back to the tenant's own record, and says so.
+
 **Confirmed against real sites, not just the test suite, four times.** Rescanning all
 fourteen websites then parked in the admin sandbox org on `1.11.0` (the single-privacy/
 terms-link version) found a state for exactly one: Clairen Haus, Georgia, matched directly

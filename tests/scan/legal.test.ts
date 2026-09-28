@@ -319,8 +319,62 @@ test("end to end: a bio naming the owner's surname after a state is not credited
   }
 });
 
+const ld = (obj: unknown) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`;
+
+test("a JSON-LD postal address is read, by code or by full name, and reports its basis", () => {
+  const byCode = extractUsState(ld({ "@type": "LocalBusiness", name: "Y", address: { "@type": "PostalAddress", addressRegion: "PA", addressCountry: "US" } }));
+  assert.equal(byCode.code, "PA");
+  assert.equal(byCode.basis, "jsonld_address");
+  const byName = extractUsState(ld({ "@context": "https://schema.org", "@graph": [{ "@type": "Organization", address: { addressRegion: "Georgia" } }] }));
+  assert.equal(byName.code, "GA");
+});
+
+test("areaServed is never read as a location, and a non-US address is skipped", () => {
+  assert.equal(extractUsState(ld({ "@type": "Organization", areaServed: "Texas" })).code, null);
+  assert.equal(extractUsState(ld({ "@type": "Organization", address: { addressRegion: "ON", addressCountry: "CA" } })).code, null);
+  assert.equal(extractUsState(ld({ "@type": "Organization", address: { addressRegion: "Victoria", addressCountry: { "@type": "Country", name: "Australia" } } })).code, null);
+});
+
+test("a JSON-LD address outranks a printed address and a meta description, but not a governing-law clause", () => {
+  const page = `<meta name="description" content="A New York studio.">${ld({ "@type": "Organization", address: { addressRegion: "OH" } })}<p>Mail: 1 Main St, Austin, TX 78701</p>`;
+  assert.equal(extractUsState(page).code, "OH");
+  assert.equal(extractUsState(page + "<p>governed by the laws of the State of Delaware.</p>").code, "DE");
+});
+
+test("every tier reports which one matched", () => {
+  assert.equal(extractUsState("governed by the laws of the State of Delaware.").basis, "governing_law");
+  assert.equal(extractUsState("1 Main St, Hanover, PA 17331").basis, "postal_address");
+  assert.equal(extractUsState(`<meta name="description" content="Central Alabama officiant.">`).basis, "meta_description");
+  assert.equal(extractUsState("<p>nothing</p>").basis, null);
+});
+
+test("end to end: the scan ships basis and source URL with a detection, and null without one", async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/about") {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end(`<!doctype html><html><head>${ld({ "@type": "LocalBusiness", address: { addressRegion: "OH" } })}</head><body>About.</body></html>`);
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<!doctype html><html lang="en"><head><title>T</title></head><body><h1>Hi</h1><a href="/about">About</a><p>${"body copy ".repeat(40)}</p></body></html>`);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const mod = await import(await loadEngine()) as {
+      runScan: (job: { scan_id: number; website_id: number; target_url: string; website_name: string }) =>
+        Promise<{ scan: Record<string, string | null> }>;
+    };
+    const result = await mod.runScan({ scan_id: 0, website_id: 0, target_url: `http://127.0.0.1:${port}/`, website_name: "t" });
+    assert.equal(result.scan.detected_region_code, "OH");
+    assert.equal(result.scan.detected_region_basis, "jsonld_address");
+    assert.equal(result.scan.detected_region_source, `http://127.0.0.1:${port}/about`);
+  } finally {
+    server.close();
+  }
+});
+
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.14\.0";/);
-  assert.match(engine, /1\.14\.0 fixes a false positive 1\.13\.0 shipped/);
+  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.15\.0";/);
+  assert.match(engine, /1\.15\.0 adds a JSON-LD tier and records where every detection came from/);
 });
