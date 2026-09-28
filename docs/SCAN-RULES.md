@@ -240,7 +240,7 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `PRIV-002` | low | Third-party trackers loaded before consent could be verified | GDPR Art. 6 & 7, ePrivacy, CCPA opt-out |
 | `PRIV-003` | medium | Form submits to an insecure or external endpoint | GDPR Art. 32, NIST PR.DS-2 |
 
-## Governance — 8 rules (5 active, 3 inactive)
+## Governance — 8 rules, all active
 
 | Code | Sev | Title | Theme |
 |---|---|---|---|
@@ -249,21 +249,29 @@ rule that never ran look identical, and only the evidence rows tell them apart.
 | `GOV-003` | info | Meta description missing | AIO readiness |
 | `GOV-004` | info | AI crawler directives | AIO readiness |
 | `GOV-005` | info | Canonical link missing | AIO readiness |
-| `GOV-006` | info | No llms.txt file | AIO readiness (inactive) |
-| `GOV-007` | info | No readable structured data (JSON-LD) | AIO readiness (inactive) |
-| `GOV-008` | low | Homepage content is rendered by script, not served | AIO readiness (inactive) |
+| `GOV-006` | info | No llms.txt file | AIO readiness |
+| `GOV-007` | info | No readable structured data (JSON-LD) | AIO readiness |
+| `GOV-008` | low | Homepage content is rendered by script, not served | AIO readiness |
 
 `GOV-006`..`008` were applied live on 2026-09-23 with no file in this repo until the same session
 that added `muster.scan_rule_history` recovered one -- see `supabase/migrations/README.md`'s "Five
 more, from a week earlier" section for the full story, and the one before it for a second,
-unrelated recovery the same day. The engine now implements all three, in
-`supabase/functions/muster-scan/aio.ts` (`http-native-1.8.0`), and they wait for that version or
-later to be observed in production, same gate as every rule before them. Proof of deploy is the
-`llms_txt` (`http_probe`) and `jsonld` (`html_excerpt`) evidence rows, written on every reachable
-HTML scan whatever the verdict: a well-prepared site keeps all three rules silent, so
+unrelated recovery the same day. The engine implements all three in
+`supabase/functions/muster-scan/aio.ts`, shipped by PR #129 and merged 2026-09-28. Proof of deploy
+is the `llms_txt` (`http_probe`) and `jsonld` (`html_excerpt`) evidence rows, written on every
+reachable HTML scan whatever the verdict: a well-prepared site keeps all three rules silent, so
 `skipped_inactive` may legitimately stay 0. `GOV-006` credits a file only if it is not HTML and
 opens with a Markdown H1, because an SPA answers `/llms.txt` with 200 and its shell. llms.txt is a
 proposal, not a standard, and the finding says so.
+
+**Activated by `20260928164840`** once `deploy-functions.yml` run 36453028341 confirmed
+`http-native-1.10.0` live and a scan against CavScope's own marketing site
+(`cavscope.28footsystems.com`, scan 129) reported `skipped_inactive` rising by exactly 2 --
+GOV-006 and GOV-007 firing for real (that site has neither file) and correctly held back one
+migration too early. Same floor-not-equality rule as every activation before it: the gate named
+"http-native-1.8.0" in the original migration was superseded twice (1.9.0, then 1.10.0) before it
+was ever satisfied, because this rule set's PR sat open while unrelated rules took the version
+number in between.
 
 ## AI governance — 5 rules (2 active with a real check, 3 deactivated 2026-09-25)
 
