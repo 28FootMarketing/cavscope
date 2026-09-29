@@ -582,9 +582,14 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   every law as a control that was "Effective". Status keys are unchanged, but `app.html` now
   renders them only through `LAW_STATUS_LABEL` ("No open findings", "Not assessed", ...), both
   payloads carry `residency_note`, and the preview says "Commonly relevant where you are based".
-  **Still open:** `q_compliance_posture` reads the org's own location and ignores
-  `websites.detected_region_*`, so for a site that states a different state than its org record
-  the panel and that site's SITREP list different laws.
+  **One location, decided once** (`20260929033108`). Until then `q_compliance_posture` read the
+  organization's record while the SITREP read the site's own stated state, so on an agency's client
+  site the workspace and the report named different places. Both now call
+  `cavscope.website_jurisdiction(website_id)`: the site's detected state, else the organization's
+  record (never the sandbox org's), else nothing assumed, with the `location_source` sentence the
+  panel and the report both print. **Never add a caller that reads `organizations.country_code`
+  for a site's laws**; `tests/sitrep/jurisdiction.test.ts` fails if either caller does. The
+  migration proved the SITREP byte-identical on every website before it could commit.
 - **The Overview's four tiles show a live workspace its own numbers, as of 2026-09-28.** Until then
   they were fixed HTML: every signed-in tenant saw the sample's posture 82, "1 active critical
   risk", control coverage 80% ("4 of 5 mapped"), evidence readiness 75% ("3 approved artifacts")

@@ -3365,6 +3365,22 @@
       if (cls !== undefined) el.className = cls == null ? orig.cls : cls;
     }
 
+    // Where this site's laws were chosen for, and how CavScope knows. The place
+    // and the sentence come from cavscope.website_jurisdiction, the same
+    // function the SITREP's Laws and Standards section reads, so the workspace
+    // and the report on one site can no longer name different places.
+    function complianceLocation(c) {
+      if (!c) return '';
+      if (c.available === false) {
+        return `<p data-tooltip="No location could be determined for this site, so no laws are listed rather than a guessed set." tabindex="0">${escapeHtml(c.reason || 'No location on record for this site.')}</p>`;
+      }
+      const src = c.location_source || {};
+      const where = c.place || [c.region_code, c.country_code].filter(Boolean).join(', ');
+      const link = /^https:\/\//i.test(src.source_url || '')
+        ? ` <a href="${escapeHtml(src.source_url)}" target="_blank" rel="noopener noreferrer" data-tooltip="The page this location was read from. Opens in a new tab.">Source</a>` : '';
+      return `<p data-tooltip="The location these laws were chosen for. A governing-law clause or published address is the site's own statement; the organization's record is used only when the site states none." tabindex="0">Location: ${escapeHtml(where || 'not recorded')}.${src.note ? ' ' + escapeHtml(src.note) : ''}${link}</p>`;
+    }
+
     // How a law's workspace status reads. The keys come from
     // q_compliance_posture; the words are chosen here so that no law is ever
     // shown as "clear", "compliant" or an "Effective" control. 'clear' only
@@ -6881,8 +6897,9 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         comp.innerHTML = `
           <div class="panel-head">
             <div>
-              <h3 data-tooltip="Laws and standards commonly relevant to where this organization is based, and what this site's scans found on the checks mapped to each. Informational, not legal advice." tabindex="0">Laws and Standards</h3>
+              <h3 data-tooltip="Laws and standards commonly relevant to where this site is based, and what its scans found on the checks mapped to each. The same location and law list as this site's SITREP. Informational, not legal advice." tabindex="0">Laws and Standards</h3>
               <p>${escapeHtml((ov && ov.compliance && ov.compliance.disclaimer) || 'Set a country on the organization to see obligations.')}</p>
+              ${complianceLocation(ov && ov.compliance)}
               ${ov && ov.compliance && ov.compliance.residency_note ? `<p data-tooltip="Which laws apply can depend on where your customers live, not only where you are based. The scan cannot see that, so this list may be missing laws that apply to you." tabindex="0">${escapeHtml(ov.compliance.residency_note)}</p>` : ''}
             </div>
           </div>
