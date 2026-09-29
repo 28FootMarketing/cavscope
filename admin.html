@@ -854,7 +854,7 @@
   // does now happens here, and tests/ui/one-admin-console.test.ts keeps it so.
   //
   // This page is still a renderer. Its figures come from
-  // public.muster_admin_console() plus five side reads (see SIDE_READS), all
+  // public.muster_admin_console() plus six side reads (see SIDE_READS), all
   // SECURITY DEFINER and gated on muster.is_super_admin(), and its controls are
   // forms over RPCs that check the caller themselves. Nothing here decides who
   // may see or change what; the database does, and a non-super-admin gets
@@ -1886,6 +1886,7 @@
           <th data-tooltip="Open or reopened findings of any severity." tabindex="0">Open</th>
           <th data-tooltip="Ownership proof. Until a site is verified, the deeper checks stay off." tabindex="0">Verified</th>
           <th data-tooltip="Last completed scan." tabindex="0">Last Scan</th>
+          <th data-tooltip="The location this site's laws are chosen for, in the workspace and the SITREP alike, and where it came from. Set or clear an override below." tabindex="0">Location</th>
         </tr></thead>
         <tbody>${rows.map((w) => `<tr>
           <td><b>${escapeHtml(w.name)}</b><br><small class="muted">${escapeHtml(w.url)}</small></td>
@@ -1895,7 +1896,120 @@
           <td class="num ${w.open_findings ? '' : 'muted'}">${num(w.open_findings)}</td>
           <td>${w.verified_at ? '<span class="pill ok">verified</span>' : '<span class="pill high">unverified</span>'}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(w.last_scan_at))}" tabindex="0">${escapeHtml(ago(w.last_scan_at))}</td>
-        </tr>`).join('')}</tbody></table>` : '<div class="empty">No websites match.</div>');
+          ${locationCell(w.id)}
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">No websites match.</div>') +
+      renderLocationPanel();
+  }
+
+  // ---- site location ------------------------------------------------------
+  //
+  // Where a site's laws are chosen for. cavscope.website_jurisdiction decides:
+  // an override set here, else the state the site states about itself, else its
+  // organization's record (never the sandbox org's). The same answer drives the
+  // tenant's Laws and Standards panel and the site's SITREP, so setting it here
+  // changes what a tenant reads -- which is why a real tenant's site confirms
+  // first and a sandbox site does not.
+  //
+  // The form lives in locForm, not only in the DOM: render() replaces the page
+  // on every search keystroke and after every write elsewhere.
+  const locForm = { site: '', country: '', region: '', note: '' };
+  const ORIGIN_LABEL = { override: 'override', website: 'site', organization: 'org record', none: 'none' };
+
+  function locSites() { return ((EXTRA.locations || {}).sites) || []; }
+  function locSite(id) { return locSites().find((x) => String(x.website_id) === String(id)) || null; }
+  function locLabel(country, region) {
+    const L = EXTRA.locations || {};
+    const c = (L.countries || []).find((x) => x.code === country);
+    const r = region ? (L.regions || []).find((x) => x.country === country && x.code === region) : null;
+    return [r && r.name, c ? c.name : country].filter(Boolean).join(', ');
+  }
+
+  function locationCell(websiteId) {
+    if (sideError('locations')) return '<td class="muted">—</td>';
+    const x = locSite(websiteId);
+    if (!x) return '<td class="muted">—</td>';
+    const r = x.resolved || {};
+    const src = r.location_source || {};
+    const origin = ORIGIN_LABEL[src.origin] || (r.available === false ? 'none' : '');
+    const place = r.available === false ? 'None' : (r.place || [r.region_code, r.country_code].filter(Boolean).join(', '));
+    const tip = r.available === false ? (r.reason || 'No location') : (src.note || '');
+    return `<td data-tooltip="${escapeHtml(tip)}" tabindex="0">${escapeHtml(place)}<br><small class="muted">${escapeHtml(origin)}</small></td>`;
+  }
+
+  function renderLocationPanel() {
+    if (sideError('locations')) return panel('Site location', '', sideErrorPanel('locations', 'site locations'));
+    const L = EXTRA.locations || {};
+    const sites = locSites();
+    const site = locSite(locForm.site);
+    const regions = (L.regions || []).filter((r) => r.country === locForm.country);
+    const r = site ? (site.resolved || {}) : null;
+    const current = site ? `<div class="notice" data-tooltip="What the tenant's workspace and this site's SITREP use today." tabindex="0">
+        <b>Now:</b> ${escapeHtml(r.available === false ? 'no location' : (r.place || [r.region_code, r.country_code].filter(Boolean).join(', ')))}.
+        ${escapeHtml(r.available === false ? (r.reason || '') : ((r.location_source || {}).note || ''))}
+        ${site.detected ? `<br><small class="muted">Detected on the site: ${escapeHtml([site.detected.region, site.detected.country].filter(Boolean).join(', '))} (${escapeHtml(site.detected.basis || 'unknown basis')}).</small>` : '<br><small class="muted">Nothing detected on the site.</small>'}
+        ${site.org_location ? `<br><small class="muted">Organization record: ${escapeHtml(site.org_location)}${site.sandbox ? ' (sandbox, never used)' : ''}.</small>` : ''}
+      </div>` : '';
+    return panel('Site location', 'Set where a site\'s laws are chosen for when detection is wrong or silent', `
+      <form data-act="loc-set" class="form-grid" style="grid-template-columns:1.6fr 1fr 1fr 1.6fr auto auto;">
+        <div class="field">
+          <label for="locSite">Site</label>
+          <select id="locSite" data-tooltip="The site to set a location for. Real tenant sites are listed first; sandbox sites are ad-hoc audits.">
+            <option value="">Choose a site</option>
+            ${sites.map((x) => `<option value="${x.website_id}" ${String(x.website_id) === locForm.site ? 'selected' : ''}>${escapeHtml(x.organization)}${x.sandbox ? ' (sandbox)' : ''} · ${escapeHtml(x.name)}${x.override ? ' · overridden' : ''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="locCountry">Country</label>
+          <select id="locCountry" data-tooltip="The country whose laws apply to this site. Only countries CavScope carries laws for are listed.">
+            <option value="">Choose a country</option>
+            ${(L.countries || []).map((c) => `<option value="${escapeHtml(c.code)}" ${c.code === locForm.country ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="locRegion">State or region</label>
+          <select id="locRegion" data-tooltip="Optional. Leave as the whole country when the site has no single state." ${regions.length ? '' : 'disabled'}>
+            <option value="">Whole country</option>
+            ${regions.map((x) => `<option value="${escapeHtml(x.code)}" ${x.code === locForm.region ? 'selected' : ''}>${escapeHtml(x.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="locNote">Reason</label>
+          <input type="text" id="locNote" maxlength="300" value="${escapeHtml(locForm.note)}" placeholder="Shown to the tenant in their report"
+                 data-tooltip="Optional, up to 300 characters. Printed after the location in the tenant's workspace and SITREP, so write it for them.">
+        </div>
+        <button type="submit" class="btn" data-tooltip="Replaces what the site states about itself until cleared. The workspace changes now; the SITREP changes from the site's next scan." ${writing ? 'disabled' : ''}>Set location</button>
+        ${site && site.override ? `<button type="button" class="btn ghost" data-act="loc-clear" data-tooltip="Go back to what the site states, or its organization's record." ${writing ? 'disabled' : ''}>Clear override</button>` : ''}
+      </form>
+      ${current}`);
+  }
+
+  function pickLocSite(id) {
+    locForm.site = id;
+    const x = locSite(id);
+    const pre = x && (x.override || (x.resolved && x.resolved.available !== false ? { country: x.resolved.country_code, region: x.resolved.region_code } : null));
+    locForm.country = (pre && pre.country) || '';
+    locForm.region = (pre && pre.region) || '';
+    locForm.note = (x && x.override && x.override.note) || '';
+  }
+
+  async function setSiteLocation() {
+    const site = locSite(locForm.site);
+    if (!site) { flash('warn', 'Choose a site first.'); return; }
+    if (!locForm.country) { flash('warn', 'Choose a country, or clear the override to go back to what the site states.'); return; }
+    const where = locLabel(locForm.country, locForm.region);
+    if (!site.sandbox && !window.confirm(`Set ${site.name}'s location to ${where}?\n\n${site.organization} sees this site's laws chosen for ${where} in their workspace now, and in its SITREP from the next scan. It replaces what the site states about itself until you clear it.`)) { render(); return; }
+    const r = await write('muster_admin_set_site_jurisdiction',
+      { p_website_id: site.website_id, p_country: locForm.country, p_region: locForm.region || null, p_note: locForm.note || null },
+      `${site.name} is now located in ${where}.`);
+    if (r) pickLocSite(locForm.site);
+  }
+
+  async function clearSiteLocation() {
+    const site = locSite(locForm.site);
+    if (!site || !site.override) return;
+    if (!site.sandbox && !window.confirm(`Clear the location override on ${site.name}?\n\nIts laws go back to what the site states about itself, or ${site.organization}'s record, in their workspace now and in its SITREP from the next scan.`)) { render(); return; }
+    const r = await write('muster_admin_set_site_jurisdiction', { p_website_id: site.website_id, p_country: null }, `${site.name}'s location override is cleared.`);
+    if (r) pickLocSite(locForm.site);
   }
 
   function renderCompliance() {
@@ -2602,6 +2716,10 @@
     impLog: ['muster_admin_impersonation_log', { p_limit: 25 }],
     overview: ['muster_admin_overview'],
     platform: ['muster_admin_platform_extras'],
+    // Every site's detected location, any override on it, and what the shared
+    // resolver (cavscope.website_jurisdiction) makes of the two -- the location
+    // both the tenant's workspace and the site's SITREP use.
+    locations: ['muster_admin_site_jurisdictions'],
   };
 
   async function fetchExtras() {
@@ -2962,6 +3080,7 @@
       if (kind === 'override-revoke') { clearFlagOverride(act); return; }
       if (kind === 'flag-delete') { deleteFlag(act); return; }
       if (kind === 'imp-end') { endImpersonation(); return; }
+      if (kind === 'loc-clear') { clearSiteLocation(); return; }
     }
     // The runner's "read the report" link, and any row in the Reports table.
     const rep = e.target.closest && e.target.closest('[data-sitrep]');
@@ -2980,6 +3099,7 @@
     // every keystroke would move the caret to the end of the field.
     if (e.target.id === 'runUrl') { run.url = e.target.value; }
     if (e.target.id === 'impReason') { impForm.reason = e.target.value; }
+    if (e.target.id === 'locNote') { locForm.note = e.target.value; }
     recordDraft(e.target);
   });
 
@@ -3009,6 +3129,7 @@
     if (kind === 'override-add') addFlagOverride(form);
     else if (kind === 'flag-create') createFlag(form);
     else if (kind === 'imp-start') startImpersonation();
+    else if (kind === 'loc-set') setSiteLocation();
   });
 
   document.addEventListener('change', (e) => {
@@ -3016,6 +3137,9 @@
     if (e.target.id === 'rangeFilter') { rangeDays = Number(e.target.value); render(); }
     if (e.target.id === 'runSite') { run.siteId = e.target.value; }
     if (e.target.id === 'impTarget') { impForm.target = e.target.value; }
+    if (e.target.id === 'locSite') { pickLocSite(e.target.value); render(); }
+    if (e.target.id === 'locCountry') { locForm.country = e.target.value; locForm.region = ''; render(); }
+    if (e.target.id === 'locRegion') { locForm.region = e.target.value; }
     recordDraft(e.target);
     if (e.target.id === 'impMinutes') { impForm.minutes = e.target.value; }
     switch (e.target.getAttribute && e.target.getAttribute('data-act')) {
