@@ -53,6 +53,8 @@ const CONSOLE_RPCS = [
   "muster_admin_platform_extras",
   "muster_admin_sitreps",
   "muster_admin_sitrep",
+  "muster_admin_site_jurisdictions",
+  "muster_admin_set_site_jurisdiction",
 ];
 
 test("admin.html calls every super admin RPC the console needs", () => {

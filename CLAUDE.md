@@ -218,11 +218,12 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   is sent here, once per page load; `#tenant=<id>` opens that tenant, and any other fragment keeps
   them in the app -- which is why this page's "MUSTER" link is `/app#overview`, not `/app`, or it
   would bounce straight back.
-  **Beyond the console payload it makes five side reads** (`SIDE_READS`): the flag registry,
+  **Beyond the console payload it makes six side reads** (`SIDE_READS`): the flag registry,
   impersonation status and log, `muster_admin_platform_extras()` (platform agents and the
-  jurisdiction review queue -- built in migration 068 for this page and never wired until now), and
+  jurisdiction review queue -- built in migration 068 for this page and never wired until now),
   `muster_admin_overview()`, kept **only** for its `incidents` list, because triage needs incident
-  ids and the console payload reduces them to counts. Each settles on its own: one failing blanks its
+  ids and the console payload reduces them to counts, and `muster_admin_site_jurisdictions()`
+  (every site's detected location, any override on it, and what the resolver makes of both). Each settles on its own: one failing blanks its
   own panel and says so, never the page. After every write the page re-reads, on failure too, so a
   select or switch the database refused snaps back to what is true. Changes that reach someone other
   than the person clicking -- a tenant's plan, a user's role, the public pricing stage, a flag's
@@ -590,6 +591,15 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   panel and the report both print. **Never add a caller that reads `organizations.country_code`
   for a site's laws**; `tests/sitrep/jurisdiction.test.ts` fails if either caller does. The
   migration proved the SITREP byte-identical on every website before it could commit.
+  **A super admin can override it per site** (`20260929033647`), in `admin.html`'s Website
+  Assurance section: `websites.jurisdiction_override_*`, set and cleared only through
+  `muster_admin_set_site_jurisdiction` (super admin, anon revoked, every change an activity event),
+  taken by the resolver **before** detection and the organization's record -- for a sandbox site
+  too, which is the only way an ad-hoc audit of a site that states nothing gets a law list. Its
+  sentence reads "Set by a CavScope administrator on <date>, in place of what the site states", plus
+  the admin's reason, **which the tenant reads in their workspace and SITREP**, so write it for them.
+  The engine never writes these columns, so a rescan cannot undo an override. Changing a real
+  tenant's site confirms first; a sandbox site does not.
 - **The Overview's four tiles show a live workspace its own numbers, as of 2026-09-28.** Until then
   they were fixed HTML: every signed-in tenant saw the sample's posture 82, "1 active critical
   risk", control coverage 80% ("4 of 5 mapped"), evidence readiness 75% ("3 approved artifacts")
