@@ -4,3 +4,6 @@ node_modules/
 .env.*
 *.log
 supabase/.temp/
+# tools/live-sweep: real tenant data, never committed
+tools/live-sweep/fixture.local.json
+tools/live-sweep/sweep-out.local.json
