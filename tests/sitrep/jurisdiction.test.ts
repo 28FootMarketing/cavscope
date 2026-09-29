@@ -272,12 +272,14 @@ test("the note is written once in SQL, in a listed and an unlisted form, and nev
 });
 
 test("every return path of the newest q_sitrep_jurisdiction carries the note", () => {
+  // Since 20260929033108 the unavailable paths (sandbox with nothing detected,
+  // no country, website not found) are decided by website_jurisdiction, and
+  // q_sitrep_jurisdiction appends the unlisted note to whichever it returns.
   const fn = provenanceSql.slice(provenanceSql.indexOf("create or replace function cavscope.q_sitrep_jurisdiction"));
-  const returns = fn.slice(0, fn.indexOf("$function$;")).split("return jsonb_build_object(").slice(1);
-  assert.equal(returns.length, 3, "expected three return paths: sandbox, no country, listed");
-  assert.match(returns[0], /'residency_note', cavscope\.jurisdiction_residency_note\(false\)/);
-  assert.match(returns[1], /'residency_note', cavscope\.jurisdiction_residency_note\(false\)/);
-  assert.match(returns[2], /'residency_note', cavscope\.jurisdiction_residency_note\(true\)/);
+  const body = fn.slice(0, fn.indexOf("$function$;"));
+  assert.match(body, /if not coalesce\(\(v_loc->>'available'\)::boolean, false\) then\n\s+return \(v_loc - 'place'\) \|\| jsonb_build_object\('residency_note', cavscope\.jurisdiction_residency_note\(false\)\)/);
+  assert.match(body, /'residency_note', cavscope\.jurisdiction_residency_note\(true\)/);
+  assert.equal((body.match(/\breturn\b/g) || []).length, 2, "one unavailable return, one listed return");
 });
 
 test("the markdown patch covers both branches and refuses to run twice", () => {
@@ -359,4 +361,53 @@ test("onboarding says 'commonly relevant', not 'applies to you', and prints the 
   assert.doesNotMatch(app, /What applies to you/);
   assert.match(app, /Commonly relevant where you are based/);
   assert.match(app, /escapeHtml\(adv\.residency_note\)/);
+});
+
+// --- one decider for the SITREP and the workspace (migration 20260929033108) ---
+//
+// The SITREP chose laws for the site's own stated location; the workspace panel
+// chose them for the organization's record. On an agency's client site those
+// are different places. Both now call cavscope.website_jurisdiction.
+
+const resolverSql = readFileSync(join(migrationsDir, "20260929033108_website_jurisdiction_shared_resolver.sql"), "utf8");
+const fnBody = (sql: string, name: string) => {
+  const at = sql.indexOf(`create or replace function ${name}`);
+  return sql.slice(at, sql.indexOf("$function$;", at));
+};
+
+test("the SITREP and the workspace panel take their location from the same function", () => {
+  const sitrep = fnBody(resolverSql, "cavscope.q_sitrep_jurisdiction");
+  const posture = fnBody(resolverSql, "cavscope.q_compliance_posture");
+  for (const body of [sitrep, posture]) {
+    assert.match(body, /v_loc := cavscope\.website_jurisdiction\(p_website_id\);/);
+    assert.doesNotMatch(body, /o\.country_code|o\.region_code/, "a caller reading the organization's record directly can disagree again");
+    assert.match(body, /'location_source', v_loc->'location_source'/);
+  }
+  const resolver = fnBody(resolverSql, "cavscope.website_jurisdiction");
+  assert.match(resolver, /coalesce\(w\.detected_country_code, o\.country_code\), coalesce\(w\.detected_region_code, o\.region_code\)/,
+    "the site's own state first, the organization's only as a fallback");
+  assert.match(resolverSql, /revoke all on function cavscope\.website_jurisdiction\(bigint\) from public, anon, authenticated;/);
+});
+
+test("the refactor proved the SITREP unchanged before it could commit", () => {
+  assert.match(resolverSql, /create temp table _jur_before as/);
+  assert.match(resolverSql, /q_sitrep_jurisdiction changed output for websites/);
+  assert.match(resolverSql, /different location source in the workspace than in the SITREP/);
+});
+
+test("the workspace panel names the place and its source, escaped, with an https-only link", () => {
+  const app = readFileSync(join(repoRoot, "app.html"), "utf8");
+  const at = app.indexOf("    function complianceLocation(c) {");
+  const src = app.slice(at, app.indexOf("\n    }\n", at) + 6);
+  const escAt = app.indexOf("function escapeHtml(");
+  const esc = app.slice(escAt, app.indexOf("\n    }\n", escAt) + 6);
+  // deno-lint-ignore no-explicit-any
+  const render = new Function(`${esc}\n${src}\nreturn complianceLocation;`)() as (c: any) => string;
+  const out = render({ available: true, place: "California, United States", location_source: { note: "Read from a postal address printed on this site.", source_url: "https://client.example/contact" } });
+  assert.match(out, /Location: California, United States\. Read from a postal address printed on this site\./);
+  assert.match(out, /href="https:\/\/client\.example\/contact"/);
+  const risky = render({ available: true, place: "<b>x</b>", location_source: { note: "n", source_url: "javascript:alert(1)" } });
+  assert.doesNotMatch(risky, /<b>x<\/b>|href="javascript:/);
+  assert.match(render({ available: false, reason: "No country recorded for this organization." }), /No country recorded/);
+  assert.match(app, /\$\{complianceLocation\(ov && ov\.compliance\)\}/);
 });
