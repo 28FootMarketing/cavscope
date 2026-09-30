@@ -6,6 +6,7 @@
     "docs/BRAND.md": "public",
     "docs/BACKEND.md": "internal",
     "docs/BRAND-CUTOVER.md": "internal",
+    "docs/RENAME-PLAN.md": "internal",
     "docs/CUTOVER.md": "internal",
     "docs/EMAIL.md": "internal",
     "docs/EMAIL-INVENTORY.md": "internal",
