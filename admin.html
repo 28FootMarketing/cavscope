@@ -1553,6 +1553,218 @@
 
   function closeSitrep() { sitrepOpen = null; render(); }
 
+  // ---- SITREP PDF (client-facing and company) --------------------------------
+  //
+  // A super admin hands a report to two different readers: the client (Plain
+  // English briefing) and the company's own leadership (Board report). Both are
+  // profiles of the SAME stored SITREP -- sections.report.profiles.{client,board}
+  // -- and Postgres decides which sections each profile carries. This code only
+  // decides how a named section looks, exactly as app.html's renderReport() does;
+  // a section the template names and this page cannot draw is printed as a
+  // visible notice, never skipped (tests/ui/sitrep-pdf.test.ts).
+  //
+  // The PDF is the browser's own "Save as PDF" over a purpose-built print
+  // document in a hidden iframe. No library is loaded, so the CSP is untouched
+  // and nothing about the report leaves the browser. It is built from the
+  // stored payload, not from a screenshot of this console, so the console's dark
+  // theme, nav and tooltips can never leak into a document that goes to a client.
+  const PDF_PROFILES = {
+    client:  { label: 'Client-facing', kind: 'Client Briefing' },
+    board:   { label: 'Company',       kind: 'Board Report' },
+  };
+
+  function pdfCite(c) {
+    const ids = [...(c.finding_ids || []).map((i) => 'F' + i), ...(c.evidence_ids || []).map((i) => 'E' + i)];
+    if (c.finding_id != null) ids.unshift('F' + c.finding_id);
+    if (!ids.length) return '';
+    const shown = ids.slice(0, 6), more = ids.length - shown.length;
+    return `<span class="cite">[${shown.map(escapeHtml).join('][')}]${more > 0 ? `[+${more}]` : ''}</span>`;
+  }
+
+  function pdfWhen(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    return isNaN(d) ? escapeHtml(String(ts)) : d.toLocaleString();
+  }
+
+  function pdfJurisdiction(j) {
+    const head = '<h2>Laws and Standards</h2>';
+    if (!j) return '';
+    const residency = j.residency_note ? `<p class="lede">${escapeHtml(j.residency_note)}</p>` : '';
+    if (j.available === false) {
+      return `<section>${head}<p class="lede">${escapeHtml(j.reason || 'No jurisdiction is recorded for this organization, so no laws are listed.')}</p>${residency}</section>`;
+    }
+    const laws = Array.isArray(j.laws) ? j.laws : [];
+    if (!laws.length) return `<section>${head}<p class="lede">No laws are recorded for this location.</p>${residency}</section>`;
+    if (laws.some((l) => !l.assessment)) {
+      return `<section>${head}<p class="lede">This report was generated before laws were assessed against its checks. The report from the next scan of this site lists them.</p></section>`;
+    }
+    const names = {};
+    (j.jurisdictions || []).forEach((x) => { names[x.code] = x.name; });
+    const place = (j.jurisdictions || []).filter((x) => x.kind === 'region' || x.kind === 'country')
+      .sort((a, b) => (a.kind === 'region' ? 0 : 1) - (b.kind === 'region' ? 0 : 1)).map((x) => x.name).join(', ');
+    const src = j.location_source && j.location_source.note ? `<p class="lede">${escapeHtml(j.location_source.note)}</p>` : '';
+    const byName = (a, b) => String(a.short_name || '').localeCompare(String(b.short_name || ''));
+    const open = laws.filter((l) => l.assessment === 'open_findings').sort(byName);
+    const none = laws.filter((l) => l.assessment === 'no_open_findings').sort(byName);
+    const na = laws.filter((l) => l.assessment === 'not_assessed').sort(byName);
+    const law = (l, extra) => `<div class="law"><b>${escapeHtml(l.short_name)}</b> <span class="dim">${escapeHtml(names[l.jurisdiction_code] || l.jurisdiction_code || '')}</span>${l.summary ? `<p>${escapeHtml(l.summary)}</p>` : ''}<p class="dim">Applies when: ${escapeHtml(l.applies_when || 'not stated')}</p>${extra || ''}</div>`;
+    // Never "clear" or "compliant": a list of statutes under a client's name
+    // reads as a determination, and this is not one.
+    return `<section>${head}
+      <p class="note">${escapeHtml(j.disclaimer || '')}</p>
+      <p class="lede">Location on record: ${escapeHtml(place || j.region_code || j.country_code || 'not recorded')}.</p>${src}
+      <p class="lede">These are laws and standards commonly relevant to an organization in this location. Whether each applies depends on facts a website scan cannot see.</p>
+      ${residency}
+      ${open.length ? `<h3>Open findings touch these (${open.length})</h3>${open.map((l) => law(l, `<ul>${(l.open_findings || []).map((f) => `<li>${escapeHtml(f.title)} <span class="sev sev-${escapeHtml(String(f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></li>`).join('')}</ul>`)).join('')}` : ''}
+      ${none.length ? `<h3>No open findings on the mapped checks (${none.length})</h3><p class="note">The checks CavScope maps to these passed on this date. That is not a determination of compliance: each asks for more than a website scan can see.</p>${none.map((l) => law(l, `<p class="dim">Checks: ${(l.rule_ids || []).map(escapeHtml).join(', ')}</p>`)).join('')}` : ''}
+      ${na.length ? `<h3>Not assessed by this scan (${na.length})</h3><p class="note">This report says nothing about these either way. They are listed because they are commonly relevant here.${j.scan_unread ? ' On this scan the engine did not read the page, so its checks could not run.' : ''}</p>${na.map((l) => law(l, `<p class="dim">${l.not_assessed_reason === 'no_mapped_check' ? 'No CavScope check maps to it.' : 'Its checks could not run on this scan.'}</p>`)).join('')}` : ''}
+    </section>`;
+  }
+
+  function pdfSection(key, ctx) {
+    const { s, r, m } = ctx;
+    switch (key) {
+      case 'board_report': {
+        const b = s.board_report || {};
+        return `<section><h2>Board Report</h2>${b.headline ? `<p><b>${escapeHtml(b.headline)}</b></p>` : ''}
+          <ul>${(b.claims || []).map((c) => `<li>${escapeHtml(c.text)}${pdfCite(c)}</li>`).join('') || '<li>No claims recorded for this scan.</li>'}</ul></section>`;
+      }
+      case 'metrics': {
+        const c = m.controls || {}, laws = m.laws || {};
+        return `<section><h2>At a Glance</h2><div class="tiles">
+          <div class="tile"><label>Open findings</label><b>${Number(m.open) || 0}</b><small>${m.critical || 0} critical · ${m.high || 0} high</small><p>${m.medium || 0} medium · ${m.low || 0} low · ${m.info || 0} informational</p></div>
+          <div class="tile"><label>Control coverage</label><b>${c.rate == null ? '—' : escapeHtml(String(c.rate)) + '%'}</b><small>${c.met || 0} met of ${c.total || 0}</small><p>${c.partial || 0} partial · ${c.not_met || 0} not met · ${c.not_assessed || 0} not assessed</p></div>
+          <div class="tile"><label>Evidence captured</label><b>${Number(m.evidence) || 0}</b><small>rows</small><p>Every claim cites at least one</p></div>
+          <div class="tile"><label>Laws and standards</label><b>${Number(laws.count) || 0}</b><small>${laws.open_findings || 0} touched</small><p>${laws.no_open_findings || 0} mapped, no open findings · ${laws.not_assessed || 0} not assessed</p></div>
+        </div></section>`;
+      }
+      case 'controls': {
+        const c = r.controls || {}, items = c.items || [];
+        const gaps = (Number(c.not_met) || 0) + (Number(c.partial) || 0);
+        return `<section><h2>Controls</h2>
+          <p class="lede">${c.met || 0} of ${c.total || 0} derived controls met, ${c.partial || 0} partial, ${c.not_met || 0} not met, ${c.not_assessed || 0} not assessed. Controls are derived from findings against the frameworks each rule cites; a citation is not a test of the framework, and this is not an audit opinion.</p>
+          ${items.length ? `<table><thead><tr><th>Framework</th><th>Reference</th><th>Assessment</th></tr></thead><tbody>${items.map((i) => `<tr><td>${escapeHtml(i.framework_label || i.framework || '')}</td><td class="mono">${escapeHtml(i.reference || '')}</td><td>${escapeHtml(String(i.assessment || '').replace('_', ' '))}</td></tr>`).join('')}</tbody></table>` : '<p>Every derived control is met or not assessed.</p>'}
+          ${items.length < gaps ? `<p class="lede">Showing ${items.length} of ${gaps} controls that are not fully met.</p>` : ''}
+          ${c.as_of ? `<p class="dim">Control coverage as of ${pdfWhen(c.as_of)}.</p>` : ''}</section>`;
+      }
+      case 'top_findings': {
+        const f = s.top_findings || [], b = s.board_report || {};
+        const shown = f.length, open = Number(b.open) || shown;
+        return `<section><h2>Findings</h2><p class="lede">Showing ${shown} of ${open} open finding${open === 1 ? '' : 's'}, most severe first.</p>
+          ${f.length ? `<table><thead><tr><th>Rule</th><th>Finding</th><th>Severity</th><th>Remediation</th></tr></thead><tbody>${f.map((x) => `<tr><td class="mono">${escapeHtml(x.rule_id || '')}</td><td>${escapeHtml(x.title || '')}${pdfCite(x)}<div class="dim">${escapeHtml(x.detail || '')}</div></td><td><span class="sev sev-${escapeHtml(String(x.severity || 'info').toLowerCase())}">${escapeHtml(x.severity || '')}</span></td><td>${escapeHtml(x.remediation || '')}</td></tr>`).join('')}</tbody></table>` : '<p>No findings are open against this site.</p>'}</section>`;
+      }
+      case 'plain_english': {
+        const items = (s.plain_english || {}).items || [];
+        return `<section><h2>Plain English</h2><ul>${items.map((i) => `<li>${escapeHtml(i.text)}${pdfCite(i)}</li>`).join('') || '<li>No open findings. Keep scanning on schedule so this stays true.</li>'}</ul></section>`;
+      }
+      case 'scope_note': {
+        const items = (s.scope_note || {}).items || [];
+        return `<section><h2>What This Scan Did Not Check</h2><ul>${items.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul></section>`;
+      }
+      case 'jurisdiction':
+        return pdfJurisdiction(s.jurisdiction);
+      case 'evidence_index': {
+        const ev = s.evidence_index || [];
+        return `<section><h2>Evidence Index</h2>${ev.length ? `<table><thead><tr><th>Id</th><th>Kind</th><th>URL</th><th>HTTP</th><th>Captured</th><th>SHA-256</th></tr></thead><tbody>${ev.map((e) => `<tr><td class="mono">E${escapeHtml(String(e.evidence_id ?? ''))}</td><td class="mono">${escapeHtml(e.kind || '')}</td><td class="wrap">${escapeHtml(e.url || '')}</td><td class="mono">${escapeHtml(String(e.http_status ?? ''))}</td><td class="mono">${pdfWhen(e.captured_at)}</td><td class="mono">${escapeHtml(String(e.sha256 || '').slice(0, 12))}…</td></tr>`).join('')}</tbody></table>` : '<p>No evidence rows were captured for this scan.</p>'}</section>`;
+      }
+      default:
+        // The template named a section this page cannot draw. Say so on the
+        // page, rather than printing less than the template promised.
+        return `<section class="missing">This report includes a section ("${escapeHtml(key)}") that this console does not render yet. The full report is available in the workspace at /sitrep.</section>`;
+    }
+  }
+
+  // Returns a complete HTML document string, or { error } when the stored report
+  // predates the report template and so has no profile to walk.
+  function buildSitrepPdf(sitrep, profile) {
+    const meta = PDF_PROFILES[profile];
+    const s = (sitrep && sitrep.sections) || null;
+    const r = s && s.report;
+    if (!meta || !r || !r.profiles || !r.profiles[profile]) {
+      return { error: 'This report was generated before the report template existed, so it has no client or company layout. Re-scan the site to produce one.' };
+    }
+    const p = r.profiles[profile], h = r.header || {}, m = r.metrics || {};
+    const score = h.posture_score ?? sitrep.posture_score;
+    const bandName = String(h.posture_band ?? sitrep.posture_band ?? 'unscored').toLowerCase();
+    const ctx = { s, r, m };
+    const title = `CavScope ${meta.kind} - ${sitrep.website || h.target || 'report'} - ${String(sitrep.generated_at || '').slice(0, 10)}`;
+    const body = (p.sections || []).map((k) => pdfSection(k, ctx)).join('');
+    const css = `
+      @page { size: Letter; margin: 0.7in; }
+      * { box-sizing: border-box; }
+      body { font: 11pt/1.5 Georgia, 'Times New Roman', serif; color: #111; margin: 0; }
+      header.top { border-bottom: 3px solid #0f766e; padding-bottom: 12px; margin-bottom: 18px; }
+      .eyebrow { font: 700 9pt Helvetica, Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #0f766e; }
+      h1 { font-size: 22pt; margin: 6px 0 2px; line-height: 1.2; }
+      .aud { color: #444; margin: 0 0 12px; font-size: 10.5pt; }
+      .meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 24px; font: 9.5pt Helvetica, Arial, sans-serif; }
+      .meta span { display: block; font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: #666; }
+      .score { margin-top: 14px; display: flex; align-items: baseline; gap: 14px; font-family: Helvetica, Arial, sans-serif; }
+      .score b { font-size: 30pt; }
+      .band { font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+      .band-green { color: #15803d; } .band-amber { color: #b45309; } .band-red { color: #b91c1c; }
+      section { margin: 0 0 18px; }
+      h2 { font: 700 10.5pt Helvetica, Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #0f766e; margin: 0 0 8px; border-bottom: 1px solid #ccc; padding-bottom: 3px; break-after: avoid; }
+      h3 { font: 700 10pt Helvetica, Arial, sans-serif; margin: 12px 0 6px; break-after: avoid; }
+      p { margin: 0 0 7px; } ul { margin: 0; padding-left: 18px; } li { margin: 0 0 6px; break-inside: avoid; }
+      .lede { color: #333; } .dim { color: #666; font-size: 9.5pt; } .note { font-style: italic; color: #333; }
+      .cite { font: 8pt 'Courier New', monospace; color: #0f766e; margin-left: 4px; white-space: nowrap; }
+      .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .tile { border: 1px solid #bbb; padding: 9px 11px; break-inside: avoid; font-family: Helvetica, Arial, sans-serif; }
+      .tile label { display: block; font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase; color: #666; }
+      .tile b { font-size: 18pt; } .tile small { color: #666; margin-left: 5px; } .tile p { font-size: 9pt; color: #444; margin: 3px 0 0; }
+      table { width: 100%; border-collapse: collapse; font: 9pt Helvetica, Arial, sans-serif; }
+      th { text-align: left; font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase; color: #555; border-bottom: 1.5px solid #888; padding: 5px 6px; }
+      td { border-bottom: 1px solid #ddd; padding: 6px; vertical-align: top; } tr { break-inside: avoid; }
+      .mono { font-family: 'Courier New', monospace; font-size: 8.5pt; } .wrap { word-break: break-all; }
+      .sev { font: 700 8pt Helvetica, Arial, sans-serif; text-transform: uppercase; border: 1px solid #888; border-radius: 9px; padding: 1px 7px; white-space: nowrap; }
+      .sev-critical { border-color: #b91c1c; color: #b91c1c; } .sev-high { border-color: #c2410c; color: #c2410c; } .sev-medium { border-color: #b45309; color: #b45309; }
+      .law { border-bottom: 1px solid #e5e5e5; padding: 6px 0; break-inside: avoid; }
+      .missing { border: 1px solid #b91c1c; color: #b91c1c; padding: 10px; font-family: Helvetica, Arial, sans-serif; }
+      footer { border-top: 1px solid #ccc; padding-top: 8px; margin-top: 20px; font: 8.5pt/1.5 Helvetica, Arial, sans-serif; color: #555; }
+      footer .mono { word-break: break-all; }`;
+    const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body>
+      <header class="top">
+        <div class="eyebrow">CavScope · ${escapeHtml(meta.kind)} · Web Assurance by 28 Foot Systems</div>
+        <h1>${escapeHtml(h.title || sitrep.headline || 'Report')}</h1>
+        <p class="aud">${escapeHtml(p.audience || '')}</p>
+        <div class="meta">
+          <div><span>Organization</span>${escapeHtml(h.organization || sitrep.organization || '')}</div>
+          <div><span>Target</span>${escapeHtml(h.target || sitrep.url || '')}</div>
+          <div><span>Scan</span>#${escapeHtml(String(h.scan_id ?? sitrep.scan_id ?? ''))} · ${pdfWhen(h.completed_at)}</div>
+          <div><span>Report</span>${escapeHtml(p.title || meta.kind)} · v${escapeHtml(String(sitrep.version ?? 1))}${h.engine_version ? ' · engine ' + escapeHtml(h.engine_version) : ''}</div>
+        </div>
+        <div class="score"><b class="band-${escapeHtml(bandName)}">${escapeHtml(String(score ?? '—'))}<small style="font-size:11pt;color:#666"> / 100</small></b>
+          <div><div class="band band-${escapeHtml(bandName)}">${escapeHtml(bandName)}</div>
+          <div class="dim">${Number(m.open) || 0} open findings: ${m.critical || 0} critical, ${m.high || 0} high, ${m.medium || 0} medium, ${m.low || 0} low, ${m.info || 0} informational${h.previous_score != null ? ' · previous score ' + escapeHtml(String(h.previous_score)) : ''}</div></div></div>
+      </header>
+      ${body}
+      <footer>${escapeHtml(r.disclaimer || '')}${sitrep.content_sha256 ? `<div class="mono" style="margin-top:6px;">sha256 ${escapeHtml(sitrep.content_sha256)}</div>` : ''}</footer>
+    </body></html>`;
+    return { html: doc, title };
+  }
+
+  // Prints through a hidden same-origin iframe (srcdoc), not window.open: a
+  // popup blocker cannot eat it, and the document never gets its own URL.
+  function downloadSitrepPdf(profile) {
+    const out = buildSitrepPdf(sitrepOpen, profile);
+    if (out.error) { flash('bad', out.error); return; }
+    const old = document.getElementById('pdfFrame');
+    if (old) old.remove();
+    const f = document.createElement('iframe');
+    f.id = 'pdfFrame';
+    f.setAttribute('aria-hidden', 'true');
+    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    f.onload = () => {
+      try { f.contentWindow.focus(); f.contentWindow.print(); }
+      catch (e) { flash('bad', 'Could not open the print dialog: ' + String((e && e.message) || e)); }
+      setTimeout(() => f.remove(), 60000);
+    };
+    f.srcdoc = out.html;
+    document.body.appendChild(f);
+  }
+
   // The SITREP is generated as markdown by Postgres, and it is deliberately
   // rendered here as preformatted text rather than parsed into HTML. Two
   // reasons: it is the exact artefact the tenant reads, so showing it verbatim
@@ -1568,6 +1780,10 @@
         <div data-tooltip="deterministic-v1 is written by a template in Postgres from the findings. An LLM generator means prose a model wrote under citation checks -- worth knowing before quoting it to a client." tabindex="0"><small class="muted" style="display:block;">Generator</small><b>${escapeHtml(r.generator || 'unknown')}</b></div>
         <div data-tooltip="The engine build that produced the scan behind this report. Findings are only comparable across scans on the same version." tabindex="0"><small class="muted" style="display:block;">Engine</small><b>${escapeHtml(r.engine_version || 'unknown')}</b></div>
         <div><small class="muted" style="display:block;">Generated</small><b data-tooltip="${escapeHtml(stamp(r.generated_at))}" tabindex="0">${escapeHtml(ago(r.generated_at))}</b></div>
+        <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn" type="button" data-act="sitrep-pdf-client" data-tooltip="Opens the print dialog with the client-facing briefing: plain-language findings and fixes, written for the person who owns the site. Choose 'Save as PDF'.">⤓ Client PDF</button>
+          <button class="btn" type="button" data-act="sitrep-pdf-board" data-tooltip="Opens the print dialog with the company report: the board narrative, metrics, controls and evidence index, written for leadership. Choose 'Save as PDF'.">⤓ Company PDF</button>
+        </div>
       </div>
       <pre style="white-space:pre-wrap; word-break:break-word; font-family:var(--font-mono); font-size:12px; line-height:1.65; color:var(--text-muted); background:var(--surface); border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:16px; margin:0; max-height:70vh; overflow:auto;"
            data-tooltip="The report exactly as stored, and exactly as the tenant reads it at /sitrep. Every claim in it cites a finding [F] or an evidence row [E]." tabindex="0">${escapeHtml(r.content_md || '(this report has no markdown body)')}</pre>`;
@@ -3081,6 +3297,8 @@
       if (kind === 'flag-delete') { deleteFlag(act); return; }
       if (kind === 'imp-end') { endImpersonation(); return; }
       if (kind === 'loc-clear') { clearSiteLocation(); return; }
+      if (kind === 'sitrep-pdf-client') { downloadSitrepPdf('client'); return; }
+      if (kind === 'sitrep-pdf-board') { downloadSitrepPdf('board'); return; }
     }
     // The runner's "read the report" link, and any row in the Reports table.
     const rep = e.target.closest && e.target.closest('[data-sitrep]');
