@@ -54,3 +54,15 @@ test("report text is always escaped: no raw field reaches the document", () => {
     assert.doesNotMatch(code, new RegExp("\\$\\{" + field.replace(".", "\\.") + "\\}"), field + " interpolated raw");
   }
 });
+
+test("Markdown and JSON exports are wired and export the stored payload untouched", () => {
+  for (const k of ["md", "json"]) {
+    assert.match(html, new RegExp(`data-act="sitrep-export-${k}"`));
+    assert.match(html, new RegExp(`kind === 'sitrep-export-${k}'\\) \\{ saveSitrepFile\\('${k}'\\)`));
+  }
+  const fn = html.slice(html.indexOf("function saveSitrepFile"), html.indexOf("function downloadSitrepPdf"));
+  assert.match(fn, /text = r\.content_md;/);
+  assert.match(fn, /JSON\.stringify\(r, null, 2\)/);
+  assert.match(fn, /revokeObjectURL/);
+  assert.match(fn, /replace\(\/\[\^a-z0-9\.-\]\+\/gi/);
+});
