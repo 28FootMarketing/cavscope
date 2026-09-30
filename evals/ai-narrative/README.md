@@ -87,7 +87,7 @@ it should show that field.
 ## Adding a case
 
 1. Drop a context into `fixtures/` shaped like what
-   `muster_engine_agent_call(ctx, 'ai_narrative', …)` returns — see the `elsif
+   `cavscope_engine_agent_call(ctx, 'ai_narrative', …)` returns — see the `elsif
    p_tool = 'ai_narrative'` branch in
    `supabase/migrations/20260907235048_muster_020_shims_part2_final.sql`.
    Fixture copy is taken verbatim from `muster.scan_rules` so the model sees

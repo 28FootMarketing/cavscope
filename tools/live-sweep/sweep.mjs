@@ -23,15 +23,15 @@ const demo = await dump();
 await page.evaluate((fx) => {
   const rulesAsked = ids => ids.map(id => ({ rule_id: id, active: fx.rules[id] ?? false, title: id, default_severity: 'low' }));
   const handlers = {
-    muster_claim_invites: () => null,
-    muster_onboarding_status: () => ({ next: 'workspace', organizations: [{ id: 3 }] }),
-    muster_my_workspace: () => ({ user: { id: 2, name: 'Owner' }, preferences: null, is_super_admin: false, platform_flags: {}, organizations: [Object.assign({}, fx.org, { role: 'executive' })] }),
-    muster_website_overview: () => JSON.parse(JSON.stringify(fx.overview)),
-    muster_latest_sitrep: () => JSON.parse(JSON.stringify(fx.sitrep)),
-    muster_risks: () => fx.risks,
-    muster_risk_appetite: () => fx.appetite,
-    muster_pending_invites: () => [],
-    muster_rule_status: (a) => rulesAsked(a.p_rule_ids || []),
+    cavscope_claim_invites: () => null,
+    cavscope_onboarding_status: () => ({ next: 'workspace', organizations: [{ id: 3 }] }),
+    cavscope_my_workspace: () => ({ user: { id: 2, name: 'Owner' }, preferences: null, is_super_admin: false, platform_flags: {}, organizations: [Object.assign({}, fx.org, { role: 'executive' })] }),
+    cavscope_website_overview: () => JSON.parse(JSON.stringify(fx.overview)),
+    cavscope_latest_sitrep: () => JSON.parse(JSON.stringify(fx.sitrep)),
+    cavscope_risks: () => fx.risks,
+    cavscope_risk_appetite: () => fx.appetite,
+    cavscope_pending_invites: () => [],
+    cavscope_rule_status: (a) => rulesAsked(a.p_rule_ids || []),
   };
   window.__rpcCalls = [];
   Live.sb = { rpc: async (fn, args) => { window.__rpcCalls.push(fn); const h = handlers[fn]; return h ? { data: h(args || {}), error: null } : { data: null, error: { message: 'unstubbed ' + fn } }; },

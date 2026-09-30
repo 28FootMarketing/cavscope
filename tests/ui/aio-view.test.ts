@@ -153,7 +153,7 @@ test("the button runs the engine in a live workspace, and the sample says it is 
   for (const line of scripted) assert.match(line, /^\[SAMPLE\]/, `unlabelled scripted line: ${line}`);
 
   const run = html.slice(html.indexOf("      async runAioAudit(log) {"), html.indexOf("      // ---------- scans ----------"));
-  assert.match(run, /this\.rpc\('muster_request_scan'/);
+  assert.match(run, /this\.rpc\('cavscope_request_scan'/);
   assert.match(run, /status === 'failed'/);
   assert.match(run, /n < 40/, "polling is bounded");
 });

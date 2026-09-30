@@ -26,7 +26,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //
 // What this does: resolves or invites the admin's Supabase Auth account,
 // runs the existing self-serve tenant-creation path (muster.do_onboard, via
-// the public.muster_ghl_provision RPC -- same code real onboarding uses, not
+// the public.cavscope_ghl_provision RPC -- same code real onboarding uses, not
 // duplicated here), then immediately sets the org onto the plan the tier
 // maps to (muster -> starter, muster_partner -> pro, muster_enterprise ->
 // enterprise) instead of leaving it on the trial plan do_onboard defaults to.
@@ -85,7 +85,7 @@ async function ghlFetch(path: string, init: RequestInit = {}) {
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const { data: secret } = await db.rpc("muster_ghl_webhook_secret");
+  const { data: secret } = await db.rpc("cavscope_ghl_webhook_secret");
   const provided = req.headers.get("x-muster-secret") ?? "";
   if (!secret || provided !== secret) return json({ error: "unauthorized" }, 401);
 
@@ -130,7 +130,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // Resolve or invite the admin's Supabase Auth account.
-  const { data: existingAuthId, error: lookupErr } = await db.rpc("muster_find_auth_user_by_email", { p_email: adminEmail });
+  const { data: existingAuthId, error: lookupErr } = await db.rpc("cavscope_find_auth_user_by_email", { p_email: adminEmail });
   if (lookupErr) return json({ error: `auth lookup failed: ${lookupErr.message}` }, 500);
 
   let authUserId = existingAuthId as string | null;
@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
     ghl_contact_id: ghlContactId,
   };
 
-  const { data: organization, error: provisionErr } = await db.rpc("muster_ghl_provision", {
+  const { data: organization, error: provisionErr } = await db.rpc("cavscope_ghl_provision", {
     p: onboardPayload,
     p_auth_user_id: authUserId,
   });

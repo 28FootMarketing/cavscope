@@ -420,7 +420,7 @@
     document.getElementById('authGate').hidden = true;
     document.getElementById('topbar').hidden = false;
     try {
-      workspace = await rpc('muster_my_workspace');
+      workspace = await rpc('cavscope_my_workspace');
     } catch (e) {
       renderError(`Could not load your workspace: ${e.message}`);
       return;
@@ -440,7 +440,7 @@
 
     if (requestedSitrep) {
       try {
-        const sitrep = await rpc('muster_sitrep', { p_sitrep_id: Number(requestedSitrep) });
+        const sitrep = await rpc('cavscope_sitrep', { p_sitrep_id: Number(requestedSitrep) });
         currentWebsiteId = sitrep.website_id;
         picker.value = String(currentWebsiteId);
         await loadHistory(currentWebsiteId, sitrep.id);
@@ -457,7 +457,7 @@
   async function onWebsiteChange(websiteId) {
     currentWebsiteId = Number(websiteId);
     try {
-      const sitrep = await rpc('muster_latest_sitrep', { p_website_id: currentWebsiteId });
+      const sitrep = await rpc('cavscope_latest_sitrep', { p_website_id: currentWebsiteId });
       await loadHistory(currentWebsiteId, sitrep ? sitrep.id : null);
       if (!sitrep) {
         renderEmpty('No SITREP yet', 'This website has not completed a scan yet. Run one from the CavScope workspace.');
@@ -472,7 +472,7 @@
   async function loadHistory(websiteId, selectedId) {
     const picker = document.getElementById('historyPicker');
     try {
-      const history = await rpc('muster_sitrep_history', { p_website_id: websiteId, p_limit: 20 });
+      const history = await rpc('cavscope_sitrep_history', { p_website_id: websiteId, p_limit: 20 });
       if (!history.length) { picker.hidden = true; picker.innerHTML = ''; return; }
       picker.innerHTML = history.map(h => `<option value="${h.id}">${new Date(h.generated_at).toLocaleDateString()} — ${h.posture_score}/100 (${h.posture_band})${h.status === 'final' ? ' · current' : ''}</option>`).join('');
       if (selectedId != null) picker.value = String(selectedId);
@@ -482,7 +482,7 @@
 
   async function onHistoryChange(sitrepId) {
     try {
-      const sitrep = await rpc('muster_sitrep', { p_sitrep_id: Number(sitrepId) });
+      const sitrep = await rpc('cavscope_sitrep', { p_sitrep_id: Number(sitrepId) });
       renderSitrep(sitrep);
     } catch (e) {
       renderError(`Could not load this SITREP: ${e.message}`);

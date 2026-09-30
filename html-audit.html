@@ -740,7 +740,7 @@
       showGate('Not turned on', 'The HTML audit is not turned on for your account. A CavScope administrator can turn it on for your workspace.', { href: '/app#overview', text: 'Back to your workspace' });
       return;
     }
-    const { data: ws } = await sb.rpc('muster_my_workspace');
+    const { data: ws } = await sb.rpc('cavscope_my_workspace');
     if (ws && ws.is_super_admin) document.getElementById('linkConsole').hidden = false;
     document.getElementById('whoami').textContent = session.user.email || 'Signed in';
     document.getElementById('gate').hidden = true;

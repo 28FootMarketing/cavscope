@@ -6,7 +6,7 @@ const FROM = "CavScope <team@mail.cavscope.28footsystems.com>";
 const LOGO_URL = "https://hjowfnzpomzxazmzywxw.supabase.co/storage/v1/object/public/brand-assets/muster-logo.jpg";
 
 async function getSecret(name: string): Promise<string> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/muster_get_secret`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cavscope_get_secret`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

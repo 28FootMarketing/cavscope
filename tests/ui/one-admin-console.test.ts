@@ -27,34 +27,34 @@ const read = (p: string) => readFileSync(join(repoRoot, p), "utf8");
 const app = read("app.html");
 const admin = read("admin.html");
 
-const adminRpcs = (html: string) => new Set([...html.matchAll(/'(muster_admin_[a-z_]+)'/g)].map((m) => m[1]));
+const adminRpcs = (html: string) => new Set([...html.matchAll(/'(cavscope_admin_[a-z_]+)'/g)].map((m) => m[1]));
 
 // Every super admin write, and the reads that exist only to back one.
 const CONSOLE_RPCS = [
-  "muster_admin_console",
-  "muster_admin_set_plan",
-  "muster_admin_set_user_role",
-  "muster_admin_update_incident",
-  "muster_admin_set_pricing_stage",
-  "muster_admin_set_pricing_visibility",
-  "muster_admin_flag_registry",
-  "muster_admin_set_flag",
-  "muster_admin_kill_switch",
-  "muster_admin_set_flag_plan_minimum",
-  "muster_admin_clear_flag_override",
-  "muster_admin_create_flag",
-  "muster_admin_delete_flag",
-  "muster_admin_impersonate_status",
-  "muster_admin_impersonation_log",
-  "muster_admin_impersonate_start",
-  "muster_admin_impersonate_end",
-  "muster_admin_impersonated_view",
-  "muster_admin_run_url",
-  "muster_admin_platform_extras",
-  "muster_admin_sitreps",
-  "muster_admin_sitrep",
-  "muster_admin_site_jurisdictions",
-  "muster_admin_set_site_jurisdiction",
+  "cavscope_admin_console",
+  "cavscope_admin_set_plan",
+  "cavscope_admin_set_user_role",
+  "cavscope_admin_update_incident",
+  "cavscope_admin_set_pricing_stage",
+  "cavscope_admin_set_pricing_visibility",
+  "cavscope_admin_flag_registry",
+  "cavscope_admin_set_flag",
+  "cavscope_admin_kill_switch",
+  "cavscope_admin_set_flag_plan_minimum",
+  "cavscope_admin_clear_flag_override",
+  "cavscope_admin_create_flag",
+  "cavscope_admin_delete_flag",
+  "cavscope_admin_impersonate_status",
+  "cavscope_admin_impersonation_log",
+  "cavscope_admin_impersonate_start",
+  "cavscope_admin_impersonate_end",
+  "cavscope_admin_impersonated_view",
+  "cavscope_admin_run_url",
+  "cavscope_admin_platform_extras",
+  "cavscope_admin_sitreps",
+  "cavscope_admin_sitrep",
+  "cavscope_admin_site_jurisdictions",
+  "cavscope_admin_set_site_jurisdiction",
 ];
 
 test("admin.html calls every super admin RPC the console needs", () => {
@@ -63,10 +63,10 @@ test("admin.html calls every super admin RPC the console needs", () => {
 });
 
 test("app.html calls no platform admin RPC except the one that opens a tenant", () => {
-  // muster_admin_tenant is how a super admin enters a tenant's workspace, which
+  // cavscope_admin_tenant is how a super admin enters a tenant's workspace, which
   // is app.html's job; admin.html links to it as /app#tenant=<id>.
   const used = [...adminRpcs(app)];
-  assert.deepEqual(used, ["muster_admin_tenant"], `app.html still calls: ${used.join(", ")}`);
+  assert.deepEqual(used, ["cavscope_admin_tenant"], `app.html still calls: ${used.join(", ")}`);
 });
 
 test("no other page calls a platform admin RPC", () => {
@@ -175,7 +175,7 @@ test("every write control carries a tooltip", () => {
 test("side reads fail per panel, not per page", () => {
   const side = admin.slice(admin.indexOf("// ---- side reads"), admin.indexOf("// ---- writes"));
   assert.match(side, /\.then\(\(r\) => r, \(err\) => \(\{ error: err \}\)\)/);
-  for (const k of ["registry", "imp", "impLog", "overview", "platform"]) assert.match(side, new RegExp(`\\b${k}: \\['muster_admin_`));
+  for (const k of ["registry", "imp", "impLog", "overview", "platform"]) assert.match(side, new RegExp(`\\b${k}: \\['cavscope_admin_`));
 });
 
 test("the flag forms keep what was typed across a re-render, and across a refused save", () => {

@@ -6,7 +6,7 @@ const BOT_TOKEN = Deno.env.get("MUSTER_TELEGRAM_BOT_TOKEN")!;
 const CORA_CHAT_ID = "1238597047";
 
 async function getSecret(name: string): Promise<string> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/muster_get_secret`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cavscope_get_secret`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

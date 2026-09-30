@@ -4,12 +4,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // Self-healing PRD-001 (.planning/selfheal/prds/PRD-001-incident-intake-and-watchdog.md):
 // a fixed battery of cheap, read-only checks against CavScope's own operational
 // data, run every 10 minutes. Anything anomalous is reported through
-// public.muster_engine_report_incident, which dedupes by fingerprint so a
+// public.cavscope_engine_report_incident, which dedupes by fingerprint so a
 // repeated signal bumps an existing muster.incidents row instead of opening
 // a new one every cycle.
 //
 // This function NEVER writes to any business table and NEVER calls out to
-// anything except muster_engine_report_incident. It has no code-repair
+// anything except cavscope_engine_report_incident. It has no code-repair
 // capability of any kind -- see .planning/selfheal/ARCHITECTURE.md for why
 // detection and repair are deliberately separate actors with separate
 // credentials.
@@ -25,7 +25,7 @@ function json(body: unknown, status = 200) {
 }
 
 async function reportIncident(fingerprint: string, source: string, severity: string, affectedOperation: string, evidence: Record<string, unknown>) {
-  const { error } = await db.rpc("muster_engine_report_incident", {
+  const { error } = await db.rpc("cavscope_engine_report_incident", {
     p_fingerprint: fingerprint,
     p_source: source,
     p_severity: severity,
@@ -39,7 +39,7 @@ async function reportIncident(fingerprint: string, source: string, severity: str
 // The inverse of reportIncident. Only ever called when this run has just observed
 // the condition to be clear, so it takes a source rather than an id.
 async function closeCleared(source: string, evidence: Record<string, unknown>): Promise<number> {
-  const { data, error } = await db.rpc("muster_engine_close_cleared_incidents", {
+  const { data, error } = await db.rpc("cavscope_engine_close_cleared_incidents", {
     p_source: source,
     p_evidence: evidence,
   });
@@ -50,7 +50,7 @@ async function closeCleared(source: string, evidence: Record<string, unknown>): 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const { data: secret } = await db.rpc("muster_engine_secret");
+  const { data: secret } = await db.rpc("cavscope_engine_secret");
   const provided = req.headers.get("x-muster-secret") ?? "";
   if (!secret || provided !== secret) return json({ error: "unauthorized" }, 401);
 
@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
   // so this runs via one RPC rather than a direct table read.
   checksRun.push("cron_failure");
   {
-    const { data: failures, error } = await db.rpc("muster_engine_cron_health_check");
+    const { data: failures, error } = await db.rpc("cavscope_engine_cron_health_check");
     if (error) throw new Error(`cron health check failed: ${error.message}`);
     for (const row of (failures ?? []) as Array<{ jobname: string; failure_count: number; missed: boolean }>) {
       if (row.failure_count > 0) {
@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
   // CavScope client).
   checksRun.push("scan_silent_failure", "commercial_grant_stuck", "alert_dead_letter", "engine_error_spike", "control_register_failure");
   {
-    const { data: summary, error } = await db.rpc("muster_engine_watchdog_summary");
+    const { data: summary, error } = await db.rpc("cavscope_engine_watchdog_summary");
     if (error) throw new Error(`watchdog summary failed: ${error.message}`);
     const s = summary as {
       silent_scans: Array<{ scan_id: number; website_id: number; url: string }>;

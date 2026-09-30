@@ -136,7 +136,7 @@ test("sitrep_ready_email was retired cleanly (muster_111 deletes what muster_110
   // "enable per org" was a switch nobody but a super admin could flip.
   // muster_111 replaced it with a plain organizations column
   // (sitrep_ready_alerts_enabled, mirroring critical_alerts_enabled) that an
-  // executive can flip themselves via muster_set_sitrep_alert_preference. The
+  // executive can flip themselves via cavscope_set_sitrep_alert_preference. The
   // flag row and any override for it must both be gone, not just unused --
   // a registry row nothing reads any more is exactly the "reports a control
   // that does not exist" problem muster_052 itself was written to prevent.
@@ -146,7 +146,7 @@ test("sitrep_ready_email was retired cleanly (muster_111 deletes what muster_110
   );
   assert.match(migration, /delete from muster\.feature_flags where key = 'sitrep_ready_email'/);
   assert.match(migration, /delete from muster\.feature_flag_overrides where flag_key = 'sitrep_ready_email'/);
-  // The LATEST muster_engine_sitrep (this migration's own CREATE OR REPLACE,
+  // The LATEST cavscope_engine_sitrep (this migration's own CREATE OR REPLACE,
   // which is what actually runs -- migrations are append-only, so an earlier
   // file's body, muster_110's, still literally contains the old
   // flag_state_for_org('sitrep_ready_email') call and always will) must read

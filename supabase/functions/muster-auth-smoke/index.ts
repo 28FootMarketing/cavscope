@@ -84,7 +84,7 @@ async function probeRedirect(redirectTo: string): Promise<string> {
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const { data: secret } = await db.rpc("muster_engine_secret");
+  const { data: secret } = await db.rpc("cavscope_engine_secret");
   const provided = req.headers.get("x-muster-secret") ?? "";
   if (!secret || provided !== secret) return json({ error: "unauthorized" }, 401);
 

@@ -92,7 +92,7 @@ test("the SQL predicate accepts the same truthy set as the TypeScript one", () =
 
 test("every browser page that reads the flag tests the same truthy set", () => {
   // admin.html was added on main while this branch was in flight. It is in this
-  // list because the gate makes muster_admin_console() raise 42501 for a flagged
+  // list because the gate makes cavscope_admin_console() raise 42501 for a flagged
   // caller, and that page renders a 42501 as "access denied" -- a message that
   // would be false for a super admin whose only problem is an old password.
   for (const page of ["signin.html", "app.html", "admin.html"]) {

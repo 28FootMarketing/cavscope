@@ -17,7 +17,7 @@ function authHeaders(extra: Record<string, string> = {}) {
 }
 
 async function getSecret(name: string): Promise<string> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/muster_get_secret`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cavscope_get_secret`, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ p_name: name }),

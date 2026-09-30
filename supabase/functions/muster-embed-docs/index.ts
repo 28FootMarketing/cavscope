@@ -113,7 +113,7 @@ async function syncDoc(doc: IncomingDoc, dryRun: boolean) {
   const docPath = doc.doc_path as string;
   const chunks = doc.chunks as IncomingChunk[];
 
-  const { data: stored, error: hashErr } = await db.rpc("muster_engine_doc_chunk_hashes", { p_doc_path: docPath });
+  const { data: stored, error: hashErr } = await db.rpc("cavscope_engine_doc_chunk_hashes", { p_doc_path: docPath });
   if (hashErr) throw new Error(`reading stored hashes for ${docPath} failed: ${hashErr.message}`);
   const existing = (stored ?? {}) as Record<string, { sha: string; visibility: string }>;
 
@@ -136,7 +136,7 @@ async function syncDoc(doc: IncomingDoc, dryRun: boolean) {
     if (dryRun) { embedded++; continue; }
 
     const embedding = await embedText(c.text as string);
-    const { error: upErr } = await db.rpc("muster_engine_upsert_doc_chunk", {
+    const { error: upErr } = await db.rpc("cavscope_engine_upsert_doc_chunk", {
       p_doc_path: docPath,
       p_doc_title: doc.doc_title,
       p_visibility: doc.visibility,
@@ -156,7 +156,7 @@ async function syncDoc(doc: IncomingDoc, dryRun: boolean) {
   // Pruning first would leave the corpus short if an embedding call failed midway.
   let pruned = 0;
   if (!dryRun) {
-    const { data: deleted, error: pruneErr } = await db.rpc("muster_engine_prune_doc_chunks", {
+    const { data: deleted, error: pruneErr } = await db.rpc("cavscope_engine_prune_doc_chunks", {
       p_doc_path: docPath, p_keep: keep,
     });
     if (pruneErr) throw new Error(`prune ${docPath} failed: ${pruneErr.message}`);
@@ -169,7 +169,7 @@ async function syncDoc(doc: IncomingDoc, dryRun: boolean) {
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
-  const { data: secret } = await db.rpc("muster_engine_secret");
+  const { data: secret } = await db.rpc("cavscope_engine_secret");
   const provided = req.headers.get("x-muster-secret") ?? "";
   if (!secret || !secretMatches(provided, secret as string)) {
     return json({ ok: false, error: "unauthorized" }, 401);

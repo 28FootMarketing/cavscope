@@ -936,23 +936,23 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
     detected_region_basis: legalState.code ? legalState.basis : null,
     detected_region_source: legalState.code ? legalSource : null,
   };
-  const { data: ingest, error: ingestErr } = await db.rpc("muster_engine_ingest", { p_scan_id: job.scan_id, p_scan: scanMeta, p_evidence: evidence, p_findings: findings });
+  const { data: ingest, error: ingestErr } = await db.rpc("cavscope_engine_ingest", { p_scan_id: job.scan_id, p_scan: scanMeta, p_evidence: evidence, p_findings: findings });
   if (ingestErr) throw new Error("ingest failed: " + ingestErr.message);
-  const { data: sitrep, error: sitrepErr } = await db.rpc("muster_engine_sitrep", { p_scan_id: job.scan_id });
+  const { data: sitrep, error: sitrepErr } = await db.rpc("cavscope_engine_sitrep", { p_scan_id: job.scan_id });
   if (sitrepErr) throw new Error("sitrep failed: " + sitrepErr.message);
   return { scan_id: job.scan_id, website: job.website_name, final_url: finalUrl, findings: findings.length, evidence: evidence.length, ingest, sitrep };
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
-  const { data: secret } = await db.rpc("muster_engine_secret");
+  const { data: secret } = await db.rpc("cavscope_engine_secret");
   const provided = req.headers.get("x-muster-secret") ?? "";
   if (!secret || provided !== secret) return json({ error: "unauthorized" }, 401);
 
   let body: { scan_id?: number; mode?: string; limit?: number } = {};
   try { body = await req.json(); } catch { /* empty body means due mode */ }
 
-  const { data: jobs, error } = await db.rpc("muster_engine_claim", {
+  const { data: jobs, error } = await db.rpc("cavscope_engine_claim", {
     p_scan_id: body.scan_id ?? null,
     p_limit: Math.max(1, Math.min(body.limit ?? 3, 5)),
   });
@@ -964,7 +964,7 @@ Deno.serve(async (req: Request) => {
       results.push(await runScan(job));
     } catch (e) {
       const msg = String(e).slice(0, 1500);
-      await db.rpc("muster_engine_fail", { p_scan_id: job.scan_id, p_error: msg });
+      await db.rpc("cavscope_engine_fail", { p_scan_id: job.scan_id, p_error: msg });
       results.push({ scan_id: job.scan_id, error: msg });
     }
   }

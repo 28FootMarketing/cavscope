@@ -147,7 +147,7 @@ export function buildChatBody(input: {
 // ---------------------------------------------------------------------------
 
 /**
- * Turn what muster_engine_llm_config_for_website returned into a TenantLlm, or
+ * Turn what cavscope_engine_llm_config_for_website returned into a TenantLlm, or
  * raise LlmNotConfiguredError.
  *
  * The not-configured message names the setting and who can change it, because
@@ -179,7 +179,7 @@ export function readLlmConfig(payload: unknown, websiteLabel: string): TenantLlm
 /**
  * Strip a secret out of text before it is stored or shown.
  *
- * muster_engine_record_llm_result writes last_error, and muster_llm_config
+ * cavscope_engine_record_llm_result writes last_error, and cavscope_llm_config
  * returns last_error to a browser. A provider that echoes the presented
  * credential in its 401 body -- or one of our own messages built from the
  * request -- would otherwise put a live key on a page, through the one path in

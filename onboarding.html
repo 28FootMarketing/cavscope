@@ -360,7 +360,7 @@
   // always spelled one way. Industry lives in cavscope.industries
   // (public.cavscope_industries()); this copy renders the dropdown if that read
   // fails, and tests/ui/pick-lists.test.ts fails if it drifts from the
-  // migration. Countries come from public.muster_countries(), the same list the
+  // migration. Countries come from public.cavscope_countries(), the same list the
   // workspace's own setup form uses; without it the field falls back to the
   // two-letter box, because a form that cannot be completed is worse.
   const INDUSTRY_FALLBACK = [
@@ -396,7 +396,7 @@
       if (Array.isArray(rows) && rows.length) industryLabels = rows.map(r => r.label);
     } catch (_) { /* the bundled copy stands in */ }
     if (!countryList) {
-      try { const rows = await rpc('muster_countries'); countryList = Array.isArray(rows) && rows.length ? rows : null; }
+      try { const rows = await rpc('cavscope_countries'); countryList = Array.isArray(rows) && rows.length ? rows : null; }
       catch (_) { countryList = null; }
     }
   }
@@ -428,7 +428,7 @@
     showState('loadingState');
     clearScanPoll();
     try {
-      state = await rpc('muster_onboarding_state');
+      state = await rpc('cavscope_onboarding_state');
     } catch (e) {
       showFatal(`Could not load onboarding: ${e.message}`);
       return;
@@ -440,7 +440,7 @@
   }
 
   async function completeStep(key, payload) {
-    state = await rpc('muster_onboarding_complete_step', { p_step_key: key, p_payload: payload || {} });
+    state = await rpc('cavscope_onboarding_complete_step', { p_step_key: key, p_payload: payload || {} });
     render();
   }
 
@@ -722,7 +722,7 @@
       updateScanStatus();
       scanPollTimer = setInterval(async () => {
         try {
-          await rpc('muster_onboarding_complete_step', { p_step_key: 'first_scan', p_payload: {} }).then(next => { state = next; clearScanPoll(); render(); });
+          await rpc('cavscope_onboarding_complete_step', { p_step_key: 'first_scan', p_payload: {} }).then(next => { state = next; clearScanPoll(); render(); });
         } catch (e2) {
           if (/first scan queued/i.test(e2.message || '')) updateScanStatus();
           else { clearScanPoll(); showStepError('scanStatus', e2.message || String(e2)); }
@@ -737,7 +737,7 @@
   }
   async function loadSitrepStep() {
     let sitrep = null;
-    try { sitrep = await rpc('muster_latest_sitrep', { p_website_id: state.website.id }); } catch (e) { /* render scan summary only */ }
+    try { sitrep = await rpc('cavscope_latest_sitrep', { p_website_id: state.website.id }); } catch (e) { /* render scan summary only */ }
     const scan = state.latest_scan || {};
     const summary = scan.summary || {};
     const bySev = summary.open_by_severity || {};

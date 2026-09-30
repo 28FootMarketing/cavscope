@@ -4,7 +4,7 @@
 //   node --experimental-strip-types --test tests/ui/pricing-visibility.test.ts
 //
 // Partner-only is the intentional commercial default. The page must ship that
-// way even when JS is off or muster_public_pricing() predates the `visible`
+// way even when JS is off or cavscope_public_pricing() predates the `visible`
 // key. The admin panel must not claim every tier is off just because the RPC
 // has not been migrated yet.
 
@@ -96,7 +96,7 @@ test("admin.html pricing panel defaults Partner on when visible is missing", () 
   // were live while index.html, correctly, showed Partner alone.
   const html = read("admin.html");
   assert.match(html, /setPricingVisibility/);
-  assert.match(html, /muster_admin_set_pricing_visibility/);
+  assert.match(html, /cavscope_admin_set_pricing_visibility/);
   assert.match(
     html,
     /pricing\.visible\s*\?\s*!!pricing\.visible\[t\.key\]\s*:\s*t\.key === 'muster_partner'/,

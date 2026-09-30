@@ -30,7 +30,7 @@ export const ENGINE_SRC = join(ENGINE_DIR, "index.ts");
 const RUNTIME_TYPES = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";\n';
 const CLIENT_IMPORT = 'import { createClient } from "jsr:@supabase/supabase-js@2";\n';
 const DB_CONST = 'const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);\n';
-const TAIL_ANCHOR = "  const { data: ingest, error: ingestErr } = await db.rpc(\"muster_engine_ingest\"";
+const TAIL_ANCHOR = "  const { data: ingest, error: ingestErr } = await db.rpc(\"cavscope_engine_ingest\"";
 
 /**
  * The replacement tail. The edge function hands `evidence` and `findings` to
@@ -69,11 +69,11 @@ export async function adaptSource() {
   if (src.includes('from "./')) throw new Error("adapter: a relative import survived the rewrite");
 
   const at = src.indexOf(TAIL_ANCHOR);
-  if (at === -1) throw new Error("adapter: could not find the muster_engine_ingest call that ends runScan(). Update tools/local-scan/adapt.mjs.");
+  if (at === -1) throw new Error("adapter: could not find the cavscope_engine_ingest call that ends runScan(). Update tools/local-scan/adapt.mjs.");
 
   const dropped = src.slice(at);
   // The excised region must be exactly the two RPCs, the return, and Deno.serve.
-  for (const required of ["muster_engine_sitrep", "Deno.serve("]) {
+  for (const required of ["cavscope_engine_sitrep", "Deno.serve("]) {
     if (!dropped.includes(required)) throw new Error(`adapter: the region after the ingest call does not contain ${required}; refusing to cut a region I do not recognise.`);
   }
   if (dropped.includes("add({")) throw new Error("adapter: the region after the ingest call raises a finding. Cutting it would silently drop a rule. Update tools/local-scan/adapt.mjs.");

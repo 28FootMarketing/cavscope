@@ -205,7 +205,7 @@ export default function middleware(request) {
       return secureRewrite(new URL('/app.html', request.url));
     }
     // The platform console. Not a second gate -- admin.html holds no role
-    // check of its own; muster_admin_console() raises 42501 for anyone who
+    // check of its own; cavscope_admin_console() raises 42501 for anyone who
     // is not a super admin, and the page renders whatever the database allows.
     if (isUnder(path, '/admin')) {
       return secureRewrite(new URL('/admin.html', request.url));
