@@ -2124,6 +2124,8 @@
       panel('Run an audit', 'Against any URL, or against a site already on the platform', auditRunner(), {
         tip: 'Both buttons call the live engine. The first parks its target in the internal sandbox organization; the second writes to a real customer register, and says so before it runs.',
       }) +
+      panel('Audit pasted HTML', 'For a page CavScope does not scan', `<p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px;">Paste a page's HTML or upload the file, run the engine's page rules on it, apply fixes and download the corrected HTML. Nothing is stored and nothing is written to any register.</p>
+        <a class="btn" href="/audit/html" data-tooltip="Opens the HTML audit. Super admins always have it; a workspace gets it only when the html_audit flag is turned on for it under Feature Flags.">Open the HTML audit</a>`) +
       `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
         ${panel('Recent scans', 'Most recent runs across every organization', recentScans(50))}
         ${panel('Queue depth', 'Live engine state', `<div class="rows">

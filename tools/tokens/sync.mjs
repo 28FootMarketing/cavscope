@@ -29,6 +29,7 @@ export const PAGES = [
   "admin.html",
   "privacy.html",
   "beta.html",
+  "html-audit.html",
 ];
 
 const START = "/* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */";
