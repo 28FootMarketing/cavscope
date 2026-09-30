@@ -77,6 +77,59 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   before it. `tests/ui/tooltip-reachability.test.ts` pins this by scanning every page's raw source,
   including inside template-literal-generated rows, for exactly that shape.
 
+## Pick from what CavScope already knows: dropdowns, not text boxes
+
+A standing rule from the owner, 2026-09-30, applying to every page the same way tooltips do.
+**When the answer to a field already exists in CavScope's data, the field is a dropdown (or a
+checklist), fed from that data, never a text box.** One thing is then always spelled one way,
+which is what keeps reports, exports and filters consistent. It was adopted after the two beta
+signups on file turned out to have typed "Consulting" and "Business Operations Consulting" for
+the same industry.
+
+What that means today, each pinned by `tests/ui/pick-lists.test.ts`:
+- **Industry** is `cavscope.industries`, read through `public.cavscope_industries()` (anon and
+  authenticated, migration `20260930184023`). `app.html`, `onboarding.html` and `beta.html` each
+  bundle a copy so the dropdown renders before the read returns; the test fails if a copy drifts
+  from the migration. A value saved before the list existed stays selected and is marked
+  "(as entered before)", never silently replaced. To add an industry: insert a row, then update
+  the three bundled copies.
+- **Country** comes from `muster_countries()` and **region** from `muster_regions()`;
+  **timezone** from the browser's own `Intl.supportedValuesOf('timeZone')`.
+- **A live workspace's website** is picked from the websites registered to it (`globalSiteSelect`,
+  `Live.selectWebsite`). Until 2026-09-30 the workspace always opened `websites[0]`, so an
+  organization's second site was unreachable anywhere in it.
+- **SITREP recipients** are a checklist of the team, with one optional field for people who have
+  no login; the **LLM provider** is a preset list that fills in the endpoint.
+
+Free text stays where the answer is genuinely new: a name, a URL being registered for the first
+time, a reason, a model id only the provider can spell. When you add a field, ask first whether
+CavScope already holds its possible answers; if it does, it is a dropdown. A new catalog is a
+table plus a `cavscope_*` read function -- never a new `muster_*` one.
+
+## Instructions and long lists collapse, one open at a time
+
+The same standing rule, second half. **Anywhere someone reads a sequence of items -- a report's
+sections, each finding's fix, a list of steps -- the items are collapsible, and opening one
+closes the others in its group**, so nobody scrolls past one item to reach the next.
+
+The engine is `initAccordions()` plus `accordionSections()` and `setAllAccordions()`, copied
+into `app.html`, `admin.html`, `sitrep.html` and `sitrep-sample.html` the way the tooltip engine
+is, and started beside `initTooltips()`. It is native `<details>`/`<summary>`, so keyboard,
+screen reader and find-in-page support come with the element. A `<details class="acc">` with a
+`data-acc-group` joins a group; `accordionSections(root, selector, group)` converts a rendered
+report's heading-led blocks without their templates changing, keeps the first open, and adds
+"Open all" / "Close all". Each finding's remediation is a "How to fix" `<details class="acc
+acc-fix">` in the report tables, the AI-readiness findings and the accessibility defects.
+**Printing opens every collapsed item and restores them afterwards** -- a printed SITREP or PDF
+must never be missing a section a reader happened to have closed. Pinned by
+`tests/ui/accordions.test.ts`; checked in Chromium on 2026-09-30, including Enter on a focused
+summary, open-all, and print.
+
+**A new page, or a new list of steps or fixes, gets the same treatment.** Onboarding is
+already one step at a time and is the exception by design. Legal and policy pages
+(`privacy.html`) stay fully expanded: a disclosure someone has to open to read is a disclosure
+that was not made.
+
 ## Right-click is suppressed on every page, and it is not a security control
 
 Every page calls `initContextMenuGuard()` alongside `initTooltips()`. It suppresses the browser

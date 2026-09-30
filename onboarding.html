@@ -354,6 +354,76 @@
     el.classList.toggle('ok', !!ok);
   }
 
+  // ---------- pick lists come from the catalog, not from typing ----------
+  //
+  // Industry and country are chosen from CavScope's own lists so one thing is
+  // always spelled one way. Industry lives in cavscope.industries
+  // (public.cavscope_industries()); this copy renders the dropdown if that read
+  // fails, and tests/ui/pick-lists.test.ts fails if it drifts from the
+  // migration. Countries come from public.muster_countries(), the same list the
+  // workspace's own setup form uses; without it the field falls back to the
+  // two-letter box, because a form that cannot be completed is worse.
+  const INDUSTRY_FALLBACK = [
+    'Accounting & Tax',
+    'Agriculture',
+    'Construction & Trades',
+    'Consulting & Professional Services',
+    'Education (K-12)',
+    'Education (Higher Education)',
+    'Energy & Utilities',
+    'Financial Services & Fintech',
+    'Government & Public Sector',
+    'Healthcare & Life Sciences',
+    'Hospitality & Food Service',
+    'Insurance',
+    'Legal Services',
+    'Manufacturing',
+    'Marketing & Advertising',
+    'Media & Entertainment',
+    'Nonprofit & Community Organizations',
+    'Real Estate',
+    'Retail & E-commerce',
+    'Software & Technology',
+    'Sports & Athletics',
+    'Transportation & Logistics',
+    'Other',
+  ];
+  let industryLabels = INDUSTRY_FALLBACK.slice();
+  let countryList = null;
+  async function loadCatalogs() {
+    try {
+      const rows = await rpc('cavscope_industries');
+      if (Array.isArray(rows) && rows.length) industryLabels = rows.map(r => r.label);
+    } catch (_) { /* the bundled copy stands in */ }
+    if (!countryList) {
+      try { const rows = await rpc('muster_countries'); countryList = Array.isArray(rows) && rows.length ? rows : null; }
+      catch (_) { countryList = null; }
+    }
+  }
+  // A value saved before the list existed stays selected and is marked, never
+  // silently swapped for a catalog entry the person did not choose.
+  function industryField(selected) {
+    const cur = String(selected || '').trim();
+    const legacy = cur && !industryLabels.includes(cur);
+    const list = legacy ? [cur, ...industryLabels] : industryLabels;
+    return `<select id="fIndustry" required data-tooltip="Pick the closest match. One list keeps every organization's industry spelled the same way in reports and exports.">
+      <option value="">Select an industry</option>
+      ${list.map(l => `<option value="${escapeHtml(l)}" ${l === cur ? 'selected' : ''}>${escapeHtml(l)}${legacy && l === cur ? ' (as entered before)' : ''}</option>`).join('')}
+    </select>`;
+  }
+  function countryField(selected) {
+    const cur = String(selected || '').trim().toUpperCase();
+    if (!countryList) {
+      return `<input type="text" id="fCountry" value="${escapeHtml(cur)}" required maxlength="2" minlength="2"
+        style="text-transform:uppercase;" oninput="this.value = this.value.toUpperCase()" data-tooltip="Two-letter country code, e.g. US.">`;
+    }
+    const want = cur || 'US';
+    return `<select id="fCountry" required data-tooltip="Where your organization is based. Sets which national laws your reports list as commonly relevant.">
+      <option value="">Select a country</option>
+      ${countryList.map(c => `<option value="${escapeHtml(c.code)}" ${c.code === want ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+    </select>`;
+  }
+
   async function loadState() {
     showState('loadingState');
     clearScanPoll();
@@ -364,6 +434,7 @@
       return;
     }
     if (state.error === 'no_onboarding_in_progress') { showState('noOnboardingState'); return; }
+    await loadCatalogs();
     showState('onboardingRoot');
     render();
   }
@@ -462,10 +533,9 @@
           <label for="fName">Organization name</label>
           <input type="text" id="fName" value="${escapeHtml(o.name || '')}" required minlength="2">
           <label for="fIndustry">Industry</label>
-          <input type="text" id="fIndustry" value="${escapeHtml(o.industry || '')}" required minlength="2" placeholder="e.g. Fintech SaaS">
-          <label for="fCountry">Country code <span class="hint">(2 letters, e.g. US)</span></label>
-          <input type="text" id="fCountry" value="${escapeHtml(o.country_code || '')}" required maxlength="2" minlength="2"
-            style="text-transform:uppercase;" oninput="this.value = this.value.toUpperCase()">
+          ${industryField(o.industry)}
+          <label for="fCountry">Country</label>
+          ${countryField(o.country_code)}
           <label for="fTimezone">Timezone</label>
           ${timezoneField(o.timezone)}
           <div class="step-msg" id="orgMsg"></div>
