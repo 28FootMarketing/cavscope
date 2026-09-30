@@ -128,3 +128,26 @@ None of these block anything above.
   source it was published from still says MUSTER, since Notion is outside this repository.
 - **`package.json`'s `"name": "muster"`**. Private, unpublished, never customer-visible;
   left as the internal identifier it is.
+
+## 7. Done 2026-09-30: MUSTER retired as a direction, not kept as a codename
+
+The owner's direction on 2026-09-30 reversed this file's earlier position that MUSTER stays as
+an internal codename: the target is that nothing carries the name. Done in this repo that day:
+
+- Every MUSTER-era host (`muster.partners`, `www.`, `app.`, `onboarding.`, `sitrep.`, and the
+  `*.muster.28footsystems.com` originals) answers with a 308 to the same page on
+  `cavscope.28footsystems.com` (`legacyTarget()` in `middleware.js`). Links already delivered
+  keep working, auth fragments included; a session already stored on an old origin does not
+  carry over, so that person signs in again.
+- The remaining visible leftovers in the pages: one sentence in `app.html`, the canonical links
+  on `app.html` and `signin.html`, the landing page's workspace links, onboarding's "Go to your
+  workspace" links, the beta page footer, the hostnames in `privacy.html`, and two strings in
+  the admin console.
+- A MUSTER scanner found still running on the old shared project (cron jobid 150, active since
+  about 2026-09-15) was paused. See `CLAUDE.md`.
+
+Also done the same day: `privacy.html` and `.well-known/security.txt` now give
+`support@` / `security@mail.cavscope.28footsystems.com`, and mail to those (and to the old
+`mail.muster.partners` pair) is forwarded to the owner by `cavscope-inbound-mail`. Still open,
+and why: the backend names follow `docs/RENAME-PLAN.md`; the old domains stay attached in
+Vercel and on the Supabase redirect allowlist, because the redirect only works while they do.

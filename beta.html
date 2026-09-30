@@ -205,7 +205,7 @@
 
     .field { margin: 0 0 16px; }
 
-    input[type="text"], input[type="email"], input[type="url"] {
+    input[type="text"], input[type="email"], input[type="url"], select {
       width: 100%;
       background: var(--surface);
       border: 1px solid var(--surface-border);
@@ -216,7 +216,7 @@
       padding: 11px 13px;
     }
 
-    input:focus-visible {
+    input:focus-visible, select:focus-visible {
       outline: 2px solid var(--teal);
       outline-offset: 1px;
       border-color: var(--teal);
@@ -345,7 +345,32 @@
       </div>
       <div class="field">
         <label for="industry">Industry</label>
-        <input type="text" id="industry" name="industry" required data-tooltip="Helps us tailor which checks and findings matter most for your site.">
+        <select id="industry" name="industry" required data-tooltip="Pick the closest match. Helps us tailor which checks and findings matter most for your site.">
+          <option value="">Select an industry</option>
+          <option value="Accounting &amp; Tax">Accounting &amp; Tax</option>
+          <option value="Agriculture">Agriculture</option>
+          <option value="Construction &amp; Trades">Construction &amp; Trades</option>
+          <option value="Consulting &amp; Professional Services">Consulting &amp; Professional Services</option>
+          <option value="Education (K-12)">Education (K-12)</option>
+          <option value="Education (Higher Education)">Education (Higher Education)</option>
+          <option value="Energy &amp; Utilities">Energy &amp; Utilities</option>
+          <option value="Financial Services &amp; Fintech">Financial Services &amp; Fintech</option>
+          <option value="Government &amp; Public Sector">Government &amp; Public Sector</option>
+          <option value="Healthcare &amp; Life Sciences">Healthcare &amp; Life Sciences</option>
+          <option value="Hospitality &amp; Food Service">Hospitality &amp; Food Service</option>
+          <option value="Insurance">Insurance</option>
+          <option value="Legal Services">Legal Services</option>
+          <option value="Manufacturing">Manufacturing</option>
+          <option value="Marketing &amp; Advertising">Marketing &amp; Advertising</option>
+          <option value="Media &amp; Entertainment">Media &amp; Entertainment</option>
+          <option value="Nonprofit &amp; Community Organizations">Nonprofit &amp; Community Organizations</option>
+          <option value="Real Estate">Real Estate</option>
+          <option value="Retail &amp; E-commerce">Retail &amp; E-commerce</option>
+          <option value="Software &amp; Technology">Software &amp; Technology</option>
+          <option value="Sports &amp; Athletics">Sports &amp; Athletics</option>
+          <option value="Transportation &amp; Logistics">Transportation &amp; Logistics</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
       <div class="consent">
         <input type="checkbox" id="marketingConsent" name="marketing_consent" data-tooltip="Optional. Lets us quote you or your results in CavScope marketing, with your review first.">
@@ -358,15 +383,64 @@
     <div class="status" id="statusBox" role="status" aria-live="polite"></div>
 
     <p class="foot">
-      <a href="https://www.muster.partners/" data-tooltip="Back to the CavScope homepage.">muster.partners</a>
+      <a href="/" data-tooltip="Back to the CavScope homepage.">CavScope home</a>
       &nbsp;·&nbsp;
-      <a href="https://www.muster.partners/privacy" data-tooltip="How CavScope handles the information you submit here.">Privacy</a>
+      <a href="/privacy" data-tooltip="How CavScope handles the information you submit here.">Privacy</a>
     </p>
   </main>
 
   <script>
     const SB_URL = 'https://hjowfnzpomzxazmzywxw.supabase.co';
     const SB_KEY = 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL';
+
+    // Industry is picked from CavScope's list, not typed, so one industry is
+    // always spelled one way (the two signups before this said "Consulting" and
+    // "Business Operations Consulting"). The options above are the bundled copy
+    // of cavscope.industries; this refreshes them from public.cavscope_industries()
+    // so a label changed in the database reaches the form without a deploy.
+    // tests/ui/pick-lists.test.ts fails if the bundled copy drifts.
+    const INDUSTRY_FALLBACK = [
+      'Accounting & Tax',
+      'Agriculture',
+      'Construction & Trades',
+      'Consulting & Professional Services',
+      'Education (K-12)',
+      'Education (Higher Education)',
+      'Energy & Utilities',
+      'Financial Services & Fintech',
+      'Government & Public Sector',
+      'Healthcare & Life Sciences',
+      'Hospitality & Food Service',
+      'Insurance',
+      'Legal Services',
+      'Manufacturing',
+      'Marketing & Advertising',
+      'Media & Entertainment',
+      'Nonprofit & Community Organizations',
+      'Real Estate',
+      'Retail & E-commerce',
+      'Software & Technology',
+      'Sports & Athletics',
+      'Transportation & Logistics',
+      'Other',
+    ];
+    (async function refreshIndustries() {
+      const sel = document.getElementById('industry');
+      if (!sel) return;
+      try {
+        const res = await fetch(`${SB_URL}/rest/v1/rpc/cavscope_industries`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+          body: '{}',
+        });
+        if (!res.ok) return;
+        const rows = await res.json();
+        if (!Array.isArray(rows) || !rows.length) return;
+        const keep = sel.value;
+        sel.length = 1;
+        for (const r of rows) sel.add(new Option(r.label, r.label, false, r.label === keep));
+      } catch (_) { /* the bundled options stand */ }
+    })();
 
     function normalizeUrl(raw) {
       const v = raw.trim();

@@ -120,3 +120,10 @@ entrypoint = "./functions/muster-asset-admin/index.ts"
 # for edge functions; remove it with the CLI, then drop this entry and the dir.
 verify_jwt = false
 entrypoint = "./functions/muster-telegram-debug/index.ts"
+
+[functions.cavscope-inbound-mail]
+# Resend inbound (email.received). Authentication IS the Svix signature, read
+# from Vault's cavscope_resend_inbound_webhook_secret; Resend cannot send a
+# Supabase JWT. Forwards support@ / security@ per cavscope.mail_routes.
+verify_jwt = false
+entrypoint = "./functions/cavscope-inbound-mail/index.ts"

@@ -706,6 +706,26 @@
     .section-head p { color: var(--text-muted); font-size: 13px; margin-top: 3px; }
 
     /* ---- tooltip (verbatim from app.html) ---------------------------------- */
+
+    /* ---------- Accordions: open one, the rest in its group close ----------
+       Instructions and long lists are collapsible so nobody scrolls past one
+       item to reach the next. Native <details>/<summary>: keyboard, screen
+       reader and find-in-page support come with the element. initAccordions()
+       closes the others in a data-acc-group and opens everything for print. */
+    details.acc > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+    details.acc > summary::-webkit-details-marker { display: none; }
+    details.acc > summary::before { content: '\25B8'; color: var(--teal); font-size: 0.9em; transition: transform 0.15s ease; flex: none; }
+    details.acc[open] > summary::before { transform: rotate(90deg); }
+    details.acc > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 4px; }
+    details.acc-section > summary > h2, details.acc-section > summary > h3 { margin: 0; }
+    details.acc-section > .acc-body { margin-top: 12px; }
+    details.acc-fix > summary { font-size: 11.5px; font-weight: 600; color: var(--teal); }
+    details.acc-fix > .acc-body { margin-top: 6px; }
+    .acc-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin: 0 0 10px; }
+    .acc-toolbar button { background: none; border: 1px solid var(--surface-border); color: var(--text-muted); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+    .acc-toolbar button:hover { border-color: var(--teal); color: var(--teal); }
+    @media (prefers-reduced-motion: reduce) { details.acc > summary::before { transition: none; } }
+    @media print { details.acc > summary::before { content: none; } .acc-toolbar { display: none !important; } }
     .app-tooltip {
       position: fixed;
       z-index: 300;
@@ -2340,7 +2360,7 @@
             plan's price at its commercial stage. <code>customer.subscription.deleted</code> is unhandled, so a customer
             who cancelled in Stripe still prices in here until someone changes their plan by hand.
           </div>`)}
-        ${panel('Pricing surface', 'What muster.partners is showing buyers right now. Both controls take effect on the public page immediately, with no deploy.', `
+        ${panel('Pricing surface', 'What the public pricing page is showing buyers right now. Both controls take effect on the public page immediately, with no deploy.', `
           <div class="runner-row" style="margin-bottom:12px;">
             <div class="field">
               <label for="pricingStage">Pricing stage</label>
@@ -2735,7 +2755,7 @@
           <div class="muted" data-tooltip="How many organizations this flag currently resolves ON for, counting kill switch, overrides, plan gates and the default -- not what the default says." tabindex="0">
             ${num(f.orgs_enabled)}/${num(sum.organizations)} orgs${liveOvs.length ? ` · <span style="color:var(--amber);">${liveOvs.length} override${liveOvs.length === 1 ? '' : 's'}</span>` : ''}
           </div>
-          <details data-flag="${key}"${openFlags.has(f.key) ? ' open' : ''}>
+          <details data-acc-group="flags" data-flag="${key}"${openFlags.has(f.key) ? ' open' : ''}>
             <summary data-tooltip="Full description, per-plan resolution, every override on this flag, and the form to add one." tabindex="0">▸ detail, overrides and per-plan resolution</summary>
             <div class="flag-detail">
               <p>${escapeHtml(f.description || '')}</p>
@@ -3115,7 +3135,7 @@
   async function setPricingStage(sel) {
     const next = sel.value, current = sel.dataset.current;
     if (next === current) return;
-    if (!window.confirm(`Switch the public pricing stage from ${current || 'unset'} to ${next}?\n\nmuster.partners shows the ${next} prices immediately. No tenant's plan contents change.`)) { render(); return; }
+    if (!window.confirm(`Switch the public pricing stage from ${current || 'unset'} to ${next}?\n\nThe public pricing page shows the ${next} prices immediately. No tenant's plan contents change.`)) { render(); return; }
     await write('muster_admin_set_pricing_stage', { p_stage: next }, `Public pricing stage set to ${next}.`);
   }
 
@@ -3471,6 +3491,78 @@
     });
   }
 
+  // ---------- Accordions ----------
+  // Instructions and long lists open one at a time: opening a <details> with a
+  // data-acc-group closes the others in that group, and the newly opened one is
+  // scrolled into view so closing the one above does not leave it off-screen.
+  // Printing opens every one and restores them afterwards, so a printed report
+  // or PDF is never missing a collapsed section. setAllAccordions() is the
+  // "open all" escape hatch; items it touches are marked so the one-at-a-time
+  // rule does not immediately close them again.
+  function initAccordions() {
+    document.addEventListener('toggle', function (e) {
+      var d = e.target;
+      if (!d || d.tagName !== 'DETAILS' || !d.open || !d.dataset.accGroup) return;
+      if (d.dataset.accBulk) { delete d.dataset.accBulk; return; }
+      var group = d.dataset.accGroup;
+      document.querySelectorAll('details[data-acc-group][open]').forEach(function (o) {
+        if (o !== d && o.dataset.accGroup === group) o.open = false;
+      });
+      var r = d.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight) d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, true);
+    var reopened = [];
+    window.addEventListener('beforeprint', function () {
+      reopened = Array.prototype.slice.call(document.querySelectorAll('details.acc:not([open])'));
+      reopened.forEach(function (d) { d.dataset.accBulk = '1'; d.open = true; });
+    });
+    window.addEventListener('afterprint', function () {
+      reopened.forEach(function (d) { d.open = false; });
+      reopened = [];
+    });
+  }
+  function setAllAccordions(root, open) {
+    (root || document).querySelectorAll('details.acc').forEach(function (d) {
+      if (d.open === open) return;
+      if (open) d.dataset.accBulk = '1';
+      d.open = open;
+    });
+  }
+  // Turns each heading-led block in a rendered report into a collapsible
+  // section, without the templates that build the blocks having to change: the
+  // block keeps its class and styling, its heading moves into the <summary>, and
+  // the heading's tooltip moves with it onto the element that takes focus.
+  function accordionSections(root, blockSelector, group) {
+    if (!root) return;
+    var blocks = root.querySelectorAll(blockSelector);
+    Array.prototype.forEach.call(blocks, function (sec, i) {
+      var h = sec.querySelector(':scope > h2, :scope > h3');
+      if (!h || sec.querySelector(':scope > details.acc-section')) return;
+      var d = document.createElement('details');
+      d.className = 'acc acc-section';
+      d.dataset.accGroup = group;
+      if (i === 0) d.open = true;
+      var sum = document.createElement('summary');
+      if (h.getAttribute('data-tooltip')) { sum.setAttribute('data-tooltip', h.getAttribute('data-tooltip')); h.removeAttribute('data-tooltip'); }
+      h.removeAttribute('tabindex');
+      sum.appendChild(h);
+      var body = document.createElement('div');
+      body.className = 'acc-body';
+      while (sec.firstChild) body.appendChild(sec.firstChild);
+      d.appendChild(sum); d.appendChild(body);
+      sec.appendChild(d);
+    });
+    if (blocks.length > 1 && !root.querySelector('.acc-toolbar')) {
+      var bar = document.createElement('div');
+      bar.className = 'acc-toolbar no-print';
+      bar.innerHTML = '<button type="button" data-tooltip="Opens every section so you can read or search the whole report at once.">Open all</button>'
+        + '<button type="button" data-tooltip="Closes every section so you can pick one at a time.">Close all</button>';
+      bar.children[0].onclick = function () { setAllAccordions(root, true); };
+      bar.children[1].onclick = function () { setAllAccordions(root, false); };
+      blocks[0].parentNode.insertBefore(bar, blocks[0]);
+    }
+  }
+
   function initTooltips() {
     const tip = document.createElement('div');
     tip.className = 'app-tooltip';
@@ -3537,6 +3629,7 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     initTooltips();
+    initAccordions();
     initContextMenuGuard();
     init();
   });

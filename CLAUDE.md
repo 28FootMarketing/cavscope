@@ -1,34 +1,47 @@
-# CavScope (repo/internal codename: MUSTER) — standing rules for this repo
+# CavScope — standing rules for this repo
 
-## Brand: CavScope is the product; MUSTER is the internal codename
+## Brand: CavScope is the product and the system of record. MUSTER is retired.
 
-This repo builds the product now marketed as **CavScope, Web Assurance by 28 Foot
-Systems**, at `https://cavscope.28footsystems.com/`. `MUSTER` was the product's previous
-customer-facing name and is now the internal codename this repo, its Postgres schema,
-every `muster_*` RPC and `muster-*` edge function, its migration filenames, and the
-`muster.partners` / `*.muster.28footsystems.com` hostnames are still built and named
-after -- deliberately, not as an oversight. Renaming those would touch live production
-data, deployed API contracts (`x-muster-api-key`, `mk_` key prefixes), and DNS/Supabase
-config with no customer-visible benefit; see `docs/BRAND-CUTOVER.md` for the full
-reasoning, what already changed in this repo, and the handful of things that still need
-a dashboard, DNS or Notion change outside it.
+This repo builds **CavScope, Web Assurance by 28 Foot Systems**, served at
+`https://cavscope.28footsystems.com/`. `MUSTER` was the product's previous name. **As of
+2026-09-30 the owner's direction is that MUSTER is no longer part of this product in any
+form, customer-facing or internal.** The target is zero. Do not add a new `muster_*` RPC,
+`muster-*` function, `muster.partners` link or MUSTER string, and do not describe MUSTER as
+a "deliberate internal codename" -- that was the earlier position and it has been reversed.
 
-**Correction, 2026-09-30:** the `muster` Postgres schema no longer exists on
-`hjowfnzpomzxazmzywxw`; it was renamed to `cavscope` (read from the live catalog). What still
+What still carries the name, and why it has not been renamed yet, is an inventory, not a
+policy: the callable backend surface (`public.muster_*` RPCs, `muster-*` edge functions and
+the cron jobs that call them), the `x-muster-api-key` header and `mk_` key prefix, and
+migration filenames, which are history and never renamed. Each is staged for retirement in
+`docs/RENAME-PLAN.md`; renaming one breaks callers unless it follows that order. Customer-visible
+leftovers are defects to fix, not identifiers to preserve.
+
+**The MUSTER-era hosts redirect, as of 2026-09-30.** `muster.partners`, `www.`, `app.`,
+`onboarding.`, `sitrep.` and the `*.muster.28footsystems.com` originals answer every request
+with a 308 to the same page on `cavscope.28footsystems.com` (`legacyTarget()` in
+`middleware.js`, pinned by `tests/routing/middleware.test.ts`). No page renders under the old
+name, and every link already delivered still works: a browser carries an auth link's
+`#fragment` across the redirect, so a magic link minted for `app.muster.partners/app` still
+signs its holder in, on the CavScope origin.
+
+**The database schema is `cavscope`**, not `muster`, on `hjowfnzpomzxazmzywxw` (read from the
+live catalog 2026-09-30). What still
 carries the old name is the callable surface -- 112 `public.muster_*` RPCs and 18 `muster-*`
 edge functions. Where the rest of this file says `muster.<table>` or `muster.<function>` for
 the database, read `cavscope.`. The staged plan to retire the remaining names is in
 `docs/RENAME-PLAN.md`.
 
-**Reading the rest of this file:** every rule below was written under the MUSTER name and
-is left as originally written, because it is a historical and technical record --
+**Reading the rest of this file:** many rules below were written under the MUSTER name and
+are left as originally written, because they are a historical and technical record --
 migration headers, verified live-config values (a Site URL, an SMTP sender name, an
 `ENGINE_VERSION` string) and war stories about what actually shipped and when. Where you
 see `MUSTER` used as the product's customer-facing name in prose below, read it as
 `CavScope` -- the two files documenting the actual current split are `docs/BRAND-CUTOVER.md`
 (what changed, what didn't, why) and this section. Where `MUSTER` appears as part of an
-identifier (`muster.foo`, `muster_bar`, `muster-baz`, a hostname, a migration filename), it
-is unchanged and still means exactly what it always meant.
+identifier (`muster_bar`, `muster-baz`, a migration filename), it still names the live thing
+until `docs/RENAME-PLAN.md` retires it; `muster.foo` means `cavscope.foo`; and a
+`muster.partners` / `app.muster.partners` host in a rule below now redirects to the same path
+on `cavscope.28footsystems.com`, which is where that rule applies.
 
 ## Tooltips are mandatory on every page
 
@@ -63,6 +76,59 @@ understand. This is a standing requirement; do not wait to be asked again per pa
   `authEmail`/`authPassword` fields after the fix) rather than adding a redundant tab stop right
   before it. `tests/ui/tooltip-reachability.test.ts` pins this by scanning every page's raw source,
   including inside template-literal-generated rows, for exactly that shape.
+
+## Pick from what CavScope already knows: dropdowns, not text boxes
+
+A standing rule from the owner, 2026-09-30, applying to every page the same way tooltips do.
+**When the answer to a field already exists in CavScope's data, the field is a dropdown (or a
+checklist), fed from that data, never a text box.** One thing is then always spelled one way,
+which is what keeps reports, exports and filters consistent. It was adopted after the two beta
+signups on file turned out to have typed "Consulting" and "Business Operations Consulting" for
+the same industry.
+
+What that means today, each pinned by `tests/ui/pick-lists.test.ts`:
+- **Industry** is `cavscope.industries`, read through `public.cavscope_industries()` (anon and
+  authenticated, migration `20260930184023`). `app.html`, `onboarding.html` and `beta.html` each
+  bundle a copy so the dropdown renders before the read returns; the test fails if a copy drifts
+  from the migration. A value saved before the list existed stays selected and is marked
+  "(as entered before)", never silently replaced. To add an industry: insert a row, then update
+  the three bundled copies.
+- **Country** comes from `muster_countries()` and **region** from `muster_regions()`;
+  **timezone** from the browser's own `Intl.supportedValuesOf('timeZone')`.
+- **A live workspace's website** is picked from the websites registered to it (`globalSiteSelect`,
+  `Live.selectWebsite`). Until 2026-09-30 the workspace always opened `websites[0]`, so an
+  organization's second site was unreachable anywhere in it.
+- **SITREP recipients** are a checklist of the team, with one optional field for people who have
+  no login; the **LLM provider** is a preset list that fills in the endpoint.
+
+Free text stays where the answer is genuinely new: a name, a URL being registered for the first
+time, a reason, a model id only the provider can spell. When you add a field, ask first whether
+CavScope already holds its possible answers; if it does, it is a dropdown. A new catalog is a
+table plus a `cavscope_*` read function -- never a new `muster_*` one.
+
+## Instructions and long lists collapse, one open at a time
+
+The same standing rule, second half. **Anywhere someone reads a sequence of items -- a report's
+sections, each finding's fix, a list of steps -- the items are collapsible, and opening one
+closes the others in its group**, so nobody scrolls past one item to reach the next.
+
+The engine is `initAccordions()` plus `accordionSections()` and `setAllAccordions()`, copied
+into `app.html`, `admin.html`, `sitrep.html` and `sitrep-sample.html` the way the tooltip engine
+is, and started beside `initTooltips()`. It is native `<details>`/`<summary>`, so keyboard,
+screen reader and find-in-page support come with the element. A `<details class="acc">` with a
+`data-acc-group` joins a group; `accordionSections(root, selector, group)` converts a rendered
+report's heading-led blocks without their templates changing, keeps the first open, and adds
+"Open all" / "Close all". Each finding's remediation is a "How to fix" `<details class="acc
+acc-fix">` in the report tables, the AI-readiness findings and the accessibility defects.
+**Printing opens every collapsed item and restores them afterwards** -- a printed SITREP or PDF
+must never be missing a section a reader happened to have closed. Pinned by
+`tests/ui/accordions.test.ts`; checked in Chromium on 2026-09-30, including Enter on a focused
+summary, open-all, and print.
+
+**A new page, or a new list of steps or fixes, gets the same treatment.** Onboarding is
+already one step at a time and is the exception by design. Legal and policy pages
+(`privacy.html`) stay fully expanded: a disclosure someone has to open to read is a disclosure
+that was not made.
 
 ## Right-click is suppressed on every page, and it is not a security control
 
@@ -169,18 +235,14 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 
 ## Other notes
 
-- **`muster.partners` is the main site.** It is path-routed, not subdomain-routed: `/` is the landing
-  page, `/onboarding` is `onboarding.html`, `/sitrep` is `sitrep.html`, `/sitrep/sample` is
-  `sitrep-sample.html`. The older `*.muster.28footsystems.com` subdomains still resolve and are
-  deliberately kept alive — magic-link emails and onboarding invites already delivered point at
-  `app.muster.28footsystems.com/app`, and retiring those hosts would strand every link in the wild.
-  Retire them only once nothing outstanding references them.
-- **Sign-in and the workspace live on `app.muster.partners`** — `/` is `signin.html`, `/app` is
-  `app.html`, `/admin` is `admin.html`, `/signin` is an alias. They are on their own host, not on `muster.partners`, and they
-  are always served **together**: a Supabase session from a password sign-in is stored per-origin, so
-  splitting `signin.html` and `app.html` across hosts makes sign-in appear to succeed and then the
-  workspace loads signed-out. A host serves both or neither. `app.muster.28footsystems.com` still
-  serves the same pair for links already in the wild.
+- **`cavscope.28footsystems.com` is the one host, path-routed for everything.** `/` is the landing
+  page, `/onboarding`, `/sitrep`, `/sitrep/sample`, `/beta`, `/privacy`, `/signin` and `/reset`
+  (both `signin.html`), `/app` and `/admin`. Marketing, sign-in, the workspace and the console
+  share one origin, which is what a Supabase session needs: it is stored per-origin, so
+  `signin.html` and `app.html` on different hosts would make sign-in appear to succeed and then
+  load the workspace signed-out. The MUSTER-era split into `muster.partners` and
+  `app.muster.partners` existed only for that reason, and those hosts now redirect here (see the
+  Brand section).
 - **`admin.html` is the Super Admin Console, the only one, at `app.muster.partners/admin`.** It is on the
   app hosts, not a console host of its own, for exactly the reason `signin.html` and `app.html` are
   served together: a Supabase session is stored per-origin, so a console anywhere else loads
@@ -840,6 +902,20 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   paste becomes the risk, and a silent transcription slip ships a broken scanner with no diff to
   review. Migrations are deliberately **not** in that workflow -- their files are named after the
   version `apply_migration` assigned, which a `db push` would not reproduce.
+- **Mail to `support@` and `security@` reaches a person, as of 2026-09-30.** Resend receives
+  it on `mail.cavscope.28footsystems.com` (and the retired `mail.muster.partners`, so old links
+  still land) and posts `email.received` to the `cavscope-inbound-mail` edge function, which
+  forwards each message to that address's row in `cavscope.mail_routes`, Reply-To the sender, so
+  answering from the owner's inbox answers whoever wrote in. Security mail is tagged
+  `[CavScope SECURITY]`. Before this nothing read those addresses at all: no Resend webhook
+  pointed at this project, and `security.txt` was sending researchers to an address nobody saw.
+  Where an address forwards is a row, changed with an `update`, never a deploy; the forward-to
+  inboxes are deliberately not in any migration file. The signing secret is Vault's
+  `cavscope_resend_inbound_webhook_secret`, read only by the service role, and a missing secret
+  fails closed. The Resend account is shared with other brands, so the function answers every
+  event not addressed to a CavScope route with 200 and reads nothing about it. A forward is
+  never sent to a CavScope mailbox, which is what makes a loop impossible. Pinned by
+  `tests/email/inbound-mail.test.ts`; setup and proof in `docs/EMAIL.md`.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is
@@ -851,12 +927,15 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `/reset` on the app hosts is the password-recovery landing and is served by `signin.html`
   through middleware's catch-all — it has no page of its own, and it must be on the Supabase
   project's allowed redirect list or GoTrue silently substitutes Site URL.
-- **Backend: Supabase project `hjowfnzpomzxazmzywxw`, schema `muster`.** MUSTER has its own project
-  now; `supabase/config.toml` and all five frontend pages point at it, and `supabase/migrations/` is its
+- **Backend: Supabase project `hjowfnzpomzxazmzywxw`, schema `cavscope`.** CavScope has its own project; `supabase/config.toml` and all five frontend pages point at it, and `supabase/migrations/` is its
   history. Real scan engine, SITREP generation, RLS, and RPCs are live — see `docs/BACKEND.md`.
-- **The old shared 28FS project `mgtmqucaldkaxvxglguw` no longer runs any part of MUSTER**, as of
-  2026-09-08. Its five `muster-*` cron jobs are unscheduled (not merely inactive), its last MUSTER
-  write was 2026-09-07 20:27 UTC, and both MUSTER API keys are revoked. What is still there: the
+- **The old shared 28FS project `mgtmqucaldkaxvxglguw` runs no part of the product.** That was
+  believed true from 2026-09-08 and was not: a `muster-scan-due-15min` cron job (jobid 150) was
+  active there from about 2026-09-15, scanning three sites daily into the old `muster` schema,
+  including one that was never a CavScope client. Found by reading `cron.job` on 2026-09-30 and
+  **paused** (`cron.alter_job(150, active := false)`, 113 jobs before and after, active 96 to 95).
+  It sent no email and had no live API key. Before claiming this project is inert again, read
+  `cron.job` for anything naming `muster`, not this paragraph. What is still there: the
   `muster` schema (45 tables, 58 functions), the 70 `public.muster_*` shims, and 8 deployed edge
   functions, all dormant. Removing them needs the Supabase CLI — the MCP has no delete for edge
   functions — and is tracked in `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.

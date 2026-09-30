@@ -260,6 +260,24 @@ Do not set `MUSTER_SUPPORT_EMAIL`, and do not put a support address in the front
 message to that address has been received. Advertising it earlier is the exact failure this design
 avoids.
 
+### Inbound: support@ and security@ forward to a person (2026-09-30)
+
+Receiving is enabled and verified in Resend on both `mail.cavscope.28footsystems.com` and
+`mail.muster.partners`. A Resend webhook for `email.received` points at
+`https://hjowfnzpomzxazmzywxw.supabase.co/functions/v1/cavscope-inbound-mail`, whose signing
+secret is stored in Vault as `cavscope_resend_inbound_webhook_secret`. The function forwards
+every message addressed to a row in `cavscope.mail_routes` to that row's `forward_to`, from the
+row's `sender`, Reply-To the original sender, subject prefixed with the row's `subject_tag`. The
+body is read from Resend's Received Emails API; attachments are not forwarded, and the forward
+says so and says where to find them. Each (message, address) is claimed in
+`cavscope.mail_forwards` before sending and carries a Resend idempotency key, so a redelivered
+webhook cannot send a second copy, and a failed send answers 5xx so Resend retries it.
+
+To change where an address goes: `update cavscope.mail_routes set forward_to = array[...] where
+address = '...'`. To add an address: insert a row (lowercase address, a `sender` on a CavScope
+mail domain). A `forward_to` on a CavScope mail domain is refused by the function, so a route
+can never loop.
+
 ### Delivery tracking and suppression
 
 `muster-alert-dispatch` records the id Resend returns from `POST /emails`.
