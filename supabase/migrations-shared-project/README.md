@@ -11,14 +11,14 @@ MUSTER. There is exactly one so far,
 `20260908032215_muster_decommission_law_update_branch_of_kb_executor.sql`, and it is
 recorded here rather than applied invisibly, because a change made to a live project and
 left out of the repo is precisely the drift the audit in
-`supabase/migrations/MUSTER-PROJECT-LEDGER.md` had to reconstruct. If you find yourself
+`supabase/migrations/CAVSCOPE-PROJECT-LEDGER.md` had to reconstruct. If you find yourself
 adding a second file here, check first that it is decommissioning and not development.
 
 Treat it as a **readable history, not a replayable one**: 30 of these 48 files differ in
 content from the statement actually applied under their version (header commentary in
 some, SQL that landed under a different version in others), and one has no applied row
 at all. The running database has the SQL either way — see
-`supabase/migrations/MUSTER-PROJECT-LEDGER.md` for the audit. Do not rebuild a project
+`supabase/migrations/CAVSCOPE-PROJECT-LEDGER.md` for the audit. Do not rebuild a project
 from this directory and assume the result matches.
 
 Every file here is named `<version>_<name>.sql`, where `<version>` is the

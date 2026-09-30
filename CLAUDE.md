@@ -960,7 +960,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `cron.job` for anything naming `muster`, not this paragraph. What is still there: the
   `muster` schema (45 tables, 58 functions), the 70 `public.muster_*` shims, and 8 deployed edge
   functions, all dormant. Removing them needs the Supabase CLI — the MCP has no delete for edge
-  functions — and is tracked in `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+  functions — and is tracked in `supabase/migrations/CAVSCOPE-PROJECT-LEDGER.md`.
   **That project is shared and very much alive for other brands: 334 edge functions, 107 cron jobs,
   and 14 `auth.users` of which only 3 are MUSTER's.** Anything done there must be surgical and must
   assert the other-brand counts before and after. `auth.users` must never be touched, not even
