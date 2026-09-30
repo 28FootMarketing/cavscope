@@ -189,3 +189,22 @@ test("the recorded detail carries bounce classification and nothing else", () =>
   // stored, so muster.email_events cannot accumulate recipient content.
   assert.equal(JSON.stringify(detail).includes("550"), false);
 });
+
+// The secret: env first, Vault second, and nothing trusted without one. Until
+// 2026-09-30 neither existed, so the endpoint answered 500 to everything and
+// not one delivery event was ever recorded.
+test("the handler reads its secret from env, then Vault, and fails closed on neither", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { dirname, join } = await import("node:path");
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const index = readFileSync(join(root, "supabase/functions/muster-resend-webhook/index.ts"), "utf8");
+  const migration = readFileSync(join(root, "supabase/migrations/20260930205321_resend_webhook_secret_vault.sql"), "utf8");
+  const env = index.indexOf('Deno.env.get("RESEND_WEBHOOK_SECRET")');
+  const vault = index.indexOf('db.rpc("cavscope_engine_resend_webhook_secret")');
+  const closed = index.indexOf('return json({ error: "webhook is not configured" }, 500)');
+  const verify = index.indexOf("await verifySvixSignature(");
+  assert.ok(env > 0 && env < vault && vault < closed && closed < verify, "env, then Vault, then fail closed, then verify");
+  assert.match(migration, /where name = 'cavscope_resend_webhook_secret'/);
+  assert.match(migration, /revoke all on function public\.cavscope_engine_resend_webhook_secret\(\) from public, anon, authenticated;/);
+});

@@ -118,8 +118,11 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   const { data: allowed, error: gateError } = await db.rpc("cavscope_html_audit_allowed");
-  if (gateError) return json({ error: "could not confirm access", detail: gateError.message }, 502);
-  if (allowed !== true) return json({ error: "The HTML audit is not turned on for your account." }, 403);
+  // 42501 is the anon role reaching a gate it has no grant on (a publishable
+  // key presented as the bearer): a refusal, not a fault, so it answers 403 like
+  // any other caller the gate says no to. Anything else is a real failure.
+  if (gateError && gateError.code !== "42501") return json({ error: "could not confirm access" }, 502);
+  if (gateError || allowed !== true) return json({ error: "The HTML audit is not turned on for your account." }, 403);
 
   const declared = Number(req.headers.get("content-length") ?? "0");
   const limit = MAX_HTML_BYTES * 2 + 200_000; // JSON escaping can double the HTML

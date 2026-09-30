@@ -279,12 +279,19 @@ addresses produced two `cavscope.mail_forwards` rows with status `sent`, and bot
 arrived in that inbox as `[CavScope support] ...` and `[CavScope SECURITY] ...`, body included
 (so the project's Resend key can read received mail), Reply-To the sender.
 
-**Known side effect on the shared Resend account, not CavScope's code:** the same test also
-produced a "Lead reply: ..." notice to the 28FS Gmail from `lead-reply-capture` on the old shared
-project `mgtmqucaldkaxvxglguw`. That function subscribes to every domain's `email.received` and
-treats any inbound message as a lead reply, so each mail to CavScope's support@ or security@
-also raises a bogus 28FS lead notice. The fix belongs in that function (ignore recipients not on
-its own mail domain), the same filter `cavscope-inbound-mail` and ARS's `ars-inbound-email` apply.
+**Side effect on the shared Resend account, fixed 2026-09-30:** the same test also produced a
+"Lead reply: ..." notice to the 28FS Gmail from `lead-reply-capture` on the old shared project
+`mgtmqucaldkaxvxglguw`. That function subscribes to every domain's `email.received` and filed
+anything not addressed to ARS as a lead reply. Reading its table showed what that had cost: 14 of
+its 40 rows were CavScope's -- eleven Google DMARC aggregate reports for `mail.muster.partners`,
+the 2026-09-08 MUSTER inbound check, and this test's two messages -- each mailed to the owner as a
+"Lead reply". No customer or researcher mail was among them. Version 17 of that function drops mail
+to or from `mail.cavscope.28footsystems.com` and `mail.muster.partners` beside the ARS domain it
+already dropped, before anything is stored or forwarded; the deployed source was read back and
+matched, and the other project's cron (113, 95 active), `auth.users` (14) and reply-row (40) counts
+were unchanged. The 14 existing rows were left in that table; they are 28FS's to delete. Note the
+consequence for DMARC: reports for `mail.muster.partners` were only ever reaching anyone through that
+misfiling, and `cavscope-inbound-mail` routes support@ and security@ only, so they are now dropped.
 
 To change where an address goes: `update cavscope.mail_routes set forward_to = array[...] where
 address = '...'`. To add an address: insert a row (lowercase address, a `sender` on a CavScope
@@ -328,7 +335,7 @@ Additional Edge Function secret:
 
 | Secret | Required | Notes |
 |---|---|---|
-| `RESEND_WEBHOOK_SECRET` | **yes, for tracking** | the `whsec_...` Resend shows when the endpoint is created. Without it the function answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. |
+| `RESEND_WEBHOOK_SECRET` | **yes, for tracking**, or Vault | the `whsec_...` Resend shows when the endpoint is created. The env var wins when set; otherwise the function reads Vault's `cavscope_resend_webhook_secret` through `cavscope_engine_resend_webhook_secret()` (service role only, migration `20260930205321`). With neither it answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. Until 2026-09-30 neither was set and no Resend webhook pointed here, so 28 sent alerts had no delivery event at all. |
 
 `category` is a foreign key into `muster.notification_categories` (added `muster_112`) rather than a
 hardcoded CHECK -- adding a category is a registry insert plus a `CATEGORY_META` entry in

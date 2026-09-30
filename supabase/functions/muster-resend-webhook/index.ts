@@ -44,7 +44,15 @@ function json(body: unknown, status = 200) {
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const secret = Deno.env.get("RESEND_WEBHOOK_SECRET");
+  // The env var wins when set; Vault's cavscope_resend_webhook_secret is the
+  // fallback (migration 20260930205321), because function env needs the CLI and
+  // Vault is written by SQL. Either way, no secret means no event is trusted.
+  let secret = Deno.env.get("RESEND_WEBHOOK_SECRET") ?? "";
+  if (!secret) {
+    const { data, error } = await db.rpc("cavscope_engine_resend_webhook_secret");
+    if (error) console.error(`resend webhook secret lookup failed: ${error.message}`);
+    secret = typeof data === "string" ? data : "";
+  }
   if (!secret) {
     // Fail closed and loudly. Accepting unverified events would let anyone who
     // finds this URL mark a real alert delivered or suppress a tenant's address.
