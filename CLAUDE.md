@@ -13,6 +13,13 @@ config with no customer-visible benefit; see `docs/BRAND-CUTOVER.md` for the ful
 reasoning, what already changed in this repo, and the handful of things that still need
 a dashboard, DNS or Notion change outside it.
 
+**Correction, 2026-09-30:** the `muster` Postgres schema no longer exists on
+`hjowfnzpomzxazmzywxw`; it was renamed to `cavscope` (read from the live catalog). What still
+carries the old name is the callable surface -- 112 `public.muster_*` RPCs and 18 `muster-*`
+edge functions. Where the rest of this file says `muster.<table>` or `muster.<function>` for
+the database, read `cavscope.`. The staged plan to retire the remaining names is in
+`docs/RENAME-PLAN.md`.
+
 **Reading the rest of this file:** every rule below was written under the MUSTER name and
 is left as originally written, because it is a historical and technical record --
 migration headers, verified live-config values (a Site URL, an SMTP sender name, an
