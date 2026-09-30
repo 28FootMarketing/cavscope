@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="CavScope by 28 Foot Systems — Enterprise Risk, AI Optimization (AIO/GEO), and Website Assurance Workspace" />
   <title>CavScope — Risk, AIO & Website Assurance Workspace</title>
-  <link rel="canonical" href="https://app.muster.partners/app">
+  <link rel="canonical" href="https://cavscope.28footsystems.com/app">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -6665,7 +6665,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         const passed = assessed.filter(c => c.state === 'pass');
         const pillars = this.aioPillars.map(([id, name]) => {
           if (id === 'citability') {
-            return { id, name, score: null, pointsToTen: 0, rationale: 'Not assessed. Whether an AI assistant cites or recommends the site is decided by the provider, and no provider publishes a method to test it. MUSTER measures readiness, not outcome.' };
+            return { id, name, score: null, pointsToTen: 0, rationale: 'Not assessed. Whether an AI assistant cites or recommends the site is decided by the provider, and no provider publishes a method to test it. CavScope measures readiness, not outcome.' };
           }
           const cs = checks.filter(c => c.pillar === id);
           const done = cs.filter(c => c.state !== 'na');

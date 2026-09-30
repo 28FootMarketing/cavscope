@@ -54,6 +54,14 @@ const EVERY_ROUTE: Array<[string, string]> = [
   ["https://sitrep.muster.28footsystems.com/", "sitrep.muster.28footsystems.com"],
   ["https://sitrep.muster.28footsystems.com/sample", "sitrep.muster.28footsystems.com"],
   ["https://muster.28footsystems.com/", "muster.28footsystems.com"],
+  ["https://muster.partners/", "muster.partners"],
+  ["https://www.muster.partners/privacy", "www.muster.partners"],
+  ["https://app.muster.partners/", "app.muster.partners"],
+  ["https://app.muster.partners/app", "app.muster.partners"],
+  ["https://app.muster.28footsystems.com/admin", "app.muster.28footsystems.com"],
+  ["https://onboarding.muster.partners/", "onboarding.muster.partners"],
+  ["https://sitrep.muster.28footsystems.com/sample", "sitrep.muster.28footsystems.com"],
+  ["https://app.muster.partners/assets/favicon-32.png", "app.muster.partners"],
   ["https://cavscope.28footsystems.com/", "cavscope.28footsystems.com"],
   ["https://www.cavscope.28footsystems.com/", "www.cavscope.28footsystems.com"],
   ["https://cavscope.28footsystems.com/privacy", "cavscope.28footsystems.com"],
@@ -80,8 +88,10 @@ test("every route carries every security header", () => {
   }
 });
 
+const CAV = "cavscope.28footsystems.com";
+
 test("the CSP allows exactly the origins the pages actually load", () => {
-  const csp = call("https://muster.partners/", "muster.partners").headers.get("content-security-policy")!;
+  const csp = call(`https://${CAV}/`, CAV).headers.get("content-security-policy")!;
   // Present because the pages demonstrably use them.
   assert.match(csp, /script-src[^;]*https:\/\/cdn\.jsdelivr\.net/);
   assert.match(csp, /style-src[^;]*https:\/\/fonts\.googleapis\.com/);
@@ -93,7 +103,7 @@ test("the CSP allows exactly the origins the pages actually load", () => {
 });
 
 test("clickjacking is refused two ways, for browsers that only know one", () => {
-  const res = call("https://muster.partners/", "muster.partners");
+  const res = call(`https://${CAV}/`, CAV);
   assert.match(res.headers.get("content-security-policy")!, /frame-ancestors 'none'/);
   assert.equal(res.headers.get("x-frame-options"), "DENY");
 });
@@ -102,7 +112,7 @@ test("clickjacking is refused two ways, for browsers that only know one", () => 
 // permit them. Asserting it here means dropping 'unsafe-inline' later is a
 // deliberate change to this test, not an accident that breaks six pages.
 test("script-src still permits inline, and the test says why", () => {
-  const csp = call("https://muster.partners/", "muster.partners").headers.get("content-security-policy")!;
+  const csp = call(`https://${CAV}/`, CAV).headers.get("content-security-policy")!;
   assert.match(csp, /script-src[^;]*'unsafe-inline'/,
     "every page ships one inline <script>; extract them before tightening this");
 });
@@ -110,89 +120,45 @@ test("script-src still permits inline, and the test says why", () => {
 // HSTS comes from Vercel on this domain. Setting it here too would be a second
 // source for one header, which is how the two drift apart.
 test("HSTS is not set by the middleware", () => {
-  const res = call("https://muster.partners/", "muster.partners");
+  const res = call(`https://${CAV}/`, CAV);
   assert.equal(res.headers.get("strict-transport-security"), null);
-});
-
-test("muster.partners routes to the right page", () => {
-  assert.equal(rewriteTarget(call("https://muster.partners/", "muster.partners")), "/index.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/privacy", "muster.partners")), "/privacy.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/onboarding", "muster.partners")), "/onboarding.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/sitrep", "muster.partners")), "/sitrep.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/sitrep/sample", "muster.partners")), "/sitrep-sample.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/beta", "muster.partners")), "/beta.html");
 });
 
 // The scanner reads these three by URL. If any of them is answered with a page
 // instead of the file, GOV-001, GOV-002 or SEC-012 fires -- which is how the
-// marketing site got its findings in the first place.
-test("robots.txt, the sitemap and security.txt are served as files, not pages", () => {
-  for (const path of ["/robots.txt", "/sitemap.xml", "/.well-known/security.txt"]) {
-    const res = call(`https://muster.partners${path}`, "muster.partners");
-    assert.equal(rewriteTarget(res), null, `${path} must fall through to the static file`);
+// marketing site got its findings in the first place. robots.txt has its own
+// merged file on this host, pinned below.
+test("the sitemap and security.txt are served as files, not pages", () => {
+  for (const path of ["/sitemap.xml", "/.well-known/security.txt"]) {
+    assert.equal(rewriteTarget(call(`https://${CAV}${path}`, CAV)), null, `${path} must fall through to the static file`);
   }
 });
 
-test("the app hosts get their own robots.txt, not the marketing site's", () => {
-  const res = call("https://app.muster.partners/robots.txt", "app.muster.partners");
-  assert.equal(rewriteTarget(res), "/robots-app.txt");
-});
-
-// A researcher who lands on an app host must find the policy, not a login form.
-test("security.txt resolves on every host, including the app hosts", () => {
-  for (const host of ["app.muster.partners", "sitrep.muster.28footsystems.com", "onboarding.muster.28footsystems.com"]) {
-    const res = call(`https://${host}/.well-known/security.txt`, host);
-    assert.equal(rewriteTarget(res), null, `${host} answered security.txt with a page`);
-  }
-});
-
-// Regression guard for the reason signin.html and app.html share an origin.
-test("the app hosts still serve both pages, and /reset lands on signin", () => {
-  for (const host of ["app.muster.partners", "app.muster.28footsystems.com"]) {
-    assert.equal(rewriteTarget(call(`https://${host}/app`, host)), "/app.html");
-    assert.equal(rewriteTarget(call(`https://${host}/`, host)), "/signin.html");
-    assert.equal(rewriteTarget(call(`https://${host}/signin`, host)), "/signin.html");
-    assert.equal(rewriteTarget(call(`https://${host}/reset`, host)), "/signin.html");
-  }
-});
-
-// The platform console shares the app origin deliberately: a Supabase session
-// is stored per-origin, so a console served from anywhere else would load
-// signed-out for someone who had just signed in. The route itself is not the
-// gate -- muster_admin_console() raises 42501 for a non-super-admin -- so the
-// only thing worth pinning here is that the path resolves on both app hosts.
-test("the platform console is served from the app origin, not its own host", () => {
-  for (const host of ["app.muster.partners", "app.muster.28footsystems.com"]) {
-    assert.equal(rewriteTarget(call(`https://${host}/admin`, host)), "/admin.html");
-    assert.equal(rewriteTarget(call(`https://${host}/admin/`, host)), "/admin.html");
-  }
-  // And nowhere else. /admin on the marketing site is not a console; it falls
-  // through to a static file of that name, which does not exist.
-  assert.equal(rewriteTarget(call("https://muster.partners/admin", "muster.partners")), null);
+test("the platform console is on the one CavScope origin", () => {
+  assert.equal(rewriteTarget(call(`https://${CAV}/admin`, CAV)), "/admin.html");
+  assert.equal(rewriteTarget(call(`https://${CAV}/admin/`, CAV)), "/admin.html");
 });
 
 test("isUnder does not match a sibling with a shared prefix", () => {
-  // /sitrepfoo is not part of the /sitrep family; on muster.partners it falls
-  // through to a static file of that name, which does not exist.
-  assert.equal(rewriteTarget(call("https://muster.partners/sitrepfoo", "muster.partners")), null);
-  assert.equal(rewriteTarget(call("https://muster.partners/privacywall", "muster.partners")), null);
-  assert.equal(rewriteTarget(call("https://muster.partners/betawall", "muster.partners")), null);
-  // /administrator is not the console. On an app host it falls to signin.html
-  // like any other unknown path, not to admin.html.
-  assert.equal(rewriteTarget(call("https://app.muster.partners/administrator", "app.muster.partners")), "/signin.html");
+  // /sitrepfoo is not part of the /sitrep family; it falls through to a static
+  // file of that name, which does not exist.
+  assert.equal(rewriteTarget(call(`https://${CAV}/sitrepfoo`, CAV)), null);
+  assert.equal(rewriteTarget(call(`https://${CAV}/privacywall`, CAV)), null);
+  assert.equal(rewriteTarget(call(`https://${CAV}/betawall`, CAV)), null);
+  // /administrator is not the console.
+  assert.equal(rewriteTarget(call(`https://${CAV}/administrator`, CAV)), null);
 });
 
 test("a trailing slash resolves the same as no trailing slash", () => {
-  assert.equal(rewriteTarget(call("https://muster.partners/privacy/", "muster.partners")), "/privacy.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/onboarding/", "muster.partners")), "/onboarding.html");
-  assert.equal(rewriteTarget(call("https://muster.partners/beta/", "muster.partners")), "/beta.html");
+  assert.equal(rewriteTarget(call(`https://${CAV}/privacy/`, CAV)), "/privacy.html");
+  assert.equal(rewriteTarget(call(`https://${CAV}/onboarding/`, CAV)), "/onboarding.html");
+  assert.equal(rewriteTarget(call(`https://${CAV}/beta/`, CAV)), "/beta.html");
 });
 
-// cavscope.28footsystems.com is the new brand's one host for everything --
-// see middleware.js for why it does not need the muster.partners /
-// app.muster.partners split. These pin that every required path resolves,
-// that root is marketing (not sign-in, unlike the legacy app hosts), and
-// that the legacy hosts are completely unaffected by this addition.
+// cavscope.28footsystems.com is the one host for everything -- see
+// middleware.js for why it does not need the old muster.partners /
+// app.muster.partners split. These pin that every required path resolves and
+// that root is marketing, not sign-in.
 test("cavscope.28footsystems.com serves every required path from one host", () => {
   const host = "cavscope.28footsystems.com";
   assert.equal(rewriteTarget(call(`https://${host}/`, host)), "/index.html");
@@ -227,8 +193,76 @@ test("cavscope.28footsystems.com does not default unknown paths to sign-in", () 
   assert.equal(rewriteTarget(res), null);
 });
 
-test("adding cavscope.28footsystems.com leaves the legacy hosts' routing untouched", () => {
-  assert.equal(rewriteTarget(call("https://muster.partners/", "muster.partners")), "/index.html");
-  assert.equal(rewriteTarget(call("https://app.muster.partners/", "app.muster.partners")), "/signin.html");
-  assert.equal(rewriteTarget(call("https://app.muster.partners/app", "app.muster.partners")), "/app.html");
+// ---- the retired MUSTER hosts ----------------------------------------------
+//
+// Since 2026-09-30 every MUSTER-era host answers with a permanent redirect to
+// the same page on cavscope.28footsystems.com, so no page ever renders under
+// the retired name and every link already delivered still works.
+
+/** [status, location] for a request, or null when it was not a redirect. */
+function redirect(url: string, host: string): [number, string] | null {
+  const res = call(url, host);
+  const loc = res.headers.get("location");
+  return loc ? [res.status, loc] : null;
+}
+
+const TO = (path: string): [number, string] => [308, `https://${CAV}${path}`];
+
+test("the old main site redirects each page to the same path on CavScope", () => {
+  for (const host of ["muster.partners", "www.muster.partners", "muster.28footsystems.com"]) {
+    for (const path of ["/", "/privacy", "/onboarding", "/sitrep", "/sitrep/sample", "/beta"]) {
+      assert.deepEqual(redirect(`https://${host}${path}`, host), TO(path), `${host}${path}`);
+    }
+  }
+});
+
+test("the old app hosts send sign-in, workspace, console and reset to their CavScope paths", () => {
+  for (const host of ["app.muster.partners", "app.muster.28footsystems.com"]) {
+    // Root on the app hosts was the sign-in page; root on CavScope is marketing.
+    assert.deepEqual(redirect(`https://${host}/`, host), TO("/signin"));
+    assert.deepEqual(redirect(`https://${host}/signin`, host), TO("/signin"));
+    assert.deepEqual(redirect(`https://${host}/app`, host), TO("/app"));
+    assert.deepEqual(redirect(`https://${host}/admin`, host), TO("/admin"));
+    assert.deepEqual(redirect(`https://${host}/reset`, host), TO("/reset"));
+    // Any other path there meant the sign-in page, and still does.
+    assert.deepEqual(redirect(`https://${host}/administrator`, host), TO("/signin"));
+  }
+});
+
+test("the old onboarding and sitrep hosts land on their CavScope pages", () => {
+  for (const host of ["onboarding.muster.partners", "onboarding.muster.28footsystems.com"]) {
+    assert.deepEqual(redirect(`https://${host}/`, host), TO("/onboarding"));
+  }
+  for (const host of ["sitrep.muster.partners", "sitrep.muster.28footsystems.com"]) {
+    assert.deepEqual(redirect(`https://${host}/`, host), TO("/sitrep"));
+    assert.deepEqual(redirect(`https://${host}/sample`, host), TO("/sitrep/sample"));
+  }
+});
+
+// Invites and onboarding links can carry a query string. The #fragment of an
+// auth link never reaches the server, and a browser carries it across a
+// redirect whose Location has none -- which is why none is ever added here.
+test("a redirect keeps the query string and never sets a fragment", () => {
+  assert.deepEqual(
+    redirect("https://onboarding.muster.28footsystems.com/?invite=abc", "onboarding.muster.28footsystems.com"),
+    TO("/onboarding?invite=abc"),
+  );
+  const [, loc] = redirect("https://app.muster.partners/app", "app.muster.partners")!;
+  assert.ok(!loc.includes("#"));
+});
+
+// A researcher who reaches an old host must still find the policy.
+test("security.txt on an old host redirects to the CavScope copy, not to a page", () => {
+  for (const host of ["app.muster.partners", "muster.partners", "sitrep.muster.28footsystems.com", "onboarding.muster.28footsystems.com"]) {
+    assert.deepEqual(redirect(`https://${host}/.well-known/security.txt`, host), TO("/.well-known/security.txt"), host);
+  }
+});
+
+test("no MUSTER-era host is ever served a page", () => {
+  for (const [url, host] of EVERY_ROUTE) {
+    if (!host.includes("muster")) continue;
+    const res = call(url, host);
+    assert.equal(rewriteTarget(res), null, `${url} rendered a page`);
+    assert.equal(res.status, 308, `${url} was not redirected`);
+  }
 });

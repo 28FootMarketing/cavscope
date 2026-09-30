@@ -2340,7 +2340,7 @@
             plan's price at its commercial stage. <code>customer.subscription.deleted</code> is unhandled, so a customer
             who cancelled in Stripe still prices in here until someone changes their plan by hand.
           </div>`)}
-        ${panel('Pricing surface', 'What muster.partners is showing buyers right now. Both controls take effect on the public page immediately, with no deploy.', `
+        ${panel('Pricing surface', 'What the public pricing page is showing buyers right now. Both controls take effect on the public page immediately, with no deploy.', `
           <div class="runner-row" style="margin-bottom:12px;">
             <div class="field">
               <label for="pricingStage">Pricing stage</label>
@@ -3115,7 +3115,7 @@
   async function setPricingStage(sel) {
     const next = sel.value, current = sel.dataset.current;
     if (next === current) return;
-    if (!window.confirm(`Switch the public pricing stage from ${current || 'unset'} to ${next}?\n\nmuster.partners shows the ${next} prices immediately. No tenant's plan contents change.`)) { render(); return; }
+    if (!window.confirm(`Switch the public pricing stage from ${current || 'unset'} to ${next}?\n\nThe public pricing page shows the ${next} prices immediately. No tenant's plan contents change.`)) { render(); return; }
     await write('muster_admin_set_pricing_stage', { p_stage: next }, `Public pricing stage set to ${next}.`);
   }
 
