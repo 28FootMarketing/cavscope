@@ -28,13 +28,17 @@ must not merge before the database has those names**. Hence the stages:
    `ok = true`. Nothing breaks, because every old name still answers.
 2. **Callers.** Switch pages, edge functions and tests to `cavscope_*`. Only after stage 1
    is applied and verified.
-3. **Edge functions.** Rename each directory to `cavscope-*` and deploy them **alongside**
+3. **Edge functions.** Renaming a directory moves code that tests and `tools/local-scan/`
+   read by path (`supabase/functions/muster-scan/...`), so those paths change in the same PR.
+   Rename each directory to `cavscope-*` and deploy them **alongside**
    the old ones (CI deploys what is in the tree, so the old ones are removed from the tree
    only in stage 5). Repoint the 4 cron jobs and the 3 DB call sites.
 4. **External callbacks.** Repoint the Stripe, GHL, Resend and Telegram webhooks at the new
    URLs. Until each one is confirmed delivering, its old function stays deployed.
-5. **Retire.** Drop the `muster_*` aliases and delete the old functions, once function logs
-   and `pg_stat_user_functions` show no calls to the old names for a full week.
+5. **Retire.** Drop the `muster_*` aliases and delete the old functions, once nothing calls the old
+   names for a full week. `pg_stat_user_functions` is empty unless `track_functions` is set
+   (default `none`), so set `track_functions = 'pl'` in stage 1 or the retirement check has no
+   data; edge-function logs cover the `muster-*` URLs.
 
 ## Deliberately not in the first pass
 

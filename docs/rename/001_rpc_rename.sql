@@ -35,7 +35,7 @@ declare
   n int := 0;
 begin
   for r in
-    select p.oid, p.proname, substr(p.proname, 8) as base, p.proargnames, p.provolatile, p.proacl, p.proowner,
+    select p.oid, p.proname, substr(p.proname, 8) as base, p.proargnames, p.proargmodes, p.provolatile, p.proacl, p.proowner,
            pg_get_function_result(p.oid) as res,
            pg_get_function_arguments(p.oid) as args,
            pg_get_function_identity_arguments(p.oid) as idargs
@@ -51,8 +51,12 @@ begin
 
     execute format('alter function public.%I(%s) rename to %I', r.proname, r.idargs, 'cavscope_' || r.base);
 
+    -- INPUT arguments only. proargnames also lists the output columns of a
+    -- RETURNS TABLE function, and passing those to the real function would be
+    -- a call it does not accept (2 of the 4 set-returning functions are TABLEs).
     select coalesce(string_agg(format('%I => %I', a, a), ', ' order by ord), '')
-      into v_call from unnest(r.proargnames) with ordinality as t(a, ord);
+      into v_call from unnest(r.proargnames, r.proargmodes) with ordinality as t(a, m, ord)
+      where m is null or m in ('i', 'v');
     v_body := case when r.res ilike 'setof%' or r.res ilike 'table%'
                    then format('select * from public.%I(%s)', 'cavscope_' || r.base, v_call)
                    else format('select public.%I(%s)', 'cavscope_' || r.base, v_call) end;
