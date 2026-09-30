@@ -62,7 +62,9 @@ test("the edge function checks access before it reads the HTML, under the caller
   assert.ok(gate > 0 && gate < readBody && readBody < parse, "gate, then read, then parse");
   assert.match(fn, /createClient\(URL_, ANON, \{\s*global: \{ headers: \{ Authorization: authorization \} \}/, "anon key plus the caller's token, never the service role");
   assert.doesNotMatch(fn, /SERVICE_ROLE/);
-  assert.match(fn, /if \(allowed !== true\) return json\(/);
+  assert.match(fn, /if \(gateError \|\| allowed !== true\) return json\(\{ error: "The HTML audit is not turned on for your account\." \}, 403\)/,
+    "an anon caller the gate has no grant for is refused with 403, not reported as a fault");
+  assert.doesNotMatch(fn, /detail: gateError/, "the refusal does not echo database errors");
 });
 
 test("nothing pasted is stored or logged", () => {
