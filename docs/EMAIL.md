@@ -337,6 +337,18 @@ Additional Edge Function secret:
 |---|---|---|
 | `RESEND_WEBHOOK_SECRET` | **yes, for tracking**, or Vault | the `whsec_...` Resend shows when the endpoint is created. The env var wins when set; otherwise the function reads Vault's `cavscope_resend_webhook_secret` through `cavscope_engine_resend_webhook_secret()` (service role only, migration `20260930205321`). With neither it answers 500 and refuses every event rather than trusting an unsigned one. Alert *sending* is unaffected; only tracking stops. Until 2026-09-30 neither was set and no Resend webhook pointed here, so 28 sent alerts had no delivery event at all. |
 
+**Live as of 2026-09-30 21:13 UTC.** Resend webhook `ec728d78-6b11-407a-b0b8-3015e2df9925` points at
+`muster-resend-webhook` for `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`,
+`email.complained` and `email.failed`, created only after the Vault fallback (#178) had deployed, so
+Resend never pointed at an endpoint that answers 500. Its signing secret is in Vault as
+`cavscope_resend_webhook_secret`, never in the repo. Proven so far: an unsigned request now answers
+**401 invalid signature**, where it answered 500 "not configured" all month -- the function reads the
+secret and verifies. Not yet proven when this was written: a real event arriving and a CavScope alert
+moving past `accepted`. To check: list that webhook's events in Resend (each should be `success`), and
+count `cavscope.email_events`. To rotate the secret: rotate it in Resend, then
+`vault.update_secret` on `cavscope_resend_webhook_secret` straight after; events between the two fail
+signature, and Resend retries them.
+
 `category` is a foreign key into `muster.notification_categories` (added `muster_112`) rather than a
 hardcoded CHECK -- adding a category is a registry insert plus a `CATEGORY_META` entry in
 `muster-alert-dispatch`, not a constraint edit; see `docs/EMAIL-INVENTORY.md`'s "Architecture"

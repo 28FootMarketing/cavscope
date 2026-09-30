@@ -124,10 +124,16 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      # Pinned, not "latest". Resolving "latest" asks the GitHub API for the newest
+      # release, unauthenticated, and on 2026-09-30 that hit a rate limit and failed
+      # the #178 deploy before anything shipped. A pinned version downloads the
+      # release asset directly with no API call. 2.118.0 is the release every
+      # deploy through 2026-09-30 actually ran. Bump it deliberately: an edit to
+      # this file redeploys every function (see CLAUDE.md).
       - if: steps.guard.outputs.configured == 'true'
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.118.0
 
       - id: verify
         if: steps.guard.outputs.configured == 'true'
