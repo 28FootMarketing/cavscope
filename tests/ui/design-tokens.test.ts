@@ -33,6 +33,7 @@ const PAGES = [
   "admin.html",
   "privacy.html",
   "beta.html",
+  "html-audit.html",
 ];
 
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");

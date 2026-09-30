@@ -1791,6 +1791,16 @@
         <!-- Platform administration is admin.html, not a view in this page. Shown
              only to a super admin (Live.activateOrg); the console itself is
              gated in Postgres whatever this link does. -->
+        <!-- The HTML audit: shipped hidden and shown only when the workspace
+             payload says flags.html_audit is true, or to a super admin. Unlike
+             navFlagMap this fails CLOSED: it is a capability that is off by
+             default, not a view a partial load should keep. The gate that
+             matters is cavscope_html_audit_allowed(), asked again by the
+             edge function on every request. -->
+        <a class="nav-out" id="navHtmlAudit" href="/audit/html" hidden data-tooltip="Audit a page CavScope does not scan: paste its HTML, apply fixes, download the corrected page.">
+          <span class="ico">🧾</span>
+          <span>HTML Audit ↗</span>
+        </a>
         <a class="nav-out" id="navPlatformConsole" href="/admin" hidden data-tooltip="Opens the Platform Console: every tenant, user, feature flag, incident, pricing and support access, in one place. Super admins only.">
           <span class="ico">👑</span>
           <span>Platform Console ↗</span>
@@ -6328,7 +6338,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         this.active = false;
         this.stopPolling();
         this.ws = this.org = this.website = this.overview = null;
-        ['navPlatformConsole', 'btnPlatformConsole'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+        ['navPlatformConsole', 'btnPlatformConsole', 'navHtmlAudit'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
         this.restoreDemo();
         this.setSync('Demo workspace · sample data');
         this.renderTopbar();
@@ -6594,6 +6604,8 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         // 42501 for anyone who is not a super admin, whatever this link does.
         const isSuper = !!(this.ws && this.ws.is_super_admin);
         ['navPlatformConsole', 'btnPlatformConsole'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = !isSuper; });
+        const htmlAuditNav = document.getElementById('navHtmlAudit');
+        if (htmlAuditNav) htmlAuditNav.hidden = !(isSuper || (o.flags && o.flags.html_audit === true));
         switchTenant(tenant.id);
         this.setSync(`Live · ${o.name} · ${o.plan} plan`);
         this.renderTopbar();

@@ -273,6 +273,19 @@ says so and says where to find them. Each (message, address) is claimed in
 `cavscope.mail_forwards` before sending and carries a Resend idempotency key, so a redelivered
 webhook cannot send a second copy, and a failed send answers 5xx so Resend retries it.
 
+**Proven 2026-09-30 19:00 UTC:** the Resend webhook (`204e5d01-...`, `email.received` only) was
+registered and its secret stored in Vault; a message sent from the owner's Gmail to both
+addresses produced two `cavscope.mail_forwards` rows with status `sent`, and both forwards
+arrived in that inbox as `[CavScope support] ...` and `[CavScope SECURITY] ...`, body included
+(so the project's Resend key can read received mail), Reply-To the sender.
+
+**Known side effect on the shared Resend account, not CavScope's code:** the same test also
+produced a "Lead reply: ..." notice to the 28FS Gmail from `lead-reply-capture` on the old shared
+project `mgtmqucaldkaxvxglguw`. That function subscribes to every domain's `email.received` and
+treats any inbound message as a lead reply, so each mail to CavScope's support@ or security@
+also raises a bogus 28FS lead notice. The fix belongs in that function (ignore recipients not on
+its own mail domain), the same filter `cavscope-inbound-mail` and ARS's `ars-inbound-email` apply.
+
 To change where an address goes: `update cavscope.mail_routes set forward_to = array[...] where
 address = '...'`. To add an address: insert a row (lowercase address, a `sender` on a CavScope
 mail domain). A `forward_to` on a CavScope mail domain is refused by the function, so a route

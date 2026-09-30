@@ -71,6 +71,7 @@ const EVERY_ROUTE: Array<[string, string]> = [
   ["https://cavscope.28footsystems.com/beta", "cavscope.28footsystems.com"],
   ["https://cavscope.28footsystems.com/app", "cavscope.28footsystems.com"],
   ["https://cavscope.28footsystems.com/admin", "cavscope.28footsystems.com"],
+  ["https://cavscope.28footsystems.com/audit/html", "cavscope.28footsystems.com"],
   ["https://cavscope.28footsystems.com/signin", "cavscope.28footsystems.com"],
   ["https://cavscope.28footsystems.com/reset", "cavscope.28footsystems.com"],
   ["https://cavscope.28footsystems.com/robots.txt", "cavscope.28footsystems.com"],
@@ -147,12 +148,16 @@ test("isUnder does not match a sibling with a shared prefix", () => {
   assert.equal(rewriteTarget(call(`https://${CAV}/betawall`, CAV)), null);
   // /administrator is not the console.
   assert.equal(rewriteTarget(call(`https://${CAV}/administrator`, CAV)), null);
+  // Only the exact audit path is the HTML audit.
+  assert.equal(rewriteTarget(call(`https://${CAV}/audit`, CAV)), null);
+  assert.equal(rewriteTarget(call(`https://${CAV}/audit/htmlx`, CAV)), null);
 });
 
 test("a trailing slash resolves the same as no trailing slash", () => {
   assert.equal(rewriteTarget(call(`https://${CAV}/privacy/`, CAV)), "/privacy.html");
   assert.equal(rewriteTarget(call(`https://${CAV}/onboarding/`, CAV)), "/onboarding.html");
   assert.equal(rewriteTarget(call(`https://${CAV}/beta/`, CAV)), "/beta.html");
+  assert.equal(rewriteTarget(call(`https://${CAV}/audit/html/`, CAV)), "/html-audit.html");
 });
 
 // cavscope.28footsystems.com is the one host for everything -- see
@@ -168,6 +173,7 @@ test("cavscope.28footsystems.com serves every required path from one host", () =
   assert.equal(rewriteTarget(call(`https://${host}/sitrep/sample`, host)), "/sitrep-sample.html");
   assert.equal(rewriteTarget(call(`https://${host}/beta`, host)), "/beta.html");
   assert.equal(rewriteTarget(call(`https://${host}/admin`, host)), "/admin.html");
+  assert.equal(rewriteTarget(call(`https://${host}/audit/html`, host)), "/html-audit.html");
   assert.equal(rewriteTarget(call(`https://${host}/privacy`, host)), "/privacy.html");
   assert.equal(rewriteTarget(call(`https://${host}/signin`, host)), "/signin.html");
   assert.equal(rewriteTarget(call(`https://${host}/reset`, host)), "/signin.html");

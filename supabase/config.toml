@@ -127,3 +127,10 @@ entrypoint = "./functions/muster-telegram-debug/index.ts"
 # Supabase JWT. Forwards support@ / security@ per cavscope.mail_routes.
 verify_jwt = false
 entrypoint = "./functions/cavscope-inbound-mail/index.ts"
+
+[functions.cavscope-html-audit]
+# The caller's own session JWT is the credential. The gateway checks it, then
+# public.cavscope_html_audit_allowed() decides under that JWT: super admins,
+# plus members of a workspace the html_audit flag is on for.
+verify_jwt = true
+entrypoint = "./functions/cavscope-html-audit/index.ts"

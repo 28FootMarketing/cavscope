@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="CavScope HTML Audit: audit a web page's HTML with the scan engine's page rules, apply fixes, and download the corrected HTML." />
+  <title>CavScope — HTML Audit</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="/assets/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    /* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */
+    :root {
+      /* Ground and surfaces */
+      --bg: #060a16;
+      --bg-gradient: radial-gradient(circle at 75% 8%, #102a45 0%, #060a16 48%), radial-gradient(circle at 15% 90%, #151e36 0%, #060a16 45%);
+      --bg-grid: rgba(54, 226, 201, 0.035);
+      --surface: #0c1527;
+      --surface-card: #111e38;
+      --surface-elevated: #162648;
+      --surface-raised: #142547;
+      --surface-hover: #192b50;
+      --surface-border: #1f3358;
+      --surface-border-strong: #2c4574;
+
+      /* Text */
+      --text: #f1f6ff;
+      --text-muted: #8e9fb8;
+      --text-dim: #5d708e;
+
+      /* Brand and status hues */
+      --teal: #36e2c9;
+      --teal-dim: #104347;
+      --teal-glow: rgba(54, 226, 201, 0.25);
+      --cyan: #38bdf8;
+      --amber: #fbbf24;
+      --amber-dim: #453414;
+      --rose: #f43f5e;
+      --rose-dim: #4c1825;
+      --purple: #a855f7;
+      --purple-dim: #32164f;
+      --emerald: #10b981;
+
+      /* Type. --font-body and --font-display are the landing-page vocabulary for
+       * the same two faces; they are aliases so index.html and privacy.html keep
+       * their existing call sites rather than being rewritten in place. */
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cinzel', Georgia, 'Times New Roman', serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --font-body: var(--font-sans);
+      --font-display: var(--font-serif);
+
+      /* Geometry and depth */
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.35);
+      --shadow-elevated: 0 12px 36px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 25px rgba(54, 226, 201, 0.2);
+
+      /* ---- CavScope brand identity, added 2026-09-26, "Charge" direction as of
+       * this revision -- superseding this same block's first cut (a flat gold
+       * accent) after a design review picked the gradient direction over it and
+       * two other options. See docs/BRAND.md "Logo rationale" for why: the guidon
+       * and the Garry Owen crest are the source material, rendered as something
+       * that moves rather than a static insignia.
+       *
+       * Still additive, not a reskin. Every name below is new or was already new
+       * in the superseded cut; nothing above this block changed value, so all
+       * nine pages still render pixel-identical to before this identity existed.
+       *
+       * Two names this block deliberately does NOT define, because the product
+       * already ships a token with that exact name and a different value:
+       *   --surface     already #0c1527 above, driving every card/panel today.
+       *                 The brand palette's equivalent is Charcoal (#1e1e1e).
+       *   --text-muted  already #8e9fb8 above, driving secondary/caption text
+       *                 on all nine pages today. The brand palette's equivalent
+       *                 is Slate Gray (#6b6b6b).
+       * Redefining either one HERE would silently reskin the live product the
+       * moment this file is committed and synced -- every card background or
+       * every piece of muted text, everywhere, with no visual review. That is
+       * a real decision, not a token rename, so it stays a decision: the two
+       * target values are named below as --cs-surface-target and
+       * --cs-text-muted-target, ready to promote to --surface / --text-muted
+       * in a dedicated reskin pass once someone has actually looked at all
+       * nine pages with the new colors.
+       */
+
+      /* Raw palette */
+      --cs-gold: #F2B84C;
+      --cs-red: #FF3B4E;
+      --cs-cyan: #22D3EE;
+      --cs-black: #0B0B0B;
+      --cs-charcoal: #1E1E1E;
+      --cs-slate: #6B6B6B;
+      --cs-light-gray: #D9D9D9;
+      --cs-white: #FFFFFF;
+
+      /* Semantic tokens, night mode (this product's only mode today) */
+      --background: var(--cs-black);
+      --surface-alt: color-mix(in srgb, var(--cs-charcoal) 100%, white 6%);
+      --cs-surface-target: var(--cs-charcoal);
+      --border: color-mix(in srgb, var(--cs-light-gray) 100%, transparent 78%);
+      --text-primary: var(--cs-white);
+      --text-secondary: var(--cs-slate);
+      --cs-text-muted-target: var(--cs-slate);
+      --accent: var(--cs-gold);
+      --accent-hover: color-mix(in srgb, var(--cs-gold) 100%, white 15%);
+      --accent-soft: color-mix(in srgb, var(--cs-gold) 22%, transparent);
+      /* The signature gradient -- the guidon's red running into the horseshoe's
+       * gold in one sweep. For hero moments (a headline's key phrase, a primary
+       * CTA, the logo mark's ring) -- not a general-purpose background. */
+      --accent-gradient: linear-gradient(135deg, var(--cs-red), var(--cs-gold));
+      /* "Signal": the one color with no cavalry lineage at all, on purpose --
+       * it marks live/instrumented state (a monitoring pulse, an active nav
+       * item, the lens glow in the mark) rather than brand or heritage. */
+      --signal: var(--cs-cyan);
+      --signal-soft: color-mix(in srgb, var(--cs-cyan) 18%, transparent);
+      /* Functional, not decorative -- a severity/status color has to stay
+       * distinguishable from the brand accent and from every other status, so
+       * these alias the existing hues above rather than the gold/red/cyan
+       * palette. Collapsing them in would make "critical" and "this button
+       * matters" look the same color, which is the wrong kind of consistent. */
+      --success: var(--emerald);
+      --warning: var(--amber);
+      --error: var(--rose);
+      /* Cyan, not gold -- a focus ring has to read against gold accent surfaces
+       * too, and gold-on-gold nearly disappears. */
+      --focus-ring: var(--cs-cyan);
+    }
+    /* muster:tokens:end */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: var(--teal); }
+    code, pre, .mono { font-family: var(--font-mono); }
+
+    .top {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+      padding: 14px 24px; border-bottom: 1px solid var(--surface-border); background: rgba(6, 10, 22, 0.86);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+    .brand img { width: 34px; height: 34px; object-fit: contain; }
+    .brand-word { font-family: var(--font-serif); font-size: 19px; font-weight: 700; letter-spacing: 3px; color: var(--amber); line-height: 1; }
+    .brand-sub { font-size: 8px; letter-spacing: 1.6px; color: var(--text-dim); text-transform: uppercase; margin-top: 4px; }
+    .top-links { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .top-links a, .top-links span { font-size: 12.5px; color: var(--text-muted); text-decoration: none; padding: 6px 10px; border: 1px solid var(--surface-border); border-radius: var(--radius-md); }
+    .top-links a:hover { color: var(--text); border-color: var(--surface-border-strong); }
+
+    main { max-width: 1040px; margin: 0 auto; padding: 28px 24px 80px; }
+    h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.2px; }
+    .lede { color: var(--text-muted); margin: 6px 0 22px; max-width: 760px; }
+
+    .card { background: var(--surface-card); border: 1px solid var(--surface-border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 18px; }
+    .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; display: inline; }
+    .card .hint { color: var(--text-muted); font-size: 12.5px; margin: 6px 0 14px; }
+
+    label.field { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 12px 0 5px; }
+    input[type=text], input[type=url], textarea, select {
+      width: 100%; background: var(--surface); color: var(--text); border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md); padding: 9px 11px; font-family: inherit; font-size: 13px;
+    }
+    textarea.code { font-family: var(--font-mono); font-size: 12px; min-height: 220px; resize: vertical; white-space: pre; }
+    input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--teal); outline-offset: 2px;
+    }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > .grow { flex: 1 1 260px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: var(--radius-md);
+      border: 1px solid var(--surface-border-strong); background: var(--surface-elevated); color: var(--text);
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
+    }
+    .btn:hover { border-color: var(--teal); }
+    .btn.primary { background: var(--teal); border-color: var(--teal); color: #041018; }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+    .file-btn input { display: none; }
+
+    .flash { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--radius-md); font-size: 13px; }
+    .flash.warn { background: var(--rose-dim); border: 1px solid var(--rose); }
+    .flash.ok { background: var(--teal-dim); border: 1px solid var(--teal); }
+    .flash.info { background: var(--surface); border: 1px solid var(--surface-border); color: var(--text-muted); }
+    .flash[hidden] { display: none; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+    .chip { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: var(--radius-full); border: 1px solid var(--surface-border); color: var(--text-muted); }
+    .sev { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; padding: 2px 7px; border-radius: 4px; flex: none; }
+    .sev.critical, .sev.high { background: var(--rose-dim); color: var(--rose); }
+    .sev.medium { background: var(--amber-dim); color: var(--amber); }
+    .sev.low, .sev.info { background: var(--surface); color: var(--text-muted); border: 1px solid var(--surface-border); }
+    .mode { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--surface-border); color: var(--text-dim); flex: none; }
+    .rid { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-dim); flex: none; }
+
+    .finding { border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px; background: var(--surface); }
+    .finding > summary { font-weight: 600; }
+    .finding > summary { flex-wrap: wrap; row-gap: 4px; }
+    .finding .ftitle { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+    .finding .detail { color: var(--text-muted); font-size: 13px; margin: 6px 0 10px; }
+    .finding .does { font-size: 13px; margin-bottom: 8px; }
+    .target { border-top: 1px dashed var(--surface-border); padding: 10px 0 4px; }
+    .target code { display: block; font-size: 11.5px; color: var(--text-muted); white-space: pre-wrap; word-break: break-all; margin-bottom: 6px; }
+    .check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; margin: 4px 0; }
+    .check input { width: 16px; height: 16px; accent-color: var(--teal); }
+    .manual-note { font-size: 12.5px; color: var(--amber); }
+
+    .scope { font-size: 12.5px; color: var(--text-muted); }
+    .scope ul { margin: 6px 0 0 18px; }
+    .scope li { margin: 2px 0; }
+
+    .changes li { margin: 4px 0 4px 18px; font-size: 13px; }
+    .result-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+
+    details.acc > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+    details.acc > summary::-webkit-details-marker { display: none; }
+    details.acc > summary::before { content: '\25B8'; color: var(--teal); font-size: 0.9em; transition: transform 0.15s ease; flex: none; }
+    details.acc[open] > summary::before { transform: rotate(90deg); }
+    details.acc > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 4px; }
+    details.acc-fix > summary { font-size: 11.5px; font-weight: 600; color: var(--teal); }
+    details.acc-fix > .acc-body { margin-top: 6px; font-size: 12.5px; color: var(--text-muted); }
+    .acc-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin: 0 0 10px; }
+    .acc-toolbar button { background: none; border: 1px solid var(--surface-border); color: var(--text-muted); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+    .acc-toolbar button:hover { border-color: var(--teal); color: var(--teal); }
+    @media (prefers-reduced-motion: reduce) { details.acc > summary::before { transition: none; } }
+    @media print { details.acc > summary::before { content: none; } .acc-toolbar, .no-print { display: none !important; } }
+
+    .gate { max-width: 560px; margin: 80px auto; text-align: center; }
+    .gate h1 { margin-bottom: 10px; }
+    .gate p { color: var(--text-muted); margin-bottom: 18px; }
+    [hidden] { display: none !important; }
+
+    .app-tooltip {
+      position: fixed;
+      z-index: 300;
+      max-width: 280px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: #0d1a33;
+      border: 1px solid #2e4a78;
+      color: #e6eefb;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+      letter-spacing: 0;
+      text-transform: none;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(3px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .app-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 640px) {
+      .top { padding: 12px 16px; }
+      main { padding: 20px 16px 60px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="/" data-tooltip="CavScope home page.">
+    <img src="/assets/cavscope-emblem.png" alt="" width="34" height="34" />
+    <div>
+      <div class="brand-word">CAVSCOPE</div>
+      <div class="brand-sub">Web Assurance by 28 Foot Systems</div>
+    </div>
+  </a>
+  <nav class="top-links" aria-label="CavScope">
+    <a id="linkConsole" href="/admin" hidden data-tooltip="Back to the Platform Console. Super admins only.">Platform Console</a>
+    <a href="/app#overview" data-tooltip="Back to your CavScope workspace.">Workspace</a>
+    <span id="whoami" tabindex="0" data-tooltip="The account this audit runs as. Access is checked on every request, not only when the page loads.">Checking access…</span>
+  </nav>
+</header>
+
+<div class="gate" id="gate">
+  <h1 id="gateTitle">HTML Audit</h1>
+  <p id="gateMsg">Checking your access…</p>
+  <a class="btn" id="gateLink" href="/" hidden data-tooltip="Go to the sign-in page.">Sign in</a>
+</div>
+
+<main id="main" hidden>
+  <h1>HTML Audit</h1>
+  <p class="lede">
+    Audit a page CavScope does not scan. Paste its HTML, or upload the file. The audit runs the same page rules as
+    CavScope's scan engine and lists what it finds. Choose the fixes you want, then download the corrected HTML to
+    put back on the site. Nothing you paste is stored.
+  </p>
+
+  <section class="card" aria-labelledby="stepPaste">
+    <h2 id="stepPaste" tabindex="0" data-tooltip="Step 1: give the audit the page's HTML.">1. The page</h2>
+    <p class="hint">In the browser, open the page and use View Page Source, then copy everything. Or save the page as an .html file and upload it.</p>
+    <label class="field" for="htmlInput">Page HTML</label>
+    <textarea id="htmlInput" class="code" spellcheck="false" placeholder="Paste the page source here, starting from the doctype line" data-tooltip="The page's full HTML source. Up to 2 MB. It is sent to CavScope only to be audited and is not saved."></textarea>
+    <div class="row" style="margin-top: 10px;">
+      <label class="btn file-btn" for="htmlFile" tabindex="0" data-tooltip="Load the HTML from a saved .html or .htm file instead of pasting it.">
+        Upload an .html file
+        <input type="file" id="htmlFile" accept=".html,.htm,text/html" />
+      </label>
+      <span id="htmlSize" class="mono" tabindex="0" style="font-size: 12px; color: var(--text-dim);" data-tooltip="Size of the HTML entered. The limit is 2 MB.">0 KB</span>
+    </div>
+    <label class="field" for="pageUrl">Page address (optional)</label>
+    <input type="url" id="pageUrl" placeholder="https://example.com/" data-tooltip="Where this page lives. It tells the audit which scripts and forms belong to the site itself and whether the page is served over https. Without it, the audit assumes https on an unknown address and says so." />
+    <div class="row" style="margin-top: 14px;">
+      <button type="button" class="btn primary" id="btnAudit" data-tooltip="Run CavScope's page rules on this HTML. Nothing is changed yet.">Run audit</button>
+    </div>
+    <div class="flash" id="flashAudit" role="status" hidden></div>
+  </section>
+
+  <section class="card" id="resultsCard" aria-labelledby="stepFindings" hidden>
+    <h2 id="stepFindings" tabindex="0" data-tooltip="Step 2: what the audit found, and the fix for each.">2. Findings and fixes</h2>
+    <p class="hint" id="contextNote"></p>
+    <div class="chips" id="sevChips"></div>
+    <div id="findings"></div>
+    <div class="scope" id="scopeNote"></div>
+    <div class="row" style="margin-top: 16px;">
+      <button type="button" class="btn primary" id="btnFix" data-tooltip="Apply the fixes you chose and filled in. Anything left blank is skipped, never guessed.">Apply chosen fixes</button>
+    </div>
+    <div class="flash" id="flashFix" role="status" hidden></div>
+  </section>
+
+  <section class="card" id="fixedCard" aria-labelledby="stepFixed" hidden>
+    <h2 id="stepFixed" tabindex="0" data-tooltip="Step 3: the corrected HTML and what changed.">3. Corrected HTML</h2>
+    <div id="changeList"></div>
+    <div class="result-actions">
+      <button type="button" class="btn primary" id="btnDownload" data-tooltip="Save the corrected HTML as a file to put back on the site.">Download corrected HTML</button>
+      <button type="button" class="btn" id="btnCopy" data-tooltip="Copy the corrected HTML to the clipboard.">Copy HTML</button>
+      <button type="button" class="btn" id="btnReport" data-tooltip="Save a plain-text report: what changed, what is still open, how to fix each on a site builder, and what this audit cannot check.">Download change report</button>
+      <button type="button" class="btn" id="btnReaudit" data-tooltip="Put the corrected HTML back into step 1 and audit it again.">Audit the corrected HTML</button>
+    </div>
+    <label class="field" for="fixedOutput">Corrected HTML</label>
+    <textarea id="fixedOutput" class="code" readonly spellcheck="false" data-tooltip="The corrected page. Read only here; download or copy it."></textarea>
+  </section>
+</main>
+
+<script>
+  const SB_URL = 'https://hjowfnzpomzxazmzywxw.supabase.co';
+  const SB_KEY = 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL';
+  const FN_URL = SB_URL + '/functions/v1/cavscope-html-audit';
+  const MAX_BYTES = 2000000;
+
+  let sb = null;
+  // Everything the operator types lives here, not only in the DOM, so a
+  // re-render (a second audit, a failed apply) never blanks an answer.
+  const state = { audit: null, draft: {}, fixed: null };
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  }
+  function flash(id, kind, msg) {
+    const el = document.getElementById(id);
+    if (!msg) { el.hidden = true; return; }
+    el.className = 'flash ' + kind;
+    el.textContent = msg;
+    el.hidden = false;
+  }
+  function byteSize(s) { return new TextEncoder().encode(s).byteLength; }
+  function showGate(title, msg, link) {
+    document.getElementById('gateTitle').textContent = title;
+    document.getElementById('gateMsg').textContent = msg;
+    const a = document.getElementById('gateLink');
+    if (link) { a.href = link.href; a.textContent = link.text; a.hidden = false; } else a.hidden = true;
+    document.getElementById('gate').hidden = false;
+    document.getElementById('main').hidden = true;
+  }
+
+  // Same shapes the SQL predicate and the other pages accept.
+  function forcedPasswordChange(session) {
+    const meta = session && session.user ? session.user.app_metadata : null;
+    const v = meta ? meta.force_password_change : undefined;
+    if (v === true) return true;
+    if (typeof v === 'string') return ['true', 't', '1'].includes(v.toLowerCase());
+    if (typeof v === 'number') return v === 1;
+    return false;
+  }
+
+  async function call(payload) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { location.replace(window.location.origin + '/?next=/audit/html'); throw new Error('signed out'); }
+    let res;
+    try {
+      res = await fetch(FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token, apikey: SB_KEY },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      throw new Error('Could not reach CavScope. Check the connection and try again.');
+    }
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 403) { showGate('Not turned on', body.error || 'The HTML audit is not turned on for your account.', { href: '/app#overview', text: 'Back to your workspace' }); throw new Error('forbidden'); }
+    if (!res.ok) throw new Error(body.error || ('The audit service answered ' + res.status + '.'));
+    return body;
+  }
+
+  // ---------- step 1 ----------
+  function updateSize() {
+    const n = byteSize(document.getElementById('htmlInput').value);
+    const el = document.getElementById('htmlSize');
+    el.textContent = n >= 1000000 ? (n / 1000000).toFixed(2) + ' MB' : Math.ceil(n / 1000) + ' KB';
+    el.style.color = n > MAX_BYTES ? 'var(--rose)' : 'var(--text-dim)';
+  }
+
+  async function runAudit() {
+    const html = document.getElementById('htmlInput').value;
+    const pageUrl = document.getElementById('pageUrl').value.trim();
+    if (!html.trim()) { flash('flashAudit', 'warn', 'Paste the page\'s HTML, or upload the file, first.'); return; }
+    if (byteSize(html) > MAX_BYTES) { flash('flashAudit', 'warn', 'The HTML is larger than 2 MB. Audit one page at a time.'); return; }
+    const btn = document.getElementById('btnAudit');
+    btn.disabled = true;
+    flash('flashAudit', 'info', 'Auditing…');
+    try {
+      const a = await call({ action: 'audit', html, page_url: pageUrl || null });
+      state.audit = { ...a, html, pageUrl };
+      state.fixed = null;
+      document.getElementById('fixedCard').hidden = true;
+      seedDefaults(a, pageUrl);
+      renderFindings();
+      flash('flashAudit', 'ok', a.findings.length ? `${a.findings.length} finding${a.findings.length === 1 ? '' : 's'}. Review them below.` : 'No findings from the page rules. The note below lists what this audit cannot check.');
+      document.getElementById('resultsCard').hidden = false;
+      document.getElementById('resultsCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } catch (e) {
+      if (e.message !== 'forbidden' && e.message !== 'signed out') flash('flashAudit', 'warn', e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Defaults only where the answer is mechanical. Words are never pre-filled.
+  function seedDefaults(a, pageUrl) {
+    const d = state.draft;
+    const ids = new Set(a.findings.map((f) => f.rule_id));
+    if (ids.has('A11Y-001') && !d.lang) d.lang = 'en';
+    ['A11Y-001', 'A11Y-004', 'PRIV-003', 'SEC-010'].forEach((id) => { if (ids.has(id) && d['apply_' + id] === undefined) d['apply_' + id] = true; });
+    if (ids.has('GOV-005') && !d.canonical && pageUrl) d.canonical = pageUrl;
+    if (!d.pin) d.pin = {};
+    (a.sri_candidates || []).forEach((c) => { if (d.pin[c.src] === undefined) d.pin[c.src] = !!c.versioned; });
+    // Positional answers belong to one audit's targets; a new audit starts them over.
+    d.alts = (a.targets.img_alt || []).map(() => ({ text: '', decorative: false }));
+    d.fieldLabels = (a.targets.form_labels || []).map(() => '');
+    d.linkLabels = (a.targets.empty_links || []).map(() => '');
+  }
+
+  // ---------- step 2 ----------
+  const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+  const MODE_LABEL = { auto: 'Fixable here', input: 'Needs your words', manual: 'Fix on the site' };
+  const MODE_TIP = {
+    auto: 'CavScope can make this change in the HTML without any judgment call. Untick it to leave it alone.',
+    input: 'CavScope can make this change, but only with words you supply. Nothing is invented on your behalf.',
+    manual: 'This cannot be fixed by editing this HTML. The instructions say what to do on the site itself.',
+  };
+
+  function renderFindings() {
+    const a = state.audit;
+    const ctx = a.context || {};
+    document.getElementById('contextNote').textContent = ctx.assumed
+      ? 'No page address given, so the audit assumed an https page on an unknown site. Every outside script and form is treated as external. Add the address in step 1 and audit again for a sharper result.'
+      : `Audited as ${ctx.finalUrl}${ctx.isHttps ? '' : ' (http, so mixed content is not assessed)'}.`;
+
+    const counts = {};
+    a.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; });
+    document.getElementById('sevChips').innerHTML = SEV_ORDER.filter((s) => counts[s])
+      .map((s) => `<span class="chip" tabindex="0" data-tooltip="Findings at ${s} severity, on the same scale CavScope's scans use.">${counts[s]} ${s}</span>`).join('');
+
+    const sorted = a.findings.slice().sort((x, y) => SEV_ORDER.indexOf(x.severity) - SEV_ORDER.indexOf(y.severity));
+    const box = document.getElementById('findings');
+    box.innerHTML = sorted.length > 1
+      ? '<div class="acc-toolbar no-print"><button type="button" data-all="open" data-tooltip="Opens every finding so you can work through them all at once.">Open all</button><button type="button" data-all="close" data-tooltip="Closes every finding so you can pick one at a time.">Close all</button></div>'
+      : '';
+    box.innerHTML += sorted.map((f, i) => findingHtml(f, i === 0)).join('');
+
+    document.getElementById('scopeNote').innerHTML = '<strong>What this audit did not check.</strong> It reads HTML only. A page with no findings here can still fail on these, which need the live site; register it in a workspace for a full scan:'
+      + '<ul>' + (a.not_checked || []).map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>';
+  }
+
+  function findingHtml(f, open) {
+    const fix = f.fix || { mode: 'manual', does: 'No automatic fix.', howTo: '' };
+    return `<details class="acc finding" data-acc-group="html-findings"${open ? ' open' : ''}>
+      <summary tabindex="0" data-tooltip="${esc(f.rule_id)}: open to see the detail and the fix.">
+        <span class="sev ${esc(f.severity)}">${esc(f.severity)}</span>
+        <span class="ftitle">${esc(f.title)}</span>
+        <span class="rid">${esc(f.rule_id)}</span>
+        <span class="mode" tabindex="0" data-tooltip="${esc(MODE_TIP[fix.mode])}">${esc(MODE_LABEL[fix.mode])}</span>
+      </summary>
+      <p class="detail">${esc(f.detail)}</p>
+      <p class="does">${esc(fix.does)}</p>
+      ${controlsHtml(f.rule_id, fix.mode)}
+      <details class="acc acc-fix" data-acc-group="html-howto">
+        <summary tabindex="0" data-tooltip="Instructions for making this fix in WordPress, Wix, Squarespace, Shopify or a hand-built site.">How to fix it on the site</summary>
+        <div class="acc-body">${esc(fix.howTo)}</div>
+      </details>
+    </details>`;
+  }
+
+  function applyBox(id, label) {
+    const d = state.draft;
+    return `<label class="check"><input type="checkbox" data-draft="apply_${id}"${d['apply_' + id] ? ' checked' : ''} data-tooltip="Untick to leave this finding as it is in the corrected HTML." /> ${esc(label)}</label>`;
+  }
+  function targetList(tags) {
+    return (tags || []).slice(0, 20).map((t) => `<div class="target"><code>${esc(t.length > 300 ? t.slice(0, 300) + '…' : t)}</code></div>`).join('');
+  }
+
+  function controlsHtml(id, mode) {
+    const a = state.audit, d = state.draft, t = a.targets || {};
+    switch (id) {
+      case 'A11Y-001':
+        return applyBox(id, 'Declare the page language')
+          + `<label class="field" for="fxLang">Page language</label><select id="fxLang" data-draft="lang" data-tooltip="The main language the page is written in. Screen readers use it to pronounce the text correctly.">`
+          + (a.languages || []).map(([code, name]) => `<option value="${esc(code)}"${d.lang === code ? ' selected' : ''}>${esc(name)} (${esc(code)})</option>`).join('') + '</select>';
+      case 'A11Y-002':
+        return `<label class="field" for="fxTitle">Page title</label><input type="text" id="fxTitle" maxlength="120" data-draft="title" value="${esc(d.title || '')}" placeholder="What this page is, then the business name" data-tooltip="Shown in the browser tab and in search results, and read first by screen readers. Leave blank to skip." />`;
+      case 'A11Y-003':
+        return (t.img_alt || []).map((tag, i) => `<div class="target"><code>${esc(tag.length > 300 ? tag.slice(0, 300) + '…' : tag)}</code>
+          <input type="text" maxlength="250" data-alt="${i}" value="${esc((d.alts[i] || {}).text || '')}" placeholder="Describe what this image shows" data-tooltip="Alt text: what a screen reader says in place of this image. Leave blank to skip this image." />
+          <label class="check"><input type="checkbox" data-deco="${i}"${(d.alts[i] || {}).decorative ? ' checked' : ''} data-tooltip="Decorative images get an empty alt, which tells screen readers to skip them. Use it only for images that carry no meaning." /> Decorative only</label></div>`).join('');
+      case 'A11Y-004':
+        return applyBox(id, 'Allow pinch zoom');
+      case 'A11Y-006':
+        return (t.form_labels || []).map((tag, i) => `<div class="target"><code>${esc(tag)}</code>
+          <input type="text" maxlength="120" data-field="${i}" value="${esc(d.fieldLabels[i] || '')}" placeholder="What this field asks for, e.g. Email address" data-tooltip="The name a screen reader announces for this field. Leave blank to skip it." /></div>`).join('');
+      case 'A11Y-007':
+        return (t.empty_links || []).map((tag, i) => `<div class="target"><code>${esc(tag.length > 300 ? tag.slice(0, 300) + '…' : tag)}</code>
+          <input type="text" maxlength="120" data-link="${i}" value="${esc(d.linkLabels[i] || '')}" placeholder="Where this link goes, e.g. Our Facebook page" data-tooltip="The name a screen reader announces for this link. Leave blank to skip it." /></div>`).join('');
+      case 'PRIV-001':
+        return `<label class="field" for="fxPrivacy">Privacy policy address</label><input type="url" id="fxPrivacy" data-draft="privacyUrl" value="${esc(d.privacyUrl || '')}" placeholder="https://example.com/privacy" data-tooltip="The full address of the site's published privacy policy. A footer link to it is added. Leave blank to skip." />`;
+      case 'PRIV-004':
+        return `<label class="field" for="fxTerms">Terms of service address</label><input type="url" id="fxTerms" data-draft="termsUrl" value="${esc(d.termsUrl || '')}" placeholder="https://example.com/terms" data-tooltip="The full address of the site's published terms. A footer link to it is added. Leave blank to skip." />`;
+      case 'PRIV-003':
+        return targetList(t.forms) + applyBox(id, 'Move http:// form actions to https://');
+      case 'SEC-010':
+        return targetList(t.mixed) + applyBox(id, 'Move these references to https://');
+      case 'SEC-014':
+        return (a.sri_candidates || []).map((c) => `<div class="target"><label class="check"><input type="checkbox" data-pin="${esc(c.src)}"${d.pin[c.src] ? ' checked' : ''} data-tooltip="${c.versioned ? 'This address names a version, so its file should not change. Safe to pin.' : 'This address names no version. If the file behind it changes, a pinned script stops loading. Tick only if you are sure it is fixed.'}" /> <span class="mono" style="font-size: 12px; word-break: break-all;">${esc(c.src)}</span></label>
+          <div style="font-size: 11.5px; color: var(--text-dim);">${c.versioned ? 'Pinned to a version' : 'No version in the address: pinning may break it'}</div></div>`).join('');
+      case 'GOV-003':
+        return `<label class="field" for="fxDesc">Meta description</label><textarea id="fxDesc" rows="2" maxlength="320" data-draft="description" placeholder="One or two sentences on what this page offers" data-tooltip="The summary search engines and AI assistants show for this page. About 150 characters works best. Leave blank to skip.">${esc(d.description || '')}</textarea>`;
+      case 'GOV-005':
+        return `<label class="field" for="fxCanonical">Canonical address</label><input type="url" id="fxCanonical" data-draft="canonical" value="${esc(d.canonical || '')}" placeholder="https://example.com/page" data-tooltip="The one official address of this page, so search engines do not split it across copies. Usually the page's own address. Leave blank to skip." />`;
+      case 'GOV-007':
+        return `<div class="row"><div class="grow"><label class="field" for="fxOrg">Organization name</label><input type="text" id="fxOrg" maxlength="160" data-draft="orgName" value="${esc(d.orgName || '')}" placeholder="Business name, exactly as it trades" data-tooltip="The business name published as structured data, which search engines and AI assistants read. Leave blank to skip." /></div>
+          <div class="grow"><label class="field" for="fxOrgUrl">Organization website</label><input type="url" id="fxOrgUrl" data-draft="orgUrl" value="${esc(d.orgUrl || '')}" placeholder="https://example.com/" data-tooltip="The business's main website address. Optional." /></div></div>`;
+      default:
+        return mode === 'manual' ? '<p class="manual-note">Not changed in the HTML. See how to fix it on the site.</p>' : '';
+    }
+  }
+
+  function onDraftInput(e) {
+    const el = e.target, d = state.draft;
+    if (!el || !el.dataset) return;
+    if (el.dataset.draft) d[el.dataset.draft] = el.type === 'checkbox' ? el.checked : el.value;
+    else if (el.dataset.alt !== undefined) d.alts[+el.dataset.alt].text = el.value;
+    else if (el.dataset.deco !== undefined) d.alts[+el.dataset.deco].decorative = el.checked;
+    else if (el.dataset.field !== undefined) d.fieldLabels[+el.dataset.field] = el.value;
+    else if (el.dataset.link !== undefined) d.linkLabels[+el.dataset.link] = el.value;
+    else if (el.dataset.pin !== undefined) d.pin[el.dataset.pin] = el.checked;
+  }
+
+  function choicesFromDraft() {
+    const d = state.draft, has = new Set(state.audit.findings.map((f) => f.rule_id));
+    const c = {};
+    if (has.has('A11Y-001') && d['apply_A11Y-001']) c.lang = d.lang;
+    if (d.title) c.title = d.title;
+    // An image with neither text nor "decorative" is skipped (null), never given an empty alt by default.
+    c.alts = d.alts.map((x) => (x.decorative ? '' : (x.text.trim() ? x.text : null)));
+    c.fixZoom = !!d['apply_A11Y-004'];
+    c.fieldLabels = d.fieldLabels.slice();
+    c.linkLabels = d.linkLabels.slice();
+    if (d.privacyUrl) c.privacyUrl = d.privacyUrl;
+    if (d.termsUrl) c.termsUrl = d.termsUrl;
+    c.upgradeForms = !!d['apply_PRIV-003'];
+    c.upgradeMixed = !!d['apply_SEC-010'];
+    if (d.description) c.description = d.description;
+    if (d.canonical) c.canonical = d.canonical;
+    if (d.orgName) c.org = { name: d.orgName, url: d.orgUrl || undefined };
+    const pin = Object.keys(d.pin || {}).filter((k) => d.pin[k]);
+    return { choices: c, pin };
+  }
+
+  async function applyChosen() {
+    const a = state.audit;
+    if (!a) return;
+    const { choices, pin } = choicesFromDraft();
+    const btn = document.getElementById('btnFix');
+    btn.disabled = true;
+    flash('flashFix', 'info', pin.length ? 'Applying fixes and hashing the scripts you chose to pin…' : 'Applying fixes…');
+    try {
+      const r = await call({ action: 'fix', html: a.html, page_url: a.pageUrl || null, choices, pin_scripts: pin });
+      state.fixed = r;
+      renderFixed();
+      flash('flashFix', r.changes.length ? 'ok' : 'info', r.changes.length ? `${r.changes.length} fix${r.changes.length === 1 ? '' : 'es'} applied.` : 'Nothing was changed. Fill in or tick at least one fix first.');
+      if (r.changes.length) document.getElementById('fixedCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } catch (e) {
+      if (e.message !== 'forbidden' && e.message !== 'signed out') flash('flashFix', 'warn', e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- step 3 ----------
+  function renderFixed() {
+    const r = state.fixed;
+    const left = (r.after && r.after.findings) || [];
+    const parts = [];
+    parts.push('<p class="hint"><strong>Changed</strong></p>');
+    parts.push(r.changes.length ? '<ul class="changes">' + r.changes.map((c) => `<li><span class="rid">${esc(c.rule_id)}</span> ${esc(c.summary)}</li>`).join('') + '</ul>' : '<p class="hint">Nothing.</p>');
+    if (r.sri_failures && r.sri_failures.length) {
+      parts.push('<p class="hint"><strong>Scripts left unpinned</strong></p><ul class="changes">'
+        + r.sri_failures.map((f) => `<li><span class="mono" style="word-break: break-all;">${esc(f.src)}</span>: ${esc(f.reason)}</li>`).join('') + '</ul>');
+    }
+    parts.push(`<p class="hint"><strong>Still open after the fixes: ${left.length}</strong>${left.length ? ' (' + esc([...new Set(left.map((f) => f.rule_id))].join(', ') + ')') : ''}. The change report lists how to fix each on the site.</p>`);
+    document.getElementById('changeList').innerHTML = parts.join('');
+    document.getElementById('fixedOutput').value = r.html;
+    document.getElementById('fixedCard').hidden = !r.changes.length;
+  }
+
+  function fileBase() {
+    const u = state.audit && state.audit.pageUrl;
+    try { if (u) return new URL(u).hostname.replace(/[^a-z0-9.-]/gi, '') || 'page'; } catch (e) { /* no address */ }
+    return 'page';
+  }
+  function save(name, text, type) {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  function report() {
+    const a = state.audit, r = state.fixed;
+    const left = (r.after && r.after.findings) || [];
+    const lines = [];
+    lines.push('CavScope HTML Audit: change report');
+    lines.push('Page: ' + (a.pageUrl || 'no address given'));
+    lines.push('Date: ' + new Date().toISOString().slice(0, 10));
+    lines.push('');
+    lines.push('CHANGED IN THE HTML');
+    r.changes.forEach((c) => lines.push(`- ${c.rule_id}: ${c.summary}`));
+    if (!r.changes.length) lines.push('- Nothing.');
+    if (r.sri_failures && r.sri_failures.length) {
+      lines.push('', 'SCRIPTS LEFT UNPINNED');
+      r.sri_failures.forEach((f) => lines.push(`- ${f.src}: ${f.reason}`));
+    }
+    lines.push('', 'STILL OPEN');
+    if (!left.length) lines.push('- None from the page rules.');
+    left.forEach((f) => {
+      lines.push(`- ${f.rule_id} (${f.severity}): ${f.title}`);
+      lines.push(`  ${f.detail}`);
+      if (f.fix && f.fix.howTo) lines.push(`  How to fix it on the site: ${f.fix.howTo}`);
+    });
+    lines.push('', 'WHAT THIS AUDIT DID NOT CHECK');
+    lines.push('It reads HTML only. These need the live site:');
+    (a.not_checked || []).forEach((x) => lines.push('- ' + x));
+    lines.push('', 'A page with no findings here is evidence these HTML checks passed on this date, not a statement that the site is secure or accessible.');
+    return lines.join('\n');
+  }
+
+  function loadFile(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.size > MAX_BYTES) { flash('flashAudit', 'warn', 'That file is larger than 2 MB.'); e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById('htmlInput').value = String(reader.result || ''); updateSize(); flash('flashAudit', 'info', `Loaded ${f.name}. Run the audit when ready.`); };
+    reader.onerror = () => flash('flashAudit', 'warn', 'Could not read that file.');
+    reader.readAsText(f);
+    e.target.value = '';
+  }
+
+  function wire() {
+    document.getElementById('htmlInput').addEventListener('input', updateSize);
+    document.getElementById('htmlFile').addEventListener('change', loadFile);
+    document.querySelector('label.file-btn').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('htmlFile').click(); }
+    });
+    document.getElementById('btnAudit').addEventListener('click', runAudit);
+    document.getElementById('btnFix').addEventListener('click', applyChosen);
+    const findings = document.getElementById('findings');
+    findings.addEventListener('input', onDraftInput);
+    findings.addEventListener('change', onDraftInput);
+    findings.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('[data-all]');
+      if (b) setAllAccordions(findings, b.dataset.all === 'open');
+    });
+    document.getElementById('btnDownload').addEventListener('click', () => save(fileBase() + '-corrected.html', state.fixed.html, 'text/html;charset=utf-8'));
+    document.getElementById('btnReport').addEventListener('click', () => save(fileBase() + '-html-audit.txt', report(), 'text/plain;charset=utf-8'));
+    document.getElementById('btnCopy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(state.fixed.html); flash('flashFix', 'ok', 'Corrected HTML copied.'); }
+      catch (e) { document.getElementById('fixedOutput').select(); flash('flashFix', 'info', 'Select-all is on the corrected HTML; copy it with Ctrl+C or Cmd+C.'); }
+    });
+    document.getElementById('btnReaudit').addEventListener('click', () => {
+      document.getElementById('htmlInput').value = state.fixed.html;
+      updateSize();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      runAudit();
+    });
+  }
+
+  async function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      showGate('HTML Audit', 'Could not load the Supabase client. Refresh, and check that cdn.jsdelivr.net is reachable.');
+      return;
+    }
+    // detectSessionInUrl is false: this page never completes a sign-in, and a
+    // page that parses an auth fragment burns a single-use link.
+    sb = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    });
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { location.replace(window.location.origin + '/?next=/audit/html'); return; }
+    if (forcedPasswordChange(session)) { location.replace(window.location.origin + '/'); return; }
+
+    // The same gate the edge function applies on every request. Asking here
+    // only decides what to show; the function refuses regardless.
+    const { data: allowed, error } = await sb.rpc('cavscope_html_audit_allowed');
+    if (error) { showGate('HTML Audit', 'Could not confirm your access: ' + error.message); return; }
+    if (allowed !== true) {
+      showGate('Not turned on', 'The HTML audit is not turned on for your account. A CavScope administrator can turn it on for your workspace.', { href: '/app#overview', text: 'Back to your workspace' });
+      return;
+    }
+    const { data: ws } = await sb.rpc('muster_my_workspace');
+    if (ws && ws.is_super_admin) document.getElementById('linkConsole').hidden = false;
+    document.getElementById('whoami').textContent = session.user.email || 'Signed in';
+    document.getElementById('gate').hidden = true;
+    document.getElementById('main').hidden = false;
+    wire();
+  }
+
+  // ---------- Context menu guard ----------
+  // Suppresses the browser menu on a mouse right-click only. It is not a
+  // security control and must never be described as one: View Source, F12 and
+  // curl all still read every byte. Keyboard-invoked menus (button 0) and
+  // text-entry surfaces keep their native menu. Pinned by
+  // tests/ui/context-menu-guard.test.ts.
+  function initContextMenuGuard() {
+    document.addEventListener('contextmenu', function (e) {
+      if (e.button !== 2) return;
+      var t = e.target;
+      if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return;
+      e.preventDefault();
+    });
+  }
+
+  // ---------- Accordions ----------
+  // Instructions and long lists open one at a time: opening a <details> with a
+  // data-acc-group closes the others in that group, and the newly opened one is
+  // scrolled into view so closing the one above does not leave it off-screen.
+  // Printing opens every one and restores them afterwards, so a printed report
+  // or PDF is never missing a collapsed section. setAllAccordions() is the
+  // "open all" escape hatch; items it touches are marked so the one-at-a-time
+  // rule does not immediately close them again.
+  function initAccordions() {
+    document.addEventListener('toggle', function (e) {
+      var d = e.target;
+      if (!d || d.tagName !== 'DETAILS' || !d.open || !d.dataset.accGroup) return;
+      if (d.dataset.accBulk) { delete d.dataset.accBulk; return; }
+      var group = d.dataset.accGroup;
+      document.querySelectorAll('details[data-acc-group][open]').forEach(function (o) {
+        if (o !== d && o.dataset.accGroup === group) o.open = false;
+      });
+      var r = d.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight) d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, true);
+    var reopened = [];
+    window.addEventListener('beforeprint', function () {
+      reopened = Array.prototype.slice.call(document.querySelectorAll('details.acc:not([open])'));
+      reopened.forEach(function (d) { d.dataset.accBulk = '1'; d.open = true; });
+    });
+    window.addEventListener('afterprint', function () {
+      reopened.forEach(function (d) { d.open = false; });
+      reopened = [];
+    });
+  }
+  function setAllAccordions(root, open) {
+    (root || document).querySelectorAll('details.acc').forEach(function (d) {
+      if (d.open === open) return;
+      if (open) d.dataset.accBulk = '1';
+      d.open = open;
+    });
+  }
+
+  function initTooltips() {
+    const tip = document.createElement('div');
+    tip.className = 'app-tooltip';
+    tip.id = 'appTooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    let current = null;
+    let suppressed = false;
+
+    function findTarget(node) {
+      return node && node.closest ? node.closest('[data-tooltip]') : null;
+    }
+
+    function show(target) {
+      const text = target.getAttribute('data-tooltip');
+      if (!text || suppressed) return;
+      current = target;
+      tip.textContent = text;
+      tip.classList.add('show');
+      target.setAttribute('aria-describedby', 'appTooltip');
+      position(target);
+    }
+
+    function position(target) {
+      const r = target.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+      const gap = 8;
+      let top = r.top - t.height - gap;
+      if (top < 8) top = r.bottom + gap;
+      let left = r.left + (r.width / 2) - (t.width / 2);
+      left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8));
+      tip.style.top = `${Math.round(top)}px`;
+      tip.style.left = `${Math.round(left)}px`;
+    }
+
+    function hide() {
+      if (current) current.removeAttribute('aria-describedby');
+      current = null;
+      tip.classList.remove('show');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+      const target = findTarget(e.target);
+      if (target && target !== current) show(target);
+      else if (!target && current) hide();
+    });
+    document.addEventListener('mouseout', (e) => {
+      const target = findTarget(e.target);
+      if (target && !target.contains(e.relatedTarget)) hide();
+    });
+    document.addEventListener('focusin', (e) => {
+      const target = findTarget(e.target);
+      if (target) show(target);
+    });
+    document.addEventListener('focusout', hide);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && current) { hide(); suppressed = true; }
+    });
+    document.addEventListener('mousemove', () => { suppressed = false; }, { passive: true });
+    window.addEventListener('scroll', () => { if (current) position(current); }, { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (current) position(current); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    initTooltips();
+    initAccordions();
+    initContextMenuGuard();
+    init();
+  });
+</script>
+
+</body>
+</html>

@@ -395,6 +395,28 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `20260907223344_muster_012_helper_functions_sql.sql` into `tools/local-scan/score.mjs`; change one and
   you must change the other. `tests/scan/local-scan.test.ts` pins the adapter and scans a local server
   end to end.
+- **`/audit/html` is a fifth way to get findings: pasted HTML, for a site CavScope does not scan,
+  as of 2026-09-30.** `html-audit.html` posts a page's HTML to the `cavscope-html-audit` edge
+  function, which runs the engine's page rules on it and, on request, applies the fixes the
+  operator chose and returns the corrected HTML to download. The rules are not copied: they moved
+  out of `runScan()` into `muster-scan/page-checks.ts`, which the engine and the audit both import
+  (engine output proven identical before and after, so no `ENGINE_VERSION` change). The fix engine
+  is `cavscope-html-audit/fixes.ts`, under `tests/html-audit/`. Three things are deliberate.
+  **It never writes words for the site owner**: alt text, titles, labels, descriptions and the
+  organization name come from a person or are skipped, and an image nobody answered is left alone
+  rather than given an empty alt. Only mechanical fixes (a language from the list, re-enabling
+  zoom, http to https, an integrity hash) apply by default. **Every result states its scope**:
+  headers, cookies, redirects, DNS and availability cannot be read from pasted HTML, and a clean
+  audit says so. **Nothing is stored**: the HTML may be a client's unpublished page, so the
+  function has no table, no log line and no activity event; its only database call is the gate.
+  Its one outbound request hashes scripts the operator ticked for SRI, and only those the page
+  itself names, over https on a public name, no redirects, 5 s, 2 MB, 20 at most.
+  **Access is the `html_audit` flag** (migration `20260930202245`), off for every organization:
+  super admins always have it, a workspace only by an override in the console's Feature Flags.
+  `public.cavscope_html_audit_allowed()` decides, under the caller's JWT, and a kill switch stops
+  super admins too. The workspace's "HTML Audit" link fails **closed** on
+  `flags.html_audit === true`, unlike `navFlagMap`, because it is an off-by-default capability, not
+  a view a partial load should keep.
 - **Rule logic that can be pure belongs in a sibling module with tests, not inline in `runScan()`.**
   `supabase/functions/muster-scan/html.ts` is that module today: `stripTags`, `stripToBodyText` and
   `detectClientRendered`, pinned by `tests/scan/html.test.ts`, alongside `email-auth.ts` and its own

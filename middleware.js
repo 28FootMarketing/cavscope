@@ -195,6 +195,12 @@ export default function middleware(request) {
     if (isUnder(path, '/beta')) {
       return secureRewrite(new URL('/beta.html', request.url));
     }
+    // The HTML audit. Not a gate either: the page asks
+    // cavscope_html_audit_allowed() only to decide what to show, and the
+    // cavscope-html-audit function asks again on every request.
+    if (path === '/audit/html') {
+      return secureRewrite(new URL('/html-audit.html', request.url));
+    }
     if (isUnder(path, '/app')) {
       return secureRewrite(new URL('/app.html', request.url));
     }
