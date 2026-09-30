@@ -902,6 +902,20 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   paste becomes the risk, and a silent transcription slip ships a broken scanner with no diff to
   review. Migrations are deliberately **not** in that workflow -- their files are named after the
   version `apply_migration` assigned, which a `db push` would not reproduce.
+- **Mail to `support@` and `security@` reaches a person, as of 2026-09-30.** Resend receives
+  it on `mail.cavscope.28footsystems.com` (and the retired `mail.muster.partners`, so old links
+  still land) and posts `email.received` to the `cavscope-inbound-mail` edge function, which
+  forwards each message to that address's row in `cavscope.mail_routes`, Reply-To the sender, so
+  answering from the owner's inbox answers whoever wrote in. Security mail is tagged
+  `[CavScope SECURITY]`. Before this nothing read those addresses at all: no Resend webhook
+  pointed at this project, and `security.txt` was sending researchers to an address nobody saw.
+  Where an address forwards is a row, changed with an `update`, never a deploy; the forward-to
+  inboxes are deliberately not in any migration file. The signing secret is Vault's
+  `cavscope_resend_inbound_webhook_secret`, read only by the service role, and a missing secret
+  fails closed. The Resend account is shared with other brands, so the function answers every
+  event not addressed to a CavScope route with 200 and reads nothing about it. A forward is
+  never sent to a CavScope mailbox, which is what makes a loop impossible. Pinned by
+  `tests/email/inbound-mail.test.ts`; setup and proof in `docs/EMAIL.md`.
 - **Email routing is two separate paths and must not be conflated** — see `docs/EMAIL.md`.
   Magic link, invite, signup confirm, email change, password reset and reauthentication are sent
   by **Supabase Auth (GoTrue)**, not by this codebase, and reach Resend only because Resend is

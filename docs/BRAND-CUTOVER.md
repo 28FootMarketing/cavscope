@@ -146,7 +146,8 @@ an internal codename: the target is that nothing carries the name. Done in this 
 - A MUSTER scanner found still running on the old shared project (cron jobid 150, active since
   about 2026-09-15) was paused. See `CLAUDE.md`.
 
-Still open, and why: the `support@` / `security@mail.muster.partners` contact addresses in
-`privacy.html` and `.well-known/security.txt` move only once the CavScope inboxes are confirmed
-monitored; the backend names follow `docs/RENAME-PLAN.md`; the old domains stay attached in
+Also done the same day: `privacy.html` and `.well-known/security.txt` now give
+`support@` / `security@mail.cavscope.28footsystems.com`, and mail to those (and to the old
+`mail.muster.partners` pair) is forwarded to the owner by `cavscope-inbound-mail`. Still open,
+and why: the backend names follow `docs/RENAME-PLAN.md`; the old domains stay attached in
 Vercel and on the Supabase redirect allowlist, because the redirect only works while they do.
