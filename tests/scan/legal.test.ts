@@ -22,6 +22,7 @@ import { loadEngine } from "../../tools/local-scan/adapt.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const engine = readFileSync(join(ROOT, "supabase/functions/muster-scan/index.ts"), "utf8");
+const pageChecks = readFileSync(join(ROOT, "supabase/functions/muster-scan/page-checks.ts"), "utf8");
 
 test("a governing-law clause is read over an address when both are present", () => {
   const v = extractUsState(`<footer>123 Main St, Wilmington, DE 19801. This site is governed by the laws of the State of California, without regard to conflicts of law.</footer>`);
@@ -83,10 +84,11 @@ test("a bare two-letter code in a meta description is never credited -- only a f
 });
 
 test("PRIV-004 mirrors PRIV-001: same anchors, same csrNote, same evidence key", () => {
-  const start = engine.indexOf("// Privacy policy link");
-  const end = engine.indexOf("// Scripts, trackers, mixed content");
+  // Both live in page-checks.ts since 2026-09-30, shared with the HTML audit.
+  const start = pageChecks.indexOf("// Privacy policy link");
+  const end = pageChecks.indexOf("return { steps, clientRendered");
   assert.ok(start > 0 && end > start);
-  const section = engine.slice(start, end);
+  const section = pageChecks.slice(start, end);
   assert.match(section, /rule_id: "PRIV-001"/);
   assert.match(section, /rule_id: "PRIV-004"/);
   assert.match(section, /\\bterms\\b\|\\btos\\b/);
@@ -94,7 +96,7 @@ test("PRIV-004 mirrors PRIV-001: same anchors, same csrNote, same evidence key",
 
 test("the jurisdiction follow-up only fetches same-origin pages, bounded", () => {
   const start = engine.indexOf("// Jurisdiction signal");
-  const end = engine.indexOf("// Scripts, trackers, mixed content");
+  const end = engine.indexOf("await run(resourceChecks(");
   assert.ok(start > 0 && end > start);
   const section = engine.slice(start, end);
   assert.match(section, /legalUrl\.hostname\.toLowerCase\(\) !== host/);
