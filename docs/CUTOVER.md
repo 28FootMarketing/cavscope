@@ -176,7 +176,7 @@ the old project. Only the `muster_law_update` branch changed: it now refuses per
 table and reporting success. JARVIS's `kb_update` path and the `kb-update-executor-10min`
 cron job are untouched. Proven behaviourally against a synthetic approval, in a
 transaction that was then rolled back. Full detail in
-`supabase/migrations/MUSTER-PROJECT-LEDGER.md`.
+`supabase/migrations/CAVSCOPE-PROJECT-LEDGER.md`.
 
 What remains is a product question, not a task: whether JARVIS should be able to propose
 MUSTER law updates at all now the products are separate. Zero have ever been filed.

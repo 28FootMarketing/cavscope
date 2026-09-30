@@ -1,7 +1,7 @@
 # MUSTER backend (phase 1)
 
 Product: MUSTER, by 28 Foot Systems. Target host: muster.28footsystems.com.
-Data plane: Supabase project `hjowfnzpomzxazmzywxw`, schema `muster`, plus `public.muster_*` RPC shims. (The shared 28FS project `mgtmqucaldkaxvxglguw` ran MUSTER until 2026-09-08 and runs none of it now; see `supabase/migrations/MUSTER-PROJECT-LEDGER.md`.)
+Data plane: Supabase project `hjowfnzpomzxazmzywxw`, schema `muster`, plus `public.muster_*` RPC shims. (The shared 28FS project `mgtmqucaldkaxvxglguw` ran MUSTER until 2026-09-08 and runs none of it now; see `supabase/migrations/CAVSCOPE-PROJECT-LEDGER.md`.)
 Orchestration: Supabase Edge Functions + pg_cron. No n8n.
 
 ## What phase 1 delivers
