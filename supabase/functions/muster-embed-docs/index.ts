@@ -53,7 +53,7 @@ async function embedText(text: string): Promise<number[]> {
     headers: {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
-      "http-referer": "https://muster.partners",
+      "http-referer": "https://cavscope.28footsystems.com",
       "x-title": "CavScope doc embedding",
     },
     body: JSON.stringify({ model: "openai/text-embedding-3-small", input: text, encoding_format: "float" }),

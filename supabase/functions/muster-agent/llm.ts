@@ -106,7 +106,7 @@ export function buildChatHeaders(apiKey: string, openRouter: boolean, title: str
   // where they mean something, so a tenant's request carries nothing about
   // CavScope that their provider did not ask for.
   if (openRouter) {
-    headers["http-referer"] = "https://muster.partners";
+    headers["http-referer"] = "https://cavscope.28footsystems.com";
     headers["x-title"] = title;
   }
   return headers;

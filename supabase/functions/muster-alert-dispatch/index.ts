@@ -61,12 +61,12 @@ const ALERT_FROM_ADDRESS = Deno.env.get("MUSTER_ALERT_FROM")
 // Where "Open the risk register" points. Overridable for the same reason as
 // the from-address: this code runs on two Supabase projects during the move,
 // and the workspace host has changed once already.
-const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://app.muster.partners/app";
+const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://cavscope.28footsystems.com/app";
 
 // Where "View your SITREP" points, for the sitrep_ready category. Separate from
 // APP_URL because sitrep.html -- the signed-in, tenant-scoped SITREP viewer --
 // lives on muster.partners, not on the app host. See docs/EMAIL.md.
-const SITREP_URL = Deno.env.get("MUSTER_SITREP_URL") ?? "https://muster.partners/sitrep";
+const SITREP_URL = Deno.env.get("MUSTER_SITREP_URL") ?? "https://cavscope.28footsystems.com/sitrep";
 
 // The address CavScope shows tenants as its support desk, and the default
 // Reply-To. Unset by default, and that default is load-bearing: an advertised
@@ -209,7 +209,7 @@ function alertHtml(row: OutboxRow): string {
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="padding-right:12px;" valign="middle">
-                  <img src="https://muster.partners/assets/cavscope-emblem.png" width="34" height="34" border="0" alt="CavScope" style="display:block; width:34px; height:34px;">
+                  <img src="https://cavscope.28footsystems.com/assets/cavscope-emblem.png" width="34" height="34" border="0" alt="CavScope" style="display:block; width:34px; height:34px;">
                 </td>
                 <td valign="middle">
                   <span style="font-family:Georgia, 'Times New Roman', serif; font-size:19px; line-height:24px; font-weight:700; letter-spacing:2px; color:#f1f6ff;">CavScope</span>

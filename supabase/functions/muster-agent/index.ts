@@ -152,7 +152,7 @@ async function generateOpenAPISchema(req: Request) {
         "AI agent gateway for CavScope website assurance. Provides MCP (JSON-RPC 2.0) and REST interfaces to query findings, generate narratives, and access workspace data.",
       contact: {
         name: "28 Foot Systems",
-        url: "https://muster.partners",
+        url: "https://cavscope.28footsystems.com",
       },
     },
     servers: [
@@ -367,7 +367,7 @@ async function embedText(text: string): Promise<number[]> {
     headers: {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
-      "http-referer": "https://muster.partners",
+      "http-referer": "https://cavscope.28footsystems.com",
       "x-title": "CavScope search embedding",
     },
     body: JSON.stringify({

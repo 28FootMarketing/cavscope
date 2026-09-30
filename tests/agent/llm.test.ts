@@ -163,7 +163,7 @@ test("OpenRouter attribution headers go only to OpenRouter", () => {
   assert.equal("x-title" in plain, false);
 
   const or = buildChatHeaders("sk-tenant-key", true, "MUSTER AI agent loop");
-  assert.equal(or["http-referer"], "https://muster.partners");
+  assert.equal(or["http-referer"], "https://cavscope.28footsystems.com");
   assert.equal(or["x-title"], "MUSTER AI agent loop");
 });
 

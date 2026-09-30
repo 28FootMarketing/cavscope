@@ -40,7 +40,7 @@ async function embedText(text: string): Promise<number[]> {
     headers: {
       "content-type": "application/json",
       "authorization": `Bearer ${apiKey}`,
-      "http-referer": "https://muster.partners",
+      "http-referer": "https://cavscope.28footsystems.com",
       "x-title": "CavScope embedding backfill",
     },
     body: JSON.stringify({

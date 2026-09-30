@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const FROM = "CavScope <team@mail.muster.partners>";
+const FROM = "CavScope <team@mail.cavscope.28footsystems.com>";
 const LOGO_URL = "https://hjowfnzpomzxazmzywxw.supabase.co/storage/v1/object/public/brand-assets/muster-logo.jpg";
 
 async function getSecret(name: string): Promise<string> {
