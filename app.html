@@ -5867,7 +5867,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       });
       lines.push('');
       lines.push('---');
-      lines.push('_MUSTER scores and findings are a technical assessment, not a compliance certification or legal opinion._');
+      lines.push('_CavScope scores and findings are a technical assessment, not a compliance certification or legal opinion._');
 
       const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(lines.join('\n'));
       const a = document.createElement('a');
@@ -6690,8 +6690,8 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         const top = failing.slice().sort((x, y) => (sevRank[x.finding.severity] ?? 5) - (sevRank[y.finding.severity] ?? 5))[0] || null;
         const blocker = top
           ? { id: top.rule, title: top.finding.title, text: `${top.finding.detail}${top.finding.remediation ? ' Fix: ' + top.finding.remediation : ''}`,
-              fields: [['Rule', top.rule], ['Title', top.finding.title], ['What MUSTER observed', top.finding.detail], ['Page', top.finding.page_url],
-                       ['MUSTER\'s recommended fix', top.finding.remediation], ['Evidence', (top.finding.evidence_ids || []).map(i => 'E' + i).join(', ')]] }
+              fields: [['Rule', top.rule], ['Title', top.finding.title], ['What CavScope observed', top.finding.detail], ['Page', top.finding.page_url],
+                       ['CavScope\'s recommended fix', top.finding.remediation], ['Evidence', (top.finding.evidence_ids || []).map(i => 'E' + i).join(', ')]] }
           : { id: null, title: assessed.length ? 'No open AI-readiness blocker' : 'Nothing assessed yet',
               text: assessed.length ? `All ${assessed.length} assessed checks pass on scan #${scan.id}.` : 'Run an audit to assess this site.', fields: null };
 
@@ -6715,12 +6715,12 @@ ${JSON.stringify({ '@context': 'https://schema.org', '@graph': [
   ] }, null, 2).replace(/</g, '\\u003c')}
 <\/script>
 
-Only the name and address MUSTER holds for this workspace are filled in. Add logo, sameAs and contactPoint from your own records before publishing; MUSTER does not invent them.`;
+Only the name and address CavScope holds for this workspace are filled in. Add logo, sameAs and contactPoint from your own records before publishing; CavScope does not invent them.`;
         const llmsTxt = llmsCheck && llmsCheck.state === 'pass'
           ? `Scan #${scan.id} found a valid /llms.txt at https://${host}/llms.txt. Nothing to add here.`
           : `# ${orgName}
 
-> One sentence: what ${orgName} does and who it serves. MUSTER does not write this line for you.
+> One sentence: what ${orgName} does and who it serves. CavScope does not write this line for you.
 
 ## Key pages
 - [Home](https://${host}/): Start here.${sitemapKnown ? `\n- [Sitemap](https://${host}/sitemap.xml): Every public page (the path robots.txt names may differ; check it).` : ''}
@@ -6752,7 +6752,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         this.aioRunning = true;
         this.stopPolling();
         try {
-          log(`Requesting a scan of https://${host} from the MUSTER engine...`);
+          log(`Requesting a scan of https://${host} from the CavScope engine...`);
           let r;
           try { r = await this.rpc('muster_request_scan', { p_website_id: site.id }); }
           catch (e) { log(`Scan request refused: ${e.message || e}`, 'terminal-crit'); return; }

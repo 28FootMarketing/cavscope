@@ -198,7 +198,7 @@ const MAX_HOPS = 6;
 // https://cavscope.28footsystems.com once that domain actually resolves in
 // production; not before, for the same reason the old /scanner path was
 // dropped -- a UA string should never link to a 404.
-const UA = "Mozilla/5.0 (compatible; CavScope-Scanner/1.0; +https://muster.partners)";
+const UA = "Mozilla/5.0 (compatible; CavScope-Scanner/1.0; +https://cavscope.28footsystems.com)";
 
 const TRACKER_HOSTS: Array<[RegExp, string]> = [
   [/googletagmanager\.com/i, "Google Tag Manager"],
