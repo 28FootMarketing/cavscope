@@ -64,10 +64,6 @@ on:
         description: 'SMTP sender display name to set (e.g. CavScope). Empty = report the current value and change nothing.'
         type: string
         default: ''
-      smtp_admin_email:
-        description: 'SMTP From address to set (must be on a domain verified in Resend). Empty = change nothing.'
-        type: string
-        default: ''
       add_redirect_urls:
         description: 'Comma or newline separated URLs to ADD to the redirect allowlist. Additive only -- never removes an entry. Empty = report the current list and change nothing.'
         type: string
@@ -227,34 +223,6 @@ jobs:
           fi
           echo "| result | **applied and verified by readback** |" >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::smtp_sender_name is now '$AFTER', confirmed by readback."
-
-      - name: SMTP sender address
-        if: inputs.smtp_admin_email != ''
-        env:
-          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
-          WANT: ${{ inputs.smtp_admin_email }}
-        run: |
-          set -euo pipefail
-          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
-          API="https://api.supabase.com/v1/projects/$REF/config/auth"
-          get_addr() { curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" | jq -r '.smtp_admin_email // "(unset)"'; }
-          BEFORE=$(get_addr)
-          echo "smtp_admin_email before : $BEFORE"
-          curl -sS -f -X PATCH "$API" \
-            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-            --data "$(jq -nc --arg n "$WANT" '{smtp_admin_email:$n}')" > /dev/null
-          AFTER=$(get_addr)
-          echo "smtp_admin_email after  : $AFTER"
-          {
-            echo "### SMTP sender address"
-            echo "| before | \`$BEFORE\` |"
-            echo "| after | \`$AFTER\` |"
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$AFTER" != "$WANT" ]; then
-            echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'."
-            exit 1
-          fi
-          echo "::notice::smtp_admin_email is now '$AFTER', confirmed by readback."
 
       - name: Redirect allowlist -- additive merge
         if: inputs.add_redirect_urls != ''
