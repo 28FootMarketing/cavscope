@@ -1,6 +1,8 @@
 # Backend rename: `muster_*` / `muster-*` to `cavscope_*` / `cavscope-*`
 
-Status: **proposed, nothing here has been applied.** Target project `hjowfnzpomzxazmzywxw`.
+Status: **stages 1 and 2 done 2026-09-30.** Stage 1 is migration `20260930225424_rpc_rename_cavscope.sql` on
+`hjowfnzpomzxazmzywxw` (dry-run rolled back first, then applied, then `verify.sql` all `ok`). Stage 2 switched
+every caller to `cavscope_*`. Stages 3 to 5 are not started.
 The `muster` schema was already renamed to `cavscope` (54 tables, 82 functions); what still
 carries the old name is the callable surface below. `CLAUDE.md` still says the `muster`
 schema is live, which is stale.
@@ -22,12 +24,12 @@ schema is live, which is stale.
 The pages deploy from `main` the moment a PR merges, so **a page that calls `cavscope_*`
 must not merge before the database has those names**. Hence the stages:
 
-1. **Database (this PR ships the SQL, unapplied).** `docs/rename/001_rpc_rename.sql`
+1. **Database (applied).** `docs/rename/001_rpc_rename.sql`
    renames the 109 functions and leaves an identical-grants `muster_*` alias for each. All
    or nothing in one transaction. Run `docs/rename/verify.sql` after; every row must be
    `ok = true`. Nothing breaks, because every old name still answers.
-2. **Callers.** Switch pages, edge functions and tests to `cavscope_*`. Only after stage 1
-   is applied and verified.
+2. **Callers (done).** Pages, edge functions, tools and tests call `cavscope_*`. Tests that read
+   migration history keep the names the migrations define.
 3. **Edge functions.** Renaming a directory moves code that tests and `tools/local-scan/`
    read by path (`supabase/functions/muster-scan/...`), so those paths change in the same PR.
    Rename each directory to `cavscope-*` and deploy them **alongside**
