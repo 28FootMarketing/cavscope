@@ -1745,6 +1745,30 @@
     return { html: doc, title };
   }
 
+  // Raw exports. Markdown is content_md byte for byte -- the exact text
+  // content_sha256 was computed over, so a saved copy can be re-hashed to prove
+  // it is unaltered. JSON is the whole stored row (sections, citations, hash),
+  // for pipelines that want the structure rather than the prose. Both come from
+  // the payload already loaded; nothing is re-fetched or re-derived.
+  function saveSitrepFile(kind) {
+    const r = sitrepOpen;
+    if (!r || r.error) { flash('bad', 'Open a report first.'); return; }
+    let text, mime, ext;
+    if (kind === 'md') {
+      if (!r.content_md) { flash('bad', 'This report has no markdown body to export.'); return; }
+      text = r.content_md; mime = 'text/markdown;charset=utf-8'; ext = 'md';
+    } else {
+      text = JSON.stringify(r, null, 2); mime = 'application/json;charset=utf-8'; ext = 'json';
+    }
+    const site = String(r.website || r.url || 'report').replace(/[^a-z0-9.-]+/gi, '-').replace(/^-+|-+$/g, '') || 'report';
+    const name = `CavScope-SITREP-${site}-${String(r.generated_at || '').slice(0, 10) || 'undated'}.${ext}`;
+    const url = URL.createObjectURL(new Blob([text], { type: mime }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
   // Prints through a hidden same-origin iframe (srcdoc), not window.open: a
   // popup blocker cannot eat it, and the document never gets its own URL.
   function downloadSitrepPdf(profile) {
@@ -1783,6 +1807,8 @@
         <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn" type="button" data-act="sitrep-pdf-client" data-tooltip="Opens the print dialog with the client-facing briefing: plain-language findings and fixes, written for the person who owns the site. Choose 'Save as PDF'.">⤓ Client PDF</button>
           <button class="btn" type="button" data-act="sitrep-pdf-board" data-tooltip="Opens the print dialog with the company report: the board narrative, metrics, controls and evidence index, written for leadership. Choose 'Save as PDF'.">⤓ Company PDF</button>
+          <button class="btn" type="button" data-act="sitrep-export-md" data-tooltip="Downloads the report's markdown exactly as stored. Its SHA-256 matches the hash printed in the report, so a saved copy can be proven unaltered.">⤓ Markdown</button>
+          <button class="btn" type="button" data-act="sitrep-export-json" data-tooltip="Downloads the whole stored report as JSON: sections, citations, scores and hash. For pipelines that want the structure rather than the prose.">⤓ JSON</button>
         </div>
       </div>
       <pre style="white-space:pre-wrap; word-break:break-word; font-family:var(--font-mono); font-size:12px; line-height:1.65; color:var(--text-muted); background:var(--surface); border:1px solid var(--surface-border); border-radius:var(--radius-md); padding:16px; margin:0; max-height:70vh; overflow:auto;"
@@ -3299,6 +3325,8 @@
       if (kind === 'loc-clear') { clearSiteLocation(); return; }
       if (kind === 'sitrep-pdf-client') { downloadSitrepPdf('client'); return; }
       if (kind === 'sitrep-pdf-board') { downloadSitrepPdf('board'); return; }
+      if (kind === 'sitrep-export-md') { saveSitrepFile('md'); return; }
+      if (kind === 'sitrep-export-json') { saveSitrepFile('json'); return; }
     }
     // The runner's "read the report" link, and any row in the Reports table.
     const rep = e.target.closest && e.target.closest('[data-sitrep]');
