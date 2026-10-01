@@ -210,9 +210,19 @@ is the same minus that step, for the two jobs where a user must not enter into i
 paths running as `service_role` with no user at all, and the console asking what org 17
 resolves to, where the answer must not change depending on which super admin is looking.
 
-**As of 2026-09-17 there are 35 flags: 25 wired, 10 enforced nowhere.** Read that from
+**As of 2026-10-01 there are 36 flags: 26 wired, 10 enforced nowhere.** Read that from
 `muster.feature_flags`, not from here -- this paragraph said "four are wired" until the count
-was checked, by which point it was 25, and the registry had grown from 22 keys to 35. The
+was checked, by which point it was 25, and the registry had grown from 22 keys to 35, then 36.
+The ten were triaged 2026-10-01 and none is a hidden hole: the console already marks each
+"read by nothing" with its switches disabled. Four are Partner or Enterprise entitlements with
+nothing behind them (`client_management_enabled` does not exist as a capability,
+`commercial_use_enabled` is a licence term, `custom_branding_enabled` is redundant with
+`white_label_enabled`, `enterprise_enabled` is per-contract), `partner_dashboard_enabled` gates a
+view that is visible to everyone and was left ungated while no Partner organization could hold
+client data, `super_admin_console` is in the inventory only, and three are kill-switched unbuilt
+features (`browser_wcag_engine`, `pdf_export`, `public_status_badge`) plus `telegram_alerts`, which
+is off by default and unbuilt. Registry prose says CavScope as of that date; lowercase
+identifiers inside it (`muster_admin_run_url`, `muster-agent`) stay until they are renamed. The
 `enforcement` column is the answer; a number written in prose is a snapshot that rots.
 
 The four wired first, by migration `20260916022923`, are still the ones whose behaviour is worth
@@ -228,8 +238,8 @@ not be presented as a control. **One of the ten is a commercial problem rather t
 feature:** `client_management_enabled` is sold on the Partner tier, and the capability it names
 does not exist. Read from the live catalog 2026-10-01: no function sets `organizations.managed_by_org_id`
 (`onboard_client` is dead and does not either), so there is no guard to add and no tier getting it
-free -- the flag's own `wiring_note` ("the client-org creation path does not check it") is wrong and
-still says so. `app.html`'s "create client organization" button, in a live workspace, opens the
+free -- the flag's `wiring_note` said the creation path "does not check it", which was wrong, and
+migration `20261001020513` corrected it. `app.html`'s "create client organization" button, in a live workspace, opens the
 self-serve onboarding and makes an independent trial organization: no Partner link, no allowance, no
 add-on billing. `index.html` marks the three client-org Partner bullets and the allowance "in
 development" until a real creation path exists; build that path with a `has_flag` guard and set
