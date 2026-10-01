@@ -27,14 +27,14 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-import { AI_NARRATIVE_SYSTEM_PROMPT } from "../../supabase/functions/muster-agent/prompt.ts";
+import { AI_NARRATIVE_SYSTEM_PROMPT } from "../../supabase/functions/cavscope-agent/prompt.ts";
 import {
   buildNarrativeUserPrompt,
   parseNarrativeResponse,
   verifyNarrativeCitations,
   NarrativeParseError,
   type NarrativeContext,
-} from "../../supabase/functions/muster-agent/narrative.ts";
+} from "../../supabase/functions/cavscope-agent/narrative.ts";
 import { grade, type Verdict } from "./graders.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -3,7 +3,7 @@
 // description, canonical, structured data, and client-rendered shells.
 //
 // Pure: no fetch, no database, no Deno globals. Two callers run this exact code
-// -- the scan engine (muster-scan/index.ts), which records each step as a
+// -- the scan engine (cavscope-scan/index.ts), which records each step as a
 // finding or an evidence excerpt, and the HTML audit (cavscope-html-audit),
 // which runs it on HTML pasted into the admin console for a site CavScope does
 // not scan. Moved here verbatim on 2026-09-30; the engine's findings and

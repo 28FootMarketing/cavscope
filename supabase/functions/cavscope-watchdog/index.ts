@@ -102,15 +102,15 @@ Deno.serve(async (req: Request) => {
       incidentsOpened++;
     }
     for (const grant of s.stuck_grants ?? []) {
-      await reportIncident(`commercial_grant_stuck:${grant.id}`, "commercial_grant_stuck", "warning", "muster-stripe-webhook -> onboarding", grant);
+      await reportIncident(`commercial_grant_stuck:${grant.id}`, "commercial_grant_stuck", "warning", "cavscope-stripe-webhook -> onboarding", grant);
       incidentsOpened++;
     }
     if ((s.dead_letter_alerts ?? 0) > 0) {
-      await reportIncident(`alert_dead_letter:${today}`, "alert_dead_letter", "warning", "muster-alert-dispatch", { dead_letter_count: s.dead_letter_alerts });
+      await reportIncident(`alert_dead_letter:${today}`, "alert_dead_letter", "warning", "cavscope-alert-dispatch", { dead_letter_count: s.dead_letter_alerts });
       incidentsOpened++;
     }
     if ((s.failed_scans_24h ?? 0) > 0) {
-      await reportIncident(`engine_error_spike:${today}`, "engine_error_spike", "info", "muster-scan", { failed_scans_24h: s.failed_scans_24h });
+      await reportIncident(`engine_error_spike:${today}`, "engine_error_spike", "info", "cavscope-scan", { failed_scans_24h: s.failed_scans_24h });
       incidentsOpened++;
     } else {
       // The half that was missing until 2026-09-13: this function could open an

@@ -17,12 +17,12 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { extractUsState } from "../../supabase/functions/muster-scan/legal.ts";
+import { extractUsState } from "../../supabase/functions/cavscope-scan/legal.ts";
 import { loadEngine } from "../../tools/local-scan/adapt.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const engine = readFileSync(join(ROOT, "supabase/functions/muster-scan/index.ts"), "utf8");
-const pageChecks = readFileSync(join(ROOT, "supabase/functions/muster-scan/page-checks.ts"), "utf8");
+const engine = readFileSync(join(ROOT, "supabase/functions/cavscope-scan/index.ts"), "utf8");
+const pageChecks = readFileSync(join(ROOT, "supabase/functions/cavscope-scan/page-checks.ts"), "utf8");
 
 test("a governing-law clause is read over an address when both are present", () => {
   const v = extractUsState(`<footer>123 Main St, Wilmington, DE 19801. This site is governed by the laws of the State of California, without regard to conflicts of law.</footer>`);

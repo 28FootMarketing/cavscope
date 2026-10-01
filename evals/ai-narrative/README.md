@@ -13,7 +13,7 @@ Nothing tested that the contract held. This suite does.
 
 | | Cost | Needs | Run it |
 |---|---|---|---|
-| **Offline** (`offline.test.ts`) | none | nothing | every commit, CI, before any `muster-agent` deploy |
+| **Offline** (`offline.test.ts`) | none | nothing | every commit, CI, before any `cavscope-agent` deploy |
 | **Live** (`live.ts`) | real OpenRouter credit | a key, egress to `openrouter.ai` | after editing `prompt.ts`, before promoting a model change |
 
 ```bash
@@ -34,7 +34,7 @@ for the other.
 ## Why the shipped code is imported, not copied
 
 The pure half of the tool lives in
-`supabase/functions/muster-agent/narrative.ts` — prompt assembly, response
+`supabase/functions/cavscope-agent/narrative.ts` — prompt assembly, response
 parsing, citation verification. `index.ts` composes it with the model call, and
 this suite imports the same module.
 

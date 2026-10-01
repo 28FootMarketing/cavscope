@@ -6,7 +6,7 @@
 //
 // This tool holds no inference credential and never talks to OpenRouter. It reads
 // the repository, chunks it (tools/embed-docs/chunk.ts), and posts text. The edge
-// function muster-embed-docs holds the OpenRouter key and does the writing. That
+// function cavscope-embed-docs holds the OpenRouter key and does the writing. That
 // split is the point: the sync can run from a laptop or CI with nothing but the
 // shared secret, and the key stays in the edge runtime where it is already set.
 //
@@ -71,7 +71,7 @@ async function main() {
 
   if (documents.length === 0) fail("nothing to sync");
 
-  const res = await fetch(`${base.replace(/\/$/, "")}/muster-embed-docs`, {
+  const res = await fetch(`${base.replace(/\/$/, "")}/cavscope-embed-docs`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-muster-secret": secret },
     body: JSON.stringify({ documents, dry_run: dryRun }),
@@ -80,7 +80,7 @@ async function main() {
   const payload = await res.json().catch(() => ({}));
   if (!res.ok || payload.ok !== true) {
     console.error(JSON.stringify(payload, null, 2));
-    fail(`muster-embed-docs returned ${res.status}`);
+    fail(`cavscope-embed-docs returned ${res.status}`);
   }
 
   console.log("");

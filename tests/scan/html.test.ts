@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CSR_TEXT_THRESHOLD, detectClientRendered, stripToBodyText, stripTags } from "../../supabase/functions/muster-scan/html.ts";
+import { CSR_TEXT_THRESHOLD, detectClientRendered, stripToBodyText, stripTags } from "../../supabase/functions/cavscope-scan/html.ts";
 
 // Regression tests for issue #93. Each case here is a way the old inline check
 // counted text a reader never sees, and so called a client-rendered page

@@ -19,107 +19,107 @@ project_id = "hjowfnzpomzxazmzywxw"
 # settings, verified 2026-09-08 and re-read 2026-09-25 when the six functions
 # at the bottom were found deployed but undeclared here.
 
-[functions.muster-scan]
+[functions.cavscope-scan]
 verify_jwt = true
-entrypoint = "./functions/muster-scan/index.ts"
+entrypoint = "./functions/cavscope-scan/index.ts"
 
-[functions.muster-verify-site]
+[functions.cavscope-verify-site]
 verify_jwt = true
-entrypoint = "./functions/muster-verify-site/index.ts"
+entrypoint = "./functions/cavscope-verify-site/index.ts"
 
-[functions.muster-alert-dispatch]
+[functions.cavscope-alert-dispatch]
 verify_jwt = true
-entrypoint = "./functions/muster-alert-dispatch/index.ts"
+entrypoint = "./functions/cavscope-alert-dispatch/index.ts"
 
-[functions.muster-agent]
+[functions.cavscope-agent]
 # Custom auth: x-muster-api-key resolved in SQL. The gateway must accept agents without a Supabase JWT.
 verify_jwt = false
-entrypoint = "./functions/muster-agent/index.ts"
+entrypoint = "./functions/cavscope-agent/index.ts"
 
-[functions.muster-watchdog]
+[functions.cavscope-watchdog]
 # Shared secret: x-muster-secret against vault muster_cron_secret. Called by pg_cron.
 verify_jwt = false
-entrypoint = "./functions/muster-watchdog/index.ts"
+entrypoint = "./functions/cavscope-watchdog/index.ts"
 
-[functions.muster-backfill-embeddings]
+[functions.cavscope-backfill-embeddings]
 # Shared secret: x-muster-secret. Spends OpenRouter credit per record, so the
 # in-function check is the only thing standing between this and an open endpoint.
 verify_jwt = false
-entrypoint = "./functions/muster-backfill-embeddings/index.ts"
+entrypoint = "./functions/cavscope-backfill-embeddings/index.ts"
 
-[functions.muster-resend-webhook]
+[functions.cavscope-resend-webhook]
 # Inbound Resend delivery/bounce/complaint events. Authentication IS the Svix
 # signature (RESEND_WEBHOOK_SECRET); Resend cannot send a Supabase JWT.
 verify_jwt = false
-entrypoint = "./functions/muster-resend-webhook/index.ts"
+entrypoint = "./functions/cavscope-resend-webhook/index.ts"
 
-[functions.muster-stripe-webhook]
+[functions.cavscope-stripe-webhook]
 # Stripe signs its own requests; verified against STRIPE_WEBHOOK_SECRET over the
 # raw body. Stripe cannot present a Supabase JWT.
 verify_jwt = false
-entrypoint = "./functions/muster-stripe-webhook/index.ts"
+entrypoint = "./functions/cavscope-stripe-webhook/index.ts"
 
-[functions.muster-ghl-webhook]
+[functions.cavscope-ghl-webhook]
 # Shared secret: x-muster-secret against vault muster_ghl_webhook_secret. GHL's
 # outbound webhook action cannot present a Supabase JWT.
 verify_jwt = false
-entrypoint = "./functions/muster-ghl-webhook/index.ts"
+entrypoint = "./functions/cavscope-ghl-webhook/index.ts"
 
-[functions.muster-embed-docs]
+[functions.cavscope-embed-docs]
 # Shared secret: x-muster-secret, same vault value as the backfill. Spends
 # OpenRouter credit and rewrites what the agent reads back as documentation, so
 # the in-function check is the only thing standing between this and an open
 # endpoint. Called by tools/embed-docs/sync.ts, which holds no inference key.
 verify_jwt = false
-entrypoint = "./functions/muster-embed-docs/index.ts"
+entrypoint = "./functions/cavscope-embed-docs/index.ts"
 
-[functions.muster-auth-smoke]
+[functions.cavscope-auth-smoke]
 # Shared secret: x-muster-secret, same vault value as the watchdog. It can mint a
 # real recovery link with the service-role key, so an open endpoint here would be
 # an account-takeover primitive -- the in-function check is the whole gate.
 verify_jwt = false
-entrypoint = "./functions/muster-auth-smoke/index.ts"
+entrypoint = "./functions/cavscope-auth-smoke/index.ts"
 
-[functions.muster-set-password]
+[functions.cavscope-set-password]
 # The caller's own session JWT is the credential: the function re-verifies it
 # with getUser() before touching the account. The gateway check is a first
 # line, not the only one.
 verify_jwt = true
-entrypoint = "./functions/muster-set-password/index.ts"
+entrypoint = "./functions/cavscope-set-password/index.ts"
 
-[functions.muster-beta-notify]
+[functions.cavscope-beta-notify]
 # Shared secret: x-muster-signal against vault muster_beta_notify_secret. Called
 # by the muster_beta_signups insert trigger through pg_net, which presents no
 # Supabase JWT. Posts the Telegram alert.
 verify_jwt = false
-entrypoint = "./functions/muster-beta-notify/index.ts"
+entrypoint = "./functions/cavscope-beta-notify/index.ts"
 
-[functions.muster-beta-confirm]
+[functions.cavscope-beta-confirm]
 # Same trigger, same x-muster-signal secret. Sends the confirmation email via
 # Resend. With verify_jwt true the trigger's call is refused 401 and no email
 # goes out, silently -- the row still inserts.
 verify_jwt = false
-entrypoint = "./functions/muster-beta-confirm/index.ts"
+entrypoint = "./functions/cavscope-beta-confirm/index.ts"
 
-[functions.muster-beta-export]
+[functions.cavscope-beta-export]
 # Shared secret in the query string (?key=) against vault muster_beta_export_key,
 # because the consumer is a Google Sheets IMPORTDATA call, which can send no
 # header. A URL-borne secret lands in access logs; rotate the key if the sheet
 # is ever shared. Returns the signup list as CSV, service-role read.
 verify_jwt = false
-entrypoint = "./functions/muster-beta-export/index.ts"
+entrypoint = "./functions/cavscope-beta-export/index.ts"
 
-[functions.muster-asset-admin]
+[functions.cavscope-asset-admin]
 # Shared secret: x-muster-signal against vault muster_asset_admin_secret.
 # Uploads into the public brand-assets bucket with the service role.
 verify_jwt = false
-entrypoint = "./functions/muster-asset-admin/index.ts"
+entrypoint = "./functions/cavscope-asset-admin/index.ts"
 
-[functions.muster-telegram-debug]
+[functions.cavscope-telegram-debug]
 # Retired: answers 410 to everything. Kept only because the MCP has no delete
 # for edge functions; remove it with the CLI, then drop this entry and the dir.
 verify_jwt = false
-entrypoint = "./functions/muster-telegram-debug/index.ts"
+entrypoint = "./functions/cavscope-telegram-debug/index.ts"
 
 [functions.cavscope-inbound-mail]
 # Resend inbound (email.received). Authentication IS the Svix signature, read

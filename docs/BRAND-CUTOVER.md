@@ -95,7 +95,7 @@ Listed so nobody goes looking for a problem that isn't one.
   and `cavscope.28footsystems.com` does not yet. Repoint both at
   `+https://cavscope.28footsystems.com` once step 1 is verified live -- not before, for the
   exact reason the URL was ever pointed at a real page in the first place (see the comment
-  above the `UA` constant in `supabase/functions/muster-scan/index.ts`).
+  above the `UA` constant in `supabase/functions/cavscope-scan/index.ts`).
 
 ## 5. Done: the GitHub repository rename
 

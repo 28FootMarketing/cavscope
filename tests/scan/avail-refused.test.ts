@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const engine = readFileSync(join(repoRoot, "supabase", "functions", "muster-scan", "index.ts"), "utf8");
+const engine = readFileSync(join(repoRoot, "supabase", "functions", "cavscope-scan", "index.ts"), "utf8");
 
 test("only 401, 403 and 429 are treated as refusal", () => {
   // A 404 homepage is genuinely broken and a 5xx is genuinely an outage. Both

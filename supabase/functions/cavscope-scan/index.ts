@@ -100,7 +100,7 @@ import { contentChecks, resourceChecks, type PageStep } from "./page-checks.ts";
 // fetch does NOT restrict Origin/Host/Cookie the way a browser would -- there
 // is no page origin to protect in a server runtime -- which is what makes
 // SEC-017's Origin-reflection probe above possible at all.) Until someone
-// confirms Deno.connect works inside the deployed muster-scan function
+// confirms Deno.connect works inside the deployed cavscope-scan function
 // specifically -- not just in the Deno CLI -- SEC-019 has no engine and
 // should be treated as retired, not merely unscheduled.
 //

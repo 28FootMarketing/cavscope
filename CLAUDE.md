@@ -30,6 +30,9 @@ carries the old name is the callable surface -- 112 `public.muster_*` RPCs and 1
 edge functions. As of 2026-10-01 the RPC rename is applied (109 `cavscope_*` functions with
 `muster_*` aliases) and every page, edge function, tool and test in this repo calls the
 `cavscope_*` names, so **new code calls `cavscope_*`**; the aliases stay until stage 5 of the plan.
+The edge-function **directories** are `supabase/functions/cavscope-*` as of stage 3 half A; the
+old `muster-*` slugs stay deployed, frozen at their last version, until the plan's second half and
+stage 5 -- a code change under `supabase/functions/` reaches only the `cavscope-*` slug.
 Where the rest of this file names an RPC as `muster_foo`, call `cavscope_foo`. Where the rest of this file says `muster.<table>` or `muster.<function>` for
 the database, read `cavscope.`. The staged plan to retire the remaining names is in
 `docs/RENAME-PLAN.md`.
@@ -417,7 +420,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   database, no service-role key and no tenant, then prints the findings and a posture score and exits
   non-zero on any `critical` or `high`. Use it for triage, for CI, or from a machine with no keys; use
   the admin console's "Run a URL scan" when the result should be recorded. It is an **adapter** over
-  `supabase/functions/muster-scan/index.ts` — it reads that file and strips the Supabase client, the two
+  `supabase/functions/cavscope-scan/index.ts` — it reads that file and strips the Supabase client, the two
   `muster_engine_*` RPCs and `Deno.serve()`, asserting each cut — so there is still exactly one copy of
   the rule set. The one thing duplicated is the posture weights, copied from
   `20260907223344_muster_012_helper_functions_sql.sql` into `tools/local-scan/score.mjs`; change one and
@@ -446,7 +449,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `flags.html_audit === true`, unlike `navFlagMap`, because it is an off-by-default capability, not
   a view a partial load should keep.
 - **Rule logic that can be pure belongs in a sibling module with tests, not inline in `runScan()`.**
-  `supabase/functions/muster-scan/html.ts` is that module today: `stripTags`, `stripToBodyText` and
+  `supabase/functions/cavscope-scan/html.ts` is that module today: `stripTags`, `stripToBodyText` and
   `detectClientRendered`, pinned by `tests/scan/html.test.ts`, alongside `email-auth.ts` and its own
   tests. The client-rendered check lived inline until 2026-09-15 and shipped a defect nothing could
   catch: it measured "visible text" that still included the `<title>` and the tail of any comment whose
@@ -676,7 +679,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 - **A SITREP's jurisdiction is the scanned site's state, not the scanning workspace's, as of
   2026-09-28.** `q_sitrep_jurisdiction` read `organizations.region_code` only, so every URL parked
   in the admin sandbox org inherited its one `PA` and got PA Act 35, whatever the site was.
-  `supabase/functions/muster-scan/legal.ts` now reads a state the site states about **itself**
+  `supabase/functions/cavscope-scan/legal.ts` now reads a state the site states about **itself**
   (governing-law clause, postal address, then -- weakest -- a full state name in the meta
   description) off the homepage and up to three same-origin legal/about/contact pages, into
   `websites.detected_country_code`/`detected_region_code`, which the query prefers over the org's.
@@ -784,7 +787,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   renders it GREEN, which is absence-of-findings-as-a-pass, the thing migration 062 exists to
   prevent. What changed is the claim, not the weight, and each finding says outright that the scan
   is an unassessed target rather than a clean one. **The classifier only ever errs toward
-  `AVAIL-001`**: `responseRejectedByClient` in `supabase/functions/muster-scan/availability.ts`
+  `AVAIL-001`**: `responseRejectedByClient` in `supabase/functions/cavscope-scan/availability.ts`
   matches a tight list of parse-phase errors and anything unrecognised stays an outage, because
   hiding a real outage is worse than the defect being fixed. That list is only sound because hyper
   raises those errors *after* response bytes arrive, while DNS, connect and TLS failures produce

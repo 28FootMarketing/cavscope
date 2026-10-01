@@ -3,7 +3,7 @@
  *
  * WHY THIS IS AN ADAPTER AND NOT A COPY
  *
- * `supabase/functions/muster-scan/index.ts` is the only place the 38 rules live.
+ * `supabase/functions/cavscope-scan/index.ts` is the only place the 38 rules live.
  * A second copy of that logic would drift the first time a rule changed, and a
  * local runner that scores a site differently from the product is worse than no
  * local runner at all -- it produces a number we would then have to defend.
@@ -25,7 +25,7 @@ import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const ENGINE_DIR = join(HERE, "..", "..", "supabase", "functions", "muster-scan");
+export const ENGINE_DIR = join(HERE, "..", "..", "supabase", "functions", "cavscope-scan");
 export const ENGINE_SRC = join(ENGINE_DIR, "index.ts");
 
 const RUNTIME_TYPES = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";\n';

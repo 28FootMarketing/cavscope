@@ -213,7 +213,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "method not allowed" }, 405);
   }
 
-  // Shared-secret auth, the same pattern muster-watchdog uses. verify_jwt is
+  // Shared-secret auth, the same pattern cavscope-watchdog uses. verify_jwt is
   // false on this function, so without this check the endpoint is fully
   // anonymous -- and it spends real OpenRouter credit per record embedded.
   // Callers send x-muster-secret; the value lives in vault as muster_cron_secret

@@ -14,19 +14,19 @@ There are now three ways to get findings for a URL, and they are not competing:
 
 | | Writes to the database | Needs | Use it for |
 |---|---|---|---|
-| `muster-scan` edge function | yes — evidence, findings, SITREP, alerts | service-role key, a queued scan for a tenant website | every real client scan |
+| `cavscope-scan` edge function | yes — evidence, findings, SITREP, alerts | service-role key, a queued scan for a tenant website | every real client scan |
 | admin console → *Run a URL scan* | yes — into the admin sandbox org | super admin session | an ad-hoc URL you do not want in a tenant's register |
 | this tool | **no** | Node >= 22.18 and network egress | triage, CI, a machine with no keys, or a site you are not scanning for a client |
 
 This one writes nothing, opens no incident, sends no alert, and produces no SITREP
-narrative — that is generated in Postgres and by `muster-agent`. It reports the
+narrative — that is generated in Postgres and by `cavscope-agent`. It reports the
 findings, the evidence artefacts and the posture score, and exits non-zero if any
 finding is `critical` or `high` (the two severities that open an alert in the
 product), so CI can gate on it.
 
 ## It is an adapter, not a copy
 
-Every rule lives in exactly one place: `supabase/functions/muster-scan/index.ts`.
+Every rule lives in exactly one place: `supabase/functions/cavscope-scan/index.ts`.
 The count moves (47 active as of 2026-09-17), so this file does not carry one -- a
 stale number here would be a claim about coverage that nothing checks.
 `adapt.mjs` reads that file at runtime and removes four things — the Deno runtime

@@ -2,7 +2,7 @@
 // describe how each finding is fixed, and apply the fixes the operator chose.
 //
 // No fetch, no database, no Deno globals, so tests/html-audit/ runs this exact
-// code. The rules themselves are not here: they are muster-scan/page-checks.ts,
+// code. The rules themselves are not here: they are cavscope-scan/page-checks.ts,
 // the same module the scan engine runs, so a finding here and a finding on a
 // scanned site can never disagree about what they mean.
 //
@@ -17,8 +17,8 @@
 // sites are built on a platform (WordPress, Wix, Squarespace, Shopify) where a
 // fixed HTML file cannot simply be put back.
 
-import { contentChecks, resourceChecks, attr, type PageFinding, type PageStep } from "../muster-scan/page-checks.ts";
-import { extractScripts, isMutableByDesign } from "../muster-scan/hardening.ts";
+import { contentChecks, resourceChecks, attr, type PageFinding, type PageStep } from "../cavscope-scan/page-checks.ts";
+import { extractScripts, isMutableByDesign } from "../cavscope-scan/hardening.ts";
 
 export const MAX_HTML_BYTES = 2_000_000;
 

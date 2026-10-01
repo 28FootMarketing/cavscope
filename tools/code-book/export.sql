@@ -4,7 +4,7 @@
 -- SCOPE is deliberately NOT selected here, because it is not in the catalog.
 -- It is a property of the ENGINE, not of the rule row: it says whether a code
 -- produces one verdict for the whole domain or one per page, and that is
--- decided by which step of supabase/functions/muster-scan/index.ts raises it.
+-- decided by which step of supabase/functions/cavscope-scan/index.ts raises it.
 --
 --   site   step 2  the http://host/ redirect probe                 SEC-001
 --          step 5  origin files: robots.txt, sitemap, security.txt GOV-001, GOV-002,

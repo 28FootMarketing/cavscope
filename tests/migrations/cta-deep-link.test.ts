@@ -1,6 +1,6 @@
 // Companion to tests/email/alert-dispatch-cta.test.ts: that file pins the
 // HTML button's destination (CATEGORY_META.ctaHref in
-// muster-alert-dispatch/index.ts); this pins the plain-text part sent
+// cavscope-alert-dispatch/index.ts); this pins the plain-text part sent
 // alongside it, which carries its own literal copy of the same URL inside
 // cavscope.autotriage()'s risk_opened body_text ("View full detail: ...").
 // A text-only mail client never sees the HTML button, so fixing one without

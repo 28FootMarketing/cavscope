@@ -19,11 +19,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { assessLlmsTxt, summarizeJsonLd } from "../../supabase/functions/muster-scan/aio.ts";
+import { assessLlmsTxt, summarizeJsonLd } from "../../supabase/functions/cavscope-scan/aio.ts";
 import { loadEngine } from "../../tools/local-scan/adapt.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const engine = readFileSync(join(ROOT, "supabase/functions/muster-scan/index.ts"), "utf8");
+const engine = readFileSync(join(ROOT, "supabase/functions/cavscope-scan/index.ts"), "utf8");
 
 const res = (status: number | null, body = "", contentType: string | null = "text/plain") => ({ status, body, contentType });
 

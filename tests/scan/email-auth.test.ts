@@ -14,7 +14,7 @@ import {
   evaluateEmailAuth, mailDomain, dmarcCandidates,
   spfRecords, spfAllQualifier, parseDmarc, dmarcRecords,
   spfLookupTerms, evaluateSpfLookups, SPF_MAX_LOOKUPS,
-} from "../../supabase/functions/muster-scan/email-auth.ts";
+} from "../../supabase/functions/cavscope-scan/email-auth.ts";
 
 const ids = (fs: { rule_id: string }[]) => fs.map((f) => f.rule_id).sort();
 

@@ -15,7 +15,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { PROBE_ORIGIN, evaluateCors, type CorsProbeResult } from "../../supabase/functions/muster-scan/cors.ts";
+import { PROBE_ORIGIN, evaluateCors, type CorsProbeResult } from "../../supabase/functions/cavscope-scan/cors.ts";
 
 test("PROBE_ORIGIN sits on the .invalid TLD, reserved to never be a real registrable domain", () => {
   assert.match(PROBE_ORIGIN, /^https:\/\/[a-z0-9-]+\.invalid$/);

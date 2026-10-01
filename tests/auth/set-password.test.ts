@@ -29,7 +29,7 @@ import {
   MAX_PASSWORD_BYTES,
   MIN_PASSWORD_CHARS,
   validateNewPassword,
-} from "../../supabase/functions/muster-set-password/core.ts";
+} from "../../supabase/functions/cavscope-set-password/core.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
@@ -336,7 +336,7 @@ test("the browser's minimum matches the server's", () => {
 test("the edge function refuses callers that are not actually flagged", () => {
   // Without this it is a general-purpose change-my-password-with-no-
   // reauthentication endpoint, which is strictly weaker than GoTrue's own.
-  const src = read("supabase/functions/muster-set-password/index.ts");
+  const src = read("supabase/functions/cavscope-set-password/index.ts");
   assert.match(src, /if \(!changeRequired\(user\.app_metadata as Record<string, unknown>\)\) \{/);
   assert.match(src, /reason: "not_required"/);
   // Identity comes from the verified token, never from the request body.
@@ -347,7 +347,7 @@ test("the edge function refuses callers that are not actually flagged", () => {
 test("the password and the flag clear in one admin call, never two", () => {
   // A separate clear-the-flag endpoint would be a bypass with extra steps, and
   // two sequential calls would leave a half-applied state on any failure.
-  const src = read("supabase/functions/muster-set-password/index.ts");
+  const src = read("supabase/functions/cavscope-set-password/index.ts");
   const call = src.slice(src.indexOf("admin.auth.admin.updateUserById"), src.indexOf("if (updErr)"));
   assert.match(call, /password,/, "the admin call does not set the password");
   assert.match(call, /app_metadata: clearedAppMetadata\(/, "the admin call does not clear the flag");
