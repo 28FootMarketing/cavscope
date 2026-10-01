@@ -225,8 +225,15 @@ already-queued alerts as `pending` rather than dropping them), `support_imperson
 Each of the ten unwired rows carries a `wiring_note` saying why and what would wire it.
 `commercial_use_enabled` can never be wired — it is a licence term, not a code path, and must
 not be presented as a control. **One of the ten is a commercial problem rather than a deferred
-feature:** `client_management_enabled` is sold on the Partner tier and its own note says the
-client-org creation path does not check it, so a lower tier gets it free.
+feature:** `client_management_enabled` is sold on the Partner tier, and the capability it names
+does not exist. Read from the live catalog 2026-10-01: no function sets `organizations.managed_by_org_id`
+(`onboard_client` is dead and does not either), so there is no guard to add and no tier getting it
+free -- the flag's own `wiring_note` ("the client-org creation path does not check it") is wrong and
+still says so. `app.html`'s "create client organization" button, in a live workspace, opens the
+self-serve onboarding and makes an independent trial organization: no Partner link, no allowance, no
+add-on billing. `index.html` marks the three client-org Partner bullets and the allowance "in
+development" until a real creation path exists; build that path with a `has_flag` guard and set
+`enforcement` in the same migration, then remove the markers.
 
 Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
 missing from the workspace payload leaves the nav item visible. These flags gate
@@ -257,8 +264,8 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   guessing, and neither may be quietly replaced with a nicer number: API request volume is not
   metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
   `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
-  `customer.subscription.deleted` is unhandled, so a cancelled customer prices in until their plan
-  is changed by hand. Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
+  a cancelled customer stops pricing in once `customer.subscription.deleted` is handled (see the
+  Stripe notes below; until the endpoint is subscribed to that event, one still prices in). Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
   an explicit "not instrumented" panel naming what would have to exist first, because the schema
   cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
   table. **Reports stopped being one of them on 2026-09-17**, backed by
@@ -375,8 +382,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `index.ts`. What remains is Stripe dashboard configuration only: the endpoint registered against the
   **new** project's function URL, `STRIPE_WEBHOOK_SECRET` set, and `tier` + `stage` metadata on each
   Payment Link. A link without that metadata is rejected 400 -- check it first if a real checkout fails.
-  Subscription **cancellation is not handled**: nothing consumes `customer.subscription.deleted`, so a
-  cancelled customer keeps their plan until someone changes it by hand.
+  Subscription **cancellation is handled as of 2026-10-01**: `gateSubscriptionDeleted` in `core.ts`
+  routes `customer.subscription.deleted` to `public.cavscope_engine_cancel_subscription`
+  (migration `20261001011757`, applied and exercised in a rolled-back transaction: downgrade to
+  trial, idempotent redelivery, a plan moved by hand left alone and logged, an unclaimed grant
+  voided, a re-purchase clearing the cancellation). It works because grants now record the claiming
+  organization (`organization_id`, set in `do_onboard`). It takes effect only when the function is
+  deployed (merge to main) **and** the Stripe endpoint is subscribed to the event, which is a
+  dashboard step nothing here can verify -- until then a cancelled customer keeps their plan. It
+  deliberately acts on `deleted`, not on a scheduled-cancellation notice, so a customer keeps what
+  they paid for. Nothing is deleted on downgrade; websites over the trial limit are not disabled.
 - A super admin can also run a real scan against any URL from `app.html`'s admin console ("Run a URL
   scan") and get back real findings from the live engine — see `muster_admin_run_url` /
   `muster_admin_website_overview` / `muster_admin_url_runs` in
@@ -977,4 +992,5 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   because it changes what an undelivered auth email means: on the built-in sender a missing
   email is an unremarkable rate limit, on configured SMTP it is a real delivery fault worth
   chasing. What IS outstanding: the six auth email templates and the rate limit on the new
-  project, and `customer.subscription.deleted`, which nothing consumes.
+  project, and subscribing the Stripe endpoint to `customer.subscription.deleted` (handled in code
+  since 2026-10-01; the dashboard step is the owner's).
