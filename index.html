@@ -751,7 +751,7 @@
 
     <div class="pricing-grid" id="pricingGrid" data-visible-count="1">
 
-      <!-- Default: Partner only. muster_public_pricing().visible can re-enable the others without a deploy. -->
+      <!-- Default: Partner only. cavscope_public_pricing().visible can re-enable the others without a deploy. -->
       <div class="price-card" id="cardMuster" hidden>
         <div class="price-card-head">
           <h3>CavScope</h3>
@@ -882,7 +882,7 @@
   // it never gates entitlements (see muster.feature_flags: those key off tier
   // alone) and visitors don't choose it. There is exactly one live price per
   // tier, set by a 28FS super-admin in app.html's admin panel, read here from
-  // muster_public_pricing() (anon-readable by design). The HTML above ships
+  // cavscope_public_pricing() (anon-readable by design). The HTML above ships
   // with the Seed-stage numbers as a static fallback -- if this fetch fails
   // (network issue, JS disabled) the page still shows a correct, if possibly
   // stale, price rather than blank content.
@@ -908,7 +908,7 @@
   // path still exists end to end -- live Stripe Payment Links below, the
   // backend accepting them via muster-stripe-webhook/PRD-003, and
   // muster.feature_flags.self_serve_onboarding, which was turned off to
-  // match (see muster_admin_set_flag in app.html's admin console, or flip
+  // match (see cavscope_admin_set_flag in app.html's admin console, or flip
   // it back directly) -- it's just not linked from this CTA, so a visitor
   // can't pay here and then hit a disabled-onboarding error afterward. To
   // reactivate: re-enable that flag AND restore the musterCta.href line
@@ -934,7 +934,7 @@
 
   // Which cards the public page shows. Partner-only is the intentional default
   // (base self-serve is paused; Enterprise stays sales-scoped). Admin toggles
-  // in app.html write muster.pricing_settings.show_*; muster_public_pricing()
+  // in app.html write muster.pricing_settings.show_*; cavscope_public_pricing()
   // returns them under `visible`. Missing `visible` (pre-migration RPC) keeps
   // the Partner-only fallback rather than re-showing paused tiers.
   const DEFAULT_VISIBLE = { muster: false, muster_partner: true, enterprise: false };
@@ -1007,7 +1007,7 @@
       // used the session anyway. Auth belongs to the app host; this page must
       // not touch a fragment it cannot honour.
       const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, detectSessionInUrl: false } });
-      const { data, error } = await sb.rpc('muster_public_pricing');
+      const { data, error } = await sb.rpc('cavscope_public_pricing');
       if (error || !data) return;
       applyPricing(data.current_stage, data.muster, data.muster_partner, data.visible || DEFAULT_VISIBLE);
     } catch {

@@ -20,20 +20,20 @@ import {
 
 // CavScope agent gateway. Makes every workspace usable by an AI agent or AI employee.
 //
-// Auth: header  x-muster-api-key: mk_...   (issued by public.muster_create_api_key, hashed at rest)
+// Auth: header  x-muster-api-key: mk_...   (issued by public.cavscope_create_api_key, hashed at rest)
 // Two surfaces on the same URL:
 //   1. MCP (Streamable HTTP, stateless JSON-RPC 2.0): initialize, ping, tools/list, tools/call
 //      Point any MCP client at https://<project>.supabase.co/functions/v1/muster-agent with the header above.
 //   2. REST: POST { "tool": "list_findings", "args": { "website_id": 3 } }  ->  { "ok": true, "result": ... }
 //      GET  /muster-agent  ->  tool catalog (JSON Schema per tool)
-// All authorization and org scoping is enforced in SQL (public.muster_engine_agent_call), including
+// All authorization and org scoping is enforced in SQL (public.cavscope_engine_agent_call), including
 // for ai_narrative below -- its context (findings, evidence ids, the org's ai_narrative flag check)
 // comes from that same RPC. Only the model call itself happens here, since Postgres can't make it.
 //
 // TWO DIFFERENT CREDENTIALS, and the split is the whole of the BYO-LLM feature.
 //
 //   ai_narrative and the agent loop  ->  the TENANT's endpoint, model and key, from
-//     muster.org_llm_config via muster_engine_llm_config_for_website(). A tenant with no
+//     muster.org_llm_config via cavscope_engine_llm_config_for_website(). A tenant with no
 //     configuration gets NO llm: the call fails with an actionable message and that
 //     organization stays on the deterministic SITREP generator. There is deliberately no
 //     fallback to CavScope's key, because the point of the feature is that their findings do
@@ -112,7 +112,7 @@ function publicPath(url: URL): string {
 async function resolveKey(req: Request) {
   const key = req.headers.get("x-muster-api-key") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!key || !key.startsWith("mk_")) return { ctx: null, error: "missing x-muster-api-key header" };
-  const { data, error } = await db.rpc("muster_engine_resolve_api_key", { p_key: key });
+  const { data, error } = await db.rpc("cavscope_engine_resolve_api_key", { p_key: key });
   if (error) return { ctx: null, error: error.message };
   if (!data) return { ctx: null, error: "invalid api key" };
   if (data.error) return { ctx: null, error: data.error };
@@ -120,7 +120,7 @@ async function resolveKey(req: Request) {
 }
 
 async function tools() {
-  const { data, error } = await db.rpc("muster_engine_agent_tools");
+  const { data, error } = await db.rpc("cavscope_engine_agent_tools");
   if (error) throw new Error(error.message);
   return (data as Array<Record<string, unknown>>).map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema, annotations: { scope: t.scope, readOnlyHint: t.scope === "read" } }));
 }
@@ -315,7 +315,7 @@ async function generateOpenAPISchema(req: Request) {
           in: "header",
           name: "x-muster-api-key",
           description:
-            "API key issued by public.muster_create_api_key. Prefix: mk_. Also accepted as Authorization Bearer token.",
+            "API key issued by public.cavscope_create_api_key. Prefix: mk_. Also accepted as Authorization Bearer token.",
         },
       },
     },
@@ -353,7 +353,7 @@ async function generateOpenAPISchema(req: Request) {
 }
 
 async function callToolRaw(ctx: unknown, name: string, args: Record<string, unknown>) {
-  const { data, error } = await db.rpc("muster_engine_agent_call", { p_ctx: ctx, p_tool: name, p_args: args ?? {} });
+  const { data, error } = await db.rpc("cavscope_engine_agent_call", { p_ctx: ctx, p_tool: name, p_args: args ?? {} });
   if (error) throw new Error(error.message);
   return data;
 }
@@ -405,7 +405,7 @@ async function callSearchFindings(ctx: unknown, args: Record<string, unknown>): 
   const embedding = await embedText(query);
 
   // Search via SQL (convert embedding array to pgvector format)
-  const { data, error } = await db.rpc("muster_engine_search_findings", {
+  const { data, error } = await db.rpc("cavscope_engine_search_findings", {
     p_ctx: ctx,
     p_website_id: website_id,
     p_embedding: embedding,
@@ -431,7 +431,7 @@ async function callSearchEvidence(ctx: unknown, args: Record<string, unknown>): 
   const embedding = await embedText(query);
 
   // Search via SQL
-  const { data, error } = await db.rpc("muster_engine_search_evidence", {
+  const { data, error } = await db.rpc("cavscope_engine_search_evidence", {
     p_ctx: ctx,
     p_website_id: website_id,
     p_embedding: embedding,
@@ -456,7 +456,7 @@ async function callSearchDocs(ctx: unknown, args: Record<string, unknown>): Prom
   // site. Which documents come back IS scoped -- the shim decides from p_ctx whether
   // this key may see internal documentation, so a tenant key gets the rule catalog
   // and nothing about the infrastructure.
-  const { data, error } = await db.rpc("muster_engine_search_docs", {
+  const { data, error } = await db.rpc("cavscope_engine_search_docs", {
     p_ctx: ctx,
     p_embedding: embedding,
     p_limit: limit,
@@ -494,7 +494,7 @@ async function callTool(ctx: unknown, name: string, args: Record<string, unknown
 // vault, so this function never names an org id and cannot ask for the wrong
 // tenant's credential.
 async function resolveTenantLlm(websiteId: unknown, websiteLabel: string): Promise<TenantLlm> {
-  const { data, error } = await db.rpc("muster_engine_llm_config_for_website", { p_website_id: websiteId });
+  const { data, error } = await db.rpc("cavscope_engine_llm_config_for_website", { p_website_id: websiteId });
   if (error) throw new Error(error.message);
   return readLlmConfig(data, websiteLabel);
 }
@@ -503,7 +503,7 @@ async function resolveTenantLlm(websiteId: unknown, websiteLabel: string): Promi
 // narrative if this bookkeeping write fails.
 async function recordLlmResult(organizationId: number, ok: boolean, error?: string): Promise<void> {
   try {
-    await db.rpc("muster_engine_record_llm_result", { p_organization_id: organizationId, p_ok: ok, p_error: error ?? null });
+    await db.rpc("cavscope_engine_record_llm_result", { p_organization_id: organizationId, p_ok: ok, p_error: error ?? null });
   } catch { /* ignore */ }
 }
 
@@ -556,7 +556,7 @@ async function runAgentLoop(ctx: unknown, llm: TenantLlm, systemPrompt: string, 
       const detail = await res.text().catch(() => "");
       // Redacted: a provider that quotes the presented credential in its 401
       // body would otherwise put a live key into last_error, which
-      // muster_llm_config returns to a browser.
+      // cavscope_llm_config returns to a browser.
       throw new Error(`agent loop call failed (${summariseLlmError({ status: res.status, detail: detail.slice(0, 300), apiKey: llm.api_key })})`);
     }
 
@@ -668,7 +668,7 @@ Deno.serve(async (req: Request) => {
     // Public catalog so an agent builder can inspect the tools before minting a key.
     try {
       return json({ name: "muster", version: "1.0.0", protocolVersion: PROTOCOL_VERSION, transport: "streamable-http",
-        auth: { header: "x-muster-api-key", issue: "public.muster_create_api_key (Pro plan or super admin)" },
+        auth: { header: "x-muster-api-key", issue: "public.cavscope_create_api_key (Pro plan or super admin)" },
         endpoint: publicOrigin(req, url) + publicPath(url), tools: await tools() });
     } catch (e) { return json({ error: String(e) }, 500); }
   }

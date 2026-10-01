@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
   // user-scoped client: resolves the caller's onboarding org via the state shim
   const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-  const { data: state, error } = await userClient.rpc("muster_onboarding_state");
+  const { data: state, error } = await userClient.rpc("cavscope_onboarding_state");
   if (error || !state?.website) return json({ ok: false, reason: "no_onboarding_website", error: error?.message }, 400);
 
   const site = state.website as { id: number; url: string; verification_token: string; verified_at: string | null };
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { error: mErr } = await admin.rpc("muster_mark_website_verified", { p_website_id: site.id });
+  const { error: mErr } = await admin.rpc("cavscope_mark_website_verified", { p_website_id: site.id });
   if (mErr) return json({ ok: false, reason: "mark_failed", error: mErr.message }, 500);
   return json({ ok: true, verified: true });
 });

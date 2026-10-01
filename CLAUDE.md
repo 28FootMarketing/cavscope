@@ -27,7 +27,10 @@ signs its holder in, on the CavScope origin.
 **The database schema is `cavscope`**, not `muster`, on `hjowfnzpomzxazmzywxw` (read from the
 live catalog 2026-09-30). What still
 carries the old name is the callable surface -- 112 `public.muster_*` RPCs and 18 `muster-*`
-edge functions. Where the rest of this file says `muster.<table>` or `muster.<function>` for
+edge functions. As of 2026-10-01 the RPC rename is applied (109 `cavscope_*` functions with
+`muster_*` aliases) and every page, edge function, tool and test in this repo calls the
+`cavscope_*` names, so **new code calls `cavscope_*`**; the aliases stay until stage 5 of the plan.
+Where the rest of this file names an RPC as `muster_foo`, call `cavscope_foo`. Where the rest of this file says `muster.<table>` or `muster.<function>` for
 the database, read `cavscope.`. The staged plan to retire the remaining names is in
 `docs/RENAME-PLAN.md`.
 

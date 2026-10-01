@@ -3,7 +3,7 @@
 //   node --experimental-strip-types --test tests/ui/audit-runner.test.ts
 //
 // admin.html was read-only until 2026-09-17 -- every figure on it came from one
-// read, muster_admin_console(), and app.html's superadmin view owned the actions.
+// read, cavscope_admin_console(), and app.html's superadmin view owned the actions.
 // Running an audit is now here too, because this is the page you are already on
 // when you notice a site needs one.
 //
@@ -30,11 +30,11 @@ const html = readFileSync(join(repoRoot, "admin.html"), "utf8");
 const runner = html.slice(html.indexOf("// ---- audit runner"), html.indexOf("function renderAuditQueue"));
 
 test("the runner calls the two gated RPCs that already exist, and adds none", () => {
-  assert.match(runner, /sb\.rpc\('muster_admin_run_url', \{ p_url: url \}\)/);
-  assert.match(runner, /sb\.rpc\('muster_request_scan', \{ p_website_id: websiteId \}\)/);
+  assert.match(runner, /sb\.rpc\('cavscope_admin_run_url', \{ p_url: url \}\)/);
+  assert.match(runner, /sb\.rpc\('cavscope_request_scan', \{ p_website_id: websiteId \}\)/);
   // Polling reads one website's scans rather than re-reading the whole console
   // payload on a loop.
-  assert.match(runner, /sb\.rpc\('muster_scans', \{ p_website_id: websiteId, p_limit: 5 \}\)/);
+  assert.match(runner, /sb\.rpc\('cavscope_scans', \{ p_website_id: websiteId, p_limit: 5 \}\)/);
 });
 
 test("both actions wait for a terminal status instead of reporting on the queue", () => {

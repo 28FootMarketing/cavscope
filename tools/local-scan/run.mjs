@@ -7,7 +7,7 @@
  * WHAT THIS IS FOR
  *
  * The real path to a scan is the deployed engine: it claims a queued scan,
- * ingests evidence and findings through muster_engine_ingest, and generates a
+ * ingests evidence and findings through cavscope_engine_ingest, and generates a
  * SITREP. That needs the service-role key and a tenant. This runs the same rule
  * code with neither, which is what you want when you are triaging a site you do
  * not want in a tenant's risk register, when you have no key to hand, or from CI.

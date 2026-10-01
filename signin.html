@@ -374,8 +374,8 @@
   // The enforcement is NOT this page. It is muster.password_change_required()
   // in Postgres (migration 20260915230805), wired into the authorization spine,
   // so a flagged JWT resolves to no user id, no super-admin and no role in any
-  // organization -- muster_onboarding_status, muster_my_workspace and
-  // muster_admin_overview all answer 42501 for it. This page is the
+  // organization -- cavscope_onboarding_status, cavscope_my_workspace and
+  // cavscope_admin_overview all answer 42501 for it. This page is the
   // explanation, and the only place the change can actually be made. Never
   // describe the redirect as the control; the SQL is the control.
   //

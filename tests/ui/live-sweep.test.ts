@@ -62,7 +62,7 @@ test("hidden wins over any class that sets display", () => {
 // --- the report is loaded, and a stub is never mistaken for an old report ----
 
 test("the workspace loads the full latest SITREP, and says so when it cannot", () => {
-  assert.match(app, /this\.rpc\('muster_latest_sitrep', \{ p_website_id: this\.website\.id \}\)/);
+  assert.match(app, /this\.rpc\('cavscope_latest_sitrep', \{ p_website_id: this\.website\.id \}\)/);
   assert.match(app, /else this\.overview\.latest_sitrep\.load_failed = true;/);
   const rr = app.slice(app.indexOf("function renderReport(profile, sitrep, brand, opts) {"));
   assert.ok(rr.indexOf("if (!sitrep.sections)") < rr.indexOf("generated before the report template existed"),

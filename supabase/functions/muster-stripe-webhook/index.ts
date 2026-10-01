@@ -9,7 +9,7 @@ import { gateCheckoutSession, gateSubscriptionDeleted, verifyStripeSignature } f
 // function only records that a real payment happened (invites the auth
 // user if new, records a pending plan grant keyed by email) and the
 // EXISTING, already-verified self-serve onboarding wizard in app.html
-// (muster_onboard -> muster.do_onboard) picks the grant up the moment the
+// (cavscope_onboard -> muster.do_onboard) picks the grant up the moment the
 // user actually creates their organization -- no parallel onboarding path.
 //
 // That handoff is verified: a probe run against the live database recorded a
@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
   const gate = gateCheckoutSession(event);
   if (!gate.act) return json(gate.body, gate.status);
 
-  const { data: existingAuthId, error: lookupErr } = await db.rpc("muster_find_auth_user_by_email", { p_email: gate.email });
+  const { data: existingAuthId, error: lookupErr } = await db.rpc("cavscope_find_auth_user_by_email", { p_email: gate.email });
   if (lookupErr) return json({ error: `auth lookup failed: ${lookupErr.message}` }, 500);
 
   let invited = false;
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const { error: grantErr } = await db.rpc("muster_engine_record_commercial_grant", {
+  const { error: grantErr } = await db.rpc("cavscope_engine_record_commercial_grant", {
     p_email: gate.email,
     p_tier: gate.tier,
     p_stage: gate.stage,
