@@ -6329,8 +6329,8 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         this.active = true;
         this.showingDemo = false;
         if (!this.demoStore) { this.demoStore = Object.assign({}, multiTenantStore); this.demoTenantId = activeTenantId; }
-        try { await this.rpc('muster_claim_invites'); } catch (_) { /* first sign-in may pre-date invites */ }
-        const status = await this.rpc('muster_onboarding_status');
+        try { await this.rpc('cavscope_claim_invites'); } catch (_) { /* first sign-in may pre-date invites */ }
+        const status = await this.rpc('cavscope_onboarding_status');
         if (status.next === 'onboard') { this.setSync('Signed in · no workspace yet'); await this.openOnboard(); return; }
         await this.loadWorkspace();
       },
@@ -6424,7 +6424,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         }
         const sel = document.getElementById('obCountry');
         if (!this.countries) {
-          try { this.countries = await this.rpc('muster_countries'); } catch (e) { this.fail(e); this.countries = []; }
+          try { this.countries = await this.rpc('cavscope_countries'); } catch (e) { this.fail(e); this.countries = []; }
         }
         sel.innerHTML = '<option value="">Select a country</option>' + this.countries.map(c =>
           `<option value="${c.code}" ${c.code === 'US' ? 'selected' : ''}>${escapeHtml(c.name)}${c.has_profile ? '' : ' (baseline only)'}</option>`).join('');
@@ -6437,7 +6437,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         regionSel.disabled = true;
         if (!code) { document.getElementById('obAdvisory').hidden = true; return; }
         try {
-          const regions = await this.rpc('muster_regions', { p_country_code: code });
+          const regions = await this.rpc('cavscope_regions', { p_country_code: code });
           if (regions.length) {
             regionSel.innerHTML += regions.map(r => `<option value="${r.code}">${escapeHtml(r.name)}</option>`).join('');
             regionSel.disabled = false;
@@ -6451,7 +6451,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         const box = document.getElementById('obAdvisory');
         if (!code) { box.hidden = true; return; }
         try {
-          const adv = await this.rpc('muster_jurisdiction_advisory', { p_country_code: code, p_region_code: region, p_depth: 'full' });
+          const adv = await this.rpc('cavscope_jurisdiction_advisory', { p_country_code: code, p_region_code: region, p_depth: 'full' });
           const laws = (adv.laws || []);
           // "Commonly relevant", never "applies to you": this list is chosen by
           // the location you picked, and laws also reach a business through
@@ -6478,7 +6478,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         if (p.brand_name) payload.brand = { brand_name: p.brand_name, brand_mark: p.brand_mark, primary_color: p.primary_color, report_signoff_name: p.report_signoff_name };
         btn.disabled = true; msg.textContent = 'Creating your workspace and queuing the first scan...';
         try {
-          const res = await this.rpc('muster_onboard', { p: payload });
+          const res = await this.rpc('cavscope_onboard', { p: payload });
           msg.textContent = (res.next_steps || []).join(' ');
           this.closeOnboard();
           await this.loadWorkspace();
@@ -6490,7 +6490,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
 
       // ---------- workspace hydration ----------
       async loadWorkspace() {
-        this.ws = await this.rpc('muster_my_workspace');
+        this.ws = await this.rpc('cavscope_my_workspace');
         // A super admin arriving at /app with no fragment -- a magic link, a
         // password sign-in, a bookmark -- is sent to the Platform Console, which
         // is where their work is. Two fragments keep them here: #tenant=<id>,
@@ -6564,27 +6564,27 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         this.website = sites.find(w => String(w.id) === String(want)) || sites[0] || null;
         const tenant = multiTenantStore['live-' + o.id];
         if (tenant && this.website) tenant.domain = this.host(this.website.url);
-        this.overview = this.website ? await this.rpc('muster_website_overview', { p_website_id: this.website.id }) : null;
+        this.overview = this.website ? await this.rpc('cavscope_website_overview', { p_website_id: this.website.id }) : null;
         // The overview's latest_sitrep is a stub -- id, headline, score. The
         // workspace reports, the evidence library and the Overview tiles need its
-        // sections, which only muster_latest_sitrep returns (the RPC sitrep.html
+        // sections, which only cavscope_latest_sitrep returns (the RPC sitrep.html
         // reads). Until 2026-09-28 nothing here fetched it, so both workspace
         // reports told every tenant their report "was generated before the report
         // template existed". A failure is marked rather than left as a stub that
         // reads like an old report.
         if (this.overview && this.overview.latest_sitrep) {
           try {
-            const full = await this.rpc('muster_latest_sitrep', { p_website_id: this.website.id });
+            const full = await this.rpc('cavscope_latest_sitrep', { p_website_id: this.website.id });
             if (full && full.sections) this.overview.latest_sitrep = full;
             else this.overview.latest_sitrep.load_failed = true;
           } catch (e) { this.overview.latest_sitrep.load_failed = true; this.fail(e); }
         }
-        this.risks = this.website ? await this.rpc('muster_risks', { p_website_id: this.website.id }) : [];
-        this.appetite = await this.rpc('muster_risk_appetite', { p_organization_id: o.id });
-        this.pendingInvites = await this.rpc('muster_pending_invites', { p_organization_id: o.id });
+        this.risks = this.website ? await this.rpc('cavscope_risks', { p_website_id: this.website.id }) : [];
+        this.appetite = await this.rpc('cavscope_risk_appetite', { p_organization_id: o.id });
+        this.pendingInvites = await this.rpc('cavscope_pending_invites', { p_organization_id: o.id });
         // Which AIO rules can have fired. Settles on its own: if it fails, the
         // AIO checks read "not assessed" rather than the workspace failing to load.
-        try { this.ruleStatus = await this.rpc('muster_rule_status', { p_rule_ids: [...this.aioChecks.map(c => c.rule), ...this.a11yChecks.map(([r]) => r)] }); }
+        try { this.ruleStatus = await this.rpc('cavscope_rule_status', { p_rule_ids: [...this.aioChecks.map(c => c.rule), ...this.a11yChecks.map(([r]) => r)] }); }
         catch (_) { this.ruleStatus = null; }
         tenant.data = this.buildState(o, this.overview);
         activeTenantId = tenant.id;
@@ -6748,7 +6748,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       //
       // Every check here is one engine rule. A check passes only when its rule
       // could have fired on the latest completed scan and did not: the rule is
-      // active (muster_rule_status), the scan's engine is at or past the version
+      // active (cavscope_rule_status), the scan's engine is at or past the version
       // that first emitted it, and the engine read the homepage at all. Anything
       // else is "not assessed" and is left out of the index -- never counted as a
       // pass, which is the same rule migration 062 enforces for controls.
@@ -6939,7 +6939,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         try {
           log(`Requesting a scan of https://${host} from the CavScope engine...`);
           let r;
-          try { r = await this.rpc('muster_request_scan', { p_website_id: site.id }); }
+          try { r = await this.rpc('cavscope_request_scan', { p_website_id: site.id }); }
           catch (e) { log(`Scan request refused: ${e.message || e}`, 'terminal-crit'); return; }
           log(r.deduplicated ? `Scan #${r.scan_id} was already in flight; following it.` : `Scan #${r.scan_id} queued. This usually takes about a minute.`);
 
@@ -6950,7 +6950,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           for (let n = 0; n < 40; n++) {
             await new Promise(res => setTimeout(res, 6000));
             let ov;
-            try { ov = await this.rpc('muster_website_overview', { p_website_id: site.id }); }
+            try { ov = await this.rpc('cavscope_website_overview', { p_website_id: site.id }); }
             catch (e) { log(`Could not read scan status: ${e.message || e}`, 'terminal-crit'); return; }
             scan = (ov.recent_scans || []).find(s => s.id === r.scan_id) || null;
             const st = scan ? scan.status : 'queued';
@@ -6985,7 +6985,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
       async requestScan() {
         if (!this.website) return;
         try {
-          const r = await this.rpc('muster_request_scan', { p_website_id: this.website.id });
+          const r = await this.rpc('cavscope_request_scan', { p_website_id: this.website.id });
           showToast(r.deduplicated ? `Scan #${r.scan_id} already in flight.` : `Scan #${r.scan_id} queued. Results in about a minute.`);
           this.startPolling(this.website.id);
         } catch (e) { this.fail(e); }
@@ -6997,7 +6997,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         this.poll = setInterval(async () => {
           n++;
           try {
-            const ov = await this.rpc('muster_website_overview', { p_website_id: websiteId });
+            const ov = await this.rpc('cavscope_website_overview', { p_website_id: websiteId });
             const st = ov.latest_scan && ov.latest_scan.status;
             if (st === 'complete' || st === 'failed' || n > 40) {
               this.stopPolling();
@@ -7233,7 +7233,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           </div>`;
       },
       async setSitrepAlertPreference(enabled) {
-        try { await this.rpc('muster_set_sitrep_alert_preference', { p_organization_id: this.org.id, p_enabled: enabled }); showToast(`SITREP-ready emails ${enabled ? 'enabled' : 'disabled'}.`); await this.loadWorkspace(); }
+        try { await this.rpc('cavscope_set_sitrep_alert_preference', { p_organization_id: this.org.id, p_enabled: enabled }); showToast(`SITREP-ready emails ${enabled ? 'enabled' : 'disabled'}.`); await this.loadWorkspace(); }
         catch (e) { this.fail(e); }
       },
       async saveSitrepRecipients(e) {
@@ -7241,13 +7241,13 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         const f = new FormData(e.target);
         const emails = [...f.getAll('member'), ...String(f.get('extra') || '').split(',')].map(s => String(s).trim()).filter(Boolean);
         try {
-          await this.rpc('muster_set_sitrep_recipients', { p_organization_id: this.org.id, p_emails: emails });
+          await this.rpc('cavscope_set_sitrep_recipients', { p_organization_id: this.org.id, p_emails: emails });
           showToast('SITREP recipients saved.');
           await this.loadWorkspace();
         } catch (err) { this.fail(err); }
       },
       // The tenant's own LLM. muster.org_llm_config has held the endpoint, model
-      // and a Vault-stored key since migration 069, muster_set_llm_config has
+      // and a Vault-stored key since migration 069, cavscope_set_llm_config has
       // been callable since 070, and muster-agent has read it since 071 -- and
       // nothing in the workspace ever set one, so the table stayed empty and
       // every narrative fell to the deterministic generator. This is that form.
@@ -7260,7 +7260,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         const el = this.panel('liveLlmPanel', 'teamSettings');
         let cfg;
         try {
-          cfg = await this.rpc('muster_llm_config', { p_organization_id: o.id });
+          cfg = await this.rpc('cavscope_llm_config', { p_organization_id: o.id });
         } catch (err) {
           el.innerHTML = `<div class="panel-head"><div><h3>AI narrative</h3><p class="live-muted">Could not read this workspace's model configuration: ${escapeHtml(err.message || String(err))}</p></div></div>`;
           return;
@@ -7333,7 +7333,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         const f = new FormData(e.target);
         const labelEl = document.getElementById('llmLabel');
         try {
-          await this.rpc('muster_set_llm_config', {
+          await this.rpc('cavscope_set_llm_config', {
             p_organization_id: this.org.id,
             p_base_url: f.get('base_url'),
             p_model: f.get('model'),
@@ -7347,7 +7347,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
       async clearLlm() {
         if (!confirm('Remove this workspace\'s model configuration? Narratives will fall back to the deterministic generator.')) return;
         try {
-          await this.rpc('muster_clear_llm_config', { p_organization_id: this.org.id });
+          await this.rpc('cavscope_clear_llm_config', { p_organization_id: this.org.id });
           showToast('Model configuration removed.');
           await this.renderLlmPanel();
         } catch (err) { this.fail(err); }
@@ -7356,7 +7356,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         e.preventDefault();
         const f = new FormData(e.target);
         try {
-          const r = await this.rpc('muster_create_api_key', { p_organization_id: this.org.id, p_agent_name: f.get('name'), p_kind: f.get('kind'), p_scopes: String(f.get('scopes')).split(',') });
+          const r = await this.rpc('cavscope_create_api_key', { p_organization_id: this.org.id, p_agent_name: f.get('name'), p_kind: f.get('kind'), p_scopes: String(f.get('scopes')).split(',') });
           const out = document.getElementById('liveKeyOut');
           out.hidden = false;
           out.innerHTML = `<div class="live-keybox">${escapeHtml(r.api_key)}</div><p class="live-muted" style="margin-top:6px;">${escapeHtml(r.note)} MCP URL: ${escapeHtml(r.mcp_url)}</p><button class="btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="copyToClipboard('${r.api_key}'); showToast('API key copied.')">⧉ Copy key</button>`;
@@ -7366,13 +7366,13 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         } catch (err) { this.fail(err); }
       },
       async revokeKey(id) {
-        try { await this.rpc('muster_revoke_api_key', { p_key_id: id }); showToast('Key revoked.'); await this.loadWorkspace(); } catch (e) { this.fail(e); }
+        try { await this.rpc('cavscope_revoke_api_key', { p_key_id: id }); showToast('Key revoked.'); await this.loadWorkspace(); } catch (e) { this.fail(e); }
       },
       async invite(e) {
         e.preventDefault();
         const f = new FormData(e.target);
         try {
-          const r = await this.rpc('muster_invite', { p_organization_id: this.org.id, p_email: f.get('email'), p_role: f.get('role') });
+          const r = await this.rpc('cavscope_invite', { p_organization_id: this.org.id, p_email: f.get('email'), p_role: f.get('role') });
           showToast(r.status === 'added' ? `Added as ${r.role}.` : r.message);
           e.target.reset();
         } catch (err) { this.fail(err); }
@@ -7392,7 +7392,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
       // which is this page's job. admin.html links here as /app#tenant=<id>.
       async openTenant(orgId) {
         try {
-          const o = await this.rpc('muster_admin_tenant', { p_organization_id: orgId });
+          const o = await this.rpc('cavscope_admin_tenant', { p_organization_id: orgId });
           if (!multiTenantStore['live-' + o.id]) multiTenantStore['live-' + o.id] = this.tenantFromOrg(o);
           await this.activateOrg(o);
         } catch (e) { this.fail(e); }
@@ -7412,7 +7412,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           client_payment_url: payload.wlClientPaymentUrl, client_pricing_note: payload.wlClientPricingNote,
         };
         try {
-          await this.rpc('muster_save_brand', { p });
+          await this.rpc('cavscope_save_brand', { p });
           showToast(`Brand profile saved for ${this.org.name}.`);
           await this.loadWorkspace();
         } catch (e) { this.fail(e); }
@@ -7427,26 +7427,26 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           next_review_at: payload.nextReview || null,
         };
         try {
-          await this.rpc('muster_save_risk_appetite', { p_organization_id: this.org.id, p });
+          await this.rpc('cavscope_save_risk_appetite', { p_organization_id: this.org.id, p });
           showToast('Risk appetite updated.');
           await this.activateOrg(this.org);
         } catch (e) { this.fail(e); }
       },
       async updateFindingStatus(findingId, status) {
         if (!status) return;
-        try { await this.rpc('muster_update_finding_status', { p_finding_id: findingId, p_status: status }); showToast(`Finding #${findingId} marked ${status}.`); await this.activateOrg(this.org); }
+        try { await this.rpc('cavscope_update_finding_status', { p_finding_id: findingId, p_status: status }); showToast(`Finding #${findingId} marked ${status}.`); await this.activateOrg(this.org); }
         catch (e) { this.fail(e); }
       },
       async promoteFinding(findingId) {
-        try { await this.rpc('muster_promote_finding_to_risk', { p_finding_id: findingId }); showToast(`Finding #${findingId} promoted to the risk register.`); await this.activateOrg(this.org); }
+        try { await this.rpc('cavscope_promote_finding_to_risk', { p_finding_id: findingId }); showToast(`Finding #${findingId} promoted to the risk register.`); await this.activateOrg(this.org); }
         catch (e) { this.fail(e); }
       },
       async setScanCadence(websiteId, minutes) {
-        try { await this.rpc('muster_update_scan_settings', { p_website_id: websiteId, p_enabled: true, p_cadence_minutes: parseInt(minutes) }); showToast('Scan cadence updated.'); await this.activateOrg(this.org); }
+        try { await this.rpc('cavscope_update_scan_settings', { p_website_id: websiteId, p_enabled: true, p_cadence_minutes: parseInt(minutes) }); showToast('Scan cadence updated.'); await this.activateOrg(this.org); }
         catch (e) { this.fail(e); }
       },
       async setAlertPreference(enabled) {
-        try { await this.rpc('muster_set_org_alert_preference', { p_organization_id: this.org.id, p_enabled: enabled }); showToast(`Critical-finding email alerts ${enabled ? 'enabled' : 'disabled'}.`); await this.loadWorkspace(); }
+        try { await this.rpc('cavscope_set_org_alert_preference', { p_organization_id: this.org.id, p_enabled: enabled }); showToast(`Critical-finding email alerts ${enabled ? 'enabled' : 'disabled'}.`); await this.loadWorkspace(); }
         catch (e) { this.fail(e); }
       },
     };
@@ -7465,7 +7465,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
         if (currentModalType === 'add_subclient') {
           e.preventDefault(); closeModal();
           const url = /^https?:\/\//i.test(payload.clientDomain || '') ? payload.clientDomain : `https://${payload.clientDomain}`;
-          Live.rpc('muster_add_website', { p_organization_id: Live.org.id, p_name: payload.clientName, p_url: url })
+          Live.rpc('cavscope_add_website', { p_organization_id: Live.org.id, p_name: payload.clientName, p_url: url })
             .then(r => { showToast(`Website added. Scan #${r.first_scan?.scan_id ?? ''} queued.`); Live.startPolling(r.website_id); return Live.loadWorkspace(); })
             .catch(err => Live.fail(err));
           return;

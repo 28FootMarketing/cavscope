@@ -9,7 +9,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // "Offer Status" column would have flipped to Expired two days early.
 //
 // Scan columns added the same day, once migration 107 made every signup queue
-// a sandbox scan: the read moved from the table to muster_engine_beta_export()
+// a sandbox scan: the read moved from the table to cavscope_engine_beta_export()
 // so the scan's status, posture and open-finding counts ride along.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -18,7 +18,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const OFFER_DEADLINE_UTC = "2026-09-29T03:59:00Z";
 
 async function getSecret(name: string): Promise<string> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/muster_get_secret`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cavscope_get_secret`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
   // One engine RPC (migration 20260925071634, muster_108) rather than a table
   // read: the signup's scan lives in muster.scans, which PostgREST does not
   // expose, and the RPC joins the two. service_role is the only grantee.
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/muster_engine_beta_export`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cavscope_engine_beta_export`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

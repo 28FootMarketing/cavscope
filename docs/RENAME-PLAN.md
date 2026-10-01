@@ -1,9 +1,15 @@
 # Backend rename: `muster_*` / `muster-*` to `cavscope_*` / `cavscope-*`
 
-Status: **proposed, nothing here has been applied.** Target project `hjowfnzpomzxazmzywxw`.
+Status, read from the live project 2026-10-01: **stage 1 is applied** (migration
+`20260930225424`, `rpc_rename_cavscope`: 117 `public.cavscope_*` functions and 109 `muster_*`
+aliases forwarding to them; grants, argument names and return types verified identical on all 109
+pairs). **Stage 2 is done in code** on branch `claude/close-known-gaps`: pages, edge functions,
+tools and tests call the `cavscope_*` names. It takes effect for browsers when that branch merges,
+and for edge functions when CI deploys them; both names answer until then, so order is safe.
+Stages 3 to 5 have not started. `track_functions` is still `none`, which stage 5's one-week
+quiet-period check needs set to `pl`. Target project `hjowfnzpomzxazmzywxw`.
 The `muster` schema was already renamed to `cavscope` (54 tables, 82 functions); what still
-carries the old name is the callable surface below. `CLAUDE.md` still says the `muster`
-schema is live, which is stale.
+carries the old name is the callable surface below.
 
 ## What carries the name (read from the live project, 2026-09-30)
 

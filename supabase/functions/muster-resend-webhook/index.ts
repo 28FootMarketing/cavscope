@@ -11,7 +11,7 @@ import {
 // This is what makes the difference between "accepted for sending" and
 // "delivered" observable. muster-alert-dispatch records the id Resend returns
 // from POST /emails; Resend later calls here with what actually happened, and
-// public.muster_engine_record_email_event joins the two.
+// public.cavscope_engine_record_email_event joins the two.
 //
 // verify_jwt = false in config.toml. Authentication IS the Svix signature --
 // there is no other credential, which is why an unsigned or stale request is
@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
   const suppressible = eventType === "complained" ||
     (eventType === "bounced" && isPermanentBounce(detail));
 
-  const { data, error } = await db.rpc("muster_engine_record_email_event", {
+  const { data, error } = await db.rpc("cavscope_engine_record_email_event", {
     p_idempotency_key: `svix-${svixId}`,
     p_provider_message_id: providerMessageId,
     p_event_type: eventType,

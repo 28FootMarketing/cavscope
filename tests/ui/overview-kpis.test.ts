@@ -93,7 +93,7 @@ function run(live: boolean, Live: Record<string, unknown>) {
 const SAMPLE_LITERALS = ["1 active critical risk", "Target: 95%+", "4 of 5 mapped", "SOC 2, GDPR, WCAG",
   "3 approved artifacts", "1 in review", "0 overdue actions", "4 treatments active", "80+ Good"];
 
-// Shaped like muster_website_overview and muster_risks for a real tenant site.
+// Shaped like cavscope_website_overview and cavscope_risks for a real tenant site.
 const LIVE = {
   overview: {
     posture_score: 61, posture_band: "amber", open_by_severity: { critical: 1, high: 1, medium: 1, low: 0, info: 2 },
@@ -186,7 +186,7 @@ test("renderOverview fills the tiles, and scan evidence is never labelled Approv
 });
 
 test("a report whose sections did not load says so, never 'No report yet'", () => {
-  // muster_website_overview returns latest_sitrep as a stub with no sections;
+  // cavscope_website_overview returns latest_sitrep as a stub with no sections;
   // until 2026-09-28 app.html never fetched the rest, so a real tenant's tile
   // said "No report yet" beside a report that existed.
   const stub = { ...LIVE, overview: { ...LIVE.overview, latest_sitrep: { id: 129, headline: "x", posture_score: 71 } } };

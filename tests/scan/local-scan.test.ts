@@ -46,7 +46,7 @@ test("the adapter fails loudly rather than cutting a region it does not recognis
   for (const anchor of [
     'import { createClient } from "jsr:@supabase/supabase-js@2";',
     'const db = createClient(Deno.env.get("SUPABASE_URL")!',
-    'await db.rpc("muster_engine_ingest"',
+    'await db.rpc("cavscope_engine_ingest"',
   ]) {
     assert.equal(original.split(anchor).length - 1, 1, `anchor is no longer unique: ${anchor}`);
   }

@@ -18,7 +18,8 @@
  * instead of quietly scanning with different rules.
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -30,7 +31,7 @@ export const ENGINE_SRC = join(ENGINE_DIR, "index.ts");
 const RUNTIME_TYPES = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";\n';
 const CLIENT_IMPORT = 'import { createClient } from "jsr:@supabase/supabase-js@2";\n';
 const DB_CONST = 'const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);\n';
-const TAIL_ANCHOR = "  const { data: ingest, error: ingestErr } = await db.rpc(\"muster_engine_ingest\"";
+const TAIL_ANCHOR = "  const { data: ingest, error: ingestErr } = await db.rpc(\"cavscope_engine_ingest\"";
 
 /**
  * The replacement tail. The edge function hands `evidence` and `findings` to
@@ -69,11 +70,11 @@ export async function adaptSource() {
   if (src.includes('from "./')) throw new Error("adapter: a relative import survived the rewrite");
 
   const at = src.indexOf(TAIL_ANCHOR);
-  if (at === -1) throw new Error("adapter: could not find the muster_engine_ingest call that ends runScan(). Update tools/local-scan/adapt.mjs.");
+  if (at === -1) throw new Error("adapter: could not find the cavscope_engine_ingest call that ends runScan(). Update tools/local-scan/adapt.mjs.");
 
   const dropped = src.slice(at);
   // The excised region must be exactly the two RPCs, the return, and Deno.serve.
-  for (const required of ["muster_engine_sitrep", "Deno.serve("]) {
+  for (const required of ["cavscope_engine_sitrep", "Deno.serve("]) {
     if (!dropped.includes(required)) throw new Error(`adapter: the region after the ingest call does not contain ${required}; refusing to cut a region I do not recognise.`);
   }
   if (dropped.includes("add({")) throw new Error("adapter: the region after the ingest call raises a finding. Cutting it would silently drop a rule. Update tools/local-scan/adapt.mjs.");
@@ -81,11 +82,24 @@ export async function adaptSource() {
   return src.slice(0, at) + LOCAL_TAIL;
 }
 
-/** Writes the adapted engine to a temp dir and returns its file URL. */
+/**
+ * Writes the adapted engine to a temp dir and returns its file URL.
+ *
+ * Several processes call this at once (the aio, legal and local-scan test files
+ * each run in their own), all into the same shared file. A plain writeFile
+ * truncates and then writes, so a process that imported the file in between got
+ * an empty module and "engine.runScan is not a function". The module is built
+ * under a name only this call uses and renamed into place: a rename is atomic,
+ * so a reader sees the previous complete file or the new complete one, and every
+ * writer produces identical content, so which one wins does not matter.
+ * tests/scan/local-scan-concurrency.test.ts is the proof.
+ */
 export async function loadEngine() {
-  const out = join(tmpdir(), "muster-local-scan");
+  const out = join(tmpdir(), "cavscope-local-scan");
   await mkdir(out, { recursive: true });
   const file = join(out, "engine.adapted.ts");
-  await writeFile(file, await adaptSource(), "utf8");
+  const staging = join(out, `engine.adapted.${process.pid}.${randomUUID()}.ts`);
+  await writeFile(staging, await adaptSource(), "utf8");
+  await rename(staging, file);
   return pathToFileURL(file).href;
 }

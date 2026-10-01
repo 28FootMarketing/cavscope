@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { gateCheckoutSession, verifyStripeSignature } from "./core.ts";
+import { gateCheckoutSession, gateSubscriptionDeleted, verifyStripeSignature } from "./core.ts";
 
 // PRD-003: Stripe self-serve checkout for the base CavScope tier only.
 // CavScope Partner/Enterprise stay sales-assisted via muster-ghl-webhook
@@ -9,7 +9,7 @@ import { gateCheckoutSession, verifyStripeSignature } from "./core.ts";
 // function only records that a real payment happened (invites the auth
 // user if new, records a pending plan grant keyed by email) and the
 // EXISTING, already-verified self-serve onboarding wizard in app.html
-// (muster_onboard -> muster.do_onboard) picks the grant up the moment the
+// (cavscope_onboard -> muster.do_onboard) picks the grant up the moment the
 // user actually creates their organization -- no parallel onboarding path.
 //
 // That handoff is verified: a probe run against the live database recorded a
@@ -20,7 +20,8 @@ import { gateCheckoutSession, verifyStripeSignature } from "./core.ts";
 // Required Edge Function secret: STRIPE_WEBHOOK_SECRET (the signing
 // secret for the webhook endpoint registered in the Stripe dashboard --
 // Developers -> Webhooks -> Add endpoint, pointed at this function's URL,
-// subscribed to checkout.session.completed; the secret is revealable there
+// subscribed to checkout.session.completed AND customer.subscription.deleted;
+// the secret is revealable there
 // at any time, not only at creation).
 // Nothing else needs a Stripe API key: tier/stage/price id all arrive as
 // Payment-Link-level metadata already present on the event payload, so
@@ -58,10 +59,24 @@ Deno.serve(async (req: Request) => {
     return json({ error: "invalid JSON body" }, 400);
   }
 
+  // A subscription that has ended stops the plan it paid for. Handled before the
+  // checkout gate, which acknowledges every other event type as a no-op.
+  if (event.type === "customer.subscription.deleted") {
+    const cancel = gateSubscriptionDeleted(event);
+    if (!cancel.act) return json(cancel.body, cancel.status);
+    const { data: outcome, error: cancelErr } = await db.rpc("cavscope_engine_cancel_subscription", {
+      p_stripe_subscription_id: cancel.subscriptionId,
+    });
+    // A 500 makes Stripe retry, which is right: the RPC is idempotent, and a
+    // cancellation that failed to apply must not be acknowledged as handled.
+    if (cancelErr) return json({ error: `could not apply cancellation: ${cancelErr.message}` }, 500);
+    return json({ received: true, handled: true, outcome: (outcome as { outcome?: string } | null)?.outcome ?? null });
+  }
+
   const gate = gateCheckoutSession(event);
   if (!gate.act) return json(gate.body, gate.status);
 
-  const { data: existingAuthId, error: lookupErr } = await db.rpc("muster_find_auth_user_by_email", { p_email: gate.email });
+  const { data: existingAuthId, error: lookupErr } = await db.rpc("cavscope_find_auth_user_by_email", { p_email: gate.email });
   if (lookupErr) return json({ error: `auth lookup failed: ${lookupErr.message}` }, 500);
 
   let invited = false;
@@ -80,7 +95,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const { error: grantErr } = await db.rpc("muster_engine_record_commercial_grant", {
+  const { error: grantErr } = await db.rpc("cavscope_engine_record_commercial_grant", {
     p_email: gate.email,
     p_tier: gate.tier,
     p_stage: gate.stage,

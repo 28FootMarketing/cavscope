@@ -72,7 +72,7 @@ test("a value typed before the list existed is kept and marked, never swapped", 
 
 test("onboarding picks country and timezone from lists", () => {
   assert.match(onboarding, /\$\{countryField\(o\.country_code\)\}/);
-  assert.match(onboarding, /rpc\('muster_countries'\)/);
+  assert.match(onboarding, /rpc\('cavscope_countries'\)/);
   assert.doesNotMatch(onboarding, /Country code <span class="hint">\(2 letters/);
   assert.match(onboarding, /Intl\.supportedValuesOf\('timeZone'\)/);
 });

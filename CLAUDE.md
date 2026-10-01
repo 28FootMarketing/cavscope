@@ -27,7 +27,10 @@ signs its holder in, on the CavScope origin.
 **The database schema is `cavscope`**, not `muster`, on `hjowfnzpomzxazmzywxw` (read from the
 live catalog 2026-09-30). What still
 carries the old name is the callable surface -- 112 `public.muster_*` RPCs and 18 `muster-*`
-edge functions. Where the rest of this file says `muster.<table>` or `muster.<function>` for
+edge functions. As of 2026-10-01 the RPC rename is applied (109 `cavscope_*` functions with
+`muster_*` aliases) and every page, edge function, tool and test in this repo calls the
+`cavscope_*` names, so **new code calls `cavscope_*`**; the aliases stay until stage 5 of the plan.
+Where the rest of this file names an RPC as `muster_foo`, call `cavscope_foo`. Where the rest of this file says `muster.<table>` or `muster.<function>` for
 the database, read `cavscope.`. The staged plan to retire the remaining names is in
 `docs/RENAME-PLAN.md`.
 
@@ -210,9 +213,19 @@ is the same minus that step, for the two jobs where a user must not enter into i
 paths running as `service_role` with no user at all, and the console asking what org 17
 resolves to, where the answer must not change depending on which super admin is looking.
 
-**As of 2026-09-17 there are 35 flags: 25 wired, 10 enforced nowhere.** Read that from
+**As of 2026-10-01 there are 36 flags: 26 wired, 10 enforced nowhere.** Read that from
 `muster.feature_flags`, not from here -- this paragraph said "four are wired" until the count
-was checked, by which point it was 25, and the registry had grown from 22 keys to 35. The
+was checked, by which point it was 25, and the registry had grown from 22 keys to 35, then 36.
+The ten were triaged 2026-10-01 and none is a hidden hole: the console already marks each
+"read by nothing" with its switches disabled. Four are Partner or Enterprise entitlements with
+nothing behind them (`client_management_enabled` does not exist as a capability,
+`commercial_use_enabled` is a licence term, `custom_branding_enabled` is redundant with
+`white_label_enabled`, `enterprise_enabled` is per-contract), `partner_dashboard_enabled` gates a
+view that is visible to everyone and was left ungated while no Partner organization could hold
+client data, `super_admin_console` is in the inventory only, and three are kill-switched unbuilt
+features (`browser_wcag_engine`, `pdf_export`, `public_status_badge`) plus `telegram_alerts`, which
+is off by default and unbuilt. Registry prose says CavScope as of that date; lowercase
+identifiers inside it (`muster_admin_run_url`, `muster-agent`) stay until they are renamed. The
 `enforcement` column is the answer; a number written in prose is a snapshot that rots.
 
 The four wired first, by migration `20260916022923`, are still the ones whose behaviour is worth
@@ -225,8 +238,15 @@ already-queued alerts as `pending` rather than dropping them), `support_imperson
 Each of the ten unwired rows carries a `wiring_note` saying why and what would wire it.
 `commercial_use_enabled` can never be wired — it is a licence term, not a code path, and must
 not be presented as a control. **One of the ten is a commercial problem rather than a deferred
-feature:** `client_management_enabled` is sold on the Partner tier and its own note says the
-client-org creation path does not check it, so a lower tier gets it free.
+feature:** `client_management_enabled` is sold on the Partner tier, and the capability it names
+does not exist. Read from the live catalog 2026-10-01: no function sets `organizations.managed_by_org_id`
+(`onboard_client` is dead and does not either), so there is no guard to add and no tier getting it
+free -- the flag's `wiring_note` said the creation path "does not check it", which was wrong, and
+migration `20261001020513` corrected it. `app.html`'s "create client organization" button, in a live workspace, opens the
+self-serve onboarding and makes an independent trial organization: no Partner link, no allowance, no
+add-on billing. `index.html` marks the three client-org Partner bullets and the allowance "in
+development" until a real creation path exists; build that path with a `has_flag` guard and set
+`enforcement` in the same migration, then remove the markers.
 
 Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
 missing from the workspace payload leaves the nav item visible. These flags gate
@@ -257,8 +277,8 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   guessing, and neither may be quietly replaced with a nicer number: API request volume is not
   metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
   `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
-  `customer.subscription.deleted` is unhandled, so a cancelled customer prices in until their plan
-  is changed by hand. Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
+  a cancelled customer stops pricing in once `customer.subscription.deleted` is handled (see the
+  Stripe notes below; until the endpoint is subscribed to that event, one still prices in). Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
   an explicit "not instrumented" panel naming what would have to exist first, because the schema
   cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
   table. **Reports stopped being one of them on 2026-09-17**, backed by
@@ -375,8 +395,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   `index.ts`. What remains is Stripe dashboard configuration only: the endpoint registered against the
   **new** project's function URL, `STRIPE_WEBHOOK_SECRET` set, and `tier` + `stage` metadata on each
   Payment Link. A link without that metadata is rejected 400 -- check it first if a real checkout fails.
-  Subscription **cancellation is not handled**: nothing consumes `customer.subscription.deleted`, so a
-  cancelled customer keeps their plan until someone changes it by hand.
+  Subscription **cancellation is handled as of 2026-10-01**: `gateSubscriptionDeleted` in `core.ts`
+  routes `customer.subscription.deleted` to `public.cavscope_engine_cancel_subscription`
+  (migration `20261001011757`, applied and exercised in a rolled-back transaction: downgrade to
+  trial, idempotent redelivery, a plan moved by hand left alone and logged, an unclaimed grant
+  voided, a re-purchase clearing the cancellation). It works because grants now record the claiming
+  organization (`organization_id`, set in `do_onboard`). It takes effect only when the function is
+  deployed (merge to main) **and** the Stripe endpoint is subscribed to the event, which is a
+  dashboard step nothing here can verify -- until then a cancelled customer keeps their plan. It
+  deliberately acts on `deleted`, not on a scheduled-cancellation notice, so a customer keeps what
+  they paid for. Nothing is deleted on downgrade; websites over the trial limit are not disabled.
 - A super admin can also run a real scan against any URL from `app.html`'s admin console ("Run a URL
   scan") and get back real findings from the live engine — see `muster_admin_run_url` /
   `muster_admin_website_overview` / `muster_admin_url_runs` in
@@ -488,7 +516,12 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   it: the password leg (`rotate_password` was false; set → sign-in last passed 2026-09-09), a real
   **magic** link (the function mints recovery links; same allowlist and fallback, but not followed),
   and delivery (nothing is sent). So write "recovery links land on the app host", not "magic links
-  work", until someone has sent a magic link and followed it. Details in `docs/EMAIL.md`. Setting a
+  work", until someone has sent a magic link and followed it. **That has now been reported:** the
+  owner sent one to a mailbox they read and followed it on 2026-10-01 and says it works. It was
+  not observed by this repo's tooling and does not say which address or landing host, so the
+  claim is "a magic link can arrive and sign someone in". An address on Resend's suppression
+  list still gets a 200 from GoTrue and no email (the QA sentinel's has since 2026-09-09), so a
+  suppressed person sees "check your email" and never receives one. Details in `docs/EMAIL.md`. Setting a
   field and delivering a working link are different claims and this file has already conflated them
   once.
   The workflow deliberately leaves `uri_allow_list` alone (`PATCH` is partial). That list is
@@ -977,4 +1010,5 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   because it changes what an undelivered auth email means: on the built-in sender a missing
   email is an unremarkable rate limit, on configured SMTP it is a real delivery fault worth
   chasing. What IS outstanding: the six auth email templates and the rate limit on the new
-  project, and `customer.subscription.deleted`, which nothing consumes.
+  project, and subscribing the Stripe endpoint to `customer.subscription.deleted` (handled in code
+  since 2026-10-01; the dashboard step is the owner's).

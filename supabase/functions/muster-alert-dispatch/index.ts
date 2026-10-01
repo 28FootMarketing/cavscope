@@ -10,10 +10,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   x-muster-secret: <vault muster_cron_secret>
 //   body: {} (cron-only; no per-call parameters needed)
 //
-// Claims up to 20 pending rows via public.muster_engine_claim_alerts (a
+// Claims up to 20 pending rows via public.cavscope_engine_claim_alerts (a
 // SELECT ... FOR UPDATE SKIP LOCKED claim, same concurrency-safety pattern
 // as the scan engine's own claim function), sends each through Resend, then
-// resolves it via public.muster_engine_resolve_alert. That RPC owns the
+// resolves it via public.cavscope_engine_resolve_alert. That RPC owns the
 // retry policy, not this function: a failed send is requeued to 'pending'
 // (picked up on the next 5-minute cron tick -- that interval is the backoff,
 // not a fixed delay computed here) for up to 5 attempts total, then
@@ -289,13 +289,13 @@ type OutboxRow = {
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const { data: secret } = await db.rpc("muster_engine_secret");
+  const { data: secret } = await db.rpc("cavscope_engine_secret");
   const provided = req.headers.get("x-muster-secret") ?? "";
   if (!secret || provided !== secret) return json({ error: "unauthorized" }, 401);
 
   const apiKey = Deno.env.get("RESEND_API_KEY");
 
-  const { data: claimed, error: claimErr } = await db.rpc("muster_engine_claim_alerts", { p_limit: 20 });
+  const { data: claimed, error: claimErr } = await db.rpc("cavscope_engine_claim_alerts", { p_limit: 20 });
   if (claimErr) return json({ error: `claim failed: ${claimErr.message}` }, 500);
 
   const rows = (claimed ?? []) as OutboxRow[];
@@ -304,7 +304,7 @@ Deno.serve(async (req: Request) => {
 
   for (const row of rows) {
     if (!apiKey) {
-      await db.rpc("muster_engine_resolve_alert", { p_id: row.id, p_status: "failed", p_error: "RESEND_API_KEY is not set" });
+      await db.rpc("cavscope_engine_resolve_alert", { p_id: row.id, p_status: "failed", p_error: "RESEND_API_KEY is not set" });
       failed++;
       continue;
     }
@@ -353,7 +353,7 @@ Deno.serve(async (req: Request) => {
         }
         // p_status "sent" means accepted for sending, not delivered. Only
         // muster-resend-webhook can raise delivery_status to "delivered".
-        await db.rpc("muster_engine_resolve_alert", {
+        await db.rpc("cavscope_engine_resolve_alert", {
           p_id: row.id,
           p_status: "sent",
           p_error: null,
@@ -362,11 +362,11 @@ Deno.serve(async (req: Request) => {
         sent++;
       } else {
         const errBody = await res.text().catch(() => res.statusText);
-        await db.rpc("muster_engine_resolve_alert", { p_id: row.id, p_status: "failed", p_error: `Resend ${res.status}: ${errBody.slice(0, 500)}` });
+        await db.rpc("cavscope_engine_resolve_alert", { p_id: row.id, p_status: "failed", p_error: `Resend ${res.status}: ${errBody.slice(0, 500)}` });
         failed++;
       }
     } catch (e) {
-      await db.rpc("muster_engine_resolve_alert", { p_id: row.id, p_status: "failed", p_error: String(e).slice(0, 500) });
+      await db.rpc("cavscope_engine_resolve_alert", { p_id: row.id, p_status: "failed", p_error: String(e).slice(0, 500) });
       failed++;
     }
   }

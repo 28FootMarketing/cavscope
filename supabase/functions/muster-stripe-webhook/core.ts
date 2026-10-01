@@ -152,3 +152,36 @@ export function gateCheckoutSession(
     subscriptionId: (session["subscription"] as string | null) ?? null,
   };
 }
+
+export type CancelGateResult =
+  | { act: false; status: number; body: Record<string, unknown> }
+  | { act: true; subscriptionId: string; customerId: string | null };
+
+/**
+ * Decide whether an event ends a plan, and pull out the subscription it ends.
+ *
+ * customer.subscription.deleted is the event that matters, not
+ * customer.subscription.updated with cancel_at_period_end: Stripe sends
+ * "deleted" when the subscription actually ends (immediately, or at the close of
+ * the paid period for a scheduled cancellation), which is the moment the paid
+ * entitlement stops being paid for. Acting on the scheduled-cancellation notice
+ * would take away days the customer has already paid for.
+ *
+ * The id must look like a subscription id. The database lookup is keyed on it,
+ * and an empty or foreign-shaped value must never reach a query that could match
+ * a row with a null subscription id.
+ */
+export function gateSubscriptionDeleted(
+  event: { type?: string; data?: { object?: Record<string, unknown> } },
+): CancelGateResult {
+  if (event.type !== "customer.subscription.deleted") {
+    return { act: false, status: 200, body: { received: true, handled: false } };
+  }
+  const sub = event.data?.object ?? {};
+  const id = typeof sub["id"] === "string" ? sub["id"].trim() : "";
+  if (!/^sub_[A-Za-z0-9]+$/.test(id)) {
+    return { act: false, status: 400, body: { error: "subscription event has no valid subscription id" } };
+  }
+  const customer = sub["customer"];
+  return { act: true, subscriptionId: id, customerId: typeof customer === "string" && customer ? customer : null };
+}

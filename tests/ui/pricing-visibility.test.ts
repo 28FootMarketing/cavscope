@@ -96,7 +96,7 @@ test("admin.html pricing panel defaults Partner on when visible is missing", () 
   // were live while index.html, correctly, showed Partner alone.
   const html = read("admin.html");
   assert.match(html, /setPricingVisibility/);
-  assert.match(html, /muster_admin_set_pricing_visibility/);
+  assert.match(html, /cavscope_admin_set_pricing_visibility/);
   assert.match(
     html,
     /pricing\.visible\s*\?\s*!!pricing\.visible\[t\.key\]\s*:\s*t\.key === 'muster_partner'/,

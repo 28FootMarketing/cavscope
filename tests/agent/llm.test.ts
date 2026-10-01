@@ -261,8 +261,8 @@ test("the tenant is resolved from the website, never from the API key", () => {
   // platform-scoped key may narrate any tenant's website. Keying off the key
   // would have found no config there and invited a fallback to MUSTER's
   // account -- silently, for a tenant who had configured their own.
-  assert.ok(AGENT.includes("muster_engine_llm_config_for_website"));
-  assert.equal(AGENT.includes("muster_engine_llm_config\""), false, "the edge function must not name an org id itself");
+  assert.ok(AGENT.includes("cavscope_engine_llm_config_for_website"));
+  assert.equal(AGENT.includes("cavscope_engine_llm_config\""), false, "the edge function must not name an org id itself");
 
   const narrative = AGENT.slice(AGENT.indexOf("async function generateAiNarrative"));
   assert.ok(narrative.includes("resolveTenantLlm(context.website_id"));

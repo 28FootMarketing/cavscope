@@ -215,6 +215,13 @@ What this run does **not** prove, so nobody reads more into it than it says:
 - **Magic links specifically.** The smoke test mints a *recovery* link. A magic link goes through
   the same allowlist check and the same Site URL fallback, so this is strong evidence it now lands
   on the app host, but only following a real magic link proves that.
+  **Update 2026-10-01:** the owner reported that a real magic link works, sent to a mailbox they
+  read and followed. That was not observed in this repository's tooling, and the report does not
+  record which address, which template or which landing host, so it settles "a magic link can
+  arrive and sign someone in" and nothing finer. One failure it cannot rule out stays open: an
+  address on Resend's suppression list (a past hard bounce, as the QA sentinel's has been since
+  2026-09-09) gets a 200 from GoTrue and no email, so that person sees "check your email" and
+  never receives one.
 - **Delivery.** Nothing was sent, so this says nothing about SMTP, Resend or which templates are
   live.
 

@@ -56,8 +56,8 @@ test("the migration proved reports unchanged with no override, and probed one th
 });
 
 test("the console reads it as a side read and writes it through the shared write path", () => {
-  assert.match(admin, /locations: \['muster_admin_site_jurisdictions'\]/);
-  assert.match(admin, /await write\('muster_admin_set_site_jurisdiction',/);
+  assert.match(admin, /locations: \['cavscope_admin_site_jurisdictions'\]/);
+  assert.match(admin, /await write\('cavscope_admin_set_site_jurisdiction',/);
   assert.match(admin, /const locForm = \{ site: '', country: '', region: '', note: '' \};/);
 });
 

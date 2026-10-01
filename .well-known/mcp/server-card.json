@@ -53,8 +53,8 @@
     "method": "apiKey",
     "location": "header",
     "name": "x-muster-api-key",
-    "description": "API key issued by public.muster_create_api_key. Prefix: mk_. Also accepted as Authorization Bearer token.",
-    "getKey": "public.muster_create_api_key (Pro plan owner or super admin)"
+    "description": "API key issued by public.cavscope_create_api_key. Prefix: mk_. Also accepted as Authorization Bearer token.",
+    "getKey": "public.cavscope_create_api_key (Pro plan owner or super admin)"
   },
   "tools": {
     "dynamic": true,

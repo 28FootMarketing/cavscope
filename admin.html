@@ -874,7 +874,7 @@
   // does now happens here, and tests/ui/one-admin-console.test.ts keeps it so.
   //
   // This page is still a renderer. Its figures come from
-  // public.muster_admin_console() plus six side reads (see SIDE_READS), all
+  // public.cavscope_admin_console() plus six side reads (see SIDE_READS), all
   // SECURITY DEFINER and gated on muster.is_super_admin(), and its controls are
   // forms over RPCs that check the caller themselves. Nothing here decides who
   // may see or change what; the database does, and a non-super-admin gets
@@ -1372,7 +1372,7 @@
     return `<div class="section-head"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(sub)}</p></div>`;
   }
 
-  // The plans muster_admin_set_plan accepts, as app.html's console offered them.
+  // The plans cavscope_admin_set_plan accepts, as app.html's console offered them.
   // A tenant already on something outside this list keeps it as an option, so
   // the dropdown can never silently show a different plan from the real one.
   const PLANS = ['trial', 'starter', 'pro', 'enterprise', 'internal'];
@@ -1424,7 +1424,7 @@
   // white_label_enabled, custom_domain_enabled and the rest of `partner`.
   //
   // It adds nothing new underneath. Every switch here is
-  // muster_admin_set_flag / muster_admin_clear_flag_override, the same RPCs
+  // cavscope_admin_set_flag / cavscope_admin_clear_flag_override, the same RPCs
   // the flag registry already calls to set or clear a per-org override --
   // this card just resolves and writes them per client instead of per flag.
   // An unwired entitlement (client_management_enabled, commercial_use_enabled,
@@ -1436,7 +1436,7 @@
   // What a tenant fills in for itself once it has an entitlement -- the brand
   // name, colors, logo, the custom domain string, what it bills its own
   // client -- stays exactly where it already lives, in the tenant's own Team
-  // & Settings (muster_save_brand, app.html). This card controls only whether
+  // & Settings (cavscope_save_brand, app.html). This card controls only whether
   // they are allowed to; it does not read or duplicate brand_profiles.
 
   function planDefaultForOrg(f, o) {
@@ -1504,7 +1504,7 @@
     return intro + orgs.map((o) => clientAccessCard(o, partnerFlags)).join('');
   }
 
-  // Platform roles, as muster_admin_set_user_role accepts them.
+  // Platform roles, as cavscope_admin_set_user_role accepts them.
   const ROLES = ['user', 'admin', 'super_admin'];
 
   function renderUsers() {
@@ -1541,7 +1541,7 @@
   // had nowhere to read the result. Generating a deliverable and not showing it
   // is the same class of failure as a switch that changes nothing.
   //
-  // Loaded on demand rather than in muster_admin_console(): the index is its own
+  // Loaded on demand rather than in cavscope_admin_console(): the index is its own
   // RPC and the markdown is a second one, so opening the section does not pull
   // every report's prose to render a list.
   let SITREPS = null;      // index, or null until first load
@@ -1550,7 +1550,7 @@
 
   async function loadSitreps(force) {
     if (SITREPS && !force) return;
-    const { data, error } = await sb.rpc('muster_admin_sitreps', { p_limit: 200 });
+    const { data, error } = await sb.rpc('cavscope_admin_sitreps', { p_limit: 200 });
     if (error) throw error;
     SITREPS = data || [];
   }
@@ -1560,7 +1560,7 @@
     sitrepBusy = true;
     render();
     try {
-      const { data, error } = await sb.rpc('muster_admin_sitrep', { p_id: id });
+      const { data, error } = await sb.rpc('cavscope_admin_sitrep', { p_id: id });
       if (error) throw error;
       sitrepOpen = data;
     } catch (e) {
@@ -1889,8 +1889,8 @@
   // is how a console stops being used. The same argument then took the rest:
   // since 2026-09-23 every super admin write lives on this page (see ---- writes).
   //
-  // Neither call is trusted from here. muster_admin_run_url and
-  // muster_request_scan are both SECURITY DEFINER and check
+  // Neither call is trusted from here. cavscope_admin_run_url and
+  // cavscope_request_scan are both SECURITY DEFINER and check
   // muster.is_super_admin() / muster.can_write_org() themselves, so a hand-made
   // call from a browser console gets 42501 exactly as it would without this
   // panel. Nothing below is a permission check; it is a form.
@@ -1970,13 +1970,13 @@
   }
 
   // Polls one website's scan list until the scan we started reaches a terminal
-  // status. Uses muster_scans rather than re-reading the whole console payload:
+  // status. Uses cavscope_scans rather than re-reading the whole console payload:
   // it is one website's rows, and is_org_member() is true for a super admin on
   // every org, so this is reachable here for any tenant.
   async function awaitScan(websiteId, scanId) {
     for (let i = 0; i < RUN_POLL_TRIES; i++) {
       await new Promise((r) => setTimeout(r, RUN_POLL_MS));
-      const { data, error } = await sb.rpc('muster_scans', { p_website_id: websiteId, p_limit: 5 });
+      const { data, error } = await sb.rpc('cavscope_scans', { p_website_id: websiteId, p_limit: 5 });
       if (error) return { status: 'unknown', error };
       const rows = Array.isArray(data) ? data : (data && data.scans) || [];
       const hit = rows.find((r) => Number(r.id) === Number(scanId)) || rows[0];
@@ -1992,7 +1992,7 @@
   async function sitrepForScan(scanId) {
     if (!scanId) return null;
     try {
-      const { data, error } = await sb.rpc('muster_admin_sitreps', { p_limit: 50 });
+      const { data, error } = await sb.rpc('cavscope_admin_sitreps', { p_limit: 50 });
       if (error) return null;
       SITREPS = data || [];
       const hit = (data || []).find((r) => Number(r.scan_id) === Number(scanId));
@@ -2004,7 +2004,7 @@
   // then re-renders. Failing here is not the same as the scan failing, and the
   // message says which.
   async function refreshAfterScan() {
-    const { data, error } = await sb.rpc('muster_admin_console');
+    const { data, error } = await sb.rpc('cavscope_admin_console');
     if (error) return false;
     DATA = data;
     return true;
@@ -2068,7 +2068,7 @@
     run.kind = 'url';
     setRun('url', `Queueing a scan of ${escapeHtml(url)}…`, true);
     try {
-      const { data, error } = await sb.rpc('muster_admin_run_url', { p_url: url });
+      const { data, error } = await sb.rpc('cavscope_admin_run_url', { p_url: url });
       if (error) throw error;
       const websiteId = data && data.website_id;
       const scanId = data && data.first_scan && data.first_scan.scan_id;
@@ -2099,7 +2099,7 @@
     run.kind = 'site';
     setRun('site', `Queueing a scan of ${escapeHtml(label)}…`, true);
     try {
-      const { data, error } = await sb.rpc('muster_request_scan', { p_website_id: websiteId });
+      const { data, error } = await sb.rpc('cavscope_request_scan', { p_website_id: websiteId });
       if (error) throw error;
       const scanId = data && (data.scan_id || (data.first_scan && data.first_scan.scan_id));
       if (data && data.deduplicated) {
@@ -2262,7 +2262,7 @@
     if (!locForm.country) { flash('warn', 'Choose a country, or clear the override to go back to what the site states.'); return; }
     const where = locLabel(locForm.country, locForm.region);
     if (!site.sandbox && !window.confirm(`Set ${site.name}'s location to ${where}?\n\n${site.organization} sees this site's laws chosen for ${where} in their workspace now, and in its SITREP from the next scan. It replaces what the site states about itself until you clear it.`)) { render(); return; }
-    const r = await write('muster_admin_set_site_jurisdiction',
+    const r = await write('cavscope_admin_set_site_jurisdiction',
       { p_website_id: site.website_id, p_country: locForm.country, p_region: locForm.region || null, p_note: locForm.note || null },
       `${site.name} is now located in ${where}.`);
     if (r) pickLocSite(locForm.site);
@@ -2272,7 +2272,7 @@
     const site = locSite(locForm.site);
     if (!site || !site.override) return;
     if (!site.sandbox && !window.confirm(`Clear the location override on ${site.name}?\n\nIts laws go back to what the site states about itself, or ${site.organization}'s record, in their workspace now and in its SITREP from the next scan.`)) { render(); return; }
-    const r = await write('muster_admin_set_site_jurisdiction', { p_website_id: site.website_id, p_country: null }, `${site.name}'s location override is cleared.`);
+    const r = await write('cavscope_admin_set_site_jurisdiction', { p_website_id: site.website_id, p_country: null }, `${site.name}'s location override is cleared.`);
     if (r) pickLocSite(locForm.site);
   }
 
@@ -2304,8 +2304,8 @@
 
   // Law rows no human has reviewed in 180 days, or ever. A research and legal
   // task, not something to automate -- this list only says whose turn it is.
-  // From muster_admin_platform_extras(), which also catches never-reviewed
-  // rows that the older 180-day query in muster_admin_overview() missed.
+  // From cavscope_admin_platform_extras(), which also catches never-reviewed
+  // rows that the older 180-day query in cavscope_admin_overview() missed.
   function jurisdictionQueue() {
     if (sideError('platform')) return panel('Jurisdictions due for review', '', sideErrorPanel('platform', 'the jurisdiction review queue'));
     const rows = ((EXTRA.platform || {}).jurisdiction_review_queue || []).filter((j) => matches(j.name, j.code));
@@ -2327,7 +2327,7 @@
   function renderBilling() {
     const rev = (DATA.kpi || {}).revenue || {};
     const pricing = DATA.pricing || {};
-    // muster_public_pricing() returns one object per tier keyed by tier name,
+    // cavscope_public_pricing() returns one object per tier keyed by tier name,
     // plus a `visible` map -- not an array. Enterprise is contact-only and has
     // no price object at all, which is why price is optional below.
     const visible = pricing.visible || {};
@@ -2339,7 +2339,7 @@
       { key: 'enterprise', name: 'Enterprise', price: null, note: 'contact sales' },
     ].map((t) => ({
       ...t,
-      // Same rule as index.html: a muster_public_pricing() that predates the
+      // Same rule as index.html: a cavscope_public_pricing() that predates the
       // `visible` key means Partner-only, which is what the public page shows
       // in that case. Reading a missing key as "shown" made this page claim all
       // three tiers were live while the site showed one.
@@ -2467,10 +2467,10 @@
       </div>` + incidentsPanel();
   }
 
-  // The triage states muster_admin_update_incident accepts.
+  // The triage states cavscope_admin_update_incident accepts.
   const INCIDENT_STATES = ['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'];
 
-  // Open watchdog incidents with their ids, from muster_admin_overview() -- the
+  // Open watchdog incidents with their ids, from cavscope_admin_overview() -- the
   // console payload carries only the counts. muster-watchdog closes an incident
   // itself when its check comes back clear; triage here is for the ones a
   // person is working, and closing one marks it handled without fixing anything.
@@ -2599,7 +2599,7 @@
     const key = impKey(imp);
     impViewFor = key;
     impView = null;
-    const { data, error } = await sb.rpc('muster_admin_impersonated_view');
+    const { data, error } = await sb.rpc('cavscope_admin_impersonated_view');
     if (impViewFor !== key) return; // a newer session replaced this one
     if (error) {
       // The usual cause is a session that lapsed between render and fetch.
@@ -2647,7 +2647,7 @@
 
   // ---- settings: the feature-flag registry --------------------------------
   //
-  // Moved from app.html on 2026-09-23. muster_admin_flag_registry carries an
+  // Moved from app.html on 2026-09-23. cavscope_admin_flag_registry carries an
   // `enforcement` array per flag, and the editor is built around showing it: a
   // flag no code reads gets a plain "read by nothing" badge and its switches are
   // disabled, because a switch you can move that changes nothing reports a
@@ -2960,7 +2960,7 @@
 
   // ---- side reads ---------------------------------------------------------
   //
-  // muster_admin_console() is the page's backbone. These are the five things it
+  // cavscope_admin_console() is the page's backbone. These are the five things it
   // does not carry, each needed by one section. Fetched with it rather than
   // lazily because four of them back a control -- the flag editor, incident
   // triage, support access -- and a control drawn before its data arrives is one
@@ -2970,20 +2970,20 @@
   // says so there; the console stays up, because losing the tenant roster over
   // an impersonation log would be the wrong trade.
   //
-  // muster_admin_overview() is here only for `incidents`: open watchdog
+  // cavscope_admin_overview() is here only for `incidents`: open watchdog
   // incidents with the ids triage needs, which the console payload reduces to
   // counts. It is the RPC app.html's in-app console used to load in full.
   let EXTRA = {};
   const SIDE_READS = {
-    registry: ['muster_admin_flag_registry'],
-    imp: ['muster_admin_impersonate_status'],
-    impLog: ['muster_admin_impersonation_log', { p_limit: 25 }],
-    overview: ['muster_admin_overview'],
-    platform: ['muster_admin_platform_extras'],
+    registry: ['cavscope_admin_flag_registry'],
+    imp: ['cavscope_admin_impersonate_status'],
+    impLog: ['cavscope_admin_impersonation_log', { p_limit: 25 }],
+    overview: ['cavscope_admin_overview'],
+    platform: ['cavscope_admin_platform_extras'],
     // Every site's detected location, any override on it, and what the shared
     // resolver (cavscope.website_jurisdiction) makes of the two -- the location
     // both the tenant's workspace and the site's SITREP use.
-    locations: ['muster_admin_site_jurisdictions'],
+    locations: ['cavscope_admin_site_jurisdictions'],
   };
 
   async function fetchExtras() {
@@ -3009,7 +3009,7 @@
   }
 
   async function fetchConsole() {
-    const { data, error } = await sb.rpc('muster_admin_console');
+    const { data, error } = await sb.rpc('cavscope_admin_console');
     if (error) throw error;
     DATA = data;
   }
@@ -3112,7 +3112,7 @@
     const next = sel.value;
     if (next === current) return;
     if (!window.confirm(`Move ${name} from ${current} to ${next}?\n\nPlan-gated features switch on or off for every member of this organization on their next request, and plan-implied revenue changes with it.`)) { render(); return; }
-    await write('muster_admin_set_plan', { p_organization_id: Number(org), p_plan: next }, `${name} is now on ${next}.`);
+    await write('cavscope_admin_set_plan', { p_organization_id: Number(org), p_plan: next }, `${name} is now on ${next}.`);
   }
 
   async function setRole(sel) {
@@ -3124,51 +3124,51 @@
       ? '\n\nsuper_admin opens this console and every tenant\'s data.' : '';
     const own = self ? '\n\nThis is your own account. Removing super_admin from it closes this console to you.' : '';
     if (!window.confirm(`Change ${email}'s platform role from ${current} to ${next}?${stakes}${own}`)) { render(); return; }
-    await write('muster_admin_set_user_role', { p_email: email, p_role: next }, `${email} is now ${next}.`);
+    await write('cavscope_admin_set_user_role', { p_email: email, p_role: next }, `${email} is now ${next}.`);
   }
 
   async function updateIncident(sel) {
     const id = Number(sel.dataset.id);
     const status = sel.value;
     if (!status) return;
-    await write('muster_admin_update_incident', { p_id: id, p_status: status }, `Incident #${id} marked ${status}.`);
+    await write('cavscope_admin_update_incident', { p_id: id, p_status: status }, `Incident #${id} marked ${status}.`);
   }
 
   async function setPricingStage(sel) {
     const next = sel.value, current = sel.dataset.current;
     if (next === current) return;
     if (!window.confirm(`Switch the public pricing stage from ${current || 'unset'} to ${next}?\n\nThe public pricing page shows the ${next} prices immediately. No tenant's plan contents change.`)) { render(); return; }
-    await write('muster_admin_set_pricing_stage', { p_stage: next }, `Public pricing stage set to ${next}.`);
+    await write('cavscope_admin_set_pricing_stage', { p_stage: next }, `Public pricing stage set to ${next}.`);
   }
 
   async function setPricingVisibility(box) {
     const { tier, name } = box.dataset;
     const on = box.checked;
-    await write('muster_admin_set_pricing_visibility', { p_tier: tier, p_visible: on }, `${name} ${on ? 'shown' : 'hidden'} on the public pricing page.`);
+    await write('cavscope_admin_set_pricing_visibility', { p_tier: tier, p_visible: on }, `${name} ${on ? 'shown' : 'hidden'} on the public pricing page.`);
   }
 
   async function setFlagPlan(sel) {
     const key = sel.dataset.key, plan = sel.value;
-    await write('muster_admin_set_flag_plan_minimum', { p_key: key, p_plan: plan || null },
+    await write('cavscope_admin_set_flag_plan_minimum', { p_key: key, p_plan: plan || null },
       plan ? `${key} now requires ${plan}+.` : `${key} plan gate removed.`);
   }
 
   async function setFlagDefault(box) {
     const key = box.dataset.key, on = box.checked;
     if (!window.confirm(`Turn the default for ${key} ${on ? 'on' : 'off'}?\n\nEvery organization without an override or a plan gate changes on its next request.`)) { render(); return; }
-    await write('muster_admin_set_flag', { p_key: key, p_enabled: on }, `${key} default ${on ? 'on' : 'off'}.`);
+    await write('cavscope_admin_set_flag', { p_key: key, p_enabled: on }, `${key} default ${on ? 'on' : 'off'}.`);
   }
 
   async function killSwitch(box) {
     const key = box.dataset.key, on = box.checked;
     if (on && !window.confirm(`Kill ${key}?\n\nIt resolves off for every organization and user immediately, ignoring defaults, plans and overrides.`)) { render(); return; }
-    await write('muster_admin_kill_switch', { p_key: key, p_on: on }, `${key} kill switch ${on ? 'on' : 'off'}.`);
+    await write('cavscope_admin_kill_switch', { p_key: key, p_on: on }, `${key} kill switch ${on ? 'on' : 'off'}.`);
   }
 
   async function addFlagOverride(form) {
     const f = new FormData(form);
     const key = form.dataset.key;
-    const saved = await write('muster_admin_set_flag', {
+    const saved = await write('cavscope_admin_set_flag', {
       p_key: key,
       p_enabled: f.get('enabled') === 'true',
       p_organization_id: Number(f.get('org')),
@@ -3195,13 +3195,13 @@
     if (next === planDefault) {
       if (!overrideId) { render(); return; }
       if (!window.confirm(`Clear the override on ${key} for ${orgName}?\n\nIt falls back to the ${orgName} plan default (${planDefault ? 'on' : 'off'}) immediately.`)) { render(); return; }
-      await write('muster_admin_clear_flag_override', { p_id: overrideId }, `Override on ${key} for ${orgName} cleared -- back to the plan default.`);
+      await write('cavscope_admin_clear_flag_override', { p_id: overrideId }, `Override on ${key} for ${orgName} cleared -- back to the plan default.`);
       return;
     }
     const reason = window.prompt(`Reason for ${next ? 'granting' : 'revoking'} ${key} for ${orgName}\n\nRequired -- an override with no stated reason is indistinguishable from a mistake six months later.`, '');
     if (reason === null) { render(); return; }
     if (reason.trim().length < 8) { flash('warn', 'Not saved: give a reason of at least 8 characters.'); render(); return; }
-    await write('muster_admin_set_flag', {
+    await write('cavscope_admin_set_flag', {
       p_key: key, p_enabled: next, p_organization_id: orgId, p_reason: reason.trim(),
     }, `${key} ${next ? 'granted to' : 'revoked from'} ${orgName}.`);
   }
@@ -3209,12 +3209,12 @@
   async function clearFlagOverride(btn) {
     const id = Number(btn.dataset.id), key = btn.dataset.key;
     if (!window.confirm(`Revoke this override on ${key}? The organization falls back to the plan gate and the default immediately.`)) return;
-    await write('muster_admin_clear_flag_override', { p_id: id }, (r) => `Override on ${r.flag_key || key} revoked.`);
+    await write('cavscope_admin_clear_flag_override', { p_id: id }, (r) => `Override on ${r.flag_key || key} revoked.`);
   }
 
   async function createFlag(form) {
     const f = new FormData(form);
-    const saved = await write('muster_admin_create_flag', {
+    const saved = await write('cavscope_admin_create_flag', {
       p_key: f.get('key'), p_name: f.get('name'), p_description: f.get('description'),
       p_scope: f.get('scope'), p_category: f.get('category'),
       p_default_enabled: f.get('default_enabled') === 'on',
@@ -3226,7 +3226,7 @@
   async function deleteFlag(btn) {
     const key = btn.dataset.key;
     if (!window.confirm(`Delete the flag ${key} and every override on it? This cannot be undone.`)) return;
-    await write('muster_admin_delete_flag', { p_key: key }, `${key} deleted.`);
+    await write('cavscope_admin_delete_flag', { p_key: key }, `${key} deleted.`);
   }
 
   async function startImpersonation() {
@@ -3235,14 +3235,14 @@
     const reason = (impForm.reason || '').trim();
     if (!target) { flash('warn', 'Pick a user first.'); return; }
     if (reason.length < 10) { flash('warn', 'Give a reason of at least 10 characters. The tenant reads it in their own activity feed.'); return; }
-    const r = await write('muster_admin_impersonate_start', {
+    const r = await write('cavscope_admin_impersonate_start', {
       p_target_user_id: Number(target), p_reason: reason, p_minutes: Number(impForm.minutes || 30),
     }, (d) => `Viewing as ${d.target_email || ('user #' + d.target_user_id)}. Read only.`);
     if (r) { impForm.reason = ''; impForm.target = ''; }
   }
 
   async function endImpersonation() {
-    await write('muster_admin_impersonate_end', {}, 'Impersonation session ended.');
+    await write('cavscope_admin_impersonate_end', {}, 'Impersonation session ended.');
   }
 
   // Same set of shapes the SQL predicate, the muster-set-password edge function
@@ -3285,7 +3285,7 @@
 
     // A forced password change outranks everything this page does. The gate is
     // in Postgres (migration 20260915230805): a flagged JWT makes
-    // muster.is_super_admin() false, so muster_admin_console() raises 42501 and
+    // muster.is_super_admin() false, so cavscope_admin_console() raises 42501 and
     // the catch below would show "access denied" to a real super admin whose
     // only problem is an unchanged password. That message would be a lie, and
     // it is the kind that sends someone hunting for a permissions bug.

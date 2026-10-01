@@ -751,7 +751,7 @@
 
     <div class="pricing-grid" id="pricingGrid" data-visible-count="1">
 
-      <!-- Default: Partner only. muster_public_pricing().visible can re-enable the others without a deploy. -->
+      <!-- Default: Partner only. cavscope_public_pricing().visible can re-enable the others without a deploy. -->
       <div class="price-card" id="cardMuster" hidden>
         <div class="price-card-head">
           <h3>CavScope</h3>
@@ -789,6 +789,7 @@
         <div class="price-amount"><span class="price-num" id="partnerPrice">$197</span><span class="price-cadence">/month</span></div>
         <span class="price-badge" id="partnerBadge">Founding Partner Pricing</span>
         <p class="price-allowance" id="partnerAllowance">Includes <b>5</b> active client organizations. Additional organizations: <b>$39</b>/month each.</p>
+        <p class="price-note" id="partnerClientNote" data-tooltip="Client organizations linked to a Partner account, with the included allowance and add-on billing, are not available yet. White-label branding and the rest of the Partner features are." tabindex="0">Client organizations are in development and are not yet available.</p>
         <p class="price-lock" id="partnerLock">Locked while continuously subscribed and in good standing.</p>
         <ul class="price-features">
           <li class="price-features-note">Everything in CavScope, plus:</li>
@@ -796,14 +797,14 @@
           <li>Custom branding</li>
           <li>Branded SITREPs</li>
           <li>Branded executive reports</li>
-          <li>Client organization management</li>
+          <li>Client organization management <span data-tooltip="Creating and managing client organizations under one Partner account is still being built. Partners are told when it is ready." tabindex="0">(in development)</span></li>
           <li>Commercial usage rights</li>
           <li>Partner dashboard</li>
-          <li>Multi-tenant client workspaces</li>
+          <li>Multi-tenant client workspaces <span data-tooltip="Separate workspaces for each of your clients are still being built. Partners are told when they are ready." tabindex="0">(in development)</span></li>
           <li>Custom brand identity</li>
           <li>Removal of CavScope / 28 Foot Systems customer-facing branding where appropriate</li>
           <li>Custom domain or subdomain capability where technically supported</li>
-          <li>Expansion billing based on active client organizations</li>
+          <li>Expansion billing based on active client organizations <span data-tooltip="Billing for additional client organizations starts when client organizations are available." tabindex="0">(in development)</span></li>
         </ul>
         <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens a short intake so you can start your CavScope Partner subscription." tabindex="0">Become a CavScope Partner →</a>
       </div>
@@ -881,7 +882,7 @@
   // it never gates entitlements (see muster.feature_flags: those key off tier
   // alone) and visitors don't choose it. There is exactly one live price per
   // tier, set by a 28FS super-admin in app.html's admin panel, read here from
-  // muster_public_pricing() (anon-readable by design). The HTML above ships
+  // cavscope_public_pricing() (anon-readable by design). The HTML above ships
   // with the Seed-stage numbers as a static fallback -- if this fetch fails
   // (network issue, JS disabled) the page still shows a correct, if possibly
   // stale, price rather than blank content.
@@ -907,7 +908,7 @@
   // path still exists end to end -- live Stripe Payment Links below, the
   // backend accepting them via muster-stripe-webhook/PRD-003, and
   // muster.feature_flags.self_serve_onboarding, which was turned off to
-  // match (see muster_admin_set_flag in app.html's admin console, or flip
+  // match (see cavscope_admin_set_flag in app.html's admin console, or flip
   // it back directly) -- it's just not linked from this CTA, so a visitor
   // can't pay here and then hit a disabled-onboarding error afterward. To
   // reactivate: re-enable that flag AND restore the musterCta.href line
@@ -933,7 +934,7 @@
 
   // Which cards the public page shows. Partner-only is the intentional default
   // (base self-serve is paused; Enterprise stays sales-scoped). Admin toggles
-  // in app.html write muster.pricing_settings.show_*; muster_public_pricing()
+  // in app.html write muster.pricing_settings.show_*; cavscope_public_pricing()
   // returns them under `visible`. Missing `visible` (pre-migration RPC) keeps
   // the Partner-only fallback rather than re-showing paused tiers.
   const DEFAULT_VISIBLE = { muster: false, muster_partner: true, enterprise: false };
@@ -1006,7 +1007,7 @@
       // used the session anyway. Auth belongs to the app host; this page must
       // not touch a fragment it cannot honour.
       const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, detectSessionInUrl: false } });
-      const { data, error } = await sb.rpc('muster_public_pricing');
+      const { data, error } = await sb.rpc('cavscope_public_pricing');
       if (error || !data) return;
       applyPricing(data.current_stage, data.muster, data.muster_partner, data.visible || DEFAULT_VISIBLE);
     } catch {
