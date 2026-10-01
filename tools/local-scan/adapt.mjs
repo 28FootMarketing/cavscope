@@ -18,7 +18,8 @@
  * instead of quietly scanning with different rules.
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -81,11 +82,24 @@ export async function adaptSource() {
   return src.slice(0, at) + LOCAL_TAIL;
 }
 
-/** Writes the adapted engine to a temp dir and returns its file URL. */
+/**
+ * Writes the adapted engine to a temp dir and returns its file URL.
+ *
+ * Several processes call this at once (the aio, legal and local-scan test files
+ * each run in their own), all into the same shared file. A plain writeFile
+ * truncates and then writes, so a process that imported the file in between got
+ * an empty module and "engine.runScan is not a function". The module is built
+ * under a name only this call uses and renamed into place: a rename is atomic,
+ * so a reader sees the previous complete file or the new complete one, and every
+ * writer produces identical content, so which one wins does not matter.
+ * tests/scan/local-scan-concurrency.test.ts is the proof.
+ */
 export async function loadEngine() {
-  const out = join(tmpdir(), "muster-local-scan");
+  const out = join(tmpdir(), "cavscope-local-scan");
   await mkdir(out, { recursive: true });
   const file = join(out, "engine.adapted.ts");
-  await writeFile(file, await adaptSource(), "utf8");
+  const staging = join(out, `engine.adapted.${process.pid}.${randomUUID()}.ts`);
+  await writeFile(staging, await adaptSource(), "utf8");
+  await rename(staging, file);
   return pathToFileURL(file).href;
 }
