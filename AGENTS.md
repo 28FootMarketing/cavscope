@@ -10,7 +10,7 @@ Connect any MCP-compatible client (Claude, Cursor, ChatGPT) to:
 
 ```
 Protocol: MCP (JSON-RPC 2.0 over HTTP)
-Endpoint: https://<project>.supabase.co/functions/v1/muster-agent
+Endpoint: https://<project>.supabase.co/functions/v1/cavscope-agent
 Auth: x-muster-api-key: mk_... (issued via public.muster_create_api_key)
 ```
 
@@ -25,7 +25,7 @@ Auth: x-muster-api-key: mk_... (issued via public.muster_create_api_key)
 Call tools directly via HTTP:
 
 ```bash
-curl -X POST https://<project>.supabase.co/functions/v1/muster-agent \
+curl -X POST https://<project>.supabase.co/functions/v1/cavscope-agent \
   -H "x-muster-api-key: mk_..." \
   -H "content-type: application/json" \
   -d '{"tool": "list_findings", "args": {"website_id": 3}}'
@@ -48,7 +48,7 @@ Response:
 All tools and endpoints are documented in OpenAPI 3.1:
 
 ```
-GET https://<project>.supabase.co/functions/v1/muster-agent/openapi.json
+GET https://<project>.supabase.co/functions/v1/cavscope-agent/openapi.json
 ```
 
 Agents use this to understand:
@@ -62,7 +62,7 @@ Agents use this to understand:
 Public tool listing (no auth required):
 
 ```
-GET https://<project>.supabase.co/functions/v1/muster-agent
+GET https://<project>.supabase.co/functions/v1/cavscope-agent
 ```
 
 Returns catalog with JSON Schema for each tool.
@@ -154,7 +154,7 @@ Standard JSON-RPC 2.0 error codes.
 
 ## Resources
 
-- **OpenAPI Spec:** `GET /muster-agent/openapi.json`
-- **Tool Catalog:** `GET /muster-agent`
+- **OpenAPI Spec:** `GET /cavscope-agent/openapi.json`
+- **Tool Catalog:** `GET /cavscope-agent`
 - **CLAUDE.md:** Project-specific instructions for AI agents
-- **Source:** `supabase/functions/muster-agent/index.ts`
+- **Source:** `supabase/functions/cavscope-agent/index.ts`

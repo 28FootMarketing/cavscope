@@ -5,8 +5,12 @@ Status, read from the live project 2026-10-01: **stage 1 is applied** (migration
 aliases forwarding to them; grants, argument names and return types verified identical on all 109
 pairs). **Stage 2 is done and live**: pages, edge functions, tools and tests call the `cavscope_*`
 names (PR #182, merged and deployed 2026-10-01); both names still answer.
-**Stage 3, first half (edge-function directories, config and in-function references) is in
-`claude/rename-stage-3`**; the second half (below) is not started. Stage 4 and 5 have not started.
+**Stage 3 is done and live** (2026-10-01): half A (directories, config, in-function references) is PR
+#183, and half B (pages, `AGENTS.md`, the MCP server card, the 4 cron jobs and the 3 database call
+sites, migration `20261001193032`) followed once all 17 new slugs answered like their old twins.
+**The external webhooks (Stripe, GHL, Resend, Telegram) still deliver to the old frozen
+`muster-*` slugs until stage 4**, so a change to a webhook function does not reach its live traffic
+until that webhook is repointed. Stage 5 has not started.
 `track_functions` cannot be set from the MCP role (superuser-only, confirmed 2026-10-01), and it is
 not needed: `pg_stat_statements` has counted every statement since 2026-09-07 with zero evictions,
 so stage 5's quiet-period check is a difference against
@@ -51,7 +55,7 @@ must not merge before the database has those names**. Hence the stages:
      MCP server card still name the old slugs, deliberately: pages deploy the instant a PR merges
      but functions deploy about a minute later, so switching a page in the same merge opens a
      window where it calls a function that does not exist yet.
-   - **Half B (after A is deployed and each new function answers):** switch the pages, `AGENTS.md`
+   - **Half B (done 2026-10-01; kept as the record of what it covered):** switch the pages, `AGENTS.md`
      and `.well-known/mcp/server-card.json` to the new slugs; repoint the 4 cron jobs and the 3
      database call sites (`cavscope.do_request_scan`, `public.cavscope_create_api_key`,
      `public.muster_notify_beta_signup`). Until then scans and webhooks keep using the frozen old

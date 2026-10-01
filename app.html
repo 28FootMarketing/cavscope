@@ -6517,7 +6517,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           } else if (hash && /^[a-z]+$/i.test(hash) && document.querySelector(`#mainNav button[data-view="${hash}"]`)) {
             // A deep link into a specific workspace view -- a transactional
             // email's CTA (risk_opened points here at #risks, see
-            // muster-alert-dispatch/index.ts) or this page's own "CavScope"
+            // cavscope-alert-dispatch/index.ts) or this page's own "CavScope"
             // link when a super admin came from the Platform Console.
             // Consumed once, same as #tenant= above, so a later refresh (or
             // switching orgs) doesn't keep re-navigating away from whatever
@@ -7156,7 +7156,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           <div class="panel-head" style="border-top:1px solid var(--surface-border);">
             <div>
               <h3>Agents &amp; API Keys</h3>
-              <p>Any AI agent or AI employee can work this workspace through the MCP endpoint <code style="font-family:var(--font-mono);color:var(--teal);">${this.url}/functions/v1/muster-agent</code> with header <code style="font-family:var(--font-mono);color:var(--teal);">x-muster-api-key</code>. ${canIssue ? '' : 'Issuing keys requires the Pro plan (flag agent_api).'}</p>
+              <p>Any AI agent or AI employee can work this workspace through the MCP endpoint <code style="font-family:var(--font-mono);color:var(--teal);">${this.url}/functions/v1/cavscope-agent</code> with header <code style="font-family:var(--font-mono);color:var(--teal);">x-muster-api-key</code>. ${canIssue ? '' : 'Issuing keys requires the Pro plan (flag agent_api).'}</p>
             </div>
           </div>
           ${agents.length ? `
@@ -7248,7 +7248,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
       },
       // The tenant's own LLM. muster.org_llm_config has held the endpoint, model
       // and a Vault-stored key since migration 069, cavscope_set_llm_config has
-      // been callable since 070, and muster-agent has read it since 071 -- and
+      // been callable since 070, and cavscope-agent has read it since 071 -- and
       // nothing in the workspace ever set one, so the table stayed empty and
       // every narrative fell to the deterministic generator. This is that form.
       //

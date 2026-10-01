@@ -31,8 +31,10 @@ edge functions. As of 2026-10-01 the RPC rename is applied (109 `cavscope_*` fun
 `muster_*` aliases) and every page, edge function, tool and test in this repo calls the
 `cavscope_*` names, so **new code calls `cavscope_*`**; the aliases stay until stage 5 of the plan.
 The edge-function **directories** are `supabase/functions/cavscope-*` as of stage 3 half A; the
-old `muster-*` slugs stay deployed, frozen at their last version, until the plan's second half and
-stage 5 -- a code change under `supabase/functions/` reaches only the `cavscope-*` slug.
+old `muster-*` slugs stay deployed, frozen at their last version, until stage 5. Pages, cron jobs and
+database call sites use the `cavscope-*` slugs as of stage 3 half B (2026-10-01); the Stripe, GHL,
+Resend and Telegram webhooks still deliver to the old slugs until stage 4, so a change to a webhook
+function does not reach its live traffic until that webhook is repointed.
 Where the rest of this file names an RPC as `muster_foo`, call `cavscope_foo`. Where the rest of this file says `muster.<table>` or `muster.<function>` for
 the database, read `cavscope.`. The staged plan to retire the remaining names is in
 `docs/RENAME-PLAN.md`.

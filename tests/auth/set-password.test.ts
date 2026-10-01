@@ -311,10 +311,10 @@ test("the forced path refreshes the session before leaving the page", () => {
   // and every RPC answers 42501, which looks exactly like a failed change.
   const html = read("signin.html");
   const fn = html.slice(html.indexOf("async function submitNewPassword"), html.indexOf("const RESEND_COOLDOWN_SECONDS"));
-  assert.match(fn, /muster-set-password/, "the forced path does not call the edge function");
+  assert.match(fn, /cavscope-set-password/, "the forced path does not call the edge function");
   assert.match(fn, /refreshSession\(\)/, "the forced path does not refresh the session");
   assert.ok(
-    fn.indexOf("muster-set-password") < fn.indexOf("refreshSession()"),
+    fn.indexOf("cavscope-set-password") < fn.indexOf("refreshSession()"),
     "the refresh has to happen after the change, not before",
   );
   // And it must confirm the refresh actually cleared the flag rather than

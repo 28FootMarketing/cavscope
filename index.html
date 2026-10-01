@@ -906,7 +906,7 @@
   // CavScope (base tier) self-serve checkout: PAUSED. Only CavScope Partner is
   // meant to be active right now (explicit decision). The real self-serve
   // path still exists end to end -- live Stripe Payment Links below, the
-  // backend accepting them via muster-stripe-webhook/PRD-003, and
+  // backend accepting them via cavscope-stripe-webhook/PRD-003, and
   // muster.feature_flags.self_serve_onboarding, which was turned off to
   // match (see cavscope_admin_set_flag in app.html's admin console, or flip
   // it back directly) -- it's just not linked from this CTA, so a visitor
@@ -924,7 +924,7 @@
   // URL once a real one exists; keep the query params, GHL's form should
   // capture them as hidden fields into the src:/product:/intent: tag
   // taxonomy. Once a GHL workflow marks a deal won, it calls the
-  // muster-ghl-webhook Edge Function to provision the tenant.
+  // cavscope-ghl-webhook Edge Function to provision the tenant.
   const GHL_PARTNER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-partner-signup';
 
   function buildGhlUrl(base, product, intent) {
