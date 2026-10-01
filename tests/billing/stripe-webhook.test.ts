@@ -1,4 +1,4 @@
-// muster-stripe-webhook: signature verification and event gating, against the
+// cavscope-stripe-webhook: signature verification and event gating, against the
 // shipped core.ts.
 //
 //   node --experimental-strip-types --test tests/billing/stripe-webhook.test.ts
@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import {
   verifyStripeSignature, parseStripeSignatureHeader, timestampWithinTolerance,
   timingSafeEqual, hmacSha256Hex, gateCheckoutSession, gateSubscriptionDeleted, MAX_TIMESTAMP_SKEW_SECONDS,
-} from "../../supabase/functions/muster-stripe-webhook/core.ts";
+} from "../../supabase/functions/cavscope-stripe-webhook/core.ts";
 
 const SECRET = "whsec_test_do_not_use_anywhere_real";
 const BODY = JSON.stringify({ type: "checkout.session.completed", id: "evt_1" });
@@ -252,7 +252,7 @@ test("a missing customer id does not block the cancellation", () => {
 
 test("index.ts routes the event before the checkout gate and fails closed on an RPC error", async () => {
   const { readFile } = await import("node:fs/promises");
-  const src = await readFile("supabase/functions/muster-stripe-webhook/index.ts", "utf8");
+  const src = await readFile("supabase/functions/cavscope-stripe-webhook/index.ts", "utf8");
   const cancelAt = src.indexOf('event.type === "customer.subscription.deleted"');
   const checkoutAt = src.indexOf("gateCheckoutSession(event)");
   assert.ok(cancelAt > 0 && checkoutAt > cancelAt, "cancellation must be handled before the checkout gate");

@@ -9,7 +9,7 @@ import {
 // Inbound Resend webhook for CavScope application email.
 //
 // This is what makes the difference between "accepted for sending" and
-// "delivered" observable. muster-alert-dispatch records the id Resend returns
+// "delivered" observable. cavscope-alert-dispatch records the id Resend returns
 // from POST /emails; Resend later calls here with what actually happened, and
 // public.cavscope_engine_record_email_event joins the two.
 //

@@ -21,8 +21,8 @@ import {
 } from "../../supabase/functions/cavscope-html-audit/fixes.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const engine = readFileSync(join(root, "supabase/functions/muster-scan/index.ts"), "utf8");
-const pageChecks = readFileSync(join(root, "supabase/functions/muster-scan/page-checks.ts"), "utf8");
+const engine = readFileSync(join(root, "supabase/functions/cavscope-scan/index.ts"), "utf8");
+const pageChecks = readFileSync(join(root, "supabase/functions/cavscope-scan/page-checks.ts"), "utf8");
 
 const URL_ = "https://shop.example.com/";
 const BAD = `<!doctype html><html><head><title></title><meta name="viewport" content="width=device-width, user-scalable=no, maximum-scale=1">
@@ -39,7 +39,7 @@ test("the audit runs the scan engine's own page rules, not a copy", () => {
   assert.doesNotMatch(engine, /rule_id: "A11Y-003"/, "the engine must not carry its own copy of a page rule");
   assert.match(pageChecks, /rule_id: "A11Y-003"/);
   const src = readFileSync(join(root, "supabase/functions/cavscope-html-audit/fixes.ts"), "utf8");
-  assert.match(src, /from "\.\.\/muster-scan\/page-checks\.ts"/);
+  assert.match(src, /from "\.\.\/cavscope-scan\/page-checks\.ts"/);
 });
 
 test("a page with every defect raises every page rule", () => {

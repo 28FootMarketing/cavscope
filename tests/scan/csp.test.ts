@@ -14,7 +14,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evaluateCspQuality } from "../../supabase/functions/muster-scan/csp.ts";
+import { evaluateCspQuality } from "../../supabase/functions/cavscope-scan/csp.ts";
 
 test("no finding when csp is null -- that case belongs to SEC-004 alone", () => {
   assert.deepEqual(evaluateCspQuality({ csp: null, evidenceKey: "headers" }), []);

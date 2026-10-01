@@ -1,4 +1,4 @@
-// Pure half of muster-set-password: password policy and the app_metadata
+// Pure half of cavscope-set-password: password policy and the app_metadata
 // merge. No network, no Deno, no secrets -- so tests/auth/set-password.test.ts
 // exercises the real rules rather than a description of them.
 

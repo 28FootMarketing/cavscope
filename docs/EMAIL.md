@@ -157,7 +157,7 @@ Everything mechanical around them is correct; what is missing is the branding.
 
 ## Verifying it, rather than assuming it
 
-[`supabase/functions/muster-auth-smoke`](../supabase/functions/muster-auth-smoke/index.ts) checks
+[`supabase/functions/cavscope-auth-smoke`](../supabase/functions/cavscope-auth-smoke/index.ts) checks
 this whole document against the live project. It mints a real recovery link with the service-role
 key, follows it, sets a password, and signs in with that password. It reports booleans and
 redacted origins only — never a token, link or password, per the rule at the top of this file.

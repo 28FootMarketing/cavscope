@@ -6,7 +6,7 @@ import {
 } from "./fixes.ts";
 
 // The HTML audit. A signed-in caller posts a page's HTML; this runs the scan
-// engine's own page rules on it (muster-scan/page-checks.ts, shared, not
+// engine's own page rules on it (cavscope-scan/page-checks.ts, shared, not
 // copied) and, on request, applies the fixes the caller chose and returns the
 // corrected HTML. For a one-off site CavScope does not scan.
 //

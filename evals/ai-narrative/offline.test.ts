@@ -1,10 +1,10 @@
 // Tier 1: the contract suite. No model, no network, no cost. Run it in CI and
-// before every muster-agent deploy.
+// before every cavscope-agent deploy.
 //
 //   node --experimental-strip-types --test evals/ai-narrative/offline.test.ts
 //
 // It asserts two things at once. That the shipped parse and verification code
-// in supabase/functions/muster-agent/narrative.ts behaves, and that each grader
+// in supabase/functions/cavscope-agent/narrative.ts behaves, and that each grader
 // still detects the failure it was written for. The second is the part that
 // keeps the suite honest over time.
 
@@ -21,7 +21,7 @@ import {
   allowedCitations,
   NarrativeParseError,
   type NarrativeContext,
-} from "../../supabase/functions/muster-agent/narrative.ts";
+} from "../../supabase/functions/cavscope-agent/narrative.ts";
 import { grade, GRADERS } from "./graders.ts";
 import { CASES } from "./recorded/cases.ts";
 

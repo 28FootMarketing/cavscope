@@ -3,11 +3,15 @@
 Status, read from the live project 2026-10-01: **stage 1 is applied** (migration
 `20260930225424`, `rpc_rename_cavscope`: 117 `public.cavscope_*` functions and 109 `muster_*`
 aliases forwarding to them; grants, argument names and return types verified identical on all 109
-pairs). **Stage 2 is done in code** on branch `claude/close-known-gaps`: pages, edge functions,
-tools and tests call the `cavscope_*` names. It takes effect for browsers when that branch merges,
-and for edge functions when CI deploys them; both names answer until then, so order is safe.
-Stages 3 to 5 have not started. `track_functions` is still `none`, which stage 5's one-week
-quiet-period check needs set to `pl`. Target project `hjowfnzpomzxazmzywxw`.
+pairs). **Stage 2 is done and live**: pages, edge functions, tools and tests call the `cavscope_*`
+names (PR #182, merged and deployed 2026-10-01); both names still answer.
+**Stage 3, first half (edge-function directories, config and in-function references) is in
+`claude/rename-stage-3`**; the second half (below) is not started. Stage 4 and 5 have not started.
+`track_functions` cannot be set from the MCP role (superuser-only, confirmed 2026-10-01), and it is
+not needed: `pg_stat_statements` has counted every statement since 2026-09-07 with zero evictions,
+so stage 5's quiet-period check is a difference against
+`docs/rename/calls-baseline-2026-10-01.csv` using `docs/rename/calls-since-baseline.sql`. Target
+project `hjowfnzpomzxazmzywxw`.
 The `muster` schema was already renamed to `cavscope` (54 tables, 82 functions); what still
 carries the old name is the callable surface below.
 
@@ -34,17 +38,32 @@ must not merge before the database has those names**. Hence the stages:
    `ok = true`. Nothing breaks, because every old name still answers.
 2. **Callers.** Switch pages, edge functions and tests to `cavscope_*`. Only after stage 1
    is applied and verified.
-3. **Edge functions.** Renaming a directory moves code that tests and `tools/local-scan/`
-   read by path (`supabase/functions/muster-scan/...`), so those paths change in the same PR.
-   Rename each directory to `cavscope-*` and deploy them **alongside**
-   the old ones (CI deploys what is in the tree, so the old ones are removed from the tree
-   only in stage 5). Repoint the 4 cron jobs and the 3 DB call sites.
+3. **Edge functions, in two halves.** Renaming a directory moves code that tests and
+   `tools/local-scan/` read by path, so those paths change in the same PR, and
+   `supabase/config.toml` carries per-function `verify_jwt` settings that **must move with the
+   directory**: a renamed function with no matching entry deploys with the default and rejects
+   every Stripe, Resend and GHL webhook with 401.
+   - **Half A (this branch):** move the 17 `muster-*` directories to `cavscope-*`, rename their
+     `config.toml` sections (`verify_jwt` and `entrypoint` otherwise identical, checked by
+     script), and the references inside functions, tools and tests. On merge CI deploys 17 new
+     slugs **alongside** the old ones, which stay deployed, frozen at their last version (CI
+     deploys what is in the tree and the CLI does not delete). Pages, `AGENTS.md` and the public
+     MCP server card still name the old slugs, deliberately: pages deploy the instant a PR merges
+     but functions deploy about a minute later, so switching a page in the same merge opens a
+     window where it calls a function that does not exist yet.
+   - **Half B (after A is deployed and each new function answers):** switch the pages, `AGENTS.md`
+     and `.well-known/mcp/server-card.json` to the new slugs; repoint the 4 cron jobs and the 3
+     database call sites (`cavscope.do_request_scan`, `public.cavscope_create_api_key`,
+     `public.muster_notify_beta_signup`). Until then scans and webhooks keep using the frozen old
+     functions, so an engine change merged in the meantime reaches only the new slugs: do half B
+     promptly.
 4. **External callbacks.** Repoint the Stripe, GHL, Resend and Telegram webhooks at the new
    URLs. Until each one is confirmed delivering, its old function stays deployed.
 5. **Retire.** Drop the `muster_*` aliases and delete the old functions, once nothing calls the old
-   names for a full week. `pg_stat_user_functions` is empty unless `track_functions` is set
-   (default `none`), so set `track_functions = 'pl'` in stage 1 or the retirement check has no
-   data; edge-function logs cover the `muster-*` URLs.
+   names for a full week. Evidence is `docs/rename/calls-since-baseline.sql` against
+   `docs/rename/calls-baseline-2026-10-01.csv` (`pg_stat_user_functions` stays empty because
+   `track_functions` is `none` and not settable from here); edge-function logs cover the `muster-*`
+   URLs. Deleting the old edge functions needs the Supabase CLI: the MCP has no delete for them.
 
 ## Deliberately not in the first pass
 

@@ -1,7 +1,7 @@
 // Graders for the ai_narrative contract.
 //
 // Each grader takes the fixture context, the raw model text, and the verified
-// result that ./../../supabase/functions/muster-agent/narrative.ts produced from
+// result that ./../../supabase/functions/cavscope-agent/narrative.ts produced from
 // them, and returns a verdict. Graders are deterministic: no model judges
 // another model here. That keeps the suite free to run and keeps a failure
 // pointing at one specific rule rather than at a taste difference.
@@ -19,7 +19,7 @@ import {
   type NarrativeContext,
   type ParsedNarrative,
   type VerifiedNarrative,
-} from "../../supabase/functions/muster-agent/narrative.ts";
+} from "../../supabase/functions/cavscope-agent/narrative.ts";
 
 export type Severity = "fail" | "warn";
 export type Verdict = { id: string; severity: Severity; passed: boolean; detail: string };

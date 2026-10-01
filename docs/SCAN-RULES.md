@@ -44,7 +44,7 @@ plus the evidence ids (`E<id>`) the engine captured for it.
 ## Sitewide or per page
 
 Not in the catalog, because it is a property of the engine rather than of the rule row: it is decided
-by which step of `supabase/functions/muster-scan/index.ts` raises the code.
+by which step of `supabase/functions/cavscope-scan/index.ts` raises the code.
 
 | Scope | Raised by | Codes |
 |---|---|---|
@@ -64,7 +64,7 @@ across a crawl or silently under-report it.
 
 `tools/local-scan/` runs this same rule set from a terminal against any URL, with no database and
 no key — `npm run scan:local -- https://example.com`. It is an adapter over
-`supabase/functions/muster-scan/index.ts`, not a second copy of the rules, so the codes below are
+`supabase/functions/cavscope-scan/index.ts`, not a second copy of the rules, so the codes below are
 the codes it raises. It writes nothing and produces no SITREP; see
 [`tools/local-scan/README.md`](../tools/local-scan/README.md).
 
@@ -121,7 +121,7 @@ The proof of deploy is the `login_discovery` evidence row
 exists. These rules are silent on most sites, so `skipped_inactive` may stay 0 and prove nothing.
 
 **It still signs in to nothing.** Every request is a plain GET. No form is submitted and no
-credential is held or sent. Rule logic is in `supabase/functions/muster-scan/login.ts`, pinned by
+credential is held or sent. Rule logic is in `supabase/functions/cavscope-scan/login.ts`, pinned by
 `tests/scan/login.test.ts`. Four decisions a client or reviewer may ask about:
 
 - **A page is a login page only if its served HTML has a password field.** A form rendered by
@@ -254,7 +254,7 @@ and opened PRIV-004 against `cavscope.28footsystems.com`, whose Terms of Service
 pending publication. That finding is correct.
 
 **The same migration adds a jurisdiction signal, unrelated to scoring.**
-`supabase/functions/muster-scan/legal.ts`'s `extractUsState()` reads a US state a site
+`supabase/functions/cavscope-scan/legal.ts`'s `extractUsState()` reads a US state a site
 states about *itself*, in three tiers of decreasing strength: a governing-law clause,
 then a postal address, then -- weakest, and tried only when neither of those matched
 anywhere -- a full state name in `<meta name="description">`. It reads the homepage
@@ -359,7 +359,7 @@ own live rescan to prove; neither would have been caught by the test suite alone
 that added `muster.scan_rule_history` recovered one -- see `supabase/migrations/README.md`'s "Five
 more, from a week earlier" section for the full story, and the one before it for a second,
 unrelated recovery the same day. The engine implements all three in
-`supabase/functions/muster-scan/aio.ts`, shipped by PR #129 and merged 2026-09-28. Proof of deploy
+`supabase/functions/cavscope-scan/aio.ts`, shipped by PR #129 and merged 2026-09-28. Proof of deploy
 is the `llms_txt` (`http_probe`) and `jsonld` (`html_excerpt`) evidence rows, written on every
 reachable HTML scan whatever the verdict: a well-prepared site keeps all three rules silent, so
 `skipped_inactive` may legitimately stay 0. `GOV-006` credits a file only if it is not HTML and
@@ -526,7 +526,7 @@ rescan, so it is a property of the origin's response rather than a blip.
 The classification is not a guess. `hyper` raises these errors only after response bytes have
 begun arriving; DNS, connect and TLS failures produce different messages because they happen
 before any response exists. So a match is positive evidence that a server answered. The marker
-list in `supabase/functions/muster-scan/availability.ts` is deliberately tight and anything
+list in `supabase/functions/cavscope-scan/availability.ts` is deliberately tight and anything
 unrecognised stays on `AVAIL-001` — misclassifying in that direction would hide a real outage,
 which is worse than the defect this fixes.
 

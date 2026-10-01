@@ -19,7 +19,7 @@ import {
   evaluateSubresourceIntegrity,
   extractScripts,
   isMutableByDesign,
-} from "../../supabase/functions/muster-scan/hardening.ts";
+} from "../../supabase/functions/cavscope-scan/hardening.ts";
 
 const PAGE = "https://example.com/";
 const HOST = "example.com";

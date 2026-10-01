@@ -19,11 +19,11 @@ import { dirname, join } from "node:path";
 import {
   ADMIN_PROBES, evaluateAdminProbes, evaluateLoginPage, findLoginLinks, hasPasswordField,
   isSameSite, passwordForms, probeHit, type ProbeResult,
-} from "../../supabase/functions/muster-scan/login.ts";
+} from "../../supabase/functions/cavscope-scan/login.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const engine = readFileSync(join(repoRoot, "supabase", "functions", "muster-scan", "index.ts"), "utf8");
-const loginSrc = readFileSync(join(repoRoot, "supabase", "functions", "muster-scan", "login.ts"), "utf8");
+const engine = readFileSync(join(repoRoot, "supabase", "functions", "cavscope-scan", "index.ts"), "utf8");
+const loginSrc = readFileSync(join(repoRoot, "supabase", "functions", "cavscope-scan", "login.ts"), "utf8");
 
 const HOME = "https://www.example.com/";
 const HOST = "www.example.com";

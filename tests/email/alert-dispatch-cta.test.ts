@@ -1,6 +1,6 @@
-// muster-alert-dispatch/index.ts imports "jsr:@supabase/functions-js/..."
+// cavscope-alert-dispatch/index.ts imports "jsr:@supabase/functions-js/..."
 // and calls Deno.serve() at module scope, so it cannot be imported into a
-// plain Node test the way muster-resend-webhook's core.ts can (see
+// plain Node test the way cavscope-resend-webhook's core.ts can (see
 // tests/email/resend-webhook.test.ts) -- there is no pure half split out of
 // it yet. This pins the CTA-href contract against the shipped source text
 // instead, the same technique tests/migrations/doubled-backslash-regex.test.ts
@@ -29,7 +29,7 @@ import { dirname, join } from "node:path";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const src = readFileSync(
-  join(repoRoot, "supabase", "functions", "muster-alert-dispatch", "index.ts"),
+  join(repoRoot, "supabase", "functions", "cavscope-alert-dispatch", "index.ts"),
   "utf8",
 );
 

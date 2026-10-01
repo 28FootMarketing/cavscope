@@ -18,10 +18,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { responseRejectedByClient, RESPONSE_PARSE_MARKER_LIST } from "../../supabase/functions/muster-scan/availability.ts";
+import { responseRejectedByClient, RESPONSE_PARSE_MARKER_LIST } from "../../supabase/functions/cavscope-scan/availability.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const engine = readFileSync(join(repoRoot, "supabase", "functions", "muster-scan", "index.ts"), "utf8");
+const engine = readFileSync(join(repoRoot, "supabase", "functions", "cavscope-scan", "index.ts"), "utf8");
 
 test("the error that found this is classified as a parse failure", () => {
   // Verbatim from scan 60 against https://hpsd.k12.pa.us/ on 2026-09-17.

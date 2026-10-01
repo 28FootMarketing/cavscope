@@ -19,7 +19,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // Resend's own delivery records.
 //
 // Invocation (same shared-secret pattern as every other engine function):
-//   POST /functions/v1/muster-auth-smoke
+//   POST /functions/v1/cavscope-auth-smoke
 //   Authorization: Bearer <publishable key>
 //   x-muster-secret: <vault muster_cron_secret>
 
@@ -144,7 +144,7 @@ Deno.serve(async (req: Request) => {
   // routing ever breaks, a recovery link lands on a page with no form and the
   // failure looks like "the email is broken".
   try {
-    const res = await fetch(resetUrl, { headers: { "user-agent": "muster-auth-smoke" } });
+    const res = await fetch(resetUrl, { headers: { "user-agent": "cavscope-auth-smoke" } });
     const html = await res.text();
     const hasForm = html.includes('id="recoveryState"') && html.includes('id="rcPassword"');
     steps.push({

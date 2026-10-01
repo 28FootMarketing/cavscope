@@ -20,7 +20,7 @@ import {
   evaluateExposure,
   exposureHit,
   type ExposureProbeResult,
-} from "../../supabase/functions/muster-scan/exposure.ts";
+} from "../../supabase/functions/cavscope-scan/exposure.ts";
 
 function probe(path: string) {
   const p = EXPOSURE_PROBES.find((x) => x.path === path);

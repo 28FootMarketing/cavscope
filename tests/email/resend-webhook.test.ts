@@ -14,7 +14,7 @@ import {
   mapResendEventType,
   isPermanentBounce,
   SIGNATURE_TOLERANCE_SECONDS,
-} from "../../supabase/functions/muster-resend-webhook/core.ts";
+} from "../../supabase/functions/cavscope-resend-webhook/core.ts";
 
 // A throwaway base64 secret. Not a credential: it signs nothing real and
 // verifies nothing real, it only exercises the HMAC path.
@@ -198,7 +198,7 @@ test("the handler reads its secret from env, then Vault, and fails closed on nei
   const { fileURLToPath } = await import("node:url");
   const { dirname, join } = await import("node:path");
   const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-  const index = readFileSync(join(root, "supabase/functions/muster-resend-webhook/index.ts"), "utf8");
+  const index = readFileSync(join(root, "supabase/functions/cavscope-resend-webhook/index.ts"), "utf8");
   const migration = readFileSync(join(root, "supabase/migrations/20260930205321_resend_webhook_secret_vault.sql"), "utf8");
   const env = index.indexOf('Deno.env.get("RESEND_WEBHOOK_SECRET")');
   const vault = index.indexOf('db.rpc("cavscope_engine_resend_webhook_secret")');

@@ -23,9 +23,9 @@ import {
 // Auth: header  x-muster-api-key: mk_...   (issued by public.cavscope_create_api_key, hashed at rest)
 // Two surfaces on the same URL:
 //   1. MCP (Streamable HTTP, stateless JSON-RPC 2.0): initialize, ping, tools/list, tools/call
-//      Point any MCP client at https://<project>.supabase.co/functions/v1/muster-agent with the header above.
+//      Point any MCP client at https://<project>.supabase.co/functions/v1/cavscope-agent with the header above.
 //   2. REST: POST { "tool": "list_findings", "args": { "website_id": 3 } }  ->  { "ok": true, "result": ... }
-//      GET  /muster-agent  ->  tool catalog (JSON Schema per tool)
+//      GET  /cavscope-agent  ->  tool catalog (JSON Schema per tool)
 // All authorization and org scoping is enforced in SQL (public.cavscope_engine_agent_call), including
 // for ai_narrative below -- its context (findings, evidence ids, the org's ai_narrative flag check)
 // comes from that same RPC. Only the model call itself happens here, since Postgres can't make it.
@@ -97,11 +97,11 @@ function publicOrigin(req: Request, url: URL): string {
 }
 
 // The edge runtime also strips the /functions/v1 prefix before the request
-// reaches the function, so url.pathname is "/muster-agent" -- everything built
+// reaches the function, so url.pathname is "/cavscope-agent" -- everything built
 // from it (OpenAPI servers[0].url, the MCP discovery urls, the catalog's
 // endpoint) advertised a URL that 404s when an agent actually calls it.
 // Verified live 2026-09-07: the catalog returned
-// https://<project>.supabase.co/muster-agent. Put the prefix back when the
+// https://<project>.supabase.co/cavscope-agent. Put the prefix back when the
 // runtime has taken it off.
 function publicPath(url: URL): string {
   return url.pathname.startsWith("/functions/v1/")
@@ -130,7 +130,7 @@ async function generateOpenAPISchema(req: Request) {
   const baseUrl = `${publicOrigin(req, url)}${publicPath(url).replace(/\/openapi\.json$/, "")}`;
   const toolList = await tools();
 
-  // Build POST /muster-agent request body schema (tool call)
+  // Build POST /cavscope-agent request body schema (tool call)
   const toolCallProperties: Record<string, unknown> = {
     tool: {
       type: "string",

@@ -5,7 +5,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // dispatches queued muster.notification_outbox rows (populated by
 // muster.autotriage() when it opens a critical/high risk) via Resend.
 //
-// Invocation (same shared-secret pattern as muster-scan):
+// Invocation (same shared-secret pattern as cavscope-scan):
 //   Authorization: Bearer <anon key>
 //   x-muster-secret: <vault muster_cron_secret>
 //   body: {} (cron-only; no per-call parameters needed)
@@ -25,7 +25,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // set" error recorded on the row -- rows queue harmlessly, nothing is lost,
 // nothing silently disappears. See BLOCKERS-AND-DECISIONS.md B-2.
 //
-// Delivery tracking lives in muster-resend-webhook: this function records the
+// Delivery tracking lives in cavscope-resend-webhook: this function records the
 // id Resend returns, that one records what Resend later reports happened to it.
 // A 2xx here is "accepted for sending" and nothing more.
 //
@@ -352,7 +352,7 @@ Deno.serve(async (req: Request) => {
           console.error(`outbox ${row.id}: Resend accepted the send but returned no id; delivery cannot be tracked`);
         }
         // p_status "sent" means accepted for sending, not delivered. Only
-        // muster-resend-webhook can raise delivery_status to "delivered".
+        // cavscope-resend-webhook can raise delivery_status to "delivered".
         await db.rpc("cavscope_engine_resolve_alert", {
           p_id: row.id,
           p_status: "sent",

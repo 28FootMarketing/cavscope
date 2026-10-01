@@ -5,7 +5,7 @@
 //
 // fetch() throws `TypeError: Method is forbidden` for TRACE, TRACK and
 // CONNECT. Confirmed empirically against Deno 2.9.7 (the runtime
-// supabase/functions/muster-scan runs on), and it is the WHATWG Fetch spec's
+// supabase/functions/cavscope-scan runs on), and it is the WHATWG Fetch spec's
 // own forbidden-method list, not a Deno-specific restriction, so no
 // spec-compliant fetch() can send a TRACE request. index.ts's own DNS
 // section explains why a raw-socket fallback is not available either: DNS
@@ -23,7 +23,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evaluateTraceMethod, traceEchoed, type TraceProbeResult } from "../../supabase/functions/muster-scan/methods.ts";
+import { evaluateTraceMethod, traceEchoed, type TraceProbeResult } from "../../supabase/functions/cavscope-scan/methods.ts";
 
 test("traceEchoed is false when the marker is absent even on a 200", () => {
   const r: TraceProbeResult = { status: 200, body: "HTTP/1.1 200 OK\r\nContent-Type: message/http\r\n\r\nTRACE / HTTP/1.1\r\nHost: example.com", sentMarker: "muster-trace-9f3a" };

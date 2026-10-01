@@ -1,6 +1,6 @@
 // Pure half of the Resend webhook handler: signature verification and event
 // mapping. No Deno globals, no database, no fetch, so tests/email exercises
-// this exact code rather than a copy of it (same split as muster-agent's
+// this exact code rather than a copy of it (same split as cavscope-agent's
 // narrative.ts).
 
 /**

@@ -12,9 +12,9 @@ import {
   readLlmConfig,
   redactSecret,
   summariseLlmError,
-} from "../../supabase/functions/muster-agent/llm.ts";
+} from "../../supabase/functions/cavscope-agent/llm.ts";
 
-const AGENT = readFileSync(new URL("../../supabase/functions/muster-agent/index.ts", import.meta.url), "utf8");
+const AGENT = readFileSync(new URL("../../supabase/functions/cavscope-agent/index.ts", import.meta.url), "utf8");
 const GUARD_SQL = readFileSync(new URL("../../supabase/migrations/20260917073710_muster_069_tenant_llm_config.sql", import.meta.url), "utf8");
 const FOR_WEBSITE_SQL = readFileSync(new URL("../../supabase/migrations/20260917080637_muster_071_llm_config_for_website.sql", import.meta.url), "utf8");
 

@@ -16,7 +16,7 @@ database and holds no credential.
 
 `scope` — whether a code produces **one verdict for the whole domain** or **one
 per page**. It is a property of the engine, not of the rule row, and it is
-derived from which step of `supabase/functions/muster-scan/index.ts` raises the
+derived from which step of `supabase/functions/cavscope-scan/index.ts` raises the
 code. `export.sql` documents the mapping. Twelve are site-scoped, twenty-six are
 page-scoped.
 

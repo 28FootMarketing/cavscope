@@ -16,7 +16,7 @@
  *
  * It writes nothing to the database, opens no incident, emails no alert, and
  * produces no SITREP narrative -- that is generated in Postgres and by
- * muster-agent, not here. It reports findings, evidence and a posture score.
+ * cavscope-agent, not here. It reports findings, evidence and a posture score.
  *
  * NETWORK
  *

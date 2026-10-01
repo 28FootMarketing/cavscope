@@ -7,7 +7,7 @@
 // by eleven appended comment lines. All three were found by hand, which is not a
 // process.
 //
-// Split in two on purpose, the same way muster-auth-smoke is:
+// Split in two on purpose, the same way cavscope-auth-smoke is:
 //
 //   - The checks that need no database (filename shape, duplicate versions,
 //     duplicate or out-of-order sequence numbers) run in CI on every push, via

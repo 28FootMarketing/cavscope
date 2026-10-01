@@ -19,7 +19,7 @@
 // 200 and dropped: nothing about another brand's mail is stored or read.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { verifySvixSignature } from "../muster-resend-webhook/core.ts";
+import { verifySvixSignature } from "../cavscope-resend-webhook/core.ts";
 import { addressedTo, addressOf, buildForward, isOwnDomain, retryable, type Route, usableTargets } from "./core.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
