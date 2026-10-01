@@ -60,6 +60,11 @@ on:
         type: choice
         options: ['skip', 'report', 'apply']
         default: 'skip'
+      password_changed_notification:
+        description: 'Email the account holder when their password changes. report = read the switch; on = enable (refused unless the branded template is live); off = disable. Default change nothing.'
+        type: choice
+        options: ['skip', 'report', 'on', 'off']
+        default: 'skip'
       smtp_sender_name:
         description: 'SMTP sender display name to set (e.g. CavScope). Empty = report the current value and change nothing.'
         type: string
@@ -123,12 +128,12 @@ jobs:
           echo "uri_allow_list  : $ALLOW"
 
           {
-            echo "### Supabase Auth config -- \`$REF\`"
+            echo "### Supabase Auth config -- `$REF`"
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| site_url before | \`$BEFORE\` |"
-            echo "| requested | \`$WANT\` |"
+            echo "| site_url before | `$BEFORE` |"
+            echo "| requested | `$WANT` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$APPLY" != "true" ]; then
@@ -138,9 +143,9 @@ jobs:
               echo ""
               echo "Redirect allowlist, unchanged by this job:"
               echo ""
-              echo "\`\`\`"
+              echo "```"
               echo "$ALLOW"
-              echo "\`\`\`"
+              echo "```"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -158,7 +163,7 @@ jobs:
           if [ "$AFTER" != "$WANT" ]; then
             echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'. Site URL is NOT set."
             {
-              echo "| site_url after | \`$AFTER\` |"
+              echo "| site_url after | `$AFTER` |"
               echo "| result | **FAILED -- readback disagrees, value not applied** |"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -166,14 +171,14 @@ jobs:
 
           AFTER_ALLOW=$(get_list)
           {
-            echo "| site_url after | \`$AFTER\` |"
+            echo "| site_url after | `$AFTER` |"
             echo "| result | **applied and verified by readback** |"
             echo ""
             echo "Redirect allowlist, untouched by this job:"
             echo ""
-            echo "\`\`\`"
+            echo "```"
             echo "$AFTER_ALLOW"
-            echo "\`\`\`"
+            echo "```"
             echo ""
             echo "A magic link still has to be sent and followed to call this done end to end."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -216,8 +221,8 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| before | \`$BEFORE\` |"
-            echo "| after | \`$AFTER\` |"
+            echo "| before | `$BEFORE` |"
+            echo "| after | `$AFTER` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$AFTER" != "$WANT" ]; then
@@ -247,8 +252,8 @@ jobs:
           echo "smtp_admin_email after  : $AFTER"
           {
             echo "### SMTP sender address"
-            echo "| before | \`$BEFORE\` |"
-            echo "| after | \`$AFTER\` |"
+            echo "| before | `$BEFORE` |"
+            echo "| after | `$AFTER` |"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$AFTER" != "$WANT" ]; then
             echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'."
@@ -377,10 +382,10 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| site_url in effect | \`$SITE\` |"
+            echo "| site_url in effect | `$SITE` |"
             echo "| custom SMTP | **$SMTP_HOST** |"
-            echo "| sender | \`$SMTP_FROM\` |"
-            echo "| POST /auth/v1/otp | \`$CODE\` |"
+            echo "| sender | `$SMTP_FROM` |"
+            echo "| POST /auth/v1/otp | `$CODE` |"
             echo "| redirect_to sent | **none, on purpose** -- the link should follow site_url |"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
@@ -396,8 +401,8 @@ jobs:
             echo "**A 200 means GoTrue accepted the request. It does not mean the email arrived.**"
             echo "Check the inbox, then click the link and read the host it lands on:"
             echo ""
-            echo "- lands on \`app.muster.partners\` -- Site URL is fixed and the flow works"
-            echo "- lands on \`www.muster.partners\` -- the setting did not take effect"
+            echo "- lands on `app.muster.partners` -- Site URL is fixed and the flow works"
+            echo "- lands on `www.muster.partners` -- the setting did not take effect"
             echo "- never arrives -- a mail transport problem, not a Site URL problem"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::GoTrue accepted the request ($CODE). Delivery is not confirmed by this; check the inbox."
@@ -507,7 +512,7 @@ jobs:
             GOT_SUBJ=$(jq -r --arg k "mailer_subjects_${flow}" '.[$k] // ""' /tmp/after.json)
             WANT_SUBJ=$(jq -r --arg f "$flow" '.[] | select(.flow==$f) | .subject' $DIR/manifest.json)
             if [ "$WANT_SHA" = "$GOT_SHA" ] && [ "$WANT_SUBJ" = "$GOT_SUBJ" ]; then OK="yes"; else OK="**NO**"; FAIL=1; fi
-            echo "| \`$flow\` | \`$GOT_SUBJ\` | \`$GOT_SHA\` | $OK |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| `$flow` | `$GOT_SUBJ` | `$GOT_SHA` | $OK |" >> "$GITHUB_STEP_SUMMARY"
             echo "$flow: want ${#WANT} chars/$WANT_SHA, got ${#GOT} chars/$GOT_SHA, subject match=$([ "$WANT_SUBJ" = "$GOT_SUBJ" ] && echo yes || echo NO)"
           done < <(jq -r '.[] | "\(.flow) \(.file) \(.subject)"' $DIR/manifest.json)
 
@@ -516,4 +521,60 @@ jobs:
             echo "::error::At least one template did not read back matching the repo. Not applied as intended."
             exit 1
           fi
-          echo "::notice::All six templates and subjects applied and verified by readback."
+          echo "::notice::All templates and subjects applied and verified by readback."
+
+      # The password-changed notification switch. Off since the project began, so
+      # changing a password mails the account holder nothing. Turning it on starts
+      # mailing real users, an owner decision, so it is its own input and defaults
+      # to nothing. `on` is refused unless the branded template is already live
+      # (read back, not assumed): the first one a customer receives must not be
+      # unbranded GoTrue stock from a security company. Run `templates: apply`
+      # first, then this with `on`.
+      - name: Password-changed notification switch
+        if: inputs.password_changed_notification != 'skip'
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          MODE: ${{ inputs.password_changed_notification }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+          DIR=supabase/auth-email-templates
+          SW=mailer_notifications_password_changed_enabled
+          TK=mailer_templates_password_changed_notification_content
+          FILE=$(jq -r '.[] | select(.flow=="password_changed_notification") | .file' $DIR/manifest.json)
+
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/cfg.json
+          LIVE_SW=$(jq -r --arg k "$SW" '.[$k] | tostring' /tmp/cfg.json)
+          WANT=$(cat "$DIR/$FILE")
+          WANT_SHA=$(printf '%s' "$WANT" | sha256sum | cut -c1-12)
+          GOT=$(jq -r --arg k "$TK" '.[$k] // ""' /tmp/cfg.json)
+          GOT_SHA=$(printf '%s' "$GOT" | sha256sum | cut -c1-12)
+          if [ "$WANT_SHA" = "$GOT_SHA" ]; then TPL="live, matches repo"; else TPL="NOT live or differs from repo"; fi
+          echo "switch $SW = $LIVE_SW; template: $TPL ($WANT_SHA want, $GOT_SHA live)"
+          {
+            echo "### Password-changed notification"
+            echo "- switch $SW: **$LIVE_SW**"
+            echo "- branded template: **$TPL**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$MODE" = "report" ]; then rm -f /tmp/cfg.json; echo "::notice::Report only. Nothing was written."; exit 0; fi
+
+          if [ "$MODE" = "on" ]; then
+            if [ "$WANT_SHA" != "$GOT_SHA" ]; then
+              rm -f /tmp/cfg.json
+              echo "::error::Refusing to enable: the branded template is not live. Run with templates: apply first."
+              exit 1
+            fi
+            VAL=true
+          else
+            VAL=false
+          fi
+          jq -n --arg k "$SW" --argjson v "$VAL" '{($k): $v}' > /tmp/payload.json
+          curl -sS -f -X PATCH "$API" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data @/tmp/payload.json > /dev/null
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/after.json
+          NOW=$(jq -r --arg k "$SW" '.[$k] | tostring' /tmp/after.json)
+          rm -f /tmp/cfg.json /tmp/after.json /tmp/payload.json
+          echo "- after write, read back: **$NOW**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$NOW" != "$VAL" ]; then echo "::error::Readback says $NOW, wanted $VAL."; exit 1; fi
+          echo "::notice::$SW is now $NOW, verified by readback."

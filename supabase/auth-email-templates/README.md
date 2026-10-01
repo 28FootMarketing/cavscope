@@ -45,3 +45,18 @@ the dashboard is overwritten on the next apply, and that direction is deliberate
 directory is the source of truth, and the dashboard is a cache of it.
 
 Full routing map, SMTP settings, and redirect allowlist: [`docs/EMAIL.md`](../../docs/EMAIL.md).
+
+## 07: the password-changed notification (staged, switch OFF)
+
+`07-password-changed-notification.html` is the seventh template and belongs to the
+security-notification family, not the six flows above. GoTrue's switch for it,
+`mailer_notifications_password_changed_enabled`, is `false`, so today a password change mails
+the account holder nothing. For a vendor of security assurance that is a control a buyer may
+expect; turning it on starts mailing real users, so it is the owner's call and nothing here
+enables it.
+
+`templates: apply` writes the template (it is in `manifest.json`) and changes no switch. The
+switch has its own `password_changed_notification` input: `report` reads it, `on` enables it and
+**is refused unless the live template reads back identical to this file**, `off` disables it.
+Order: `templates: apply`, then `password_changed_notification: on`. The email carries no link
+that signs anyone in and no password, only the address, a sign-in link and the security contact.
