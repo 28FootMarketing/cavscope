@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 
 import {
   verifyStripeSignature, parseStripeSignatureHeader, timestampWithinTolerance,
-  timingSafeEqual, hmacSha256Hex, gateCheckoutSession, MAX_TIMESTAMP_SKEW_SECONDS,
+  timingSafeEqual, hmacSha256Hex, gateCheckoutSession, gateSubscriptionDeleted, MAX_TIMESTAMP_SKEW_SECONDS,
 } from "../../supabase/functions/muster-stripe-webhook/core.ts";
 
 const SECRET = "whsec_test_do_not_use_anywhere_real";
@@ -205,4 +205,58 @@ test("a malformed event does not throw", () => {
   for (const e of [{}, { type: "checkout.session.completed" }, { type: "checkout.session.completed", data: {} }]) {
     assert.doesNotThrow(() => gateCheckoutSession(e));
   }
+});
+
+// customer.subscription.deleted ends the plan the checkout granted. Until this
+// existed a cancelled customer kept their plan until someone changed it by hand.
+
+test("a deleted subscription is acted on, keyed by its subscription id", () => {
+  const r = gateSubscriptionDeleted({
+    type: "customer.subscription.deleted",
+    data: { object: { id: "sub_1Abc23", customer: "cus_9Xyz", status: "canceled" } },
+  });
+  assert.deepEqual(r, { act: true, subscriptionId: "sub_1Abc23", customerId: "cus_9Xyz" });
+});
+
+test("other event types are acknowledged, not treated as cancellations", () => {
+  for (const type of ["checkout.session.completed", "customer.subscription.updated", "invoice.paid"]) {
+    const r = gateSubscriptionDeleted({ type, data: { object: { id: "sub_1Abc23" } } });
+    assert.equal(r.act, false, type);
+    if (!r.act) assert.equal(r.status, 200, type);
+  }
+});
+
+test("a scheduled cancellation notice does not end the plan early", () => {
+  // cancel_at_period_end arrives as subscription.updated while the customer is
+  // still inside the period they paid for.
+  const r = gateSubscriptionDeleted({
+    type: "customer.subscription.updated",
+    data: { object: { id: "sub_1Abc23", cancel_at_period_end: true } },
+  });
+  assert.equal(r.act, false);
+});
+
+test("a missing or foreign-shaped id is refused before it can reach a query", () => {
+  for (const id of [undefined, "", "   ", "cus_123", "sub_", "sub_1 OR 1=1", "sub_1%", 42, null]) {
+    const r = gateSubscriptionDeleted({ type: "customer.subscription.deleted", data: { object: { id } } });
+    assert.equal(r.act, false, String(id));
+    if (!r.act) assert.equal(r.status, 400, String(id));
+  }
+  assert.equal(gateSubscriptionDeleted({ type: "customer.subscription.deleted" }).act, false);
+});
+
+test("a missing customer id does not block the cancellation", () => {
+  const r = gateSubscriptionDeleted({ type: "customer.subscription.deleted", data: { object: { id: "sub_1Abc23" } } });
+  assert.deepEqual(r, { act: true, subscriptionId: "sub_1Abc23", customerId: null });
+});
+
+test("index.ts routes the event before the checkout gate and fails closed on an RPC error", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const src = await readFile("supabase/functions/muster-stripe-webhook/index.ts", "utf8");
+  const cancelAt = src.indexOf('event.type === "customer.subscription.deleted"');
+  const checkoutAt = src.indexOf("gateCheckoutSession(event)");
+  assert.ok(cancelAt > 0 && checkoutAt > cancelAt, "cancellation must be handled before the checkout gate");
+  assert.match(src, /cavscope_engine_cancel_subscription/);
+  assert.doesNotMatch(src, /muster_engine_cancel/, "new RPCs carry the CavScope name");
+  assert.match(src, /if \(cancelErr\) return json\(\{ error: `could not apply cancellation[\s\S]*?\}, 500\);/);
 });

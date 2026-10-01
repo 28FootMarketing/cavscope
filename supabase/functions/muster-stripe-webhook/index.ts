@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { gateCheckoutSession, verifyStripeSignature } from "./core.ts";
+import { gateCheckoutSession, gateSubscriptionDeleted, verifyStripeSignature } from "./core.ts";
 
 // PRD-003: Stripe self-serve checkout for the base CavScope tier only.
 // CavScope Partner/Enterprise stay sales-assisted via muster-ghl-webhook
@@ -20,7 +20,8 @@ import { gateCheckoutSession, verifyStripeSignature } from "./core.ts";
 // Required Edge Function secret: STRIPE_WEBHOOK_SECRET (the signing
 // secret for the webhook endpoint registered in the Stripe dashboard --
 // Developers -> Webhooks -> Add endpoint, pointed at this function's URL,
-// subscribed to checkout.session.completed; the secret is revealable there
+// subscribed to checkout.session.completed AND customer.subscription.deleted;
+// the secret is revealable there
 // at any time, not only at creation).
 // Nothing else needs a Stripe API key: tier/stage/price id all arrive as
 // Payment-Link-level metadata already present on the event payload, so
@@ -56,6 +57,20 @@ Deno.serve(async (req: Request) => {
     event = JSON.parse(rawBody);
   } catch {
     return json({ error: "invalid JSON body" }, 400);
+  }
+
+  // A subscription that has ended stops the plan it paid for. Handled before the
+  // checkout gate, which acknowledges every other event type as a no-op.
+  if (event.type === "customer.subscription.deleted") {
+    const cancel = gateSubscriptionDeleted(event);
+    if (!cancel.act) return json(cancel.body, cancel.status);
+    const { data: outcome, error: cancelErr } = await db.rpc("cavscope_engine_cancel_subscription", {
+      p_stripe_subscription_id: cancel.subscriptionId,
+    });
+    // A 500 makes Stripe retry, which is right: the RPC is idempotent, and a
+    // cancellation that failed to apply must not be acknowledged as handled.
+    if (cancelErr) return json({ error: `could not apply cancellation: ${cancelErr.message}` }, 500);
+    return json({ received: true, handled: true, outcome: (outcome as { outcome?: string } | null)?.outcome ?? null });
   }
 
   const gate = gateCheckoutSession(event);
