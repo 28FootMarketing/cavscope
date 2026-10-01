@@ -69,15 +69,30 @@ Deno.serve(async (req: Request) => {
   {
     const { data: failures, error } = await db.rpc("cavscope_engine_cron_health_check");
     if (error) throw new Error(`cron health check failed: ${error.message}`);
+    let cronFailing = false;
+    let cronMissed = false;
     for (const row of (failures ?? []) as Array<{ jobname: string; failure_count: number; missed: boolean }>) {
       if (row.failure_count > 0) {
+        cronFailing = true;
         await reportIncident(`cron_failure:${row.jobname}:${today}`, "cron_failure", "critical", row.jobname, { failure_count: row.failure_count });
         incidentsOpened++;
       }
       if (row.missed) {
+        cronMissed = true;
         await reportIncident(`cron_missed:${row.jobname}:${today}`, "cron_missed", "critical", row.jobname, { missed: true });
         incidentsOpened++;
       }
+    }
+    // These two open at CRITICAL severity and had no close path at all until
+    // 2026-10-01, so one failed cron run would have left a critical incident open
+    // permanently. The health check is a rolling window over recent runs: a window
+    // with no failure (or no missed run) means the job is running again, which is
+    // the condition clearing. A job still failing is re-reported above every run.
+    if (!cronFailing) {
+      incidentsClosed += await closeCleared("cron_failure", { failing_jobs: 0 });
+    }
+    if (!cronMissed) {
+      incidentsClosed += await closeCleared("cron_missed", { missed_jobs: 0 });
     }
   }
 
@@ -101,13 +116,27 @@ Deno.serve(async (req: Request) => {
       await reportIncident(`scan_silent_failure:${scan.scan_id}`, "scan_silent_failure", "info", "muster.generate_sitrep / scan rule evaluation", scan);
       incidentsOpened++;
     }
+    // Each of these is fingerprinted per scan (or per grant), so a later run can never
+    // reach "the same" row by fingerprint: 39 scan_silent_failure incidents sat open
+    // from 2026-09-17 to 2026-10-01, 35 of them scans where the engine emitted
+    // findings for rules still held inactive and ingest dropped every one. The check
+    // is a rolling window, so an empty window is the condition clear for the whole
+    // source, the same reasoning engine_error_spike uses below.
+    if (!(s.silent_scans?.length)) {
+      incidentsClosed += await closeCleared("scan_silent_failure", { silent_scans: 0 });
+    }
     for (const grant of s.stuck_grants ?? []) {
       await reportIncident(`commercial_grant_stuck:${grant.id}`, "commercial_grant_stuck", "warning", "cavscope-stripe-webhook -> onboarding", grant);
       incidentsOpened++;
     }
+    if (!(s.stuck_grants?.length)) {
+      incidentsClosed += await closeCleared("commercial_grant_stuck", { stuck_grants: 0 });
+    }
     if ((s.dead_letter_alerts ?? 0) > 0) {
       await reportIncident(`alert_dead_letter:${today}`, "alert_dead_letter", "warning", "cavscope-alert-dispatch", { dead_letter_count: s.dead_letter_alerts });
       incidentsOpened++;
+    } else {
+      incidentsClosed += await closeCleared("alert_dead_letter", { dead_letter_count: 0 });
     }
     if ((s.failed_scans_24h ?? 0) > 0) {
       await reportIncident(`engine_error_spike:${today}`, "engine_error_spike", "info", "cavscope-scan", { failed_scans_24h: s.failed_scans_24h });
