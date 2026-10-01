@@ -1285,7 +1285,7 @@
       {
         name: 'Billing Webhook', state: 'ok',
         val: 'Signature-verified',
-        tip: 'cavscope-stripe-webhook verifies the Stripe signature and gates on payment_status before recording a grant. Cancellation is NOT handled: nothing consumes customer.subscription.deleted, so a cancelled customer keeps their plan until someone changes it.',
+        tip: 'cavscope-stripe-webhook verifies the Stripe signature and gates on payment_status before recording a grant. A cancelled subscription (customer.subscription.deleted) downgrades the organization to trial once the Stripe endpoint is subscribed to that event; until it is, a cancelled customer keeps their plan until someone changes it.',
       },
     ];
 
