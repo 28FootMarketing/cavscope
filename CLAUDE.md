@@ -608,6 +608,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   window, so one failed scan on 2026-09-08 left two incidents open forever and bumped them 144
   times. Open-incident count is only a usable signal while it can go down. A new check that
   reports an incident needs a matching close path, or it is a counter, not an alarm.
+  **That rule was missed five more times and is now a test (2026-10-01).** Only
+  `engine_error_spike` and `control_register_failure` could ever close: `cron_failure` and
+  `cron_missed` open at **critical** severity and could not, and `scan_silent_failure` had left 39
+  incidents open since 2026-09-17 (35 were scans where the engine emitted findings for rules still
+  held inactive and ingest dropped them, per `skipped_inactive`; the check cannot tell that from a
+  broken engine, so the incident evidence now carries `engine_version` and `skipped_inactive`).
+  `commercial_grant_stuck` and `alert_dead_letter` had the same flaw. All seven sources close when
+  their rolling-window check comes back clear, and `tests/scan/watchdog-close-paths.test.ts` fails
+  if a source is added that cannot. A grant voided by a cancellation (`cancelled_at`) is excluded
+  from "stuck", or a deliberate cancellation would read as a failure after 48 hours.
 - **Frameworks are data, in `muster.frameworks`; adding one is an insert, not a constraint edit.**
   `controls.framework` is a foreign key to that table and `muster.framework_label()` reads it, so a
   new framework needs one row (key + display label) and nothing else. Before 2026-09-16 the valid
