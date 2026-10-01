@@ -17,7 +17,7 @@
   },
   "endpoints": {
     "mcp": {
-      "url": "https://<project>.supabase.co/functions/v1/muster-agent",
+      "url": "https://<project>.supabase.co/functions/v1/cavscope-agent",
       "transport": "streamable-http",
       "auth": {
         "scheme": "apiKey",
@@ -28,7 +28,7 @@
       "description": "MCP JSON-RPC 2.0 endpoint"
     },
     "rest": {
-      "url": "https://<project>.supabase.co/functions/v1/muster-agent",
+      "url": "https://<project>.supabase.co/functions/v1/cavscope-agent",
       "transport": "http",
       "auth": {
         "scheme": "apiKey",
@@ -39,12 +39,12 @@
       "description": "REST tool call interface"
     },
     "openapi": {
-      "url": "https://<project>.supabase.co/functions/v1/muster-agent/openapi.json",
+      "url": "https://<project>.supabase.co/functions/v1/cavscope-agent/openapi.json",
       "format": "openapi3.1",
       "description": "OpenAPI 3.1 schema for agent discovery"
     },
     "catalog": {
-      "url": "https://<project>.supabase.co/functions/v1/muster-agent",
+      "url": "https://<project>.supabase.co/functions/v1/cavscope-agent",
       "format": "json",
       "description": "Public tool catalog with JSON Schema"
     }
@@ -91,8 +91,8 @@
   },
   "documentation": {
     "readme": "https://github.com/28FootMarketing/cavscope/blob/main/AGENTS.md",
-    "openapi": "https://<project>.supabase.co/functions/v1/muster-agent/openapi.json",
-    "source": "https://github.com/28FootMarketing/cavscope/blob/main/supabase/functions/muster-agent/index.ts"
+    "openapi": "https://<project>.supabase.co/functions/v1/cavscope-agent/openapi.json",
+    "source": "https://github.com/28FootMarketing/cavscope/blob/main/supabase/functions/cavscope-agent/index.ts"
   },
   "organization": {
     "name": "28 Foot Systems",

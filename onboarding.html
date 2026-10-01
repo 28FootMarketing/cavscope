@@ -584,7 +584,7 @@
     btn.disabled = true;
     showStepError('websiteMsg', 'Checking your site…', true);
     try {
-      const { data, error } = await sb.functions.invoke('muster-verify-site');
+      const { data, error } = await sb.functions.invoke('cavscope-verify-site');
       if (error) throw error;
       if (!data.ok) {
         const reasons = {

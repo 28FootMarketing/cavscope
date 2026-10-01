@@ -381,7 +381,7 @@
   //
   // app_metadata is service-role-only, which is exactly what makes the flag
   // worth having -- a user cannot clear their own. So the change goes through
-  // the muster-set-password edge function, which sets the password and clears
+  // the cavscope-set-password edge function, which sets the password and clears
   // the flag in one admin call or neither.
   let forcedChange = false;
 
@@ -575,7 +575,7 @@
       // shown, and sending a forced change down the ordinary path would set the
       // password and leave the account still locked.
       if (forcedChange || isForced(session)) {
-        const { data, error } = await sb.functions.invoke('muster-set-password', { body: { password: pw1 } });
+        const { data, error } = await sb.functions.invoke('cavscope-set-password', { body: { password: pw1 } });
         if (error) {
           // invoke() reports any non-2xx as a generic "non-2xx status" error
           // and leaves the real message in the response body. Without reading

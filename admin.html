@@ -1263,7 +1263,7 @@
       {
         name: 'Platform', state: inc.open ? (inc.critical ? 'bad' : 'warn') : 'ok',
         val: inc.open ? `${num(inc.open)} open incident${inc.open === 1 ? '' : 's'}` : 'No open incidents',
-        tip: 'Open findings from muster-watchdog’s own health checks. The watchdog closes an incident when its check comes back clear, so this count can go down — that is what makes it an alarm and not a counter.',
+        tip: 'Open findings from cavscope-watchdog’s own health checks. The watchdog closes an incident when its check comes back clear, so this count can go down — that is what makes it an alarm and not a counter.',
       },
       {
         name: 'Scan Queue', state: q.queued > 20 ? 'warn' : 'ok',
@@ -1285,7 +1285,7 @@
       {
         name: 'Billing Webhook', state: 'ok',
         val: 'Signature-verified',
-        tip: 'muster-stripe-webhook verifies the Stripe signature and gates on payment_status before recording a grant. Cancellation is NOT handled: nothing consumes customer.subscription.deleted, so a cancelled customer keeps their plan until someone changes it.',
+        tip: 'cavscope-stripe-webhook verifies the Stripe signature and gates on payment_status before recording a grant. Cancellation is NOT handled: nothing consumes customer.subscription.deleted, so a cancelled customer keeps their plan until someone changes it.',
       },
     ];
 
@@ -2387,7 +2387,7 @@
           </tr>`).join('')}</tbody></table>
           <div class="status" style="margin-top:14px;" data-tooltip="${escapeHtml(paused
             ? 'Self-serve checkout is paused, so the landing page and signin.html point at sales instead of a Stripe link. New accounts are provisioned by hand.'
-            : 'Self-serve checkout is live: the Stripe Payment Links are reachable from the pricing grid, and muster-stripe-webhook records the grant.')}" tabindex="0">
+            : 'Self-serve checkout is live: the Stripe Payment Links are reachable from the pricing grid, and cavscope-stripe-webhook records the grant.')}" tabindex="0">
             <span class="dot ${paused ? 'warn' : 'ok'}"></span>
             <span class="status-name">Self-serve checkout</span>
             <span class="status-val">${paused ? 'paused — sales-led' : 'live'}</span>
@@ -2402,7 +2402,7 @@
         ${panel('Observed state', 'Inferred from live tables', `<div class="rows">
           <div class="status" data-tooltip="Signature-verified and gated on payment_status. Cancellation is not handled: nothing consumes customer.subscription.deleted." tabindex="0"><span class="dot ok"></span><span class="status-name">Stripe — checkout.session.completed</span><span class="status-val">handled</span></div>
           <div class="status" data-tooltip="No consumer exists for this event, so a cancelled customer keeps their plan until it is changed by hand. This is a known gap, not a transient failure." tabindex="0"><span class="dot bad"></span><span class="status-name">Stripe — subscription.deleted</span><span class="status-val">not handled</span></div>
-          <div class="status" data-tooltip="Application email: muster-alert-dispatch calls Resend's REST API directly for critical-finding alerts." tabindex="0"><span class="dot ${al.dead_letter ? 'bad' : 'ok'}"></span><span class="status-name">Resend — alert dispatch</span><span class="status-val">${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter</span></div>
+          <div class="status" data-tooltip="Application email: cavscope-alert-dispatch calls Resend's REST API directly for critical-finding alerts." tabindex="0"><span class="dot ${al.dead_letter ? 'bad' : 'ok'}"></span><span class="status-name">Resend — alert dispatch</span><span class="status-val">${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter</span></div>
           <div class="status" data-tooltip="Magic link, invite, recovery and email-change are sent by Supabase Auth (GoTrue), which relays through Resend as its SMTP provider. That path is configured in the Supabase dashboard, not in this codebase, and this console cannot observe it." tabindex="0"><span class="dot warn"></span><span class="status-name">Supabase Auth email</span><span class="status-val">not observable here</span></div>
         </div>`)}
         ${panel('Why two email paths', 'They are not the same system', `<div class="notice">
@@ -2410,7 +2410,7 @@
           Sign-in links, invites and password resets are rendered by Supabase Auth and only reach Resend because Resend
           is configured as its SMTP relay — a Resend <em>template</em> can never render them. Application email
           (currently just the <code>risk_opened</code> alert) goes through Resend's REST API from
-          <code>muster-alert-dispatch</code>. Conflating the two is how an auth template ends up edited in the wrong place.
+          <code>cavscope-alert-dispatch</code>. Conflating the two is how an auth template ends up edited in the wrong place.
         </div>`)}
       </div>` + platformAgents();
   }
@@ -2471,13 +2471,13 @@
   const INCIDENT_STATES = ['investigating', 'recovered', 'patch_pending', 'awaiting_release', 'closed', 'wont_fix'];
 
   // Open watchdog incidents with their ids, from cavscope_admin_overview() -- the
-  // console payload carries only the counts. muster-watchdog closes an incident
+  // console payload carries only the counts. cavscope-watchdog closes an incident
   // itself when its check comes back clear; triage here is for the ones a
   // person is working, and closing one marks it handled without fixing anything.
   function incidentsPanel() {
     if (sideError('overview')) return panel('Open incidents', '', sideErrorPanel('overview', 'the incident list'));
     const rows = ((EXTRA.overview || {}).incidents || []).filter((i) => matches(i.affected_operation, i.source, i.severity, i.status));
-    return panel('Open incidents', `${rows.length} open · raised by muster-watchdog`, rows.length ? `<table class="tbl">
+    return panel('Open incidents', `${rows.length} open · raised by cavscope-watchdog`, rows.length ? `<table class="tbl">
       <thead><tr>
         <th data-tooltip="Critical needs a person now; warning needs one soon." tabindex="0">Severity</th>
         <th>Operation</th>
@@ -3245,7 +3245,7 @@
     await write('cavscope_admin_impersonate_end', {}, 'Impersonation session ended.');
   }
 
-  // Same set of shapes the SQL predicate, the muster-set-password edge function
+  // Same set of shapes the SQL predicate, the cavscope-set-password edge function
   // and the other two pages accept: provisioning writes the flag as a JSON
   // boolean and as the string "true", and a check that catches only one of them
   // is not a check.
