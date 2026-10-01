@@ -516,7 +516,12 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   it: the password leg (`rotate_password` was false; set → sign-in last passed 2026-09-09), a real
   **magic** link (the function mints recovery links; same allowlist and fallback, but not followed),
   and delivery (nothing is sent). So write "recovery links land on the app host", not "magic links
-  work", until someone has sent a magic link and followed it. Details in `docs/EMAIL.md`. Setting a
+  work", until someone has sent a magic link and followed it. **That has now been reported:** the
+  owner sent one to a mailbox they read and followed it on 2026-10-01 and says it works. It was
+  not observed by this repo's tooling and does not say which address or landing host, so the
+  claim is "a magic link can arrive and sign someone in". An address on Resend's suppression
+  list still gets a 200 from GoTrue and no email (the QA sentinel's has since 2026-09-09), so a
+  suppressed person sees "check your email" and never receives one. Details in `docs/EMAIL.md`. Setting a
   field and delivering a working link are different claims and this file has already conflated them
   once.
   The workflow deliberately leaves `uri_allow_list` alone (`PATCH` is partial). That list is
