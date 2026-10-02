@@ -67,7 +67,10 @@ must not merge before the database has those names**. Hence the stages:
    names for a full week. Evidence is `docs/rename/calls-since-baseline.sql` against
    `docs/rename/calls-baseline-2026-10-01.csv` (`pg_stat_user_functions` stays empty because
    `track_functions` is `none` and not settable from here); edge-function logs cover the `muster-*`
-   URLs. Deleting the old edge functions needs the Supabase CLI: the MCP has no delete for them.
+   URLs. **Clock restarted 2026-10-02:** counts kept growing after the 2026-10-01 baseline because
+   the old frozen functions and cron were still calling `muster_*` until stage 3 half B (19:30 UTC).
+   `docs/rename/calls-snapshot-2026-10-02.csv` is the post-half-B reference; the quiet week is measured
+   from it, so the earliest stage 5 date is 2026-10-09. Deleting the old edge functions needs the Supabase CLI: the MCP has no delete for them.
 
 ## Deliberately not in the first pass
 
