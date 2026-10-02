@@ -260,8 +260,10 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 
 ## Other notes
 
+- **The public beta signup is closed, as of 2026-10-02, at the owner's instruction.** `/beta` answers a 307 to `/` and `beta.html` is kept, unrouted. The real control is the `public_insert_only` policy on `public.muster_beta_signups`, now `with check (false)` (migration `20261002001225`), because the table was insertable straight through PostgREST regardless of the page. The 2 existing rows are untouched. To reopen: set the policy back to `with check (true)` and restore the `/beta` rewrite in `middleware.js`.
+
 - **`cavscope.28footsystems.com` is the one host, path-routed for everything.** `/` is the landing
-  page, `/onboarding`, `/sitrep`, `/sitrep/sample`, `/beta`, `/privacy`, `/signin` and `/reset`
+  page, `/onboarding`, `/sitrep`, `/sitrep/sample`, `/privacy`, `/signin` and `/reset`
   (both `signin.html`), `/app` and `/admin`. Marketing, sign-in, the workspace and the console
   share one origin, which is what a Supabase session needs: it is stored per-origin, so
   `signin.html` and `app.html` on different hosts would make sign-in appear to succeed and then

@@ -193,7 +193,14 @@ export default function middleware(request) {
       return secureRewrite(new URL('/privacy.html', request.url));
     }
     if (isUnder(path, '/beta')) {
-      return secureRewrite(new URL('/beta.html', request.url));
+      // Closed 2026-10-02 at the owner's instruction. A temporary redirect, not
+      // 308, so it can be reopened without browsers holding on to it. The real
+      // control is the insert policy on public.muster_beta_signups
+      // (migration 20261002001225); beta.html is kept, unrouted, for reopening.
+      return new Response(null, {
+        status: 307,
+        headers: { ...SECURITY_HEADERS, location: CAVSCOPE_ORIGIN + '/' },
+      });
     }
     // The HTML audit. Not a gate either: the page asks
     // cavscope_html_audit_allowed() only to decide what to show, and the
