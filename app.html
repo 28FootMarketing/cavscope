@@ -1852,7 +1852,7 @@
           <a class="btn-amber" id="btnPlatformConsole" href="/admin" hidden data-tooltip="Opens the Platform Console, where every platform-wide control lives. Super admins only.">
             👑 Platform Console
           </a>
-          <button class="btn-primary" onclick="openModal('create_tenant')" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Set up a new client organization with its own isolated workspace.">
+          <button class="btn-primary" id="btnCreateTenant" onclick="openModal('create_tenant')" style="padding: 7px 12px; font-size: 11.5px;" data-tooltip="Set up a new client organization with its own isolated workspace.">
             ＋ Tenant
           </button>
           <button class="btn-ghost" id="btnLiveDemo" hidden onclick="Live.showingDemo ? Live.showLive() : Live.showDemo()" data-tooltip="Switch between your live workspace and the sample data walkthrough.">◐ Show demo</button>
@@ -4283,6 +4283,25 @@
           </div>
         `
       },
+      create_client_org: {
+        title: "＋ New client organization",
+        desc: "Creates a separate organization for one of your clients, linked to your Partner account. You become its executive, so you can switch into it from the organization picker, add its websites and run its scans. It counts against your Partner allowance.",
+        render: () => `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Client organization name</label>
+              <input required name="clientOrgName" minlength="2" maxlength="120" placeholder="e.g. Summit Health" data-tooltip="The client's own name. It appears on that organization's reports and in your organization picker.">
+            </div>
+            <div class="form-group">
+              <label>Industry</label>
+              <select name="industry" data-tooltip="Pick the closest match from CavScope's industry list. Optional.">
+                ${industryOptions('', true)}
+              </select>
+            </div>
+          </div>
+          <small id="clientOrgAllowanceNote" style="color: var(--text-muted);" data-tooltip="How many client organizations your Partner plan includes and how many are in use." tabindex="0">${escapeHtml(Live.clientOrgAllowanceText())}</small>
+        `
+      },
       create_tenant: {
         title: "👑 Provision New Enterprise / Agency Tenant",
         desc: "Create an isolated tenant namespace with custom domain, administrative credentials, and cloud residency region.",
@@ -6411,6 +6430,56 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         const liveOn = this.active && !this.showingDemo && !!this.website;
         if (scan) scan.hidden = !liveOn;
         if (demo) { demo.hidden = !this.active; demo.textContent = this.showingDemo ? '● Back to live' : '◐ Show demo'; }
+        this.syncClientOrgButton();
+      },
+
+      // ---------- client organizations (Partner tier) ----------
+      //
+      // A Partner creates linked client organizations. Who is a Partner, how many
+      // clients they may have and whether the flag allows it are all decided in
+      // SQL (cavscope_client_orgs / cavscope_create_client_org); this only shows
+      // the answer. Until 2026-10-02 the "+ Tenant" button opened the self-serve
+      // onboarding instead and made an independent trial organization, which is
+      // not what the button said. In a live workspace it is now shown only to a
+      // Partner whose organization can create clients.
+      partner: null,
+      clientOrgAllowanceText() {
+        const p = this.partner;
+        if (!p || !p.is_partner) return '';
+        const used = (p.clients || []).length;
+        return `${used} of ${p.allowance} client organizations used on your Partner plan.`;
+      },
+      async loadPartner(o) {
+        this.partner = null;
+        try { this.partner = await this.rpc('cavscope_client_orgs', { p_partner_org_id: o.id }); }
+        catch (e) { console.error(e); this.partner = null; }
+        this.syncClientOrgButton();
+      },
+      syncClientOrgButton() {
+        const btn = document.getElementById('btnCreateTenant');
+        if (!btn) return;
+        const live = this.active && !this.showingDemo;
+        const can = !!(this.partner && this.partner.enabled);
+        btn.hidden = live && !can;
+        if (live && can) btn.setAttribute('data-tooltip', `Create a client organization linked to your Partner account. ${this.clientOrgAllowanceText()}`);
+      },
+      beginClientOrg() {
+        const p = this.partner;
+        if (!p || !p.enabled) { showToast('Client organizations are part of the Partner plan.'); return; }
+        if ((p.clients || []).length >= p.allowance) {
+          showToast(`Your Partner plan includes ${p.allowance} client organizations and all are in use. Contact CavScope to add more.`);
+          return;
+        }
+        _openModal('create_client_org');
+      },
+      async createClientOrg(payload) {
+        try {
+          const r = await this.rpc('cavscope_create_client_org', {
+            p_partner_org_id: this.org.id, p_name: payload.clientOrgName, p_industry: payload.industry || null });
+          showToast(`Client organization "${r.name}" created.`);
+          await this.loadWorkspace();
+          await this.openTenant(r.organization_id);
+        } catch (err) { this.fail(err); }
       },
 
       // ---------- onboarding ----------
@@ -6610,6 +6679,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         this.setSync(`Live · ${o.name} · ${o.plan} plan`);
         this.renderTopbar();
         this.renderLivePanels();
+        this.loadPartner(o);
       },
       // ---------- flags decide what the workspace shows ----------
       //
@@ -7470,7 +7540,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
             .catch(err => Live.fail(err));
           return;
         }
-        if (currentModalType === 'create_tenant') { e.preventDefault(); closeModal(); Live.openOnboard(); return; }
+        if (currentModalType === 'create_client_org') { e.preventDefault(); closeModal(); Live.createClientOrg(payload); return; }
         if (currentModalType === 'appetite') { e.preventDefault(); closeModal(); Live.saveRiskAppetite(payload); return; }
       }
       return _handleFormSubmit(e);
@@ -7490,6 +7560,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
     }
     const _openModal = openModal;
     openModal = function (type) {
+      if (isLiveWorkspace() && type === 'create_tenant') { Live.beginClientOrg(); return; }
       if (isLiveWorkspace() && DEMO_ONLY_MODALS.includes(type)) {
         showToast('Not available in a live workspace yet: nothing would be saved. Findings, risks and evidence come from scans.');
         return;

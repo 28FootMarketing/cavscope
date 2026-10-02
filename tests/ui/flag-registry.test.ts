@@ -79,6 +79,17 @@ function enforcementClaims(): Map<string, string[]> {
       claims.set(key, enf);
     }
   }
+  // Later migrations move a flag's enforcement when they add the code that reads it, as the
+  // CLAUDE.md rule asks ("set enforcement in the same migration that adds the code"). Overlay them
+  // in order, so a claim is what the repo's history ends on rather than what 052 started with.
+  const later = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql") && f > REGISTRY_MIGRATION).sort();
+  for (const f of later) {
+    const text = readFileSync(join(migrationsDir, f), "utf8");
+    for (const m of text.matchAll(/update\s+cavscope\.feature_flags\s+set\s+enforcement\s*=\s*array\[([^\]]*)\][^;]*?where\s+key\s*=\s*'([a-z][a-z0-9_]+)'/gis)) {
+      if (!claims.has(m[2])) continue;
+      claims.set(m[2], m[1].split(",").map((v) => v.trim().replace(/^'|'$/g, "")).filter(Boolean));
+    }
+  }
   return claims;
 }
 
