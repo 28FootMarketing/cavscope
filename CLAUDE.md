@@ -407,7 +407,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   voided, a re-purchase clearing the cancellation). It works because grants now record the claiming
   organization (`organization_id`, set in `do_onboard`). It takes effect only when the function is
   deployed (merge to main) **and** the Stripe endpoint is subscribed to the event, which is a
-  dashboard step nothing here can verify -- until then a cancelled customer keeps their plan. It
+  dashboard step nothing here can verify -- until then a cancelled customer keeps their plan. **Delivery to `cavscope-stripe-webhook` was observed 2026-10-02** (a resent checkout event, POST 400 at 00:03 UTC: signature accepted, payload refused for missing `tier`/`stage`). **The cancellation event was never observed arriving**: a `stripe trigger customer.subscription.deleted` ran in the Stripe *sandbox*, which does not reach an endpoint registered in live mode. The owner accepted it as passed on 2026-10-02 on the strength of the offline tests and has not seen it delivered; the first real cancellation is the first live proof. It
   deliberately acts on `deleted`, not on a scheduled-cancellation notice, so a customer keeps what
   they paid for. Nothing is deleted on downgrade; websites over the trial limit are not disabled.
 - A super admin can also run a real scan against any URL from `app.html`'s admin console ("Run a URL
