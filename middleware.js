@@ -91,8 +91,8 @@ const SECURITY_HEADERS = {
 // in @vercel/functions/middleware.d.ts. Wrapping both here means a new branch
 // added below cannot forget the headers: there is no bare rewrite() or next()
 // left in this file to copy from.
-function secureRewrite(url) {
-  return rewrite(url, { headers: SECURITY_HEADERS });
+function secureRewrite(url, extraHeaders = {}) {
+  return rewrite(url, { headers: { ...SECURITY_HEADERS, ...extraHeaders } });
 }
 
 function secureNext() {
@@ -224,7 +224,11 @@ export default function middleware(request) {
     // email's redirect target, handled by signin.html's own type=recovery
     // branch -- there is no reset.html.
     if (path === '/signin' || path === '/reset') {
-      return secureRewrite(new URL('/signin.html', request.url));
+      // no-store: a sign-in page, and a reset landing that can carry a recovery
+      // token in its fragment, must never be kept by a shared cache or a
+      // browser's disk cache. It is what CavScope's own AUTH-006 asks of every
+      // site it scans, so the product's own login page has to pass it.
+      return secureRewrite(new URL('/signin.html', request.url), { 'cache-control': 'no-store' });
     }
     // Anything else falls through to the static file of that name -- an
     // unknown path on this host is a 404, not a silent bounce to the sign-in
