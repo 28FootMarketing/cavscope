@@ -271,6 +271,7 @@
        reason. One rule for every element, rather than one per class. */
     [hidden] { display: none !important; }
     .nav a.nav-out[hidden] { display: none; }
+    .nav a#navSupport { color: var(--text); }
     .nav a.nav-out:hover { background: var(--surface-hover); color: #fff; }
 
     .nav button:hover {
@@ -1804,6 +1805,12 @@
         <a class="nav-out" id="navPlatformConsole" href="/admin" hidden data-tooltip="Opens the Platform Console: every tenant, user, feature flag, incident, pricing and support access, in one place. Super admins only.">
           <span class="ico">👑</span>
           <span>Platform Console ↗</span>
+        </a>
+        <!-- Support: always shown, every role. Mail to support@ reaches a person
+             (cavscope-inbound-mail forwards it); see docs/EMAIL.md. -->
+        <a class="nav-out" id="navSupport" href="mailto:support@mail.cavscope.28footsystems.com?subject=CavScope%20support" data-tooltip="Email CavScope support. A person reads it and replies to you directly.">
+          <span class="ico">💬</span>
+          <span>Support</span>
         </a>
       </nav>
 
