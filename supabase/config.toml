@@ -134,3 +134,10 @@ entrypoint = "./functions/cavscope-inbound-mail/index.ts"
 # plus members of a workspace the html_audit flag is on for.
 verify_jwt = true
 entrypoint = "./functions/cavscope-html-audit/index.ts"
+
+[functions.cavscope-sitrep-pdf]
+# The caller's own session JWT is the credential. The gateway checks it, then
+# public.cavscope_pdf_export_allowed() decides under that JWT: a member of the report's
+# organization (or a super admin) with the pdf_export flag on for it.
+verify_jwt = true
+entrypoint = "./functions/cavscope-sitrep-pdf/index.ts"

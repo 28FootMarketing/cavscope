@@ -263,6 +263,18 @@ Partner whose organization can create clients; it used to open the self-serve on
 independent trial organization. `tests/ui/client-orgs.test.ts` pins the guards; the SQL was exercised in
 a rolled-back transaction against the live database.
 
+**`pdf_export` is wired as of 2026-10-02 and ships dark** (migrations `20261002032527`, `20261002032531`):
+28 flags wired, 8 not. `cavscope-sitrep-pdf` renders a SITREP's own markdown (the text the console shows
+verbatim and the `.md` export carries, so the three cannot disagree) with pdf-lib, whose standard fonts
+supply the glyph widths, because there is no headless browser here. It runs as the caller, never as the
+service role, stores nothing, and asks `public.cavscope_pdf_export_allowed(sitrep_id)` before it reads the
+report: a member of the report's organization or a super admin, flag on for that organization, and the
+kill switch off. **The kill switch is ON**, so nobody can use it until an owner turns it off in the
+console and grants an organization the flag. `sitrep.html` shows "Download PDF" only when that check says
+yes and fails closed. Text a standard font cannot draw (CJK, emoji) becomes `?` rather than stopping the
+report. `tests/pdf/` pins the renderer and the wiring; the access check was exercised in a rolled-back
+transaction. It is the report as a document, not the viewer's page, so it has no accordions or colours.
+
 Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
 missing from the workspace payload leaves the nav item visible. These flags gate
 visibility, not authority — the RPC behind every view enforces RLS whatever the sidebar

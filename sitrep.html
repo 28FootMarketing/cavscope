@@ -326,6 +326,7 @@
         <select class="picker" id="websitePicker" onchange="onWebsiteChange(this.value)" data-tooltip="Switch which of your organization's websites this report covers." hidden></select>
         <select class="picker" id="historyPicker" onchange="onHistoryChange(this.value)" data-tooltip="View a previous SITREP for this website, to compare posture over time." hidden></select>
         <button class="btn-ghost" onclick="window.print()" data-tooltip="Opens your browser's print dialog. Choose 'Save as PDF' to export this report.">▣ Print / PDF</button>
+        <button class="btn-ghost" id="btnDownloadPdf" hidden onclick="downloadPdf()" data-tooltip="Downloads this report as a PDF file you can send or keep. Shown only when PDF export is turned on for your organization.">⬇ Download PDF</button>
         <button class="btn-ghost" id="btnSignOut" onclick="signOut()" data-tooltip="Sign out of this SITREP viewer.">⏻ Sign out</button>
       </div>
     </div>
@@ -358,6 +359,7 @@
   let sb = null;
   let workspace = null;
   let currentWebsiteId = null;
+  let currentSitrepId = null;
 
   function init() {
     if (!window.supabase || !window.supabase.createClient) {
@@ -496,6 +498,9 @@
   }
 
   function renderEmpty(title, body) {
+    const pdfBtn = document.getElementById('btnDownloadPdf');
+    if (pdfBtn) pdfBtn.hidden = true;
+    currentSitrepId = null;
     document.getElementById('reportRoot').hidden = false;
     document.getElementById('reportRoot').innerHTML = `<div class="empty-state"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(body)}</p></div>`;
   }
@@ -505,9 +510,56 @@
   // same sentence; this copy exists only for reports generated before it did.
   const DEFAULT_DISCLAIMER = "CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.";
 
+  // PDF export is a flag-gated capability, so the button fails CLOSED: it stays hidden unless the
+  // database says this report may be exported. The server asks again on every request.
+  async function refreshPdfButton(sitrepId) {
+    const btn = document.getElementById('btnDownloadPdf');
+    if (!btn) return;
+    btn.hidden = true;
+    currentSitrepId = sitrepId;
+    try {
+      const ok = await rpc('cavscope_pdf_export_allowed', { p_sitrep_id: Number(sitrepId) });
+      if (ok === true && currentSitrepId === sitrepId) btn.hidden = false;
+    } catch (e) { /* stays hidden */ }
+  }
+
+  async function downloadPdf() {
+    const btn = document.getElementById('btnDownloadPdf');
+    if (!btn || currentSitrepId == null) return;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Preparing PDF...';
+    try {
+      const { data } = await sb.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      if (!token) throw new Error('Sign in again to download.');
+      const res = await fetch(`${SB_URL}/functions/v1/cavscope-sitrep-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'apikey': SB_KEY },
+        body: JSON.stringify({ sitrep_id: currentSitrepId }),
+      });
+      if (!res.ok) {
+        let msg = `The PDF could not be made (${res.status}).`;
+        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (_) { /* keep default */ }
+        throw new Error(msg);
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url; a.download = `cavscope-sitrep-${currentSitrepId}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) {
+      alert(e.message || 'The PDF could not be made.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
   function renderSitrep(sitrep) {
     const root = document.getElementById('reportRoot');
     root.hidden = false;
+    refreshPdfButton(sitrep.id);
     const s = sitrep.sections || {};
     const board = s.board_report || {};
     const claims = board.claims || [];
