@@ -1478,6 +1478,33 @@
     </div>`;
   }
 
+  // Allowances a Partner can be given: the client counts the two Partner price
+  // points include (commercial_pricing.included_client_orgs: 5 at seed, 10 at
+  // fruit). A value outside this list that is already set stays selectable, so
+  // the dropdown never shows a different number from the real one.
+  const PARTNER_ALLOWANCES = [5, 10];
+
+  function partnerAllowanceRow(o) {
+    const rows = Array.isArray(EXTRA.partners) ? EXTRA.partners : null;
+    if (!rows) {
+      return `<div class="muted" style="margin-bottom:12px;" data-tooltip="The Partner allowance could not be read, so it is not shown rather than guessed." tabindex="0">Partner client allowance unavailable.</div>`;
+    }
+    const mine = rows.find((r) => Number(r.organization_id) === Number(o.id)) || {};
+    const cur = mine.allowance == null ? '' : Number(mine.allowance);
+    const list = PARTNER_ALLOWANCES.includes(cur) || cur === '' ? PARTNER_ALLOWANCES : PARTNER_ALLOWANCES.concat([cur]).sort((a, b) => a - b);
+    const isClient = mine.managed_by_org_id != null;
+    return `<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+      <span data-tooltip="How many client organizations this organization may create under the Partner tier. Not a Partner means none, and the New client organization button stays hidden for them." tabindex="0"><b>Partner client allowance</b></span>
+      <select class="inline-select" data-act="partner-allowance" data-org="${Number(o.id)}" data-name="${escapeHtml(o.name)}" data-current="${cur}" data-used="${Number(mine.used || 0)}"
+        ${isClient ? 'disabled' : ''} aria-label="Partner client allowance for ${escapeHtml(o.name)}"
+        data-tooltip="${isClient ? 'This organization is itself a client of a Partner, so it cannot be a Partner.' : 'Sets how many client organizations this organization may create. Asks before saving. It cannot go below the number already created.'}">
+        <option value=""${cur === '' ? ' selected' : ''}>Not a Partner</option>
+        ${list.map((n) => `<option value="${n}"${n === cur ? ' selected' : ''}>${n} client organizations</option>`).join('')}
+      </select>
+      <small class="muted" data-tooltip="Client organizations this Partner has already created." tabindex="0">${Number(mine.used || 0)} used</small>
+    </div>`;
+  }
+
   function clientAccessCard(o, partnerFlags) {
     return panel(
       o.name,
@@ -1487,6 +1514,7 @@
          <a class="link-more" href="/app#tenant=${Number(o.id)}"
             data-tooltip="Opens ${escapeHtml(o.name)}'s own workspace, where the tenant sets its brand name, colors, logo, custom domain string and what it bills its own client under Team &amp; Settings. This card controls only whether they're allowed to.">Open workspace ↗</a>
        </div>
+       ${partnerAllowanceRow(o)}
        <div class="flag-head" style="grid-template-columns: minmax(0,1.5fr) 120px minmax(0,1fr);"><span>Entitlement</span><span>Enabled</span><span>Source</span></div>
        ${partnerFlags.map((f) => clientEntitlementRow(f, o)).join('') || '<div class="empty">No Partner-tier entitlements defined.</div>'}`,
       { tip: `Partner-tier entitlements for ${escapeHtml(o.name)} only. Full registry, every category, every plan, every client's overrides: Settings.` }
@@ -2984,6 +3012,9 @@
     // resolver (cavscope.website_jurisdiction) makes of the two -- the location
     // both the tenant's workspace and the site's SITREP use.
     locations: ['cavscope_admin_site_jurisdictions'],
+    // Which organizations are Partners (a client allowance is set) and how many
+    // linked clients each has used. Not part of the console payload, so it is read here.
+    partners: ['cavscope_admin_partner_allowances'],
   };
 
   async function fetchExtras() {
@@ -3113,6 +3144,15 @@
     if (next === current) return;
     if (!window.confirm(`Move ${name} from ${current} to ${next}?\n\nPlan-gated features switch on or off for every member of this organization on their next request, and plan-implied revenue changes with it.`)) { render(); return; }
     await write('cavscope_admin_set_plan', { p_organization_id: Number(org), p_plan: next }, `${name} is now on ${next}.`);
+  }
+
+  async function setPartnerAllowance(sel) {
+    const { org, name, current, used } = sel.dataset;
+    const next = sel.value;
+    if (String(next) === String(current)) return;
+    const label = next === '' ? 'Not a Partner' : `${next} client organizations`;
+    if (!window.confirm(`Set ${name} to: ${label}?\n\n${next === '' ? 'They will no longer be able to create client organizations. Existing clients are not removed.' : 'They can create up to that many client organizations, each on their plan.'}${Number(used) ? `\n\nThey already have ${used}.` : ''}`)) { render(); return; }
+    await write('cavscope_admin_set_partner_allowance', { p_organization_id: Number(org), p_allowance: next === '' ? null : Number(next) }, `${name}: ${label}.`);
   }
 
   async function setRole(sel) {
@@ -3412,6 +3452,7 @@
     if (e.target.id === 'impMinutes') { impForm.minutes = e.target.value; }
     switch (e.target.getAttribute && e.target.getAttribute('data-act')) {
       case 'plan': setPlan(e.target); break;
+      case 'partner-allowance': setPartnerAllowance(e.target); break;
       case 'role': setRole(e.target); break;
       case 'incident': updateIncident(e.target); break;
       case 'stage': setPricingStage(e.target); break;

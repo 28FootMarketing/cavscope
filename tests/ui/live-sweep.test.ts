@@ -155,6 +155,9 @@ test("record forms with no backend are hidden and refused in a live workspace", 
   for (const t of ["risk", "control", "evidence", "exception", "remediation", "test"]) assert.ok(types.includes(t), `${t} would fake a save`);
   // Every modal type the live form handler does not route to an RPC is in the list.
   const liveRouted = [...app.slice(app.indexOf("    handleFormSubmit = function (e) {")).slice(0, 1800).matchAll(/currentModalType === '([a-z_]+)'/g)].map((x) => x[1]);
+  // A modal the live openModal wrapper intercepts is never opened in a live workspace, so it
+  // cannot fake a save: create_tenant is redirected to the real client-organization path.
+  liveRouted.push(...[...app.matchAll(/isLiveWorkspace\(\) && type === '([a-z_]+)'/g)].map((x) => x[1]));
   const all = [...new Set([...app.matchAll(/currentModalType === '([a-z_]+)'/g)].map((x) => x[1]))];
   for (const t of all) assert.ok(liveRouted.includes(t) || types.includes(t), `modal '${t}' neither saves live nor is refused`);
   assert.match(app, /if \(isLiveWorkspace\(\) && DEMO_ONLY_MODALS\.includes\(type\)\)/);

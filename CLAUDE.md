@@ -242,16 +242,26 @@ already-queued alerts as `pending` rather than dropping them), `support_imperson
 
 Each of the ten unwired rows carries a `wiring_note` saying why and what would wire it.
 `commercial_use_enabled` can never be wired — it is a licence term, not a code path, and must
-not be presented as a control. **One of the ten is a commercial problem rather than a deferred
-feature:** `client_management_enabled` is sold on the Partner tier, and the capability it names
-does not exist. Read from the live catalog 2026-10-01: no function sets `organizations.managed_by_org_id`
-(`onboard_client` is dead and does not either), so there is no guard to add and no tier getting it
-free -- the flag's `wiring_note` said the creation path "does not check it", which was wrong, and
-migration `20261001020513` corrected it. `app.html`'s "create client organization" button, in a live workspace, opens the
-self-serve onboarding and makes an independent trial organization: no Partner link, no allowance, no
-add-on billing. `index.html` marks the three client-org Partner bullets and the allowance "in
-development" until a real creation path exists; build that path with a `has_flag` guard and set
-`enforcement` in the same migration, then remove the markers.
+not be presented as a control. **`client_management_enabled` was the one that was a commercial problem
+rather than a deferred feature, and it is wired as of 2026-10-02** (migrations `20261002031035`,
+`20261002031051`, `20261002031639`; the read for the console is `20261002031759`): 27 flags wired, 9 not.
+The Partner tier was sold with client organizations and nothing created one. Now
+`public.cavscope_create_client_org` does, through `cavscope.do_create_client_org`, and it refuses unless
+all of these hold: the caller is executive (or super admin) on the Partner, the organization has a
+**`partner_client_allowance`** (null = not a Partner), the flag is on, the Partner is not itself a
+client (no chains), the name is 2 to 120 characters and unique among its clients, the industry is on the
+list, and there is room under the allowance. **Past the allowance it refuses; it does not give extras
+away**, because billing for the $39/$49 add-on organizations is not built. The client inherits the
+Partner's plan, website limit and commercial stage, and the creator becomes its executive, so RLS and the
+tenant switcher work unchanged. **Partner status is an explicit allowance a super admin sets** (Client
+Access in `admin.html`, `cavscope_admin_set_partner_allowance`), never inferred: the Stripe grant records
+plan and stage but not the tier, so a Partner is indistinguishable from an ordinary Pro buyer in the
+database, and guessing would give the allowance to the wrong people. **Wiring the Stripe tier through to
+the allowance is the open follow-up**; until then a Partner who buys needs a super admin to switch their
+allowance on, and `index.html` says so. In a live workspace the "+ Tenant" button is shown only to a
+Partner whose organization can create clients; it used to open the self-serve onboarding and make an
+independent trial organization. `tests/ui/client-orgs.test.ts` pins the guards; the SQL was exercised in
+a rolled-back transaction against the live database.
 
 Nav gating in `app.html` (`Live.navFlagMap` / `applyFlagsToNav`) **fails open**: a key
 missing from the workspace payload leaves the nav item visible. These flags gate
