@@ -121,7 +121,7 @@ const LEGACY_SITREP_HOSTS = ['sitrep.muster.partners', 'sitrep.muster.28footsyst
 
 function legacyTarget(host, path) {
   const shared = path.startsWith('/assets/') || path.startsWith('/.well-known/')
-    || path === '/sitemap.xml' || path === '/robots.txt';
+    || path === '/sitemap.xml' || path === '/robots.txt' || path === '/llms.txt';
   if (LEGACY_SITE_HOSTS.includes(host)) return path;
   if (LEGACY_APP_HOSTS.includes(host)) {
     // The app hosts' root was the sign-in page; on CavScope root is marketing,
@@ -159,6 +159,9 @@ export default function middleware(request) {
 
   // Sitemap likewise: one file, served as itself.
   if (path === '/sitemap.xml') return secureNext();
+
+  // llms.txt, for the same reason: an agent asking for it must get the file.
+  if (path === '/llms.txt') return secureNext();
 
   // ---- cavscope.28footsystems.com: one host, every path ---------------------
   //

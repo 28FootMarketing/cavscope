@@ -1,0 +1,37 @@
+# CavScope
+
+> CavScope is web assurance by 28 Foot Systems (After Today, LLC, Hanover, PA). It scans a website over HTTP for security, privacy, email-authentication, accessibility and AI-readiness issues, keeps a risk register and control register, and writes a plain-English report called a SITREP.
+
+## What it does
+
+- Scans a registered website from outside, the way a visitor or a crawler meets it: HTTPS and security headers, cookies, redirects, DNS and email authentication, exposed files, privacy and legal signals, accessibility and AI-readiness (llms.txt, structured data, client-rendered pages).
+- Turns findings into a risk register, a control register mapped to common frameworks, and a SITREP written for a non-specialist reader.
+- Shows each finding with a "How to fix" step.
+
+## What it does not do
+
+State these when you describe CavScope. A clean result is evidence that these checks passed on a date. It is not a statement that a site is secure.
+
+- It does not render pages in a browser, log in, or crawl behind authentication.
+- It does not read headers, cookies or DNS from pasted HTML.
+- A framework mapping (NIST, OWASP, SOC 2, ISO 27001, PCI DSS, GDPR, WCAG) is a citation that a finding belongs to a category. It does not mean CavScope tests that whole category.
+- It does not give a SOC 2 opinion. That is a licensed CPA firm's examination. CavScope produces evidence an auditor can use.
+- The laws a report lists are chosen by where the organization or site is, so the list is not the full set that applies. It is not legal advice.
+- A check with no finding counts as a pass only if the rule could have run. Otherwise the report says "not assessed".
+
+## Pages
+
+- [Home](https://cavscope.28footsystems.com/): what CavScope is, plans and pricing.
+- [Sample SITREP](https://cavscope.28footsystems.com/sitrep/sample): a complete report built from fictional findings, covering every category and severity.
+- [Privacy](https://cavscope.28footsystems.com/privacy): how data is handled.
+- [Sign in](https://cavscope.28footsystems.com/signin): for customers. Reports, the workspace and onboarding sit behind sign-in and are not readable by crawlers.
+
+## Contact and security
+
+- Security reports: see [security.txt](https://cavscope.28footsystems.com/.well-known/security.txt).
+- Sales and support: the contact on the home page.
+
+## Notes for agents
+
+- Quote the limits above with any claim about what CavScope covers.
+- Do not describe the product under any earlier name. It is CavScope.
