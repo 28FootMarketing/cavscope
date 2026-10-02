@@ -275,3 +275,12 @@ test("no MUSTER-era host is ever served a page", () => {
     assert.equal(res.status, 308, `${url} was not redirected`);
   }
 });
+
+test("the sign-in page and the reset landing are served no-store", () => {
+  for (const path of ["/signin", "/reset"]) {
+    const res = call(`https://${CAV}${path}`, CAV);
+    assert.equal(rewriteTarget(res), "/signin.html");
+    assert.match(res.headers.get("cache-control") ?? "", /\bno-store\b/i, path);
+    for (const h of SECURITY_HEADERS) assert.ok(res.headers.get(h), `${path} keeps ${h}`);
+  }
+});
