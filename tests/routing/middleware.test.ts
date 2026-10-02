@@ -129,7 +129,7 @@ test("HSTS is not set by the middleware", () => {
 // marketing site got its findings in the first place. robots.txt has its own
 // merged file on this host, pinned below.
 test("the sitemap and security.txt are served as files, not pages", () => {
-  for (const path of ["/sitemap.xml", "/.well-known/security.txt"]) {
+  for (const path of ["/sitemap.xml", "/llms.txt", "/.well-known/security.txt"]) {
     assert.equal(rewriteTarget(call(`https://${CAV}${path}`, CAV)), null, `${path} must fall through to the static file`);
   }
 });
