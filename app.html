@@ -1649,6 +1649,26 @@
     details.acc-section > summary > h2, details.acc-section > summary > h3 { margin: 0; }
     details.acc-section > .acc-body { margin-top: 12px; }
     details.acc-fix > summary { font-size: 11.5px; font-weight: 600; color: var(--teal); }
+    .gl-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+    .gl-controls input, .gl-controls select { padding: 9px 12px; border-radius: var(--radius-md); border: 1px solid var(--surface-border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+    .gl-controls input { flex: 1 1 280px; min-width: 0; }
+    .gl-count { color: var(--text-muted); font-size: 12px; }
+    #glossaryBody { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+    .gl-cat { border: 1px solid var(--surface-border); border-radius: var(--radius-lg); background: var(--surface-card); padding: 14px 18px; }
+    .gl-cat > summary h3 { font-size: 16px; color: #fff; }
+    .gl-cat-n { margin-left: auto; color: var(--text-muted); font-size: 12px; font-weight: 500; }
+    .gl-rule { border-top: 1px solid var(--surface-border); padding: 10px 0; }
+    .gl-rule > summary { font-size: 13.5px; font-weight: 600; color: var(--text); flex-wrap: wrap; }
+    .gl-id { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); font-weight: 500; }
+    .gl-sev { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid currentColor; }
+    .gl-sev.critical { color: var(--rose); } .gl-sev.high { color: var(--amber); } .gl-sev.medium { color: var(--cyan); }
+    .gl-sev.low, .gl-sev.info { color: var(--text-muted); }
+    .gl-off { font-size: 10.5px; color: var(--text-dim); border: 1px dashed var(--surface-border-strong); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 500; }
+    .gl-body { margin: 10px 0 4px 20px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+    .gl-body p { margin: 0 0 8px; white-space: pre-wrap; }
+    .gl-body .gl-fix-label { color: var(--teal); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .gl-scope { margin-top: 18px; font-size: 12px; line-height: 1.6; color: var(--text-dim); max-width: 820px; }
+    .gl-empty { padding: 24px; color: var(--text-muted); font-size: 13px; }
     details.acc-fix > .acc-body { margin-top: 6px; }
     .acc-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin: 0 0 10px; }
     .acc-toolbar button { background: none; border: 1px solid var(--surface-border); color: var(--text-muted); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
@@ -1787,6 +1807,10 @@
         </button>
 
         <div class="nav-label" style="margin-top: 10px;">Workspace</div>
+        <button data-view="glossary" data-tooltip="Every finding CavScope can raise, explained in plain English, with how to fix it.">
+          <span class="ico">📚</span>
+          <span>Findings Glossary</span>
+        </button>
         <button data-view="teamSettings" data-tooltip="This workspace's team, invitations, API keys, report branding and AI narrative model.">
           <span class="ico">👥</span>
           <span>Team &amp; Settings</span>
@@ -2294,6 +2318,33 @@
 &lt;/div&gt;</div>
             </div>
           </div>
+        </section>
+
+        <!-- ================= FINDINGS GLOSSARY ================= -->
+        <!-- Read from public.cavscope_finding_glossary(), which reads cavscope.scan_rules, so it cannot
+             drift from what the engine can raise. Nothing here is written by hand. -->
+        <section id="glossary" class="view">
+          <div class="scanner-hero">
+            <span class="eyebrow" style="color: var(--teal);">Reference</span>
+            <h2 style="font-family: var(--font-serif); font-size: clamp(26px, 3vw, 36px); color: #fff; margin: 6px 0 8px;">Findings Glossary</h2>
+            <p style="color: #b5cce4; max-width: 820px; font-size: 13.5px; line-height: 1.6;">
+              Every finding CavScope can raise, in plain English: what it means, how serious it usually is, and what fixing it involves. Open one at a time. The list is read from the same catalog the scanner uses, so it always matches what a scan can report.
+            </p>
+            <div class="gl-controls">
+              <input id="glossarySearch" type="search" autocomplete="off" placeholder="Search findings (e.g. SPF, cookies, alt text)" aria-label="Search the findings glossary" data-tooltip="Filters the list by title, code or wording. Try SPF, cookies or HTTPS." oninput="renderGlossary()">
+              <select id="glossarySeverity" aria-label="Filter by severity" data-tooltip="Show only findings that are usually this serious. Severity is the usual level; a scan can note when a specific site differs." onchange="renderGlossary()">
+                <option value="">All severities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="info">Informational</option>
+              </select>
+              <span id="glossaryCount" class="gl-count" tabindex="0" data-tooltip="How many findings match what you typed and picked."></span>
+            </div>
+          </div>
+          <div id="glossaryBody"></div>
+          <p class="gl-scope">A finding is evidence of one condition on one date. A scan with none of these means those checks passed that day. It does not mean a site is secure, and CavScope cannot see everything, such as sign-in areas or anything behind a login. A finding that says "Not currently checked" is defined here but is not part of scans today.</p>
         </section>
 
         <!-- ================= VIEW 2: AI OPTIMIZATION (AIO / GEO) AUDIT ================= -->
@@ -3340,11 +3391,72 @@
       const targetBtn = document.querySelector(`#mainNav button[data-view="${viewId}"]`);
 
       if (targetView) targetView.classList.add('active');
+      if (viewId === 'glossary') loadGlossary();
       if (targetBtn) targetBtn.classList.add('active');
 
       const sidebar = document.getElementById('sidebar');
       if (sidebar) sidebar.classList.remove('open');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ---- Findings Glossary -------------------------------------------------
+    // The catalog is cavscope.scan_rules, read through public.cavscope_finding_glossary() (anon and
+    // authenticated, like the industry list). Nothing is typed here, so a rule added to the engine
+    // appears in the glossary with no edit to this page. The same read serves demo mode.
+    const GLOSSARY_CATEGORY = {
+      security: 'Security', accessibility: 'Accessibility', availability: 'Availability',
+      privacy: 'Privacy', governance: 'Governance', ai_governance: 'AI governance', third_party: 'Third-party code',
+    };
+    const GLOSSARY_SEVERITY = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Informational' };
+    let glossaryRows = null;
+    async function loadGlossary() {
+      const body = document.getElementById('glossaryBody');
+      if (!body) return;
+      if (glossaryRows) { renderGlossary(); return; }
+      body.innerHTML = '<div class="gl-empty">Loading the findings...</div>';
+      try {
+        if (!Live.sb) throw new Error('The backend client did not load.');
+        glossaryRows = await Live.rpc('cavscope_finding_glossary');
+        if (!Array.isArray(glossaryRows)) throw new Error('Unexpected answer.');
+        renderGlossary();
+      } catch (e) {
+        body.innerHTML = '<div class="gl-empty">The glossary could not load right now. ' + escapeHtml((e && e.message) || '') + ' Reload to try again.</div>';
+      }
+    }
+    function renderGlossary() {
+      const body = document.getElementById('glossaryBody');
+      if (!body || !glossaryRows) return;
+      const q = (document.getElementById('glossarySearch').value || '').trim().toLowerCase();
+      const sev = document.getElementById('glossarySeverity').value;
+      const rows = glossaryRows.filter(r =>
+        (!sev || r.severity === sev) &&
+        (!q || [r.title, r.rule_id, r.plain_english, r.remediation].some(t => String(t || '').toLowerCase().includes(q))));
+      document.getElementById('glossaryCount').textContent = rows.length + ' of ' + glossaryRows.length + ' findings';
+      if (!rows.length) { body.innerHTML = '<div class="gl-empty">No findings match. Clear the search or pick another severity.</div>'; return; }
+      const cats = [];
+      rows.forEach(r => { if (!cats.includes(r.category)) cats.push(r.category); });
+      body.innerHTML = cats.map((c, i) => {
+        const inCat = rows.filter(r => r.category === c);
+        return `<details class="acc acc-section gl-cat" data-acc-group="glossary-cat"${i === 0 ? ' open' : ''}>
+          <summary tabindex="0" data-tooltip="Open to see the findings in this group.">
+            <h3>${escapeHtml(GLOSSARY_CATEGORY[c] || c)}</h3><span class="gl-cat-n">${inCat.length}</span>
+          </summary>
+          <div class="acc-body">${inCat.map(r => `
+            <details class="acc gl-rule" data-acc-group="glossary-rule">
+              <summary tabindex="0" data-tooltip="Open to read what this means and how to fix it.">
+                <span class="gl-sev ${escapeHtml(r.severity)}">${escapeHtml(GLOSSARY_SEVERITY[r.severity] || r.severity)}</span>
+                <span>${escapeHtml(r.title)}</span>
+                <span class="gl-id">${escapeHtml(r.rule_id)}</span>
+                ${r.checked ? '' : '<span class="gl-off" tabindex="0" data-tooltip="This finding is defined but is not part of scans today.">Not currently checked</span>'}
+              </summary>
+              <div class="gl-body">
+                <p>${escapeHtml(r.plain_english)}</p>
+                <p><span class="gl-fix-label">How to fix</span><br>${escapeHtml(r.remediation)}</p>
+              </div>
+            </details>`).join('')}
+          </div>
+        </details>`;
+      }).join('');
     }
 
     function toggleSidebar() {
