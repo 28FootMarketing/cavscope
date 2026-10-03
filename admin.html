@@ -376,9 +376,12 @@
     }
     .panel-head p { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
     .panel-body { padding: 0 17px 16px; flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    /* A table narrower than its columns clips the last one silently. Scroll it. */
-    .panel-body .tbl { display: block; overflow-x: auto; white-space: nowrap; }
-    .panel-body .tbl thead, .panel-body .tbl tbody { display: table; width: 100%; }
+    /* A table narrower than its columns clips the last one silently. Scroll it -- from the
+       container, not the table: making thead and tbody separate display:table boxes (as this
+       did until 2026-10-03) lets each size its own columns, so every header sat away from its
+       cells. One real table, one set of columns. */
+    .panel-body { overflow-x: auto; }
+    .panel-body .tbl { min-width: 100%; white-space: nowrap; }
     .link-more {
       background: none; border: none; cursor: pointer;
       color: var(--teal); font-family: inherit; font-size: 11.5px; font-weight: 600;
