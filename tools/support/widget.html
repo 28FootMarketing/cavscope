@@ -1,0 +1,236 @@
+<style>
+  /* Support widget: a tab on the right edge, vertically centred, that opens a message panel. */
+  .cs-support-tab {
+    position: fixed; right: 0; top: 50%; z-index: 9000;
+    transform: translateY(-50%) rotate(180deg);
+    writing-mode: vertical-rl;
+    padding: 18px 9px;
+    border: 1px solid var(--surface-border-strong); border-right: 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: var(--surface-elevated); color: var(--text);
+    font: 700 12px/1 var(--font-sans); letter-spacing: 1.6px; text-transform: uppercase;
+    cursor: pointer; box-shadow: var(--shadow-elevated);
+  }
+  .cs-support-tab:hover { background: var(--surface-hover); }
+  .cs-support-tab:focus-visible, .cs-support-panel :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+  .cs-support-tab[hidden], .cs-support-panel[hidden] { display: none; }
+  .cs-support-panel {
+    position: fixed; right: 0; top: 0; bottom: 0; z-index: 9001;
+    width: min(380px, 100vw); box-sizing: border-box;
+    display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+    padding: 20px 18px;
+    background: var(--surface-elevated); color: var(--text);
+    border-left: 1px solid var(--surface-border-strong); box-shadow: var(--shadow-elevated);
+    font: 13px/1.5 var(--font-sans);
+  }
+  .cs-support-panel h2 { margin: 0; font: 700 16px/1.2 var(--font-sans); }
+  .cs-support-panel p { margin: 0; color: var(--text-muted); }
+  .cs-support-panel label { display: block; margin-bottom: 4px; font-weight: 600; }
+  .cs-support-panel select, .cs-support-panel textarea {
+    width: 100%; box-sizing: border-box; padding: 9px 10px;
+    border: 1px solid var(--surface-border-strong); border-radius: var(--radius-md);
+    background: var(--surface); color: var(--text); font: inherit;
+  }
+  .cs-support-panel textarea { min-height: 120px; resize: vertical; }
+  .cs-support-row { display: flex; align-items: center; gap: 8px; }
+  .cs-support-row input { margin: 0; }
+  .cs-support-shot { border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 8px; background: var(--surface); }
+  .cs-support-shot img { display: block; width: 100%; height: auto; border-radius: var(--radius-sm); }
+  .cs-support-shot .cs-support-links { margin-top: 6px; display: flex; gap: 12px; }
+  .cs-support-btn {
+    padding: 9px 14px; border-radius: var(--radius-md); border: 1px solid var(--surface-border-strong);
+    background: var(--surface); color: var(--text); font: 600 13px var(--font-sans); cursor: pointer;
+  }
+  .cs-support-btn.primary { background: var(--teal); border-color: var(--teal); color: #04202a; }
+  .cs-support-btn.link { padding: 0; border: 0; background: none; color: var(--teal); text-decoration: underline; font-weight: 500; }
+  .cs-support-btn:disabled { opacity: 0.6; cursor: default; }
+  .cs-support-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
+  .cs-support-status { min-height: 18px; font-weight: 600; }
+  .cs-support-status.err { color: var(--rose); }
+  .cs-support-status.ok { color: var(--emerald); }
+  @media (max-width: 600px) { .cs-support-tab { padding: 14px 7px; font-size: 11px; } }
+  @media print { .cs-support-tab, .cs-support-panel { display: none !important; } }
+</style>
+
+<button type="button" class="cs-support-tab" id="csSupportTab" aria-haspopup="dialog" aria-controls="csSupportPanel" data-tooltip="Message CavScope support. Your screen is captured so we can see what you see.">Support</button>
+
+<section class="cs-support-panel" id="csSupportPanel" role="dialog" aria-labelledby="csSupportTitle" hidden>
+  <h2 id="csSupportTitle" tabindex="0" data-tooltip="Send CavScope support a message about what you are looking at.">Contact support</h2>
+  <p id="csSupportIntro">Tell us what happened. A person reads this and replies to the email on your account.</p>
+  <div id="csSupportSignedOut" hidden>
+    <p>Sign in to send a message, so we know who to reply to.</p>
+    <a class="cs-support-btn primary" href="/signin" style="display:inline-block;margin-top:10px;text-decoration:none" data-tooltip="Opens the sign-in page.">Sign in</a>
+  </div>
+  <form id="csSupportForm" novalidate>
+    <div>
+      <label for="csSupportCategory">What is this about?</label>
+      <select id="csSupportCategory" data-tooltip="Pick the closest match. It helps us route your message.">
+        <option value="broken">Something is broken</option>
+        <option value="wrong_number">A number or report looks wrong</option>
+        <option value="how_to">I need help using something</option>
+        <option value="billing">Billing or my plan</option>
+        <option value="other">Something else</option>
+      </select>
+    </div>
+    <div style="margin-top:12px">
+      <label for="csSupportMessage">What happened?</label>
+      <textarea id="csSupportMessage" maxlength="4000" placeholder="What were you trying to do, and what did you see instead?" data-tooltip="Describe the problem in your own words. Up to 4,000 characters."></textarea>
+    </div>
+    <div class="cs-support-row" style="margin-top:12px">
+      <input type="checkbox" id="csSupportShotOn" checked data-tooltip="Attaches a picture of this page as you see it. Passwords typed into fields are left out. Untick to send without it.">
+      <label for="csSupportShotOn" style="margin:0;font-weight:500">Include a screenshot of this page</label>
+    </div>
+    <div class="cs-support-shot" id="csSupportShot" hidden style="margin-top:10px">
+      <img id="csSupportShotImg" alt="Preview of the screenshot that will be sent with your message">
+      <div class="cs-support-links">
+        <button type="button" class="cs-support-btn link" id="csSupportRetake" data-tooltip="Closes this panel for a moment and captures the page again.">Retake</button>
+      </div>
+    </div>
+    <p style="margin-top:10px">Also sent: the page address, your browser and window size.</p>
+    <div class="cs-support-status" id="csSupportStatus" role="status" aria-live="polite"></div>
+    <div class="cs-support-actions">
+      <button type="button" class="cs-support-btn" id="csSupportCancel" data-tooltip="Closes this panel without sending.">Cancel</button>
+      <button type="submit" class="cs-support-btn primary" id="csSupportSend" data-tooltip="Sends your message and screenshot to CavScope support.">Send</button>
+    </div>
+  </form>
+</section>
+
+<script>
+/* Support widget logic. A page sets window.CavSupportConfig = { getClient, getOrgId } before this
+   runs (both are read lazily, so the client may not exist yet). html2canvas is fetched on first
+   use, pinned by integrity hash. */
+(function () {
+  var H2C_SRC = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+  var H2C_SRI = 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H';
+  var cfg = { getClient: function () { return null; }, getOrgId: function () { return null; } };
+  var shot = null;          // data URL of the captured page, or null
+  var busy = false;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function loadH2C() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = H2C_SRC; s.integrity = H2C_SRI; s.crossOrigin = 'anonymous';
+      s.onload = function () { window.html2canvas ? resolve(window.html2canvas) : reject(new Error('no html2canvas')); };
+      s.onerror = function () { reject(new Error('could not load the screenshot tool')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function capture() {
+    return loadH2C().then(function (h2c) {
+      return h2c(document.body, {
+        x: window.scrollX, y: window.scrollY, width: window.innerWidth, height: window.innerHeight,
+        windowWidth: window.innerWidth, windowHeight: window.innerHeight,
+        scale: 1, logging: false, useCORS: false, backgroundColor: null,
+        ignoreElements: function (el) { return el.id === 'csSupportTab' || el.id === 'csSupportPanel'; },
+        onclone: function (doc) {
+          // Whatever was typed into a password field never reaches the picture.
+          doc.querySelectorAll('input[type="password"]').forEach(function (i) { i.value = ''; });
+        }
+      });
+    }).then(function (canvas) {
+      var url = canvas.toDataURL('image/jpeg', 0.72);
+      if (url.length > 3900000) url = canvas.toDataURL('image/jpeg', 0.45);
+      return url;
+    });
+  }
+
+  function setStatus(msg, kind) { var s = $('csSupportStatus'); s.textContent = msg || ''; s.className = 'cs-support-status' + (kind ? ' ' + kind : ''); }
+
+  function showShot() {
+    var on = $('csSupportShotOn').checked && !!shot;
+    $('csSupportShot').hidden = !on;
+    if (on) $('csSupportShotImg').src = shot;
+  }
+
+  async function signedIn() {
+    try { var c = cfg.getClient(); if (!c) return false; var r = await c.auth.getSession(); return !!(r && r.data && r.data.session); }
+    catch (e) { return false; }
+  }
+
+  async function openPanel() {
+    if (busy) return; busy = true;
+    var tab = $('csSupportTab');
+    setStatus('');
+    shot = null;
+    var wantShot = $('csSupportShotOn').checked;
+    if (wantShot) {
+      tab.hidden = true;
+      try { shot = await capture(); }
+      catch (e) { shot = null; $('csSupportShotOn').checked = false; setStatus('A screenshot could not be taken here. You can still send your message.', 'err'); }
+    }
+    tab.hidden = true;
+    var ok = await signedIn();
+    $('csSupportSignedOut').hidden = ok;
+    $('csSupportForm').hidden = !ok;
+    $('csSupportIntro').hidden = !ok;
+    $('csSupportPanel').hidden = false;
+    showShot();
+    busy = false;
+    (ok ? $('csSupportMessage') : $('csSupportTitle')).focus();
+  }
+
+  function closePanel() {
+    $('csSupportPanel').hidden = true;
+    $('csSupportTab').hidden = false;
+    $('csSupportTab').focus();
+  }
+
+  async function retake() {
+    $('csSupportPanel').hidden = true;
+    await new Promise(function (r) { setTimeout(r, 60); });
+    try { shot = await capture(); setStatus(''); }
+    catch (e) { shot = null; setStatus('A screenshot could not be taken here.', 'err'); }
+    $('csSupportPanel').hidden = false;
+    showShot();
+  }
+
+  async function send(ev) {
+    ev.preventDefault();
+    var msg = $('csSupportMessage').value.trim();
+    if (!msg) { setStatus('Tell us what happened.', 'err'); $('csSupportMessage').focus(); return; }
+    var btn = $('csSupportSend'); btn.disabled = true; setStatus('Sending...');
+    try {
+      var c = cfg.getClient();
+      var r = await c.auth.getSession();
+      var token = r && r.data && r.data.session && r.data.session.access_token;
+      if (!token) throw new Error('Sign in again to contact support.');
+      var res = await fetch(c.supabaseUrl + '/functions/v1/cavscope-support-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': c.supabaseKey },
+        body: JSON.stringify({
+          category: $('csSupportCategory').value, message: msg,
+          page_url: location.origin + location.pathname + location.hash.split('=')[0].slice(0, 40),
+          user_agent: navigator.userAgent, viewport: window.innerWidth + 'x' + window.innerHeight,
+          organization_id: cfg.getOrgId(),
+          screenshot: ($('csSupportShotOn').checked && shot) ? shot : null
+        })
+      });
+      var j = {}; try { j = await res.json(); } catch (e) { /* keep default */ }
+      if (!res.ok) throw new Error(j.error || 'Your message could not be sent (' + res.status + ').');
+      $('csSupportMessage').value = '';
+      setStatus(j.delivered === false
+        ? 'Saved. Email delivery is delayed, but we have your message on file.'
+        : 'Sent. We will reply to the email on your account.', 'ok');
+      setTimeout(function () { if (!$('csSupportPanel').hidden) closePanel(); setStatus(''); }, 2600);
+    } catch (e) {
+      setStatus(e.message || 'Your message could not be sent.', 'err');
+    } finally { btn.disabled = false; }
+  }
+
+  function wire() {
+    if (window.CavSupportConfig) cfg = Object.assign(cfg, window.CavSupportConfig);
+    $('csSupportTab').addEventListener('click', openPanel);
+    $('csSupportCancel').addEventListener('click', closePanel);
+    $('csSupportRetake').addEventListener('click', retake);
+    $('csSupportForm').addEventListener('submit', send);
+    $('csSupportShotOn').addEventListener('change', showShot);
+    $('csSupportPanel').addEventListener('keydown', function (e) { if (e.key === 'Escape') closePanel(); });
+  }
+
+  window.CavSupport = { init: function (c) { cfg = Object.assign(cfg, c || {}); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+})();
+</script>
