@@ -192,6 +192,20 @@
       transition: background 0.14s ease, color 0.14s ease;
     }
     .nav button:hover { background: var(--surface-hover); color: var(--text); }
+    .nav-support { margin-top: 10px; }
+    .nav-support a {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 11px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .nav-support a:hover { background: var(--surface-hover); }
     .nav button[aria-current="page"] {
       background: var(--surface-elevated);
       border-color: var(--surface-border-strong);
@@ -798,6 +812,14 @@
     </div>
 
     <nav class="nav" id="nav" aria-label="Super admin sections"></nav>
+
+    <!-- Outside #nav on purpose: renderNav() rewrites that element's HTML. -->
+    <nav class="nav nav-support" aria-label="Support">
+      <a href="mailto:support@mail.cavscope.28footsystems.com?subject=CavScope%20console%20support" data-tooltip="Email CavScope support. A person reads it and replies to you directly.">
+        <span class="ico" aria-hidden="true">💬</span>
+        <span>Support</span>
+      </a>
+    </nav>
 
     <div class="rail-promo" data-tooltip="CavScope's reason for existing: every organization that gets measurable about assurance makes the web fractionally safer for everyone else on it." tabindex="0">
       <h4>Build a more<br>assured internet.</h4>
