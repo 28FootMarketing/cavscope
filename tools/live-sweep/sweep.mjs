@@ -31,6 +31,7 @@ await page.evaluate((fx) => {
     cavscope_risks: () => fx.risks,
     cavscope_risk_appetite: () => fx.appetite,
     cavscope_pending_invites: () => [],
+    cavscope_finding_glossary: () => [],
     cavscope_rule_status: (a) => rulesAsked(a.p_rule_ids || []),
   };
   window.__rpcCalls = [];
