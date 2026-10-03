@@ -453,6 +453,8 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: flex-end;
+      margin-left: auto;
       gap: 10px;
       row-gap: 8px;
       min-width: 0;
@@ -617,13 +619,15 @@
     }
 
     .hero-actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
-      flex: 0 1 auto;
+      flex: 0 1 380px;
       max-width: 48%;
-      flex-wrap: wrap;
-      justify-content: flex-end;
+      justify-content: end;
+      align-items: stretch;
     }
+    .hero-actions > * { width: 100%; box-sizing: border-box; justify-content: center; text-align: center; white-space: nowrap; }
 
     /* Cards & Panels */
     .card, .panel {
@@ -1669,8 +1673,7 @@
     @media (max-width: 640px) {
       .grid-4 { grid-template-columns: 1fr; }
       .hero { flex-direction: column; align-items: flex-start; }
-      .hero-actions { width: 100%; max-width: none; justify-content: flex-start; }
-      .hero-actions button { flex: 1 1 auto; }
+      .hero-actions { width: 100%; max-width: none; grid-template-columns: 1fr; justify-content: stretch; }
       .form-row { grid-template-columns: 1fr; }
       .table-row, .table-header { font-size: 11.5px; }
       .scanner-hero, .master-url-bar { padding: 20px; }
@@ -4690,7 +4693,8 @@
       const tenantEyebrow = document.getElementById('topbarTenantEyebrow');
       const masterUrlInput = document.getElementById('globalMasterUrl');
 
-      if (headerTitle) headerTitle.textContent = `${tenant.name} — Website Assurance`;
+      // An organization already named "... — Website Assurance" must not read it twice.
+      if (headerTitle) headerTitle.textContent = /website assurance\s*$/i.test(tenant.name) ? tenant.name : `${tenant.name} — Website Assurance`;
       if (tenantEyebrow) tenantEyebrow.textContent = `${tenant.name} Workspace (${tenant.region})`;
       if (masterUrlInput) masterUrlInput.value = tenant.domain;
 
