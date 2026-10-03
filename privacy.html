@@ -298,7 +298,7 @@
         <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts." tabindex="0">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
         <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours." tabindex="0">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
         <tr><td data-tooltip="Vercel hosts the web pages." tabindex="0">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
-        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP." tabindex="0">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP.</td></tr>
+        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP." tabindex="0">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP. A support message, and the screenshot if you attach one, can also be read by a Claude model to help our team respond (see below).</td></tr>
       </tbody>
     </table>
   </div>
@@ -306,6 +306,11 @@
   <div class="note">
     <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure." tabindex="0">Worth stating plainly</div>
     <p>Generating the narrative section of a SITREP sends the findings for that scan — rule identifiers, severities, page URLs and the evidence excerpts they cite — to a language model through OpenRouter. If that is unacceptable for a given engagement, say so and we will turn narrative generation off for your organization; every finding, score and SITREP is produced by the deterministic engine and stands without it.</p>
+  </div>
+
+  <div class="note">
+    <div class="note-title" data-tooltip="What happens to a message you send through the Support tab." tabindex="0">Support messages</div>
+    <p>The Support tab sends us your message, the page address, your browser and window size, and a screenshot of the page if you leave that box ticked. We email it to our support inbox. The screenshot is attached to that email and is not stored in our database. When AI triage is switched on, a Claude model, reached through OpenRouter, also reads the message and the screenshot and drafts notes for our team: what it seems to say, a likely cause, a suggested fix and a draft reply. The model never writes to you; a person reads everything first. A screenshot shows whatever was on your screen, so close anything private before you send one, or untick the box.</p>
   </div>
 
   <h2>Who can see what</h2>
