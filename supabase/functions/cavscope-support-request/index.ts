@@ -1,12 +1,19 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildEmail, validate, type Route } from "./core.ts";
+import { buildEmail, validate, type Route, type Valid } from "./core.ts";
+import { buildMessages, buildTriageEmail, extractTriage, TRIAGE_TOOL } from "./ai.ts";
 
 // In-app support. A signed-in person posts { category, message, page_url, user_agent, viewport,
 // organization_id, screenshot }. The request is filed through public.cavscope_submit_support_request
 // under the caller's own JWT (which checks sign-in, the category list, org membership and the
 // 10-an-hour limit), then emailed to the support route in cavscope.mail_routes, Reply-To the
 // person, so answering from the inbox answers them.
+//
+// AI triage (flag support_ai, dark until an owner turns it on): after the request is on file and
+// support has the original email, a model reads the request, the screenshot and a few account facts,
+// and support gets a SECOND email: summary, what is on screen, likely cause, suggested fix and a
+// DRAFT reply. It runs after the response has gone back (EdgeRuntime.waitUntil), so the customer
+// waits no longer for it, and nothing the model writes is ever sent to the customer.
 //
 // The screenshot is attached to that email and stored nowhere else: no table, no storage object.
 // If the email cannot be sent the request is still on file (status 'failed') and the person is
@@ -26,6 +33,21 @@ const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPPORT_ADDRESS = "support@mail.cavscope.28footsystems.com";
 const MAX_BODY_BYTES = 5_000_000;
+// Same key lookup the embedding functions use. The model is a setting, not a constant.
+const AI_KEY = Deno.env.get("MUSTER_OPENROUTER_API_KEY") ?? Deno.env.get("OPENROUTER_API_KEY") ?? "";
+const AI_MODEL = Deno.env.get("CAVSCOPE_SUPPORT_AI_MODEL") ?? "anthropic/claude-sonnet-4.5";
+
+// deno-lint-ignore no-explicit-any
+declare const EdgeRuntime: any;
+
+async function sendMail(payload: unknown, idempotencyKey: string) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "content-type": "application/json", "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`resend ${res.status}`);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
@@ -69,13 +91,9 @@ Deno.serve(async (req) => {
     const routes = await db.rpc("cavscope_engine_mail_routes", { p_addresses: [SUPPORT_ADDRESS] });
     const route = (Array.isArray(routes.data) ? routes.data[0] : null) as Route | null;
     if (!route || !route.forward_to?.length) throw new Error("no support route");
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "content-type": "application/json", "Idempotency-Key": `cavscope-support-${id}` },
-      body: JSON.stringify(buildEmail({ id, route, from: email, v })),
-    });
-    if (!res.ok) throw new Error(`resend ${res.status}`);
+    await sendMail(buildEmail({ id, route, from: email, v }), `cavscope-support-${id}`);
     await finish(true);
+    EdgeRuntime.waitUntil(triage(db, id, route, v));
     return json({ ok: true, id, delivered: true });
   } catch (e) {
     console.error("cavscope-support-request: delivery failed", id, String(e).slice(0, 200));
@@ -83,3 +101,46 @@ Deno.serve(async (req) => {
     return json({ ok: true, id, delivered: false });
   }
 });
+
+// Never throws and never blocks the response. A failure is recorded on the request, not raised.
+// deno-lint-ignore no-explicit-any
+async function triage(db: any, id: number, route: Route, v: Valid) {
+  const done = (status: string, result: unknown = null, error: string | null = null) =>
+    db.rpc("cavscope_engine_finish_support_ai", { p_id: id, p_status: status, p_result: result, p_model: AI_MODEL, p_error: error });
+  try {
+    const on = await db.rpc("cavscope_engine_support_ai_enabled");
+    if (on.error || on.data !== true) return; // dark: nothing leaves the building
+    if (!AI_KEY) { await done("skipped", null, "no OpenRouter key in the function environment"); return; }
+    await done("pending");
+    const ctx = await db.rpc("cavscope_engine_support_context", { p_id: id });
+    let shot: string | null = null;
+    if (v.screenshot) {
+      let bin = "";
+      for (const byte of v.screenshot.bytes) bin += String.fromCharCode(byte);
+      shot = `data:${v.screenshot.mime};base64,${btoa(bin)}`;
+    }
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${AI_KEY}`, "content-type": "application/json", "X-Title": "CavScope support triage" },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        max_tokens: 1500,
+        messages: buildMessages({
+          id, category: v.category, message: v.message, pageUrl: v.pageUrl, userAgent: v.userAgent,
+          viewport: v.viewport, context: ctx.data ?? null, screenshotDataUrl: shot,
+        }),
+        tools: [TRIAGE_TOOL],
+        tool_choice: { type: "function", function: { name: "record_triage" } },
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    if (!res.ok) throw new Error(`model ${res.status}`);
+    const t = extractTriage(await res.json());
+    if (!t) throw new Error("the model's answer did not match the schema");
+    await done("done", t);
+    await sendMail(buildTriageEmail({ id, route, category: v.category, t, model: AI_MODEL }), `cavscope-support-ai-${id}`);
+  } catch (e) {
+    console.error("cavscope-support-request: triage failed", id, String(e).slice(0, 200));
+    await done("failed", null, String(e).slice(0, 280));
+  }
+}
