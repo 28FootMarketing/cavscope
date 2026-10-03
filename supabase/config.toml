@@ -141,3 +141,10 @@ entrypoint = "./functions/cavscope-html-audit/index.ts"
 # organization (or a super admin) with the pdf_export flag on for it.
 verify_jwt = true
 entrypoint = "./functions/cavscope-sitrep-pdf/index.ts"
+
+[functions.cavscope-support-request]
+# The caller's own session JWT is the credential. The gateway checks it, then
+# public.cavscope_submit_support_request() files the request under that JWT (sign-in,
+# category list, org membership, 10 an hour). Emails the support route in cavscope.mail_routes.
+verify_jwt = true
+entrypoint = "./functions/cavscope-support-request/index.ts"
