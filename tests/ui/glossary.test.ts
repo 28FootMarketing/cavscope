@@ -58,3 +58,20 @@ test("the old product name is gone from the rule text a customer reads", () => {
   assert.match(sql, /'MUSTER-Scanner', 'CavScope-Scanner'/);
   assert.match(read("supabase/functions/cavscope-scan/index.ts"), /CavScope-Scanner\/1\.0/);
 });
+
+test("the SQL that writes tenant-visible text no longer says the old name", () => {
+  const f = readdirSync(migDir).find((n) => n.includes("customer_visible_muster_text_functions"))!;
+  const s = readFileSync(join(migDir, f), "utf8");
+  assert.match(s, /replace\(pg_get_functiondef\(r\.oid\), 'MUSTER', 'CavScope'\)/);
+  assert.match(s, /expected 8 functions/);
+  const c = readFileSync(join(migDir, readdirSync(migDir).find((n) => n.includes("customer_visible_muster_text_controls"))!), "utf8");
+  assert.match(c, /update cavscope\.controls set description = replace\(description, 'MUSTER', 'CavScope'\)/);
+});
+
+test("stored reports are rewritten with their hash recomputed, and the block refuses to leave one wrong", () => {
+  const s = readFileSync(join(migDir, readdirSync(migDir).find((n) => n.includes("rewrite_stored_sitreps_old_product_name"))!), "utf8");
+  assert.match(s, /content_sha256 = encode\(sha256\(convert_to\(content_md, 'UTF8'\)\), 'hex'\)/);
+  assert.match(s, /raise exception 'sitreps still wrong after rewrite/);
+  const r = readFileSync(join(migDir, readdirSync(migDir).find((n) => n.includes("customer_visible_muster_text_records"))!), "utf8");
+  for (const t of ["plans", "risks", "findings", "activity_events"]) assert.match(r, new RegExp(`update cavscope\\.${t} set`));
+});
