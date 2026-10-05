@@ -86,7 +86,7 @@ test("the page follows every standing page rule", () => {
   assert.match(page, /detectSessionInUrl: false/);
   for (const fnName of ["initTooltips()", "initAccordions()", "initContextMenuGuard()"]) assert.ok(page.includes(fnName), fnName);
   assert.match(page, /\.app-tooltip \{/);
-  assert.match(page, /muster:tokens:start/);
+  assert.match(page, /cavscope:tokens:start/);
   assert.match(page, /data-acc-group="html-findings"/, "findings open one at a time");
   assert.match(page, /data-acc-group="html-howto"/);
   assert.match(page, /<select id="fxLang" data-draft="lang"/, "the language comes from a list");

@@ -168,7 +168,7 @@ either to make the block "more complete" — each exists because MUSTER sells ac
 
 `assets/tokens.css` is the source of truth for every colour, font stack, radius and shadow.
 It is **not served to a browser**. Each page carries an inlined copy inside its `<style>`,
-between `/* muster:tokens:start */` and `/* muster:tokens:end */`, written there by
+between `/* cavscope:tokens:start */` and `/* cavscope:tokens:end */`, written there by
 `node tools/tokens/sync.mjs`. `tests/ui/design-tokens.test.ts` fails if any page drifts.
 
 **To change a token: edit `assets/tokens.css`, run `node tools/tokens/sync.mjs`, commit both.**

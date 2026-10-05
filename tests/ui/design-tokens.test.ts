@@ -3,7 +3,7 @@
 //   node --experimental-strip-types --test tests/ui/design-tokens.test.ts
 //
 // assets/tokens.css is the source of truth; every page carries an inlined copy
-// between the muster:tokens markers, written there by tools/tokens/sync.mjs.
+// between the cavscope:tokens markers, written there by tools/tokens/sync.mjs.
 // Inlining is deliberate -- the pages are self-contained, and a linked
 // stylesheet would give all of them a shared way to render unstyled. The cost of
 // that choice is one copy per page, and these tests are what make the copies safe.
@@ -47,10 +47,10 @@ function declarations(css: string): Map<string, string> {
 }
 
 function tokenRegion(html: string): string {
-  const start = html.indexOf("/* muster:tokens:start");
-  const end = html.indexOf("/* muster:tokens:end */");
-  assert.notEqual(start, -1, "page has no muster:tokens:start marker");
-  assert.notEqual(end, -1, "page has no muster:tokens:end marker");
+  const start = html.indexOf("/* cavscope:tokens:start");
+  const end = html.indexOf("/* cavscope:tokens:end */");
+  assert.notEqual(start, -1, "page has no cavscope:tokens:start marker");
+  assert.notEqual(end, -1, "page has no cavscope:tokens:end marker");
   return html.slice(start, end);
 }
 

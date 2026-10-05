@@ -9,7 +9,7 @@
 //   node tools/tokens/sync.mjs          rewrite every page
 //   node tools/tokens/sync.mjs --check  exit 1 if any page has drifted
 //
-// It replaces the region between the muster:tokens markers. On a page that has
+// It replaces the region between the cavscope:tokens markers. On a page that has
 // no markers yet it replaces that page's first :root {...} block and adds them,
 // which is what made the initial adoption a single command.
 
@@ -32,8 +32,8 @@ export const PAGES = [
   "html-audit.html",
 ];
 
-const START = "/* muster:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */";
-const END = "/* muster:tokens:end */";
+const START = "/* cavscope:tokens:start -- generated from assets/tokens.css by tools/tokens/sync.mjs. Do not edit here. */";
+const END = "/* cavscope:tokens:end */";
 
 // Pull the :root block out of the source file, dropping the file-level comment
 // that explains the rule -- that belongs in the source, not in seven copies of

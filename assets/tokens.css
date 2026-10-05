@@ -1,7 +1,7 @@
 /* CavScope design tokens -- the single source of truth for every page.
  *
  * This file is NOT served to a browser. Each page carries its own copy of the
- * block below, inlined into its <style> between the muster:tokens markers, and
+ * block below, inlined into its <style> between the cavscope:tokens markers, and
  * `node tools/tokens/sync.mjs` is what puts it there. tests/ui/design-tokens.test.ts
  * fails if any page has drifted from this file.
  *
