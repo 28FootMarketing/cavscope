@@ -34,7 +34,7 @@
       /* Text */
       --text: #f1f6ff;
       --text-muted: #8e9fb8;
-      --text-dim: #5d708e;
+      --text-dim: #8798b4;
 
       /* Brand and status hues */
       --teal: #36e2c9;
@@ -44,6 +44,9 @@
       --amber: #fbbf24;
       --amber-dim: #453414;
       --rose: #f43f5e;
+      /* Rose as TEXT. --rose is 3.8 to 4.5:1 on the lighter dark panels, under the 4.5:1 WCAG asks of small text;
+         this is 5.2:1 or better on every surface. Fills, borders and dots keep --rose. */
+      --rose-text: #fb7185;
       --rose-dim: #4c1825;
       --purple: #a855f7;
       --purple-dim: #32164f;
@@ -242,7 +245,7 @@
       font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase;
       padding: 2px 7px; border-radius: 4px; display: inline-block;
     }
-    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
+    .sev-critical, .sev-high { background: rgba(244, 63, 94, 0.15); color: var(--rose-text); }
     .sev-medium { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
     .sev-low, .sev-info { background: rgba(54, 226, 201, 0.15); color: var(--teal); }
     .mono-cell { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
@@ -319,7 +322,7 @@
 </head>
 <body>
 
-  <div class="topbar" id="topbar" hidden>
+  <header class="topbar" id="topbar" hidden>
     <div class="topbar-inner">
       <div class="brand"><img class="brand-mark" src="/assets/cavscope-emblem.png" alt="" width="160" height="160">CavScope <small>/ SITREP VIEWER</small></div>
       <div class="topbar-right">
@@ -330,9 +333,9 @@
         <button class="btn-ghost" id="btnSignOut" onclick="signOut()" data-tooltip="Sign out of this SITREP viewer.">⏻ Sign out</button>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div class="wrap">
+  <main class="wrap" id="main">
 
     <div class="auth-gate" id="authGate">
       <h1>SITREP Viewer</h1>
@@ -351,7 +354,7 @@
 
     <div id="reportRoot" hidden></div>
 
-  </div>
+  </main>
 
 <script>
   const SB_URL = 'https://hjowfnzpomzxazmzywxw.supabase.co';
@@ -494,7 +497,7 @@
   function bandColor(band) {
     if (band === 'green') return 'var(--emerald)';
     if (band === 'amber') return 'var(--amber)';
-    return 'var(--rose)';
+    return 'var(--rose-text)';
   }
 
   function renderEmpty(title, body) {
@@ -908,6 +911,9 @@
     tip.className = 'app-tooltip';
     tip.id = 'appTooltip';
     tip.setAttribute('role', 'tooltip');
+    // Hidden until a tooltip is showing: an empty role=tooltip node fails axe's aria-tooltip-name on every
+    // page, and a screen reader has nothing to read from it until it has text.
+    tip.hidden = true;
     document.body.appendChild(tip);
 
     let current = null;
@@ -921,6 +927,8 @@
       if (!text || suppressed) return;
       current = target;
       tip.textContent = text;
+      tip.hidden = false;
+      void tip.offsetWidth; // reflow, so the fade-in runs from the hidden state
       tip.classList.add('show');
       target.setAttribute('aria-describedby', 'appTooltip');
       position(target);
@@ -940,6 +948,7 @@
       if (current) current.removeAttribute('aria-describedby');
       current = null;
       tip.classList.remove('show');
+      tip.hidden = true;
     }
 
     document.addEventListener('mouseover', (e) => {

@@ -117,6 +117,9 @@ function contrastProbe(selectors) {
     try { el = document.querySelector(sel); } catch { /* selector from a shadow root or iframe */ }
     if (!el) { out.push({ selector: sel, missing: true }); continue; }
     const cs = getComputedStyle(el);
+    // Text painted by its own gradient (background-clip: text) has no separate background: the gradient IS
+    // the ink. Reading it as a backdrop gives white on white. It cannot be settled from colours, so say so.
+    if (cs.backgroundClip === "text" || cs.webkitBackgroundClip === "text") { out.push({ selector: sel, clippedText: true }); continue; }
     const backgrounds = [];
     let opacity = 1;
     for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
@@ -263,6 +266,7 @@ export async function collectPage(context, url, { cacheBust = false, first = fal
         const sels = cc.nodes.map((n) => n.target?.[0]).filter((s) => typeof s === "string").slice(0, 60);
         const probes = await page.evaluate(contrastProbe, sels);
         for (const pr of probes) {
+          if (pr.clippedText) { out.contrast.push({ target: pr.selector, status: "unresolved", reason: "text is painted by a gradient (background-clip: text)", ratio: null }); continue; }
           if (pr.missing) { out.contrast.push({ target: pr.selector, status: "unresolved", reason: "element is inside a shadow root or frame", ratio: null }); continue; }
           if (pr.effectiveOpacity < 0.999) { out.contrast.push({ target: pr.selector, status: "unresolved", reason: "element or an ancestor is partially transparent", ratio: null }); continue; }
           const r = resolveTextContrast({ color: pr.color, backgrounds: pr.backgrounds, fontSizePx: pr.fontSizePx, fontWeight: pr.fontWeight });
