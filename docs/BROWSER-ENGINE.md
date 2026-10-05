@@ -5,25 +5,39 @@ JavaScript, and checks what a visitor's browser actually ends up with. It exists
 cannot see anything a page builds after load: rendered accessibility, the requests a page really makes,
 cookies set by script, forms assembled by script.
 
-**Status as of 2026-10-05: built, tested, schema live, rules inactive, no worker deployed.** Nothing here
-changes a customer's report until all of: a worker is running, the `browser_engine` flag is switched on for
+**Status as of 2026-10-05: built, tested, schema and function deployed, rules inactive, waiting on one Vercel environment variable.** Nothing here
+changes a customer's report until all of: the function is configured, the `browser_engine` flag is switched on for
 an organization, a `browser-1.0.0` scan is observed, and the rules are activated by a later migration.
 
 ## Where it runs
 
-Not in an edge function: Chromium cannot run there. `workers/browser-scan/` is a Node 22 worker for a host
-that can (the `Dockerfile` uses the Playwright base image; the Playwright version in the image tag and in
-`package.json` must match, currently 1.56.1). It polls `public.cavscope_engine_claim_browser`, runs the scan,
-and sends the result through the same `public.cavscope_engine_ingest` the HTTP engine uses.
+On Vercel, as one function: `api/browser-scan.mjs`, with Chromium from `@sparticuz/chromium` (major 141,
+matching Playwright 1.56's Chromium 141), 300 s, configured in `vercel.json` (functions only; routing stays in
+`middleware.js`). Not in a Supabase edge function: Chromium cannot run there.
 
 ```
-SUPABASE_URL=https://hjowfnzpomzxazmzywxw.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=...      # service role: the engine RPCs are revoked from everyone else
-POLL_SECONDS=20                    # optional
-BROWSER_PROXY=...                  # optional, only for a host whose route out is an egress proxy
+database --pg_net POST--> /api/browser-scan  (x-cavscope-worker-secret)
+                            answers 202 at once, scans after the response (waitUntil)
+                            claim -> run engine -> ingest, through public.cavscope_worker_* RPCs
 ```
 
-`node workers/browser-scan/cli.mjs <url>` runs the engine with no database and writes nothing.
+The function holds **no service-role key**. It holds the public anon key and one shared secret, a Vault entry
+the database created (`cavscope_browser_worker_secret`), and the `cavscope_worker_*` RPCs check that secret
+themselves. Each is narrowed: claim only takes queued browser scans, ingest and fail only touch a scan that is
+a running browser scan, so a leaked secret cannot reach an HTTP scan or a finished one. This is the one place
+anon may execute an engine-shaped RPC, and the secret is what gates it.
+
+**One manual step, because the deploy connection cannot create production environment variables:** set
+`CAVSCOPE_BROWSER_WORKER_SECRET` on the Vercel project (Production, Sensitive) to the value of that Vault entry
+(`select decrypted_secret from vault.decrypted_secrets where name = 'cavscope_browser_worker_secret'`), then
+redeploy. Until then the function answers 503 and nothing runs. Rotate by updating both together.
+
+Time and size: a scan has a 200 s page budget (`budget_ms`); pages not reached are listed in the scan's detail
+rather than dropped silently, and the disappearance re-run only happens if the budget can pay for it.
+`pg_cron` job `cavscope-browser-sweep` runs every five minutes and posts to the function only when a queued
+browser scan has waited over two minutes (its kick never arrived), so an idle system costs no invocations.
+
+`node workers/browser-scan/cli.mjs <url>` runs the engine locally with no database and writes nothing.
 
 ## How a scan is requested
 
@@ -87,7 +101,7 @@ Screen reader testing, keyboard navigation (focus order, traps, focus visibility
 
 ## Activating it
 
-1. Deploy the worker; set its two env vars.
+1. Set `CAVSCOPE_BROWSER_WORKER_SECRET` on Vercel (above) and deploy.
 2. In the console: `browser_engine` kill switch off, override on for one organization.
 3. Request a scan; wait for `engine_version = 'browser-1.0.0'` on a completed scan.
 4. A later migration sets `active = true` on the rules. Not before: ingest drops findings for inactive rules
@@ -106,4 +120,4 @@ Screen reader testing, keyboard navigation (focus order, traps, focus visibility
   Full axe JSON for a large page is therefore truncated in storage.
 * **Layout-dependent axe results from a degraded load can be wrong.** A page that lost some of its own files
   yields low-confidence findings that say so.
-* **Verified on real bytes, not from a production worker.** See `workers/browser-scan/CHANGELOG.md`.
+* **Verified locally with the same Chromium build, not yet from a production invocation.** See `workers/browser-scan/CHANGELOG.md`.

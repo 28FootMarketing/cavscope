@@ -285,10 +285,14 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 - **The browser engine exists, is tested, and is dark, as of 2026-10-05.** `workers/browser-scan/` loads
   pages in headless Chromium (Playwright, axe-core pinned) and reports rendered accessibility, third-party
   requests, cookies before interaction, CSP behaviour and forms. It is a second engine, `browser-1.0.0`,
-  beside `http-native-*`, not a replacement, and it cannot run in an edge function: it needs a worker host
-  (`docs/BROWSER-ENGINE.md`, `Dockerfile`). Migrations `20261005020553`, `20261005021804` and
-  `20261005022456` are applied. **All twelve rules are inactive and both flags (`browser_engine`,
-  `browser_active_tests`) are dark; no worker is deployed.** Things that were not obvious and are pinned by
+  beside `http-native-*`, not a replacement, and it cannot run in an edge function: it runs as a Vercel function,
+  `api/browser-scan.mjs` (`docs/BROWSER-ENGINE.md`), the owner's host; **do not propose or ask about any other host**.
+  Migrations `20261005020553`, `20261005021804`, `20261005022456` and `20261005024226` are applied. The function holds
+  no service-role key: it holds the anon key and a Vault secret that the `cavscope_worker_*` RPCs check, and
+  **`CAVSCOPE_BROWSER_WORKER_SECRET` must be set on the Vercel project by the owner** (the deploy connection cannot
+  create production env vars). `vercel.json` now exists, for `functions` only; the routing rule below still
+  holds, and `tests/browser/api.test.ts` fails if it gains a routing key. **All twelve rules are inactive and both flags (`browser_engine`,
+  `browser_active_tests`) are dark.** Things that were not obvious and are pinned by
   `tests/migrations/browser-engine.test.ts`: the HTTP engine's `engine_ingest` resolved every open
   `http_native` finding a scan did not re-observe, so a browser scan would have resolved all of a site's
   findings (reconcile is now per engine); it also wrote `detected_*_code` unconditionally, which a browser
@@ -536,7 +540,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   don't reintroduce host-conditional `vercel.json` rewrites for new hosts; add another `if (host === ...)`
   branch to `middleware.js` instead. Path matching goes through `isUnder(path, base)` so `/sitrep/sample`
   matches the `/sitrep` family while `/sitrepfoo` does not, and `normalize()` strips trailing slashes.
-  There is no `vercel.json` in this repo; don't add one for routing.
+  `vercel.json` holds only `functions` config for `api/browser-scan.mjs`; don't add routing to it.
 - Migration files are named after the version `apply_migration` actually assigned, not after
   when you wrote them — the tool assigns the version from its own clock and ignores the filename.
   After applying, read the version back and name the file that. See

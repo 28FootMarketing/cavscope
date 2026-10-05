@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/browser-scan.mjs": {
+      "maxDuration": 300,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    }
+  }
+}

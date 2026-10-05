@@ -17,9 +17,10 @@ const guards = sql["browser_engine_active_test_guards"];
 const support = sql["browser_engine_support_functions"];
 const strip = (s: string) => s.replace(/--.*$/gm, "");
 
-test("three migrations exist, named for the versions the database assigned", () => {
-  assert.equal(files.length, 3, files.join(", "));
-  assert.ok(foundation && guards && support);
+const worker = sql["browser_engine_vercel_worker"];
+test("four migrations exist, named for the versions the database assigned", () => {
+  assert.equal(files.length, 4, files.join(", "));
+  assert.ok(foundation && guards && support && worker);
 });
 
 test("every browser rule is inserted INACTIVE, and none is activated here", () => {
@@ -102,4 +103,40 @@ test("rule text never claims compliance or a legal conclusion", () => {
   // "violation" is axe-core's own word for a failed rule; what must never appear is a legal conclusion.
   assert.doesNotMatch(rules, /\b(illegal|unlawful|in compliance|compliant with|violates? (the )?(law|act|statute|regulation)|violation of (the )?(law|act|statute|regulation))\b/i);
   assert.match(rules, /not legal advice/);
+});
+
+test("Vercel worker RPCs: every one checks the shared secret first, and ingest and fail touch only a RUNNING browser scan", () => {
+  for (const fn of ["cavscope_worker_claim_browser", "cavscope_worker_ingest", "cavscope_worker_fail", "cavscope_worker_open_findings"]) {
+    const start = worker.indexOf(`function public.${fn}(`);
+    assert.ok(start > 0, fn);
+    const body = worker.slice(start, worker.indexOf("$$;", worker.indexOf("$$", start) + 2));
+    assert.match(body.slice(0, 600), /if not cavscope\.worker_secret_ok\(p_secret\) then raise exception 'forbidden' using errcode = '42501'/, `${fn} checks the secret before anything else`);
+  }
+  assert.equal((worker.match(/exists \(select 1 from cavscope\.scans where id = p_scan_id and engine = 'browser' and status = 'running'\)/g) ?? []).length, 2, "ingest and fail are narrowed to running browser scans");
+  assert.match(worker, /least\(greatest\(coalesce\(p_limit, 1\), 1\), 3\)/, "a caller cannot claim an unbounded batch");
+});
+
+test("Vercel worker: the secret lives in Vault, is compared by hash, and the function holds no service-role key", () => {
+  assert.match(worker, /vault\.create_secret\(encode\(extensions\.gen_random_bytes\(32\), 'hex'\), 'cavscope_browser_worker_secret'/);
+  assert.match(worker, /not exists \(select 1 from vault\.secrets where name = 'cavscope_browser_worker_secret'\)/, "re-running never rotates it");
+  assert.match(worker, /extensions\.digest\(d\.decrypted_secret, 'sha256'\)[\s\S]*extensions\.digest\(p_secret, 'sha256'\)/);
+  assert.match(worker, /revoke all on function cavscope\.worker_secret_ok\(text\) from public, anon, authenticated;/);
+  assert.match(worker, /revoke all on function cavscope\.kick_browser_scan\(bigint\) from public, anon, authenticated;/);
+  assert.match(worker, /revoke all on function cavscope\.kick_stale_browser_scans\(\) from public, anon, authenticated;/);
+});
+
+test("Vercel worker: anon may execute exactly the four secret-gated wrappers and no engine RPC", () => {
+  const grants = [...strip(worker).matchAll(/grant execute on function ([\w.]+)\(/g)].map((m) => m[1]).sort();
+  assert.deepEqual(grants, ["public.cavscope_worker_claim_browser", "public.cavscope_worker_fail", "public.cavscope_worker_ingest", "public.cavscope_worker_open_findings"]);
+  assert.ok(!/grant execute[^;]*cavscope_engine_/.test(strip(worker)), "no cavscope_engine_* function is opened to anon");
+});
+
+test("Vercel worker: a request kicks the function, a failed kick is recorded not raised, and the sweep only fires for a stuck scan", () => {
+  assert.match(worker, /https:\/\/cavscope\.28footsystems\.com\/api\/browser-scan/);
+  assert.match(worker, /'x-cavscope-worker-secret', v_secret/);
+  assert.match(worker, /perform cavscope\.kick_browser_scan\(v_scan_id\);\s+exception when others then[\s\S]*Browser engine kick deferred/);
+  assert.match(worker, /status = 'queued' and queued_at < now\(\) - interval '2 minutes'/);
+  assert.match(worker, /cron\.schedule\('cavscope-browser-sweep', '\*\/5 \* \* \* \*'/);
+  assert.match(worker, /where not exists \(select 1 from cron\.job where jobname = 'cavscope-browser-sweep'\)/);
+  assert.doesNotMatch(strip(worker), /muster/i, "no old product name in a new migration");
 });

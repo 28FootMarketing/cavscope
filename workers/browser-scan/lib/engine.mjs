@@ -16,6 +16,10 @@ import {
 } from "./rules.mjs";
 
 export const ENGINE_VERSION = "browser-1.0.0";
+// Time the page visits may use before the scan stops starting new pages. Leaves room under a 300 s function
+// limit for evaluation, the active tests and ingest.
+export const DEFAULT_BUDGET_MS = 200_000;
+export const RETRY_MIN_BUDGET_MS = 60_000;
 const EXCERPT = 8000;
 
 export const sha256Hex = (text) => createHash("sha256").update(text).digest("hex");
@@ -61,7 +65,7 @@ async function discoverPages({ home, deps, cap }) {
 }
 
 // Runs one full pass. Returns everything the rules and the report need.
-async function pass({ targetUrl, options, deps, browser, cap, contextOptions }) {
+async function pass({ targetUrl, options, deps, browser, cap, contextOptions, deadline }) {
   const cacheBust = !!options.cache_bust;
   const context = await newScanContext(browser, { contextOptions });
   // A caller-supplied hook (tests, and sandboxes with an intercepting proxy). The worker passes none.
@@ -82,11 +86,15 @@ async function pass({ targetUrl, options, deps, browser, cap, contextOptions }) 
     const { pages: urls, skippedByRobots } = selectPages({ origin, home: finalHome, candidates, robots, cap });
 
     // The first page is already collected; keep its place and visit the rest.
+    // A scan has a time budget (a serverless host kills a function at its limit). Pages not reached are
+    // listed, never silently dropped: the report says how many were visited.
+    const skippedForTime = [];
     for (const [i, u] of urls.entries()) {
       if (normalizeUrl(u) === normalizeUrl(finalHome)) continue;
+      if (deadline && Date.now() > deadline) { skippedForTime.push(u); continue; }
       pages.push(await collectPage(context, u, { cacheBust, evidenceKey: `page_${pages.length + 1}` }));
     }
-    return { pages, origin, discovery: { robotsStatus, robotsRules: robots.ruleCount, usedSitemap: sitemapUrls.length > 0, sitemapUrlCount: sitemapUrls.length, skippedByRobots, cap } };
+    return { pages, origin, discovery: { robotsStatus, robotsRules: robots.ruleCount, usedSitemap: sitemapUrls.length > 0, sitemapUrlCount: sitemapUrls.length, skippedByRobots, skippedForTime, cap } };
   } finally {
     await context.close().catch(() => {});
   }
@@ -118,19 +126,23 @@ export async function runBrowserScan({ targetUrl, options = {}, deps = {}, previ
   const d = { ...defaultDeps, ...deps };
   // OPS-001: scan only once the change being checked is live. If it never appears, say so and scan anyway.
   const deploy = options.wait_for ? await waitForDeploy({ url: options.wait_for.url ?? targetUrl, ...options.wait_for, fetchImpl: d.fetchImpl }) : null;
-  const browser = await launchBrowser();
+  // deps.launch lets a host supply its own Chromium (a serverless function ships one); otherwise Playwright's.
+  const browser = await (d.launch ? d.launch() : launchBrowser());
   const t0 = Date.now();
+  const deadline = t0 + (options.budget_ms ?? DEFAULT_BUDGET_MS);
   try {
-    let run = await pass({ targetUrl, options, deps: d, browser, cap, contextOptions });
+    let run = await pass({ targetUrl, options, deps: d, browser, cap, contextOptions, deadline });
     let retried = false;
     const siteHost = new URL(run.origin).hostname;
     await confirmFailedRequests({ pages: run.pages, siteHost, fetchStatus: d.fetchStatus });
     let ev = evaluateAll({ pages: run.pages, origin: run.origin, siteHost, fetchStatus: d.fetchStatus });
     const keysOf = (res) => new Set(res.flatMap((r) => r.findings).map((f) => `${f.rule_id}|${f.location}`));
     const missing = [...previousKeys].filter((k) => !keysOf(ev.results).has(k));
-    if (missing.length && !options.cache_bust) {
+    // The retry re-visits every page, so it only runs if the budget can pay for it: a half-visited second pass
+    // would 'confirm' a finding gone merely because the pages that carried it were never reached.
+    if (missing.length && !options.cache_bust && deadline - Date.now() > RETRY_MIN_BUDGET_MS) {
       retried = true;
-      run = await pass({ targetUrl, options: { ...options, cache_bust: true }, deps: d, browser, cap, contextOptions });
+      run = await pass({ targetUrl, options: { ...options, cache_bust: true }, deps: d, browser, cap, contextOptions, deadline });
       await confirmFailedRequests({ pages: run.pages, siteHost, fetchStatus: d.fetchStatus });
       ev = evaluateAll({ pages: run.pages, origin: run.origin, siteHost, fetchStatus: d.fetchStatus });
     }
