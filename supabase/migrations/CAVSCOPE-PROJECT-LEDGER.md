@@ -1415,3 +1415,19 @@ gets read back as truth. Verified against the live account `acct_1PUDj1JijfcmbDD
 Still genuinely outstanding: GoTrue SMTP, the six auth email templates and the rate limit on the new
 project, none of which are readable from any tool here, and `customer.subscription.deleted`, which
 nothing consumes so a cancelled customer keeps their plan.
+
+## 2026-10-05: website 7 (the retired muster.partners site) deleted
+
+Run by the owner in the SQL editor, not through `apply_migration`: the MCP connection hung on every
+`DELETE` that day (reads and updates were fine), so there is no migration version for it. Website 7
+(org 4, `https://muster.partners`) and everything recorded about it were removed in one transaction:
+16 scans, 18 SITREPs, 17 findings, 4 risks, 94 controls, 2 incidents and their dependents. Its reports
+named the old host as the scanned target, which cannot be reworded without falsifying evidence.
+Read back afterwards: site 7 absent, 19 websites remain (was 20), no scan, report, finding or incident
+mentions the old name. The 34 `scan_evidence` rows on the CavScope marketing site that still quote the
+old name are captures of our own pages as fetched, and were left as captured.
+
+The 34 evidence rows were then archived (migration `20261005015058`): copied unchanged into
+`cavscope.scan_evidence_archive` (RLS on, no policies, no client grants; service role only), 34 of 34
+copies verified identical, and the originals removed from the live library by a delete the owner ran
+in the SQL editor.
