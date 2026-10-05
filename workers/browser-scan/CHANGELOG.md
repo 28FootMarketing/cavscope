@@ -17,3 +17,10 @@ One fresh context per scan; no bypass of the page's CSP.
 Schema: `scans.engine`, `scans.options`, `scan_authorizations`, evidence kinds `browser_page`, `axe_results`,
 `request_list`, `cookie_jar`, `console_log`, `form_inventory`, `csp_probe`, `dns_ns`, `active_test`; flags
 `browser_engine`, `browser_active_tests`. Existing http-native functions scoped to their own engine.
+
+## Hosting (2026-10-05)
+
+Runs as a Vercel function (`api/browser-scan.mjs`), not a long-running worker. The standalone worker loop and
+its Dockerfile were removed. Added: a time budget (`budget_ms`, default 200 s) so a serverless limit cannot cut
+a scan off silently, `deps.launch` so the host supplies its own Chromium, and `lib/job.mjs`, the host-independent
+claim/run/ingest loop. This is hosting, not rule output, so the engine version stays `browser-1.0.0`.

@@ -284,3 +284,11 @@ test("the sign-in page and the reset landing are served no-store", () => {
     for (const h of SECURITY_HEADERS) assert.ok(res.headers.get(h), `${path} keeps ${h}`);
   }
 });
+
+test("/api/browser-scan on the CavScope host passes through to the function: no rewrite, security headers kept", () => {
+  const res = call("https://cavscope.28footsystems.com/api/browser-scan", "cavscope.28footsystems.com");
+  assert.equal(rewriteTarget(res), null, "the browser-engine function is not rewritten to a page");
+  assert.equal(res.headers.get("x-middleware-next"), "1");
+  for (const h of SECURITY_HEADERS) assert.ok(res.headers.get(h), h);
+});
+
