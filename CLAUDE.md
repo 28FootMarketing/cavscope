@@ -282,6 +282,26 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 
 ## Other notes
 
+- **The browser engine exists, is tested, and is dark, as of 2026-10-05.** `workers/browser-scan/` loads
+  pages in headless Chromium (Playwright, axe-core pinned) and reports rendered accessibility, third-party
+  requests, cookies before interaction, CSP behaviour and forms. It is a second engine, `browser-1.0.0`,
+  beside `http-native-*`, not a replacement, and it cannot run in an edge function: it needs a worker host
+  (`docs/BROWSER-ENGINE.md`, `Dockerfile`). Migrations `20261005020553`, `20261005021804` and
+  `20261005022456` are applied. **All twelve rules are inactive and both flags (`browser_engine`,
+  `browser_active_tests`) are dark; no worker is deployed.** Things that were not obvious and are pinned by
+  `tests/migrations/browser-engine.test.ts`: the HTTP engine's `engine_ingest` resolved every open
+  `http_native` finding a scan did not re-observe, so a browser scan would have resolved all of a site's
+  findings (reconcile is now per engine); it also wrote `detected_*_code` unconditionally, which a browser
+  scan would have nulled; `sync_controls` scored a reference with no findings as met, which would have read
+  an engine that never ran as a pass (a browser rule now counts only where a browser scan completed). The
+  pre-existing `browser_wcag_engine` flag (kill switch on, read by nothing) was the placeholder for this; it
+  was left alone and `browser_engine` is the flag that is actually read. **The active tests (FORM-010,
+  FORM-011) send data and are gated in SQL and again in the worker**; never aim them at a site without a
+  stored authorization, and never at a live site to "see if it works". Fixtures and the Playwright run live in
+  `tests/browser/` (`npm run test:browser`; the unit half is in `npm test`). **The Supabase MCP connection
+  hangs on `DELETE` and `DROP FUNCTION` statements (observed 2026-10-05); write such steps so they do not
+  need them, or hand the SQL to the owner.**
+
 - **Support is a tab on the right edge of the workspace and the console, not an email link, as of 2026-10-03.** `tools/support/widget.html` is the one source; `node tools/support/sync.mjs` writes it into `app.html` and `admin.html` between `<!-- support:start -->` and `<!-- support:end -->` (same arrangement as the design tokens, pinned by `tests/support/widget.test.ts`). A signed-in person picks a category from a fixed list, writes a message and, unless they untick it, sends a screenshot of the page, taken in their browser with `html2canvas` (pinned by integrity hash, served from `cdn.jsdelivr.net`, which the CSP already allows) with password fields blanked and the widget left out of its own picture. `cavscope-support-request` (JWT required) files the request through `public.cavscope_submit_support_request` under the caller's JWT (category list, org membership, 10 an hour), then emails the `support@` row of `cavscope.mail_routes` with the screenshot attached, Reply-To the person. **The screenshot is attached and stored nowhere**: it can show anything on a screen, so `cavscope.support_requests` records only `has_screenshot`. If the email fails the request stays on file as `failed` and the person is told it was saved, not delivered. Nothing reads `support_requests` in a browser; there is no inbox view yet, the email is the inbox. Do not put a `mailto:` support link back in either page's navigation.
   **AI triage is wired and ships dark, as of 2026-10-03** (flag `support_ai`, kill switch on, default off; migrations `20261003042946`, `20261003042948`, `20261003043005`): after the original email, a model reads the message, the screenshot and a few account facts (`cavscope_engine_support_context`) and support gets a second email with a summary, what is on screen, a likely cause, a suggested fix and a **draft** reply. Nothing the model writes is sent to the customer; there is no `to: customer` anywhere and `tests/support/ai.test.ts` fails if there is. The customer is told on the panel and in `privacy.html` that an AI may read what they send. It runs after the response (`EdgeRuntime.waitUntil`), skips quietly with no OpenRouter key, and the model slug is a setting (`CAVSCOPE_SUPPORT_AI_MODEL`, default `anthropic/claude-sonnet-4.5`, **not yet exercised live**). The screenshot is still stored nowhere; only the model's written notes (`ai_*`) are. How to work a request, and why fixes are not automatic, is in `docs/SUPPORT.md`.
 

@@ -420,6 +420,36 @@ the full account.
 
 ---
 
+## Browser engine — 12 rules, all inactive (2026-10-05)
+
+Evaluated by `browser-1.0.0`, a second engine that loads pages in headless Chromium
+(`workers/browser-scan/`, `docs/BROWSER-ENGINE.md`). **Held inactive** by migration
+`20261005020553`, under the same rule as every other held rule: activate in a later migration, after a scan
+reports `engine_version = 'browser-1.0.0'`. They are `check_type = 'browser'`, so an HTTP scan can never
+resolve their findings, and `sync_controls` scores a reference they own as "not assessed", never "met", on a
+site where no browser scan has completed.
+
+| Rule | Default severity | What it reports | Maps to |
+|---|---|---|---|
+| `A11Y-008` | medium (per axe impact) | axe-core violation in the rendered page; one finding per axe rule per site | WCAG 1.1.1, 1.3.1, 1.4.3, 2.4.4, 4.1.2 |
+| `A11Y-009` | info | axe "incomplete" results, listed as needs review; contrast over gradients resolved from computed colours | WCAG 1.4.3, 1.4.11 |
+| `A11Y-010` | medium | title, one h1, valid lang, image alt on the rendered page | WCAG 1.1.1, 2.4.2, 3.1.1, 2.4.6 |
+| `TP-002` | info | third-party hosts the browser contacted; zero is reported as a result | SOC 2 CC9.2 and others, as TP-001 |
+| `PRIV-006` | medium | cookies or tracker hosts observed before any interaction | none (a citation would imply a legal test) |
+| `SEC-021` | medium | CSP refusals in the console; failed first-party requests | NIST CSF PR.PS-01, OWASP A02:2025 |
+| `SEC-022` | info | harmless inline script refused or executed | as SEC-018 |
+| `FORM-001` | high | form with no usable action, or non-HTTPS destination (observed with the network blocked) | OWASP A02:2025 |
+| `FORM-002` | medium | text-message consent readiness checklist (carrier registration evidence, not legal advice) | none |
+| `FORM-003` | info | consider a parent/guardian notice near a personal-data form on a youth-facing page | none |
+| `FORM-010` | medium | **active**: seven-case form endpoint matrix | OWASP A02:2025 |
+| `FORM-011` | high | **active**: live end-to-end form submit | none |
+
+`FORM-010` and `FORM-011` send data and run only with a stored authorization from an executive of the
+owning organization on a verified site; see `docs/BROWSER-ENGINE.md`. `ADA Title III` was named in the request
+as a framework for `A11Y-008` and is deliberately **not** in `framework_refs`: it is a statute, the register
+cites standards, and a statute listed against an automated check reads as a legal determination. Statutes sit
+in the jurisdiction section, with their "applies when" conditions.
+
 ## How the product groups these
 
 The workspace does not show the seven flat categories. It reshapes them into three views.
