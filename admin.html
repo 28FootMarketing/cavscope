@@ -2163,7 +2163,7 @@
       `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
         ${panel('Recent scans', 'Most recent runs across every organization', recentScans(50))}
         ${panel('Queue depth', 'Live engine state', `<div class="rows">
-          <div class="status" data-tooltip="Waiting for the next muster-scan-due tick to pick them up." tabindex="0"><span class="dot ${q.queued > 20 ? 'warn' : 'ok'}"></span><span class="status-name">Queued</span><span class="status-val">${num(q.queued)}</span></div>
+          <div class="status" data-tooltip="Waiting for the next scheduled scan run to pick them up." tabindex="0"><span class="dot ${q.queued > 20 ? 'warn' : 'ok'}"></span><span class="status-name">Queued</span><span class="status-val">${num(q.queued)}</span></div>
           <div class="status" data-tooltip="Currently executing on the engine." tabindex="0"><span class="dot ok"></span><span class="status-name">Running</span><span class="status-val">${num(q.running)}</span></div>
           <div class="status" data-tooltip="Completed successfully in the last 24 hours." tabindex="0"><span class="dot ok"></span><span class="status-name">Completed (24h)</span><span class="status-val">${num(a.complete_24h)}</span></div>
           <div class="status" data-tooltip="Failed in the last 24 hours. A failed scan produces no findings, so a site that only fails silently keeps its old score." tabindex="0"><span class="dot ${a.failed_24h ? 'bad' : 'ok'}"></span><span class="status-name">Failed (24h)</span><span class="status-val">${num(a.failed_24h)}</span></div>

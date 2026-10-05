@@ -1,6 +1,5 @@
 # cavscope.28footsystems.com -- one host serving both the public marketing
-# site and the signed-in application. Merges what robots.txt and
-# robots-app.txt do separately for muster.partners / app.muster.partners.
+# site and the signed-in application.
 #
 # /onboarding, /sitrep (except the sample), /app, /admin and /signin are all
 # sign-in gates or tenant-scoped pages that return the signed-out state to a
