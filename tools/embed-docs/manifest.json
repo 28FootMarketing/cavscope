@@ -13,6 +13,7 @@
     "docs/EMAIL-INVENTORY.md": "internal",
     "docs/IMPERSONATION.md": "internal",
     "docs/MAGIC-LINK.md": "internal",
-    "docs/RETRIEVAL.md": "internal"
+    "docs/RETRIEVAL.md": "internal",
+    "docs/BROWSER-ENGINE.md": "internal"
   }
 }

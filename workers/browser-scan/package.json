@@ -1,0 +1,16 @@
+{
+  "name": "cavscope-browser-scan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CavScope browser engine worker: loads pages in headless Chromium and reports rendered-page checks.",
+  "scripts": {
+    "start": "node worker.mjs",
+    "scan": "node cli.mjs"
+  },
+  "dependencies": {
+    "axe-core": "4.13.0",
+    "playwright-core": "1.56.1"
+  },
+  "engines": { "node": ">=22" }
+}
