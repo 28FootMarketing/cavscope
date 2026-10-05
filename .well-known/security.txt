@@ -1,6 +1,6 @@
 # Vulnerability disclosure policy for CavScope, served at
 # cavscope.28footsystems.com -- operated by After Today, LLC (DBA 28 Foot
-# Systems). The retired muster.partners hosts redirect here.
+# Systems).
 #
 # RFC 9116. Expires is mandatory and this file stops being valid on that date --
 # renew it before then rather than after, because an expired security.txt is
