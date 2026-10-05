@@ -30,7 +30,7 @@
       /* Text */
       --text: #f1f6ff;
       --text-muted: #8e9fb8;
-      --text-dim: #5d708e;
+      --text-dim: #8798b4;
 
       /* Brand and status hues */
       --teal: #36e2c9;
@@ -40,6 +40,9 @@
       --amber: #fbbf24;
       --amber-dim: #453414;
       --rose: #f43f5e;
+      /* Rose as TEXT. --rose is 3.8 to 4.5:1 on the lighter dark panels, under the 4.5:1 WCAG asks of small text;
+         this is 5.2:1 or better on every surface. Fills, borders and dots keep --rose. */
+      --rose-text: #fb7185;
       --rose-dim: #4c1825;
       --purple: #a855f7;
       --purple-dim: #32164f;
@@ -249,6 +252,8 @@
     <div class="kicker" data-tooltip="Operated by After Today, LLC, doing business as 28 Foot Systems, in Hanover, Pennsylvania." tabindex="0">After Today, LLC — DBA 28 Foot Systems</div>
   </header>
 
+  <main id="main">
+
   <h1>Privacy</h1>
   <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does." tabindex="0">Last updated 8 September 2026</p>
 
@@ -325,6 +330,8 @@
     <li>Security vulnerability reports: <a href="mailto:security@mail.cavscope.28footsystems.com" data-tooltip="Reaches the CavScope security inbox. See also /.well-known/security.txt.">security@mail.cavscope.28footsystems.com</a> — see <a href="/.well-known/security.txt" data-tooltip="Our machine-readable vulnerability disclosure policy, per RFC 9116.">our disclosure policy</a></li>
   </ul>
 
+  </main>
+
   <footer>
     CavScope is operated by After Today, LLC (DBA 28 Foot Systems), Hanover, Pennsylvania. CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion.
   </footer>
@@ -379,6 +386,9 @@
     tip.className = 'app-tooltip';
     tip.id = 'appTooltip';
     tip.setAttribute('role', 'tooltip');
+    // Hidden until a tooltip is showing: an empty role=tooltip node fails axe's aria-tooltip-name on every
+    // page, and a screen reader has nothing to read from it until it has text.
+    tip.hidden = true;
     document.body.appendChild(tip);
 
     let current = null;
@@ -393,6 +403,8 @@
       if (!text || suppressed) return;
       current = target;
       tip.textContent = text;
+      tip.hidden = false;
+      void tip.offsetWidth; // reflow, so the fade-in runs from the hidden state
       tip.classList.add('show');
       target.setAttribute('aria-describedby', 'appTooltip');
       position(target);
@@ -414,6 +426,7 @@
       if (current) current.removeAttribute('aria-describedby');
       current = null;
       tip.classList.remove('show');
+      tip.hidden = true;
     }
 
     document.addEventListener('mouseover', (e) => {

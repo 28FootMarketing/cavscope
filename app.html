@@ -31,7 +31,7 @@
       /* Text */
       --text: #f1f6ff;
       --text-muted: #8e9fb8;
-      --text-dim: #5d708e;
+      --text-dim: #8798b4;
 
       /* Brand and status hues */
       --teal: #36e2c9;
@@ -41,6 +41,9 @@
       --amber: #fbbf24;
       --amber-dim: #453414;
       --rose: #f43f5e;
+      /* Rose as TEXT. --rose is 3.8 to 4.5:1 on the lighter dark panels, under the 4.5:1 WCAG asks of small text;
+         this is 5.2:1 or better on every surface. Fills, borders and dots keep --rose. */
+      --rose-text: #fb7185;
       --rose-dim: #4c1825;
       --purple: #a855f7;
       --purple-dim: #32164f;
@@ -380,7 +383,7 @@
       width: 32px;
       height: 32px;
       border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      background: linear-gradient(135deg, #0369a1, #4f46e5); /* white initials: 5.9 to 6.3:1 (the old #0ea5e9 start was 2.8:1) */
       display: grid;
       place-items: center;
       font-size: 11px;
@@ -1837,7 +1840,7 @@
       <div class="sidebar-footer">
         <div class="preset-selector">
           <label>Portfolio Preset</label>
-          <select id="presetSelect" onchange="loadPreset(this.value)" data-tooltip="Loads sample data for demos. Replaces the current workspace immediately.">
+          <select id="presetSelect" aria-label="Sample data preset" onchange="loadPreset(this.value)" data-tooltip="Loads sample data for demos. Replaces the current workspace immediately.">
             <option value="enterprise">CavScope Client Portfolio (Default)</option>
             <option value="breach">Critical Risk Scenario (adds a sample breach)</option>
             <option value="clean">Clean Baseline (clears the risk register)</option>
@@ -1865,7 +1868,7 @@
             <h1 id="topbarHeaderTitle">Enterprise Risk, AIO & Website Assurance</h1>
           </div>
           <div style="margin-left: 12px; display: flex; align-items: center; gap: 6px;">
-            <select id="topbarTenantSelect" class="filter-select" onchange="switchTenant(this.value)" style="background: #0d1a38; border-color: #2b4573; color: #fff; font-weight: 700; font-size: 11.5px; padding: 6px 12px; border-radius: var(--radius-md);" data-tooltip="Switch which client organization you are working in. Each has its own data.">
+            <select id="topbarTenantSelect" class="filter-select" aria-label="Client organization" onchange="switchTenant(this.value)" style="background: #0d1a38; border-color: #2b4573; color: #fff; font-weight: 700; font-size: 11.5px; padding: 6px 12px; border-radius: var(--radius-md);" data-tooltip="Switch which client organization you are working in. Each has its own data.">
               <!-- Rendered via JS -->
             </select>
           </div>
@@ -1903,7 +1906,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div>
               <span class="eyebrow" style="color: var(--teal);" id="lblMasterBrandTag">CavScope Universal Engine</span>
-              <h3 style="font-size: 16px; color: #fff; margin-top: 2px;">One URL to Run It All</h3>
+              <h3 role="heading" aria-level="2" style="font-size: 16px; color: #fff; margin-top: 2px;">One URL to Run It All</h3>
             </div>
             <div style="font-size: 11px; color: var(--text-muted);">
               Scans WCAG 2.2 AA Accessibility · AIO / GEO · Risk Register · Controls · Evidence · Remediation
@@ -1929,7 +1932,7 @@
 
           <div class="preset-chip-list" style="margin-top: 2px; align-items: center;">
             <span style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Select from Your Clients:</span>
-            <select id="clientUrlQuickPick" class="filter-select" onchange="pickClientUrl(this.value)" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; background: #0c1c38; border-color: #2b4573; color: #38bdf8;" data-tooltip="Pick a saved client to load its URL and details as the audit target.">
+            <select id="clientUrlQuickPick" class="filter-select" aria-label="Pick one of your client sites" onchange="pickClientUrl(this.value)" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; background: #0c1c38; border-color: #2b4573; color: #38bdf8;" data-tooltip="Pick a saved client to load its URL and details as the audit target.">
               <!-- Dynamically populated -->
             </select>
             <button type="button" class="preset-chip" onclick="showView('subclients')" data-tooltip="Add, review, or audit every client website in your portfolio.">Manage All Clients ↗</button>
@@ -2017,9 +2020,9 @@
           <!-- Top Level Posture Metric Cards. Sample figures as written; a live
                workspace refills every tile from its own data in renderOverviewKpis(). -->
           <div class="grid-4" id="overviewKpis">
-            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'risks')" onkeydown="navigateCard(event, 'risks')" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue. Click to open the Risk Register.">
+            <div class="card metric-card" style="cursor: pointer;" onclick="navigateCard(event, 'risks')">
               <div class="metric-card-top">
-                <label>Risk Posture Score</label>
+                <label tabindex="0" data-tooltip="Overall safety score. Starts at 100 and drops for each open critical or high-severity issue. Click to open the Risk Register.">Risk Posture Score</label>
                 <div class="metric-icon-wrap">〽</div>
               </div>
               <div class="metric-value">
@@ -2040,9 +2043,9 @@
               <span class="sr-only"> Opens the Risk Register.</span>
             </div>
 
-            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'controls')" onkeydown="navigateCard(event, 'controls')" data-tooltip="Share of compliance rules you have confirmed are working, not just documented. Click to open Controls.">
+            <div class="card metric-card" style="cursor: pointer;" onclick="navigateCard(event, 'controls')">
               <div class="metric-card-top">
-                <label>Control Coverage</label>
+                <label tabindex="0" data-tooltip="Share of compliance rules you have confirmed are working, not just documented. Click to open Controls.">Control Coverage</label>
                 <div class="metric-icon-wrap">▣</div>
               </div>
               <div class="metric-value">
@@ -2062,9 +2065,9 @@
               <span class="sr-only"> Opens Controls.</span>
             </div>
 
-            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'evidence')" onkeydown="navigateCard(event, 'evidence')" data-tooltip="How much of the proof an auditor would ask for is already collected and approved. Click to open the Evidence library.">
+            <div class="card metric-card" style="cursor: pointer;" onclick="navigateCard(event, 'evidence')">
               <div class="metric-card-top">
-                <label id="kpiEvidenceLabel">Evidence Readiness</label>
+                <label id="kpiEvidenceLabel" tabindex="0" data-tooltip="How much of the proof an auditor would ask for is already collected and approved. Click to open the Evidence library.">Evidence Readiness</label>
                 <div class="metric-icon-wrap">⌑</div>
               </div>
               <div class="metric-value">
@@ -2084,9 +2087,9 @@
               <span class="sr-only"> Opens the Evidence library.</span>
             </div>
 
-            <div class="card metric-card" style="cursor: pointer;" role="button" tabindex="0" onclick="navigateCard(event, 'remediation')" onkeydown="navigateCard(event, 'remediation')" data-tooltip="Average completion across every open fix. Overdue items are flagged below. Click to open the Remediation schedule.">
+            <div class="card metric-card" style="cursor: pointer;" onclick="navigateCard(event, 'remediation')">
               <div class="metric-card-top">
-                <label>Remediation Progress</label>
+                <label tabindex="0" data-tooltip="Average completion across every open fix. Overdue items are flagged below. Click to open the Remediation schedule.">Remediation Progress</label>
                 <div class="metric-icon-wrap">◎</div>
               </div>
               <div class="metric-value">
@@ -3023,7 +3026,7 @@
   </div>
 
   <!-- Floating Toast -->
-  <div class="toast" id="toast">
+  <div class="toast" id="toast" role="status" aria-live="polite">
     <span style="color: var(--teal); font-size: 16px;">✓</span>
     <span id="toastMessage">Workspace updated successfully.</span>
   </div>
@@ -6244,6 +6247,9 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       tip.className = 'app-tooltip';
       tip.id = 'appTooltip';
       tip.setAttribute('role', 'tooltip');
+      // Hidden until a tooltip is showing: an empty role=tooltip node fails axe's aria-tooltip-name on every
+      // page, and a screen reader has nothing to read from it until it has text.
+      tip.hidden = true;
       document.body.appendChild(tip);
 
       let current = null;
@@ -6258,6 +6264,8 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         if (!text || suppressed) return;
         current = target;
         tip.textContent = text;
+        tip.hidden = false;
+        void tip.offsetWidth; // reflow, so the fade-in runs from the hidden state
         tip.classList.add('show');
         target.setAttribute('aria-describedby', 'appTooltip');
         position(target);
@@ -6279,6 +6287,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
         if (current) current.removeAttribute('aria-describedby');
         current = null;
         tip.classList.remove('show');
+        tip.hidden = true;
       }
 
       document.addEventListener('mouseover', (e) => {

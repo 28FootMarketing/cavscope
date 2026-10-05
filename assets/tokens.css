@@ -35,7 +35,7 @@
   /* Text */
   --text: #f1f6ff;
   --text-muted: #8e9fb8;
-  --text-dim: #5d708e;
+  --text-dim: #8798b4;
 
   /* Brand and status hues */
   --teal: #36e2c9;
@@ -45,6 +45,9 @@
   --amber: #fbbf24;
   --amber-dim: #453414;
   --rose: #f43f5e;
+  /* Rose as TEXT. --rose is 3.8 to 4.5:1 on the lighter dark panels, under the 4.5:1 WCAG asks of small text;
+     this is 5.2:1 or better on every surface. Fills, borders and dots keep --rose. */
+  --rose-text: #fb7185;
   --rose-dim: #4c1825;
   --purple: #a855f7;
   --purple-dim: #32164f;

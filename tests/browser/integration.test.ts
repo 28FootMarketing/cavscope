@@ -20,7 +20,7 @@ before(async () => {
   if (skip) { console.log("# skipping browser integration tests:", skip); return; }
   const { startFixtures } = await import("./fixture-server.mjs");
   fixtures = await startFixtures();
-  for (const name of ["clean", "prechecked", "badaction", "scriptform", "scripthttp", "noalt", "ga", "cspbreak", "thirdparty"])
+  for (const name of ["clean", "prechecked", "badaction", "scriptform", "scripthttp", "cliptext", "noalt", "ga", "cspbreak", "thirdparty"])
     scans[name] = await engine.runBrowserScan({ targetUrl: fixtures.url(name), cap: 5 });
 });
 after(async () => { if (fixtures) await fixtures.close(); });
@@ -98,6 +98,14 @@ T("a form with action='#' that a script submits is observed, not guessed: HTTPS 
   assert.match(http[0].detail, /POST to http:\/\/api\.example\.test\/submit.*blocked in the browser; nothing was sent/);
   // The observation request never left the browser: nothing here could have reached example.test.
   assert.ok(ok.evidence.some((e: any) => e.kind === "form_inventory"));
+});
+
+T("gradient-clipped text is NEEDS REVIEW, never a false contrast failure (white on its own white gradient read 1:1)", () => {
+  const ax = JSON.parse(scans.cliptext.evidence.find((e: any) => e.kind === "axe_results").excerpt);
+  assert.equal(ax.summary.contrast.resolvedFail, 0, JSON.stringify(ax.contrastFailures));
+  assert.equal(find("cliptext", "A11Y-008", "color-contrast (resolved)").length, 0);
+  const review = find("cliptext", "A11Y-009", "color-contrast");
+  assert.ok(review.length === 0 || /background-clip: text/.test(review[0].detail + JSON.stringify(ax.contrastUnresolved)), "if axe left it incomplete it is listed for review, with the reason");
 });
 
 T("NEGATIVE: an image with no alt produces an axe violation and a structure finding", () => {

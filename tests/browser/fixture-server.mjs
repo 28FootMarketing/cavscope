@@ -32,6 +32,10 @@ const SCENARIOS = {
   badaction: {
     body: () => `<form id="contact" action="#"><p><label for="e">Email</label><input id="e" name="email" type="email"></p><button type="submit">Send</button></form>`,
   },
+  cliptext: {
+    body: () => `<h2 class="clip">Gradient-painted heading</h2><p>Body text.</p>`,
+    css: ".clip{background:linear-gradient(135deg,#ffffff 60%,#b8d4f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#fff}body{background:#0a1f44;color:#f1f6ff}",
+  },
   scriptform: {
     csp: "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.example.test",
     head: (p) => `<script src="${p}/form.js" defer></script>`,
@@ -73,7 +77,7 @@ export async function startFixtures() {
     const headers = { "content-type": "text/html; charset=utf-8" };
     if (sc.csp) headers["content-security-policy"] = sc.csp;
     if (sc.cookies) headers["set-cookie"] = sc.cookies;
-    if (rest === "/s.css") { res.writeHead(200, { "content-type": "text/css" }); return res.end(CSS); }
+    if (rest === "/s.css") { res.writeHead(200, { "content-type": "text/css" }); return res.end(CSS + (sc.css ?? "")); }
     if (rest === "/p.png") { res.writeHead(200, { "content-type": "image/png" }); return res.end(PNG); }
     if (rest === "/form.js" || rest === "/form-http.js") {
       const target = rest === "/form.js" ? "https://api.example.test/submit" : "http://api.example.test/submit";
