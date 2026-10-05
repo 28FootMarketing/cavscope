@@ -7,6 +7,7 @@ import { resolve4, resolveNs } from "node:dns/promises";
 import { AXE_VERSION, collectPage, launchBrowser, liveSubmit, newScanContext } from "./collect.mjs";
 import { activeTestsPermitted, buildMatrix, evaluateLiveSubmit, evaluateMatrix, runMatrix } from "./active.mjs";
 import { MAX_PAGES, normalizeUrl, parseRobots, parseSitemap, sameOrigin, selectPages } from "./discover.mjs";
+import { axeEvidenceBody } from "./axe-evidence.mjs";
 import { confirmFailedRequests } from "./confirm.mjs";
 import { waitForDeploy } from "./deploy-wait.mjs";
 import { dnsProvider, isFirstParty, registrableDomain } from "./hosts.mjs";
@@ -206,7 +207,7 @@ export async function runBrowserScan({ targetUrl, options = {}, deps = {}, previ
       add({ key: p.evidenceKey, kind: "browser_page", url: p.finalUrl || p.url, status: p.status ?? null, ms: p.ms ?? null,
         raw: { url: p.url, finalUrl: p.finalUrl, status: p.status, contentType: p.contentType, loadMs: p.ms, navigationAttempts: p.attempts, cacheBust: p.cacheBust ?? false, error: p.error ?? null, structure: p.structure ?? null, requestCount: p.requests.length } });
       if (p.error) continue;
-      if (p.axe) add({ key: p.evidenceKey + "_axe", kind: "axe_results", url: p.finalUrl, raw: { axeVersion: p.axe.version, tags: p.axe.tags, injection: p.axe.injection, passes: p.axe.passes, violations: p.axe.violations, incomplete: p.axe.incomplete, contrastResolved: p.contrast ?? [] } });
+      if (p.axe) add({ key: p.evidenceKey + "_axe", kind: "axe_results", url: p.finalUrl, raw: axeEvidenceBody({ axe: p.axe, contrast: p.contrast ?? [] }) });
       add({ key: p.evidenceKey + "_console", kind: "console_log", url: p.finalUrl, raw: { console: p.console, failedRequests: p.requests.filter((r) => r.failed && !r.aborted) } });
       if (p.forms?.length) add({ key: p.evidenceKey + "_forms", kind: "form_inventory", url: p.finalUrl, raw: p.forms.map((f) => ({ id: f.id, name: f.name, rawAction: f.rawAction, action: f.action, method: f.method, hasPassword: f.hasPassword, hasPayment: f.hasPayment, fields: f.fields.map(({ name, id, type, required, checked, autocomplete }) => ({ name, id, type, required, checked, autocomplete })), links: f.links, nearText: f.nearText.slice(0, 600), observedSubmission: f.observed ? { networkBlocked: true, requests: f.observed.requests.map(({ url, method, contentType }) => ({ url, method, contentType })) } : null })) });
     }

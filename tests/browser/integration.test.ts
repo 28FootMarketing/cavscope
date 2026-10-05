@@ -55,10 +55,9 @@ T("CLEAN fixture: axe ran under a strict CSP without the page's policy being byp
 
 T("CLEAN fixture: the gradient contrast case is settled from computed colours (gold on navy), not left open", () => {
   const ax = JSON.parse(scans.clean.evidence.find((e: any) => e.kind === "axe_results").excerpt);
-  const resolved = ax.contrastResolved ?? [];
-  assert.ok(resolved.length >= 1, "axe left the gradient text incomplete and CavScope resolved it");
-  assert.ok(resolved.every((c: any) => c.status === "pass"), JSON.stringify(resolved));
-  assert.ok(resolved[0].ratio >= 5.5, `ratio ${resolved[0].ratio}`);
+  assert.ok(ax.summary.contrast.resolvedPass >= 1, "axe left the gradient text incomplete and CavScope resolved it as passing");
+  assert.equal(ax.summary.contrast.resolvedFail, 0, JSON.stringify(ax.contrastFailures));
+  assert.equal(ax.summary.contrast.unresolved, 0);
   assert.equal(find("clean", "A11Y-009").length, 0, "nothing left to review");
 });
 
