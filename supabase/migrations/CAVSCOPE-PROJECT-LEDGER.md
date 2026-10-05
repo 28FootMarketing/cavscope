@@ -1426,3 +1426,8 @@ named the old host as the scanned target, which cannot be reworded without falsi
 Read back afterwards: site 7 absent, 19 websites remain (was 20), no scan, report, finding or incident
 mentions the old name. The 34 `scan_evidence` rows on the CavScope marketing site that still quote the
 old name are captures of our own pages as fetched, and were left as captured.
+
+The 34 evidence rows were then archived (migration `20261005015058`): copied unchanged into
+`cavscope.scan_evidence_archive` (RLS on, no policies, no client grants; service role only), 34 of 34
+copies verified identical, and the originals removed from the live library by a delete the owner ran
+in the SQL editor.
