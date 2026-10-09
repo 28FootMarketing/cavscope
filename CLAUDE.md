@@ -1036,6 +1036,16 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   paste becomes the risk, and a silent transcription slip ships a broken scanner with no diff to
   review. Migrations are deliberately **not** in that workflow -- their files are named after the
   version `apply_migration` assigned, which a `db push` would not reproduce.
+  **A paste deploy still happened on 2026-10-06 and drifted from main for three days.**
+  `cavscope-alert-dispatch` version 6 was deployed through the MCP at 16:10 UTC, after the last
+  commit, with the support address moved off the shared `MUSTER_SUPPORT_EMAIL` secret (which held a
+  `muster.partners` address) onto a `CAVSCOPE_SUPPORT_EMAIL` default; nothing committed it and no
+  branch carried it, so the next CI deploy touching functions would have put the MUSTER footer back on
+  every alert. Found on 2026-10-09 by comparing `list_edge_functions` timestamps against `git log`
+  (an MCP deploy's `entrypoint_path` starts with `/tmp/user_fn_`, a CI deploy's with
+  `/home/runner/work/`) and committed the same day. **Check that before trusting any function's
+  source: a deployed function whose `updated_at` is later than its directory's last commit is drift
+  until proven otherwise.**
 - **Mail to `support@` and `security@` reaches a person, as of 2026-09-30.** Resend receives
   it on `mail.cavscope.28footsystems.com` (and the retired `mail.muster.partners`, so old links
   still land) and posts `email.received` to the `cavscope-inbound-mail` edge function, which

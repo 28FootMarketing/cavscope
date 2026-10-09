@@ -69,22 +69,26 @@ const APP_URL = Deno.env.get("MUSTER_APP_URL") ?? "https://cavscope.28footsystem
 const SITREP_URL = Deno.env.get("MUSTER_SITREP_URL") ?? "https://cavscope.28footsystems.com/sitrep";
 
 // The address CavScope shows tenants as its support desk, and the default
-// Reply-To. Unset by default, and that default is load-bearing: an advertised
-// address that cannot receive is worse than no address, because the tenant
-// writes to it and believes someone read it.
+// Reply-To. This is CavScope's own desk and is deliberately NOT read from the
+// MUSTER_* secrets: those are shared with the MUSTER brand, and
+// MUSTER_SUPPORT_EMAIL was set to support@mail.muster.partners, which put a
+// MUSTER address in the footer and Reply-To of every CavScope alert.
+// support@mail.cavscope.28footsystems.com receives: it has a row in
+// cavscope.mail_routes and cavscope-inbound-mail forwards it to a real inbox.
+// Override with CAVSCOPE_SUPPORT_EMAIL only if CavScope's desk ever moves.
 //
-// mail.muster.partners had receiving disabled until 2026-09-08. Enabling the
-// capability in Resend is not enough on its own -- inbound needs an MX record
-// (mail -> inbound-smtp.us-east-1.amazonaws.com, priority 10). Until that
-// resolves, leave this unset and the footer simply does not claim a support
-// address exists.
-const SUPPORT_EMAIL = Deno.env.get("MUSTER_SUPPORT_EMAIL") ?? "";
+// This block is what production has run since 2026-10-06 (version 6 of the
+// deployed function). It was deployed through the MCP without a commit and
+// found as drift on 2026-10-09; it is committed here so the next CI deploy
+// does not revert the footer to the MUSTER address.
+const SUPPORT_EMAIL = Deno.env.get("CAVSCOPE_SUPPORT_EMAIL") ?? "support@mail.cavscope.28footsystems.com";
 
 // Reply-To. Defaults to the support address, since a tenant hitting reply on a
 // critical alert is exactly the person support wants to hear from. Kept as a
-// separate override for the case where replies should land somewhere other
-// than the address printed in the footer -- a ticketing intake, say.
-const ALERT_REPLY_TO = Deno.env.get("MUSTER_ALERT_REPLY_TO") || SUPPORT_EMAIL;
+// separate CavScope-only override for the case where replies should land
+// somewhere other than the address printed in the footer -- a ticketing
+// intake, say.
+const ALERT_REPLY_TO = Deno.env.get("CAVSCOPE_ALERT_REPLY_TO") || SUPPORT_EMAIL;
 
 const SEVERITY_COLOR: Record<string, string> = {
   critical: "#f43f5e",
