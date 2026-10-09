@@ -56,8 +56,9 @@ is a bug, not a shortcut.
   on the outbox row id, and a `X-Entity-Ref-ID` header so Gmail does not collapse distinct alerts
   into one thread.
 - **Configuration is environment variables**: `RESEND_API_KEY`, `MUSTER_ALERT_FROM`,
-  `MUSTER_APP_URL`, `MUSTER_SITREP_URL`, `MUSTER_SUPPORT_EMAIL`, `MUSTER_ALERT_REPLY_TO` — see
-  `docs/EMAIL.md`.
+  `MUSTER_APP_URL`, `MUSTER_SITREP_URL`, `CAVSCOPE_SUPPORT_EMAIL`, `CAVSCOPE_ALERT_REPLY_TO` — see
+  `docs/EMAIL.md`. The support pair is CavScope's own since 2026-10-06; the `MUSTER_*` support
+  secrets are shared with the other brand and are no longer read.
 - **Light/dark rendering**: the template ships `color-scheme`/`supported-color-schemes` meta tags
   and a `<style>` block with `@media (prefers-color-scheme: dark)` overrides (`!important`, since
   that is the only thing that beats an inline style's specificity in an email client). Clients that
@@ -201,9 +202,10 @@ There is no support address in the product today. All four `mailto:` links —
 has no route anywhere: not in the workspace, not in the SITREP viewer, not in an alert email. The
 landing page meanwhile sells "Priority support & SLA options" on the enterprise tier.
 
-The alert email is now ready for one: set `MUSTER_SUPPORT_EMAIL` and its footer gains a support line
-and a Reply-To. It is gated on that secret precisely so the address cannot be advertised before it
-can receive.
+The alert email now carries one: its footer names `support@mail.cavscope.28footsystems.com` and sets
+it as Reply-To by default (since 2026-10-06), because that address receives and forwards to a person.
+`CAVSCOPE_SUPPORT_EMAIL` overrides it if the desk moves. The earlier gate on a secret existed so the
+address could not be advertised before it could receive; that condition is now met.
 
 Frontend support links are deliberately **not** added yet. Static HTML cannot be gated on a secret,
 so putting `support@mail.muster.partners` in a page ships a dead address to production the moment it

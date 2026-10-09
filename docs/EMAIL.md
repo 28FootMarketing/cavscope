@@ -238,16 +238,21 @@ Edge Function secrets (Supabase dashboard → Edge Functions → Secrets):
 |---|---|---|
 | `RESEND_API_KEY` | **yes** | none — without it every claimed row resolves `failed` with that exact reason, nothing is lost |
 | `MUSTER_ALERT_FROM` | no | `CavScope Alerts <alerts@mail.cavscope.28footsystems.com>` (2026-09-26 — was `mail.muster.partners`; a real recipient asked why an email display-named "CavScope Alerts" was arriving from a `muster.partners` address. Switched once `mail.cavscope.28footsystems.com` came back fully verified in Resend, independent of the main site's own DNS cutover.) |
-| `MUSTER_APP_URL` | no | `https://app.muster.partners/app` |
-| `MUSTER_ALERT_REPLY_TO` | no | unset — falls back to `MUSTER_SUPPORT_EMAIL` |
-| `MUSTER_SUPPORT_EMAIL` | no | unset — the alert footer then names no support address at all |
+| `MUSTER_APP_URL` | no | `https://cavscope.28footsystems.com/app` |
+| `MUSTER_SITREP_URL` | no | `https://cavscope.28footsystems.com/sitrep` |
+| `CAVSCOPE_SUPPORT_EMAIL` | no | `support@mail.cavscope.28footsystems.com` — the address in the alert footer's "Questions about this finding?" line |
+| `CAVSCOPE_ALERT_REPLY_TO` | no | unset — falls back to `CAVSCOPE_SUPPORT_EMAIL` |
 
-Neither has a default, and that is load-bearing: **an advertised address that cannot receive is
-worse than no address**, because the tenant writes to it and believes someone read it. Set
-`MUSTER_SUPPORT_EMAIL` and the alert footer gains a "Questions about this finding?" line and a
-Reply-To; leave it unset and the email behaves exactly as it did before. `MUSTER_ALERT_REPLY_TO`
-stays as an override for the case where replies should land somewhere other than the address printed
-in the footer, such as a ticketing intake.
+**The support address has a default as of 2026-10-06**, and the earlier rule that it must not is
+satisfied rather than dropped: the rule was that an advertised address must be able to receive, and
+`support@mail.cavscope.28footsystems.com` does (a row in `cavscope.mail_routes`, forwarded to a person
+by `cavscope-inbound-mail`, see below). The function stopped reading `MUSTER_SUPPORT_EMAIL` and
+`MUSTER_ALERT_REPLY_TO` at the same time: those secrets are shared with the MUSTER brand, and
+`MUSTER_SUPPORT_EMAIL` was set to `support@mail.muster.partners`, which put a MUSTER address in the
+footer and Reply-To of every CavScope alert. The `CAVSCOPE_*` names are overrides for the day the
+desk moves, not switches that turn the line on. That change ran in production from 2026-10-06
+(deployed through the MCP, version 6) and was committed to the repo on 2026-10-09 after being found
+as drift; see the CI-deploy note in `CLAUDE.md`.
 
 ### Inbound on `mail.muster.partners`
 
@@ -263,9 +268,10 @@ While that record is missing the domain reads `partially_verified` in Resend. **
 unaffected** — DKIM and both SPF CNAMEs stayed verified, and a send from
 `alerts@mail.muster.partners` was confirmed delivered after the capability change.
 
-Do not set `MUSTER_SUPPORT_EMAIL`, and do not put a support address in the frontend, until a real
-message to that address has been received. Advertising it earlier is the exact failure this design
-avoids.
+That rule, as written at the time: do not advertise a support address, in an email or a page, until
+a real message to that address has been received. It is met on the CavScope domain (next section),
+which is why the alert footer now carries `support@mail.cavscope.28footsystems.com` by default. It
+still holds for any new address.
 
 ### Inbound: support@ and security@ forward to a person (2026-09-30)
 

@@ -11,11 +11,16 @@ sites, migration `20261001193032`) followed once all 17 new slugs answered like 
 **The external webhooks (Stripe, GHL, Resend, Telegram) still deliver to the old frozen
 `muster-*` slugs until stage 4**, so a change to a webhook function does not reach its live traffic
 until that webhook is repointed. Stage 5 has not started.
-`track_functions` cannot be set from the MCP role (superuser-only, confirmed 2026-10-01), and it is
-not needed: `pg_stat_statements` has counted every statement since 2026-09-07 with zero evictions,
-so stage 5's quiet-period check is a difference against
-`docs/rename/calls-baseline-2026-10-01.csv` using `docs/rename/calls-since-baseline.sql`. Target
-project `hjowfnzpomzxazmzywxw`.
+**Stage 5's evidence is the API gateway log, not `pg_stat_statements`** (corrected 2026-10-09).
+The first two snapshots used `pg_stat_statements` counts per `muster_*` name, and on 2026-10-09
+every count had grown all week, which read as "still called". None of it was. The rename kept each
+function's OID (`cavscope_engine_secret` is oid 19354, the original; the `muster_engine_secret`
+alias is a new wrapper), and `pg_stat_statements` keys on the OID and keeps the query text it saw
+first, so every call to a `cavscope_*` name is counted on the row that still reads `muster_*`. There
+is no `cavscope_engine_secret` row at all, against 2,475 gateway calls to it in one day. That check
+can never go quiet and must not be used. `docs/rename/calls-since-baseline.sql` now carries the
+log query instead; `track_functions` stays unsettable from the MCP role and is still not needed.
+Target project `hjowfnzpomzxazmzywxw`.
 The `muster` schema was already renamed to `cavscope` (54 tables, 82 functions); what still
 carries the old name is the callable surface below.
 
@@ -64,13 +69,22 @@ must not merge before the database has those names**. Hence the stages:
 4. **External callbacks.** Repoint the Stripe, GHL, Resend and Telegram webhooks at the new
    URLs. Until each one is confirmed delivering, its old function stays deployed.
 5. **Retire.** Drop the `muster_*` aliases and delete the old functions, once nothing calls the old
-   names for a full week. Evidence is `docs/rename/calls-since-baseline.sql` against
-   `docs/rename/calls-baseline-2026-10-01.csv` (`pg_stat_user_functions` stays empty because
-   `track_functions` is `none` and not settable from here); edge-function logs cover the `muster-*`
-   URLs. **Clock restarted 2026-10-02:** counts kept growing after the 2026-10-01 baseline because
-   the old frozen functions and cron were still calling `muster_*` until stage 3 half B (19:30 UTC).
-   `docs/rename/calls-snapshot-2026-10-02.csv` is the post-half-B reference; the quiet week is measured
-   from it, so the earliest stage 5 date is 2026-10-09. Deleting the old edge functions needs the Supabase CLI: the MCP has no delete for them.
+   names for a full week. Evidence is the API gateway log, read one 24-hour window at a time with
+   the query in `docs/rename/calls-since-baseline.sql`: `edge_logs` rows whose path is
+   `/rest/v1/rpc/muster_*` (the RPC aliases) and `function_edge_logs` rows whose pathname is
+   `/functions/v1/muster-*` (the frozen old slugs). The two CSV snapshots and the clock they set
+   are void; see the status paragraph at the top for why `pg_stat_statements` cannot answer this.
+   **The log sweep on 2026-10-09 covered every window from 2026-10-02 12:00 UTC** and found: the last
+   call to an old RPC name at 2026-10-03 03:21 UTC (three workspace reads from an iPad browser, a
+   cached pre-rename page); the last request to an old slug at 2026-10-03 23:47 UTC (a `python-httpx`
+   probe from a Helsinki cloud host against `muster-agent`: `/v1/models` answered 200, four
+   `/v1/chat/completions` answered 401, no customer); nothing since. **The quiet week therefore runs
+   from 2026-10-03 23:47 UTC and the earliest stage 5 date is 2026-10-11**, provided stage 4 is done
+   first: the Resend webhooks already deliver to `cavscope-*` (read from Resend 2026-10-09), but the
+   Stripe, GHL and Telegram endpoints cannot be read from this repo's tooling and must be confirmed
+   by their owner. Re-run the sweep for the windows after 2026-10-09 12:00 UTC before retiring; a hit
+   restarts the clock. Deleting the old edge functions needs the Supabase CLI: the MCP has no delete
+   for them.
 
 ## Deliberately not in the first pass
 
