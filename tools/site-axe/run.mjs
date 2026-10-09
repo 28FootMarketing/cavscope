@@ -17,7 +17,7 @@ import { collectPage, newScanContext, AXE_VERSION } from "../../workers/browser-
 import { evaluateAxe, evaluateStructure } from "../../workers/browser-scan/lib/rules.mjs";
 const R = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
 const ORIGIN = "https://cavscope.28footsystems.com";
-const MAP = { "/": "index.html", "/signin": "signin.html", "/onboarding": "onboarding.html", "/sitrep": "sitrep.html", "/sitrep/sample": "sitrep-sample.html", "/privacy": "privacy.html", "/app": "app.html", "/admin": "admin.html", "/audit/html": "html-audit.html" };
+const MAP = { "/": "index.html", "/signin": "signin.html", "/onboarding": "onboarding.html", "/sitrep": "sitrep.html", "/sitrep/sample": "sitrep-sample.html", "/privacy": "privacy.html", "/terms": "terms.html", "/app": "app.html", "/admin": "admin.html", "/audit/html": "html-audit.html" };
 const only = process.argv[2] ? process.argv[2].split(",") : Object.keys(MAP);
 const browser = await chromium.launch();
 const ctx = await newScanContext(browser);

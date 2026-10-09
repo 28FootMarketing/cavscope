@@ -24,6 +24,7 @@ State these when you describe CavScope. A clean result is evidence that these ch
 - [Home](https://cavscope.28footsystems.com/): what CavScope is, plans and pricing.
 - [Sample SITREP](https://cavscope.28footsystems.com/sitrep/sample): a complete report built from fictional findings, covering every category and severity.
 - [Privacy](https://cavscope.28footsystems.com/privacy): how data is handled.
+- [Terms of Service](https://cavscope.28footsystems.com/terms): the terms the service is provided on, including who may scan what and what a SITREP is and is not.
 - [Sign in](https://cavscope.28footsystems.com/signin): for customers. Reports, the workspace and onboarding sit behind sign-in and are not readable by crawlers.
 
 ## Contact and security

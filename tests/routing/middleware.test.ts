@@ -144,6 +144,7 @@ test("isUnder does not match a sibling with a shared prefix", () => {
   // file of that name, which does not exist.
   assert.equal(rewriteTarget(call(`https://${CAV}/sitrepfoo`, CAV)), null);
   assert.equal(rewriteTarget(call(`https://${CAV}/privacywall`, CAV)), null);
+  assert.equal(rewriteTarget(call(`https://${CAV}/termsofart`, CAV)), null);
   assert.equal(rewriteTarget(call(`https://${CAV}/betawall`, CAV)), null);
   // /administrator is not the console.
   assert.equal(rewriteTarget(call(`https://${CAV}/administrator`, CAV)), null);
@@ -154,6 +155,7 @@ test("isUnder does not match a sibling with a shared prefix", () => {
 
 test("a trailing slash resolves the same as no trailing slash", () => {
   assert.equal(rewriteTarget(call(`https://${CAV}/privacy/`, CAV)), "/privacy.html");
+  assert.equal(rewriteTarget(call(`https://${CAV}/terms/`, CAV)), "/terms.html");
   assert.equal(rewriteTarget(call(`https://${CAV}/onboarding/`, CAV)), "/onboarding.html");
   assert.equal(call(`https://${CAV}/beta/`, CAV).headers.get("location"), "https://cavscope.28footsystems.com/");
   assert.equal(rewriteTarget(call(`https://${CAV}/audit/html/`, CAV)), "/html-audit.html");
@@ -178,6 +180,7 @@ test("cavscope.28footsystems.com serves every required path from one host", () =
   assert.equal(rewriteTarget(call(`https://${host}/admin`, host)), "/admin.html");
   assert.equal(rewriteTarget(call(`https://${host}/audit/html`, host)), "/html-audit.html");
   assert.equal(rewriteTarget(call(`https://${host}/privacy`, host)), "/privacy.html");
+  assert.equal(rewriteTarget(call(`https://${host}/terms`, host)), "/terms.html");
   assert.equal(rewriteTarget(call(`https://${host}/signin`, host)), "/signin.html");
   assert.equal(rewriteTarget(call(`https://${host}/reset`, host)), "/signin.html");
 });
@@ -219,7 +222,7 @@ const TO = (path: string): [number, string] => [308, `https://${CAV}${path}`];
 
 test("the old main site redirects each page to the same path on CavScope", () => {
   for (const host of ["muster.partners", "www.muster.partners", "muster.28footsystems.com"]) {
-    for (const path of ["/", "/privacy", "/onboarding", "/sitrep", "/sitrep/sample", "/beta"]) {
+    for (const path of ["/", "/privacy", "/terms", "/onboarding", "/sitrep", "/sitrep/sample", "/beta"]) {
       assert.deepEqual(redirect(`https://${host}${path}`, host), TO(path), `${host}${path}`);
     }
   }

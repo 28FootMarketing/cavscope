@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="What CavScope collects, who processes it, and why — written from what the code actually does." />
-  <title>Privacy — CavScope</title>
-  <link rel="canonical" href="https://cavscope.28footsystems.com/privacy">
+  <meta name="description" content="The terms on which CavScope, Web Assurance by 28 Foot Systems, is provided: what it does, who may scan what, how plans are billed and cancelled, and what a SITREP is and is not." />
+  <title>Terms of Service — CavScope</title>
+  <link rel="canonical" href="https://cavscope.28footsystems.com/terms">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-180.png">
@@ -257,79 +257,85 @@
 
   <main id="main">
 
-  <h1>Privacy</h1>
-  <p class="updated" data-tooltip="The date this page was last changed to match what the software actually does." tabindex="0">Last updated 8 September 2026</p>
+  <h1>Terms of Service</h1>
+  <p class="updated" data-tooltip="The date this page was last changed to match how the service actually works." tabindex="0">Last updated 9 October 2026</p>
 
-  <p class="lead">This describes what CavScope collects, who else it passes through, and why. It is written from what the software actually does, not from a template.</p>
+  <p class="lead">These are the terms on which CavScope is provided. They are written to describe what the service actually does and what we actually commit to, in plain language, so that nothing here is a surprise later.</p>
 
   <div class="note">
-    <div class="note-title" data-tooltip="Read this before relying on this page for a compliance answer." tabindex="0">Scope of this page</div>
-    <p>This is a factual disclosure of current data practices. It is <strong>not</strong> a lawyer-reviewed privacy policy and it does not attempt to state your rights under GDPR, UK GDPR, CCPA or any other regime. If you need a contractual or regulatory answer — a DPA, a subprocessor list with contractual guarantees, a retention commitment, a data-subject request procedure — ask us and we will route it to counsel rather than answer it here.</p>
+    <div class="note-title" data-tooltip="Read this before relying on this page as a contract." tabindex="0">Scope of this page</div>
+    <p>This page states our current terms factually. It has <strong>not</strong> been reviewed by counsel, and it is not a substitute for a signed agreement. An Enterprise or Partner engagement with its own contract is governed by that contract where the two differ. If you need a contractual answer that this page does not give — an indemnity, a service level, a data processing agreement — ask us and we will route it to the right person rather than answer it here.</p>
   </div>
 
-  <h2>The marketing site</h2>
-  <p>This site, <code>cavscope.28footsystems.com</code>, has no forms, no analytics, no tag manager and no tracking pixels. It sets no cookies of its own and stores no session.</p>
-  <p>Three third parties see your IP address because your browser fetches files from them directly:</p>
-  <div class="scroller">
-    <table>
-      <thead><tr><th>Who</th><th>Why your browser contacts them</th></tr></thead>
-      <tbody>
-        <tr><td data-tooltip="Google Fonts serves the typefaces this page uses." tabindex="0">Google Fonts</td><td>The stylesheet and font files for the typefaces on this page.</td></tr>
-        <tr><td data-tooltip="jsDelivr is a public CDN. It serves the Supabase JavaScript client used to read live pricing." tabindex="0">jsDelivr</td><td>The Supabase JavaScript client bundle.</td></tr>
-        <tr><td data-tooltip="Vercel hosts and serves these pages, so it necessarily handles the request." tabindex="0">Vercel</td><td>Hosts and serves these pages. Standard server request logs.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>The page makes one call to our Supabase project to read the current published prices. It is an anonymous read of public data and it is configured not to persist a session.</p>
+  <h2>1. Who we are and what you are agreeing to</h2>
+  <p>CavScope is operated by <strong>After Today, LLC</strong>, a Pennsylvania limited liability company doing business as <strong>28 Foot Systems</strong>, in Hanover, Pennsylvania ("we", "us"). By creating an account, registering a website, running a scan, or paying for a plan, you ("you", "your organization") agree to these terms. If you are acting for an organization, you confirm you are allowed to bind it.</p>
 
-  <h2>The workspace</h2>
-  <p>Signing in at <code>cavscope.28footsystems.com/signin</code> creates an account record. What we hold is your <strong>email address</strong>, your organization and role, and sign-in timestamps. Authentication is handled by Supabase Auth; your session is stored in your own browser, per origin.</p>
-  <p>We do not ask for, and the software has no field for, a date of birth, a government identifier, a physical address, or a phone number.</p>
+  <h2>2. What CavScope is</h2>
+  <p>CavScope is a website assurance service. It assesses a website you register from the outside, the way an anonymous visitor or a crawler meets it: HTTPS and response headers, cookies, redirects, public DNS and email-authentication records, exposed files, privacy and legal signals on the page, accessibility, and AI readiness. It keeps the results in a risk register and a control register, scores a posture, and writes a plain-English report called a SITREP.</p>
+  <p>The scanner identifies itself as <code>CavScope-Scanner/1.0</code>. It does not sign in, does not submit forms, and does not try to reach anything a visitor could not reach. It renders no JavaScript unless the browser engine has been enabled for your organization, and it never attempts to exploit a weakness it reports.</p>
 
-  <h2>What a scan collects</h2>
-  <p>CavScope assesses a website you tell it to assess. It requests pages the same way any anonymous visitor would, identifying itself as <code>CavScope-Scanner/1.0</code>, and it resolves public DNS records for the domain. It does not sign in, does not submit forms, and does not attempt to access anything a visitor could not reach.</p>
-  <p>What it stores as evidence for each finding:</p>
+  <h2>3. You may only scan what you are authorized to scan</h2>
+  <p>You may register and scan a website only if you own it, or you have the owner's permission to assess it. A Partner may register a client's website only with that client's authorization. We may refuse, pause or delete a scan target at any time if we believe it is not yours to assess, and we may suspend an account that registers one.</p>
+  <p>Checks that send data to a site, where they exist, are switched off for every organization and require an authorization held on file before they can run. Asking us to run them is a statement that you hold that authorization.</p>
+
+  <h2>4. Accounts, roles and your team</h2>
+  <p>An account belongs to a person, identified by an email address, and sits inside an organization with a role. Access is enforced in the database with row-level security: a signed-in user sees their own organization's websites, scans, findings and reports and nothing else. You are responsible for who you invite, for the roles you give them, and for keeping sign-in links and passwords to yourself. Tell us promptly if you believe an account has been used without permission.</p>
+
+  <h2>5. Plans, payment and cancellation</h2>
   <ul>
-    <li>HTTP response headers and status codes</li>
-    <li>Excerpts of the page HTML, capped in length</li>
-    <li><code>robots.txt</code>, the sitemap, and <code>/.well-known/security.txt</code></li>
-    <li>Public DNS answers — SPF, DMARC and MX records</li>
+    <li><strong>Plans.</strong> The plans and prices offered publicly are shown on the <a href="/#pricing" data-tooltip="The current public pricing, read live from CavScope's own database.">pricing section</a> of the home page and are read from the same database the service runs on. Enterprise pricing is set during a discovery conversation, not published.</li>
+    <li><strong>Billing.</strong> Subscriptions are billed monthly, in advance, through Stripe. Card details are entered on Stripe's pages and never reach us.</li>
+    <li><strong>Partner client organizations.</strong> A Partner plan includes a stated number of active client organizations. Additional organizations are priced as shown on the pricing section. Past the included number the service refuses to create another rather than billing one you did not agree to.</li>
+    <li><strong>Cancellation.</strong> You may cancel at any time through Stripe. You keep what you paid for until the end of the current billing period; the downgrade takes effect when the subscription ends. Nothing is deleted on downgrade, and websites over the trial limit are not disabled, though scheduled scanning of them may stop.</li>
+    <li><strong>Price changes.</strong> We may change prices for future billing periods and will tell you before a change reaches your account.</li>
+    <li><strong>Refunds.</strong> Fees already billed are not refunded except where the law requires it or we have agreed otherwise in writing.</li>
   </ul>
-  <p>If the scanned page contains personal data in its public HTML, an excerpt of that HTML may be stored as evidence. That is a consequence of quoting the page we assessed; we do not extract, index or separate personal data out of it.</p>
 
-  <h2>Where your data goes</h2>
-  <div class="scroller">
-    <table>
-      <thead><tr><th>Processor</th><th>What it handles</th></tr></thead>
-      <tbody>
-        <tr><td data-tooltip="Supabase hosts the Postgres database, authentication, and the edge functions that run the scan engine." tabindex="0">Supabase</td><td>Database, authentication, and the scan engine. Findings, evidence and account records live here.</td></tr>
-        <tr><td data-tooltip="Resend is the email provider. It relays sign-in mail and alerts." tabindex="0">Resend</td><td>Email delivery: sign-in links, invitations, password resets, and risk alerts.</td></tr>
-        <tr><td data-tooltip="Stripe handles checkout. Card details are entered on Stripe's own pages, not ours." tabindex="0">Stripe</td><td>Payments. Card details are entered on Stripe's pages and never reach us.</td></tr>
-        <tr><td data-tooltip="Vercel hosts the web pages." tabindex="0">Vercel</td><td>Hosting for the pages you are reading.</td></tr>
-        <tr><td data-tooltip="OpenRouter routes the request to Anthropic's Claude, which writes the plain-English summary on a SITREP." tabindex="0">OpenRouter → Anthropic</td><td>Findings text is sent to a Claude model to write the plain-English narrative on a SITREP. A support message, and the screenshot if you attach one, can also be read by a Claude model to help our team respond (see below).</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="note">
-    <div class="note-title" data-tooltip="The one part of the pipeline where your findings leave our infrastructure." tabindex="0">Worth stating plainly</div>
-    <p>Generating the narrative section of a SITREP sends the findings for that scan — rule identifiers, severities, page URLs and the evidence excerpts they cite — to a language model through OpenRouter. If that is unacceptable for a given engagement, say so and we will turn narrative generation off for your organization; every finding, score and SITREP is produced by the deterministic engine and stands without it.</p>
-  </div>
-
-  <div class="note">
-    <div class="note-title" data-tooltip="What happens to a message you send through the Support tab." tabindex="0">Support messages</div>
-    <p>The Support tab sends us your message, the page address, your browser and window size, and a screenshot of the page if you leave that box ticked. We email it to our support inbox. The screenshot is attached to that email and is not stored in our database. When AI triage is switched on, a Claude model, reached through OpenRouter, also reads the message and the screenshot and drafts notes for our team: what it seems to say, a likely cause, a suggested fix and a draft reply. The model never writes to you; a person reads everything first. A screenshot shows whatever was on your screen, so close anything private before you send one, or untick the box.</p>
-  </div>
-
-  <h2>Who can see what</h2>
-  <p>Access is enforced in the database itself with row-level security, not only in the interface. A signed-in user sees their own organization's websites, scans, findings and SITREPs, and nothing else. 28 Foot Systems staff with super-admin rights can access a tenant's workspace for support; when they do, it is recorded in an append-only audit log that names the administrator, the target, the stated reason and the time window.</p>
-
-  <h2>Retention</h2>
-  <p>Scan history is kept so that findings can be tracked over time — that is the product. We have not yet set a fixed retention period, and rather than publish a number we do not enforce, we will say so: ask and we will delete your organization's data.</p>
-
-  <h2>Contact</h2>
+  <h2>6. What a SITREP is, and what it is not</h2>
+  <p>A SITREP is a technical assessment of what the engine observed on a date. It is <strong>not</strong> a compliance certification, an audit opinion, a legal opinion, or legal advice. In particular:</p>
   <ul>
-    <li>Privacy and data questions: <a href="mailto:support@mail.cavscope.28footsystems.com" data-tooltip="Reaches the CavScope support inbox.">support@mail.cavscope.28footsystems.com</a></li>
+    <li>A framework reference on a finding is a citation that says where a finding belongs. It never says CavScope tests the whole framework. We do not provide a SOC 2 opinion; that is a licensed CPA firm's examination.</li>
+    <li>A clean result is evidence that the listed checks passed on that date. It is not a statement that the site is secure, accessible or compliant.</li>
+    <li>The laws listed under a jurisdiction are chosen by one place, where the organization or site states it is. They are not a determination of which laws apply to you. Privacy law in particular can reach a business through where its customers live.</li>
+    <li>Every report states what the scan did not check. Read that section as part of the report.</li>
+  </ul>
+  <p>You remain solely responsible for your own website and for your legal and regulatory obligations. Decisions you take on the strength of a SITREP are yours.</p>
+
+  <h2>7. Acceptable use</h2>
+  <p>You agree not to:</p>
+  <ul>
+    <li>Scan, or attempt to scan, a website you are not authorized to assess.</li>
+    <li>Use CavScope to assess clients' websites commercially, white-label reports or remove CavScope branding outside a plan that includes those rights.</li>
+    <li>Try to reach another organization's data, bypass row-level security, or probe the service's own infrastructure.</li>
+    <li>Share an API key, or use one to run the service on behalf of someone who is not a member of the organization it belongs to.</li>
+    <li>Resell, copy or scrape the service, the rule catalogue or the report format for a competing product.</li>
+  </ul>
+
+  <h2>8. Your data</h2>
+  <p>What we collect, who processes it and why is on the <a href="/privacy" data-tooltip="What CavScope collects, which processors it passes through, and why.">Privacy</a> page, which forms part of these terms. In short: you own your organization's data; we hold the rights needed to store and process it to provide the service; findings for a scan are sent to a language model only to write the narrative section of a SITREP, and we will turn that off for your organization on request. Ask and we will delete your organization's data.</p>
+
+  <h2>9. Availability, changes and support</h2>
+  <p>We work to keep CavScope available and the engine honest, and we will tell you when something it reports turns out to be wrong. We do not promise uninterrupted availability or a response time unless an Enterprise agreement says so. We may change, add or retire features, rules and checks; a rule's wording is read into every report, so we treat it as customer copy and change it carefully. Support is reached from the Support tab inside the workspace and the console, and by email at the address below.</p>
+
+  <h2>10. Warranties and limitation of liability</h2>
+  <p>CavScope is provided as is. We do not warrant that it will find every weakness on a website, that a finding is free of error, or that a clean result means a site is secure. To the fullest extent the law allows, we are not liable for indirect, incidental, consequential or punitive damages, or for lost profits, revenue or data, arising from the service or from reliance on a report. Our total liability to you for all claims arising out of the service in any twelve-month period is limited to the fees you paid us for the service in that period.</p>
+  <div class="note">
+    <div class="note-title" data-tooltip="A section a lawyer should read before it is relied on by either side." tabindex="0">Worth stating plainly</div>
+    <p>This section and the next one are the ones that most need counsel. We have written them to say what we mean. Until they have been reviewed, read them as our stated position, not as a tested clause.</p>
+  </div>
+
+  <h2>11. Suspension and termination</h2>
+  <p>We may suspend or close an account that breaks these terms, registers a site it is not authorized to scan, or abuses the service, and we will say why unless the law prevents us. You may close your account at any time by cancelling your subscription and asking us to delete your organization's data. Sections 6, 8, 10 and 12 survive termination.</p>
+
+  <h2>12. Governing law</h2>
+  <p>These terms are governed by the laws of the Commonwealth of Pennsylvania, without regard to its conflict-of-law rules. Where a signed agreement names a different law or venue, that agreement controls.</p>
+
+  <h2>13. Changes to these terms</h2>
+  <p>We will change this page when the service changes or when counsel reviews it. The date at the top moves when we do. A change that reduces what you receive, or increases what you pay, is told to account holders by email before it takes effect. Continuing to use CavScope after a change means you accept it.</p>
+
+  <h2>14. Contact</h2>
+  <ul>
+    <li>Questions about these terms, billing or your account: <a href="mailto:support@mail.cavscope.28footsystems.com" data-tooltip="Reaches the CavScope support inbox.">support@mail.cavscope.28footsystems.com</a></li>
     <li>Security vulnerability reports: <a href="mailto:security@mail.cavscope.28footsystems.com" data-tooltip="Reaches the CavScope security inbox. See also /.well-known/security.txt.">security@mail.cavscope.28footsystems.com</a> — see <a href="/.well-known/security.txt" data-tooltip="Our machine-readable vulnerability disclosure policy, per RFC 9116.">our disclosure policy</a></li>
   </ul>
 
@@ -338,7 +344,7 @@
   <footer>
     CavScope is operated by After Today, LLC (DBA 28 Foot Systems), Hanover, Pennsylvania. CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion.
     <div class="foot-links">
-      <a href="/terms" data-tooltip="The terms on which CavScope is provided: what it does, who may scan what, billing and cancellation, and what a SITREP is and is not.">Terms of Service</a>
+      <a href="/privacy" data-tooltip="What CavScope collects, which processors it passes through, and why.">Privacy</a>
       <a href="/.well-known/security.txt" data-tooltip="Where to report a security vulnerability in CavScope, per RFC 9116.">Security</a>
     </div>
   </footer>

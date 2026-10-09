@@ -195,6 +195,11 @@ export default function middleware(request) {
     if (isUnder(path, '/privacy')) {
       return secureRewrite(new URL('/privacy.html', request.url));
     }
+    // The second legal page. Added 2026-10-09 after CavScope's own engine
+    // reported PRIV-004 (no Terms of Service link) on this site.
+    if (isUnder(path, '/terms')) {
+      return secureRewrite(new URL('/terms.html', request.url));
+    }
     if (isUnder(path, '/beta')) {
       // Closed 2026-10-02 at the owner's instruction. A temporary redirect, not
       // 308, so it can be reopened without browsers holding on to it. The real
