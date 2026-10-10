@@ -2550,20 +2550,50 @@
 
   function renderIntegrations() {
     const al = (DATA.system || {}).alerts || {};
-    return head('Integrations', 'What this platform can observe about its own outbound dependencies. Each row is inferred from real rows, not from a health endpoint.') +
+    const I = DATA.integrations || {};
+    const st = I.stripe || {}, em = I.email || {}, ib = I.inbound || {}, sp = I.support || {}, ll = I.tenant_llms || {}, br = I.browser || {};
+    const row = (dot, name, val, tip) => `<div class="status" data-tooltip="${escapeHtml(tip)}" tabindex="0"><span class="dot ${dot}" aria-hidden="true"></span><span class="status-name">${escapeHtml(name)}</span><span class="status-val">${escapeHtml(val)}</span></div>`;
+    const rows = [
+      row(st.grants > 0 ? 'ok' : 'warn', 'Stripe: paid checkouts',
+        st.grants > 0 ? `${num(st.grants)} recorded · ${num(st.claimed)} claimed · last ${ago(st.last_grant_at)}` : 'none recorded yet',
+        st.grants > 0
+          ? 'Paid checkouts the billing webhook has recorded. Claimed means an organization has taken the grant. This is the table the webhook writes, so it proves delivery and a valid payload.'
+          : 'No paid checkout has ever been recorded here, so the path is wired but not proven end to end. The first real checkout is the proof. Stripe’s own dashboard shows whether events are being delivered.'),
+      row(st.cancelled > 0 ? 'ok' : 'warn', 'Stripe: cancellations',
+        st.cancelled > 0 ? `${num(st.cancelled)} processed` : 'handled in code · never observed',
+        st.cancelled > 0
+          ? 'Cancellations the webhook has processed: the organization was downgraded to trial.'
+          : 'customer.subscription.deleted is handled (the organization drops to trial), and the logic is tested offline, but no cancellation has ever arrived. Until the Stripe endpoint is subscribed to that event and one is seen, a cancelled customer keeps their plan.'),
+      row(al.dead_letter ? 'bad' : 'ok', 'Resend: alert dispatch',
+        `${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter${em.last_sent_at ? ' · last ' + ago(em.last_sent_at) : ''}`,
+        'Application email: cavscope-alert-dispatch calls Resend’s REST API directly. Dead-letter means a send failed five times and stopped retrying. Alerts only go out when a new high-risk finding opens, so a quiet day is not a fault.'),
+      row(em.suppressed > 0 ? 'warn' : 'ok', 'Resend: delivery events',
+        `${num(em.events)} recorded${em.last_event_at ? ' · last ' + ago(em.last_event_at) : ''} · ${num(em.suppressed)} suppressed`,
+        'Delivered, bounced and complained events Resend reports back to cavscope-resend-webhook. A suppressed address will not receive mail, including a magic link.'),
+      row(ib.failed > 0 ? 'bad' : 'ok', 'Inbound mail (support@, security@)',
+        `${num(ib.routes)} routes · ${num(ib.forwarded)} forwarded · ${num(ib.failed)} failed${ib.last_forward_at ? ' · last ' + ago(ib.last_forward_at) : ''}`,
+        'Mail to the CavScope addresses is forwarded to the owner’s inbox by cavscope-inbound-mail. A failed forward means a message was received and not delivered to a person.'),
+      row(sp.failed > 0 ? 'bad' : 'ok', 'Support requests',
+        `${num(sp.requests)} filed · ${num(sp.failed)} not delivered · AI triage ran on ${num(sp.ai_done)}`,
+        'Requests filed from the support tab. Not delivered means the request is saved but the email to support failed. AI triage is off until the support_ai flag is turned on, and its notes go to support only, never to the customer.'),
+      row(ll.erroring > 0 ? 'bad' : 'ok', 'Tenant LLMs',
+        `${num(ll.configured)} configured · ${num(ll.erroring)} erroring`,
+        'Organizations that brought their own language model for narrative and agent features. Erroring means the last call failed after the last success. None configured is a normal state: nothing from that workspace reaches a model.'),
+      row('ok', 'Browser engine',
+        br.scans > 0 ? `${num(br.scans)} scan${br.scans === 1 ? '' : 's'} · last ${ago(br.last_at)}` : 'no scans yet',
+        'Scans run by the Vercel worker. The engine and its rules are switched off for customers; the one scan on file was an owner-run proof.'),
+      row('warn', 'Supabase Auth email', 'not observable here',
+        'Magic link, invite, recovery and email-change are sent by Supabase Auth (GoTrue), which relays through Resend as its SMTP provider. That path is configured in the Supabase project, not in this codebase, and this console cannot observe it.'),
+    ].join('');
+    return head('Integrations', 'What this platform can observe about its own outbound dependencies. Each row is inferred from rows the database holds, not from a health endpoint, so a quiet integration and a broken one can look alike; the tooltip on each row says which.') +
       `<div class="row b" style="grid-template-columns: 1fr 1fr;">
-        ${panel('Observed state', 'Inferred from live tables', `<div class="rows">
-          <div class="status" data-tooltip="Signature-verified and gated on payment_status. Cancellation is not handled: nothing consumes customer.subscription.deleted." tabindex="0"><span class="dot ok"></span><span class="status-name">Stripe — checkout.session.completed</span><span class="status-val">handled</span></div>
-          <div class="status" data-tooltip="No consumer exists for this event, so a cancelled customer keeps their plan until it is changed by hand. This is a known gap, not a transient failure." tabindex="0"><span class="dot bad"></span><span class="status-name">Stripe — subscription.deleted</span><span class="status-val">not handled</span></div>
-          <div class="status" data-tooltip="Application email: cavscope-alert-dispatch calls Resend's REST API directly for critical-finding alerts." tabindex="0"><span class="dot ${al.dead_letter ? 'bad' : 'ok'}"></span><span class="status-name">Resend — alert dispatch</span><span class="status-val">${num(al.sent_24h)} sent 24h · ${num(al.dead_letter)} dead-letter</span></div>
-          <div class="status" data-tooltip="Magic link, invite, recovery and email-change are sent by Supabase Auth (GoTrue), which relays through Resend as its SMTP provider. That path is configured in the Supabase dashboard, not in this codebase, and this console cannot observe it." tabindex="0"><span class="dot warn"></span><span class="status-name">Supabase Auth email</span><span class="status-val">not observable here</span></div>
-        </div>`)}
+        ${panel('Observed state', 'Inferred from live tables', `<div class="rows">${rows}</div>`)}
         ${panel('Why two email paths', 'They are not the same system', `<div class="notice">
           <b>Auth email and application email never share a template.</b>
           Sign-in links, invites and password resets are rendered by Supabase Auth and only reach Resend because Resend
           is configured as its SMTP relay — a Resend <em>template</em> can never render them. Application email
-          (currently just the <code>risk_opened</code> alert) goes through Resend's REST API from
-          <code>cavscope-alert-dispatch</code>. Conflating the two is how an auth template ends up edited in the wrong place.
+          (risk alerts, the SITREP-ready notice, support requests and forwarded inbound mail) goes through Resend’s REST API
+          from the edge functions. Conflating the two is how an auth template ends up edited in the wrong place.
         </div>`)}
       </div>` + platformAgents();
   }
