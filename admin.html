@@ -1566,23 +1566,37 @@
       panel('User roster', `${rows.length} shown`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>User</th>
-          <th data-tooltip="Platform role. super_admin is what opens this console; everything else is scoped by RLS to the organizations the user belongs to." tabindex="0">Role</th>
+          <th data-tooltip="Platform role. super_admin is the only role anything checks: it opens this console. user and admin behave the same today; what a person can do inside an organization comes from their seat in it, scoped by RLS." tabindex="0">Role</th>
           <th data-tooltip="Organizations this user has a seat in." tabindex="0">Memberships</th>
           <th data-tooltip="How the account signs in." tabindex="0">Login</th>
           <th data-tooltip="Last recorded sign-in." tabindex="0">Last Seen</th>
         </tr></thead>
         <tbody>${rows.map((u) => `<tr>
           <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(u.name || u.email))}</span>
-            <span><b>${escapeHtml(u.name || '(no name)')}</b><br><small class="muted">${escapeHtml(u.email)}</small></span></span></td>
+            <span><b>${escapeHtml(u.name || '(no name)')}</b>${u.email === MY_EMAIL ? ' <span class="pill low" data-tooltip="This is the account you are signed in with." tabindex="0">you</span>' : ''}<br><small class="muted">${escapeHtml(u.email)} · joined ${escapeHtml(ago(u.created_at))}</small></span></span></td>
           <td><select class="inline-select" data-act="role" data-email="${escapeHtml(u.email)}" data-current="${escapeHtml(u.role)}"
                 aria-label="Platform role for ${escapeHtml(u.email)}"
-                data-tooltip="Changes this user's platform role. super_admin opens this console and every tenant's data, so granting or removing it asks first.">
+                data-tooltip="Changes this user's platform role. super_admin opens this console and every tenant's data, so granting or removing it asks first. The last super admin cannot be demoted, and every change is recorded below.">
               ${(ROLES.includes(u.role) ? ROLES : ROLES.concat([u.role])).map((r) => `<option value="${escapeHtml(r)}"${r === u.role ? ' selected' : ''}>${escapeHtml(r)}</option>`).join('')}
             </select></td>
           <td class="muted num">${num(u.memberships)}</td>
           <td class="muted">${escapeHtml(u.login_method || '—')}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(u.last_signed_in))}" tabindex="0">${escapeHtml(ago(u.last_signed_in))}</td>
-        </tr>`).join('')}</tbody></table>` : '<div class="empty">No users match.</div>');
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">No users match.</div>') +
+      panel('Recent role changes', 'The last ten platform role changes, newest first', roleChanges(), {
+        tip: 'Every change to a platform role is recorded here with who made it. Role changes made before 2026-10-10 were not recorded.',
+      });
+  }
+
+  function roleChanges() {
+    const rows = DATA.role_changes || [];
+    if (!rows.length) return '<div class="empty">No role changes recorded yet.</div>';
+    return `<div class="rows">${rows.map((r) => `
+      <div class="status" data-tooltip="${escapeHtml(stamp(r.at))}" tabindex="0">
+        <span class="dot ${/-> super_admin$/.test(r.detail || '') ? 'warn' : 'ok'}" aria-hidden="true"></span>
+        <span class="status-name">${escapeHtml(r.target || '')}</span>
+        <span class="status-val">${escapeHtml(r.detail || '')} · by ${escapeHtml(r.actor || 'unknown')} · ${escapeHtml(ago(r.at))}</span>
+      </div>`).join('')}</div>`;
   }
 
   // ---- reports -------------------------------------------------------------
