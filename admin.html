@@ -2601,7 +2601,7 @@
           <div class="imp-why">Reason: ${escapeHtml(imp.reason || '')}</div>
         </div>
         <div style="text-align:right;">
-          <div id="impCountdown" class="imp-clock" data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero; nothing has to sweep it." tabindex="0">--:--</div>
+          <div id="impCountdown" class="imp-clock" data-tooltip="Time left before this session expires on its own. Access stops on the next call after it reaches zero, and the closing notice is written the next time anyone opens this section." tabindex="0">--:--</div>
           <button class="btn warn sm" type="button" data-act="imp-end" data-tooltip="Ends the session now. Access stops immediately, because authorisation is re-checked on every call rather than carried in a token.">End session</button>
         </div>
       </div>
@@ -2616,8 +2616,8 @@
         </div>
         <div class="field">
           <label for="impReason">Reason</label>
-          <input type="text" id="impReason" minlength="10" required value="${escapeHtml(form.reason)}" placeholder="e.g. ticket 412, customer cannot see their SITREP"
-                 data-tooltip="Required, at least 10 characters, and shown to the tenant verbatim in their own activity feed. Write it for them to read.">
+          <input type="text" id="impReason" minlength="10" maxlength="500" required value="${escapeHtml(form.reason)}" placeholder="e.g. ticket 412, customer cannot see their SITREP"
+                 data-tooltip="Required, 10 to 500 characters, and shown verbatim in the activity feed of every organization this user belongs to. Write it for them to read.">
         </div>
         <div class="field">
           <label for="impMinutes">Duration</label>
@@ -2625,11 +2625,11 @@
             ${['15', '30', '60'].map((m) => `<option value="${m}"${String(form.minutes) === m ? ' selected' : ''}>${m} min</option>`).join('')}
           </select>
         </div>
-        <button class="btn" type="submit" data-tooltip="Opens a read-only session and writes a notice into the tenant's own activity feed, carrying your reason.">Start</button>
+        <button class="btn" type="submit" data-tooltip="Opens a read-only session and writes a notice, carrying your reason, into the activity feed of every organization this user belongs to.">Start</button>
       </form>
     `;
     const log = impLog.length ? `
-      <table class="tbl" style="margin-top:18px;" data-tooltip="Every impersonation session ever opened, newest first. This log is append-only and cannot be edited from the application." tabindex="0">
+      <table class="tbl" style="margin-top:18px;" data-tooltip="The 25 most recent impersonation sessions, newest first. The log cannot be edited from the application; the browser has no access to it at all." tabindex="0">
         <thead><tr><th>Admin</th><th>Target</th><th>Reason</th><th>Started (UTC)</th><th>Actions</th><th>Outcome</th></tr></thead>
         <tbody>${impLog.map((r) => `<tr>
           <td class="muted">${escapeHtml(r.admin_email || '')}</td>
@@ -2653,7 +2653,8 @@
     const log = Array.isArray(EXTRA.impLog) ? EXTRA.impLog : [];
     // The target's view is fetched when an admin is actually looking, not on
     // every console load, because every read of it is recorded against the
-    // session in the tenant's own audit trail.
+    // session (in the session's own event log, which the application cannot edit;
+    // the tenant's feed gets the start and the end notice, not each read).
     if (imp.active && impViewFor !== impKey(imp)) loadImpersonatedView(imp);
     return intro + panel(imp.active ? 'Session open' : 'Open a session',
       imp.active ? 'Read only. Ends on its own when the timer runs out.' : 'Pick a user, say why, and choose how long.',
