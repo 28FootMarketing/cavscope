@@ -6024,7 +6024,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
       const a = document.createElement('a');
       a.href = dataStr;
-      a.download = `muster-assurance-${state.client.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
+      a.download = `cavscope-assurance-${state.client.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
       a.click();
       showToast("Workspace snapshot downloaded.");
     }
@@ -6089,7 +6089,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(lines.join('\n'));
       const a = document.createElement('a');
       a.href = dataStr;
-      a.download = `muster-assurance-${state.client.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.md`;
+      a.download = `cavscope-assurance-${state.client.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.md`;
       a.click();
       showToast("Workspace snapshot downloaded as Markdown.");
     }
@@ -6098,7 +6098,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.subClients || [], null, 2));
       const a = document.createElement('a');
       a.href = dataStr;
-      a.download = `muster-client-roster-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `cavscope-client-roster-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       showToast("Client accounts roster exported.");
     }

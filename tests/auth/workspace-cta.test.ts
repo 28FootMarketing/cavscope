@@ -46,13 +46,13 @@ test("the www form of the new domain is treated the same as the apex", () => {
   assert.equal(run("www.cavscope.28footsystems.com", "https://www.cavscope.28footsystems.com"), "https://www.cavscope.28footsystems.com/signin");
 });
 
-test("on every legacy host, the CTA still hops to the app.muster.partners origin", () => {
+test("on every other host, the CTA goes to the CavScope sign-in", () => {
   for (const [hostname, origin] of [
     ["muster.partners", "https://muster.partners"],
     ["www.muster.partners", "https://www.muster.partners"],
     ["muster.28footsystems.com", "https://muster.28footsystems.com"],
   ] as const) {
-    assert.equal(run(hostname, origin), "https://app.muster.partners/");
+    assert.equal(run(hostname, origin), "https://cavscope.28footsystems.com/signin");
   }
 });
 

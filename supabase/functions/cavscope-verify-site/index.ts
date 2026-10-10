@@ -30,10 +30,10 @@ Deno.serve(async (req) => {
     return json({ ok: false, reason: "fetch_failed", detail: String(e) }, 200);
   }
 
-  const metaRe = new RegExp(`<meta[^>]+name=["']muster-verification["'][^>]+content=["']${site.verification_token}["']`, "i");
-  const metaRe2 = new RegExp(`<meta[^>]+content=["']${site.verification_token}["'][^>]+name=["']muster-verification["']`, "i");
+  const metaRe = new RegExp(`<meta[^>]+name=["'](?:cavscope|muster)-verification["'][^>]+content=["']${site.verification_token}["']`, "i");
+  const metaRe2 = new RegExp(`<meta[^>]+content=["']${site.verification_token}["'][^>]+name=["'](?:cavscope|muster)-verification["']`, "i");
   if (!metaRe.test(html) && !metaRe2.test(html)) {
-    return json({ ok: false, reason: "tag_not_found", expected: `<meta name="muster-verification" content="${site.verification_token}">` }, 200);
+    return json({ ok: false, reason: "tag_not_found", expected: `<meta name="cavscope-verification" content="${site.verification_token}">` }, 200);
   }
 
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
