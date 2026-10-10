@@ -1253,6 +1253,37 @@
     </table>`;
   }
 
+  // Minutes between runs, read from the five cron fields; null when it cannot be read. A schedule
+  // that is not "every N minutes" used to be judged against 15, so an hourly or daily job would
+  // have read as late all the time. Calendar schedules (a day, month or weekday set) are not judged.
+  function scheduleIntervalMin(sched) {
+    const f = String(sched || '').trim().split(/\s+/);
+    if (f.length !== 5) return null;
+    const [min, hour, dom, mon, dow] = f;
+    if (dom !== '*' || mon !== '*' || dow !== '*') return null;
+    const step = /^\*\/(\d+)$/.exec(min);
+    if (step && hour === '*') return Number(step[1]);
+    if (/^\d+(,\d+)*$/.test(min) && hour === '*') {
+      const xs = min.split(',').map(Number).sort((a, b) => a - b);
+      if (xs.length === 1) return 60;
+      let gap = xs[0] + 60 - xs[xs.length - 1];
+      for (let i = 1; i < xs.length; i++) gap = Math.max(gap, xs[i] - xs[i - 1]);
+      return gap;
+    }
+    if (/^\d+$/.test(min) && /^\d+$/.test(hour)) return 1440;
+    return null;
+  }
+
+  // Late is measured against the schedule's own interval, doubled: a job that ran one tick ago is
+  // on time and a job that missed two is not. A job whose interval cannot be read is not called late.
+  function jobIsLate(j) {
+    if (!j.active) return true;
+    if (!j.last_success_at) return true;
+    const every = scheduleIntervalMin(j.schedule);
+    if (every == null) return false;
+    return (Date.now() - new Date(j.last_success_at).getTime()) > every * 2 * 60000;
+  }
+
   function systemStatus() {
     const sys = DATA.system || {};
     const inc = sys.incidents || {}, q = sys.queue || {}, al = sys.alerts || {}, bill = sys.billing || {};
@@ -1261,12 +1292,8 @@
     // A cron row being "active" only proves a schedule exists. Late is measured
     // against the schedule's own interval, doubled, because a job that ran one
     // tick ago is on time and a job that missed two is not.
-    const stale = cron.filter((j) => {
-      if (!j.active) return true;
-      if (!j.last_success_at) return true;
-      const everyMin = /^\*\/(\d+)/.exec(j.schedule) ? Number(/^\*\/(\d+)/.exec(j.schedule)[1]) : 15;
-      return (Date.now() - new Date(j.last_success_at).getTime()) > everyMin * 2 * 60000;
-    });
+    const stale = cron.filter(jobIsLate);
+    const ch = DATA.cron_http || {};
 
     const rows = [
       {
@@ -1285,6 +1312,11 @@
         tip: stale.length
           ? 'Late or disabled: ' + stale.map((j) => j.jobname).join(', ') + '. Measured against each job’s own interval, doubled — not against a fixed threshold.'
           : 'Every scheduled job has a successful run inside twice its own interval.',
+      },
+      {
+        name: 'Job Calls', state: ch.failed > 0 ? 'bad' : ch.total ? 'ok' : 'warn',
+        val: ch.total ? `${num(ch.total)} answered in ${Math.max(1, Math.round((Date.now() - new Date(ch.since).getTime()) / 3600000))}h · ${num(ch.failed)} failed` : 'no recent calls recorded',
+        tip: 'A cron job that calls an edge function shows \u201csucceeded\u201d as soon as the request is queued, whether or not the function worked. This counts the HTTP answers Postgres recorded for those calls over the window shown (it keeps only the last few hours); a failed one is a 4xx, a 5xx or no answer at all.',
       },
       {
         name: 'Alert Delivery', state: al.dead_letter ? 'bad' : al.pending > 10 ? 'warn' : 'ok',
@@ -2631,12 +2663,12 @@
     const cron = sys.cron || [];
     return head('System Health', 'Schedules, queue depth and open incidents. An active cron row proves a schedule exists; the last successful run is what proves it fired.') +
       `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
-        ${panel('Scheduled jobs', `${cron.length} muster-* pg_cron job${cron.length === 1 ? '' : 's'}`, cron.length ? `<table class="tbl">
+        ${panel('Scheduled jobs', `${cron.length} pg_cron job${cron.length === 1 ? '' : 's'}`, cron.length ? `<table class="tbl">
           <thead><tr>
             <th>Job</th>
             <th data-tooltip="The pg_cron schedule, in UTC." tabindex="0">Schedule</th>
             <th data-tooltip="Whether the schedule is enabled at all." tabindex="0">Active</th>
-            <th data-tooltip="Status of the most recent run, successful or not." tabindex="0">Last Run</th>
+            <th data-tooltip="Status of the most recent run. For a job that calls an edge function, succeeded means the request was queued, not that the function worked; see Job Calls under Platform status for the answers." tabindex="0">Last Run</th>
             <th data-tooltip="The last run that actually succeeded. This, not the active flag, is what proves the job is working." tabindex="0">Last Success</th>
           </tr></thead>
           <tbody>${cron.map((j) => `<tr>
@@ -2644,8 +2676,8 @@
             <td class="num muted">${escapeHtml(j.schedule)}</td>
             <td>${j.active ? '<span class="pill ok">on</span>' : '<span class="pill critical">off</span>'}</td>
             <td>${j.last_status === 'succeeded' ? '<span class="pill ok">succeeded</span>' : j.last_status ? `<span class="pill critical">${escapeHtml(j.last_status)}</span>` : '<span class="muted">never run</span>'}</td>
-            <td class="muted num" data-tooltip="${escapeHtml(stamp(j.last_success_at))}" tabindex="0">${escapeHtml(ago(j.last_success_at))}</td>
-          </tr>`).join('')}</tbody></table>` : '<div class="empty">No muster-* cron jobs are scheduled. Nothing is running on a timer.</div>')}
+            <td class="muted num" data-tooltip="${escapeHtml(stamp(j.last_success_at))}" tabindex="0">${escapeHtml(ago(j.last_success_at))}${jobIsLate(j) && j.active ? ' <span class="pill high" data-tooltip="No successful run inside twice this job\'s own interval." tabindex="0">late</span>' : ''}</td>
+          </tr>`).join('')}</tbody></table>` : '<div class="empty">No cron jobs are scheduled. Nothing is running on a timer.</div>')}
         ${panel('Platform status', 'Live', systemStatus())}
       </div>` + incidentsPanel();
   }
