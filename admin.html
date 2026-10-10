@@ -825,10 +825,10 @@
       </div>
 
       <select class="picker" id="orgFilter" aria-label="Organization filter"
-        data-tooltip="Narrows every panel to one organization. 'All organizations' is the platform-wide view."></select>
+        data-tooltip="Narrows the Risk Watch, Recent Audit Activity and the roster sections to one organization. The headline tiles, activity chart, Organization Health, System Status and Action Items stay platform-wide, and the Overview says so while a filter is on."></select>
 
       <select class="picker" id="rangeFilter" aria-label="Date range"
-        data-tooltip="Window for the activity chart and the recent-scan table. It does not change the headline tiles, which are current-state counts, not period totals.">
+        data-tooltip="Window for the activity chart only. It does not change the headline tiles, which are current-state counts, not period totals.">
         <option value="7">Last 7 days</option>
         <option value="30" selected>Last 30 days</option>
       </select>
@@ -1043,7 +1043,7 @@
         value: num((asmt.queued || 0) + (asmt.running || 0)),
         delta: { dir: 'flat', text: num(asmt.queued) + ' queued' },
         foot: `${num(asmt.complete_24h)} completed · ${num(asmt.failed_24h)} failed in 24h`,
-        tip: 'Scans queued or running on the live engine right now. A number that never falls means the scan worker is not draining the queue — check muster-scan-due under System Health.',
+        tip: 'Scans queued or running on the live engine right now. A number that never falls means the scan worker is not draining the queue — check the scan schedule under System Health.',
       },
       {
         cls: 'rose', icon: '⚠', label: 'High-Risk Alerts', go: 'website-assurance',
@@ -1064,7 +1064,7 @@
         value: money(rev.mrr_cents),
         delta: { dir: 'flat', text: 'plan-implied' },
         foot: `${num(rev.paying_orgs)} priced · ${num(rev.unpriced_orgs)} on internal or unpriced plans`,
-        tip: 'What the current plan assignments price out to at each organization’s commercial stage. It is NOT billed revenue: nothing in this platform reads Stripe invoices, and customer.subscription.deleted is unhandled, so a cancelled customer still prices in until their plan is changed by hand.',
+        tip: 'What the current plan assignments price out to at each organization’s commercial stage. It is NOT billed revenue: nothing in this platform reads Stripe invoices. A cancellation downgrades the plan once the Stripe endpoint delivers customer.subscription.deleted, which has not been seen live yet, so a cancelled customer may still price in until their plan is changed by hand.',
       },
       {
         cls: 'purple', icon: '⌨', label: 'API Usage', go: 'integrations',
@@ -1255,7 +1255,7 @@
 
   function systemStatus() {
     const sys = DATA.system || {};
-    const inc = sys.incidents || {}, q = sys.queue || {}, al = sys.alerts || {};
+    const inc = sys.incidents || {}, q = sys.queue || {}, al = sys.alerts || {}, bill = sys.billing || {};
     const cron = sys.cron || [];
 
     // A cron row being "active" only proves a schedule exists. Late is measured
@@ -1275,16 +1275,16 @@
         tip: 'Open findings from cavscope-watchdog’s own health checks. The watchdog closes an incident when its check comes back clear, so this count can go down — that is what makes it an alarm and not a counter.',
       },
       {
-        name: 'Scan Queue', state: q.queued > 20 ? 'warn' : 'ok',
+        name: 'Scan Queue', state: (q.queued > 20 || (q.oldest_queued_at && Date.now() - new Date(q.oldest_queued_at).getTime() > 30 * 60000)) ? 'warn' : 'ok',
         val: `${num(q.queued)} queued · ${num(q.running)} running`,
-        tip: q.oldest_queued_at ? `Oldest item queued ${ago(q.oldest_queued_at)}.` : 'Nothing is waiting. The engine drains the queue on the muster-scan-due schedule.',
+        tip: q.oldest_queued_at ? `Oldest item queued ${ago(q.oldest_queued_at)}.` : 'Nothing is waiting. The engine drains the queue on the scan schedule.',
       },
       {
-        name: 'Scheduled Jobs', state: stale.length ? 'bad' : 'ok',
-        val: stale.length ? `${stale.length} of ${cron.length} late or off` : `${cron.length} healthy`,
+        name: 'Scheduled Jobs', state: (stale.length || !cron.length) ? 'bad' : 'ok',
+        val: !cron.length ? 'No scheduled jobs found' : stale.length ? `${stale.length} of ${cron.length} late or off` : `${cron.length} healthy`,
         tip: stale.length
           ? 'Late or disabled: ' + stale.map((j) => j.jobname).join(', ') + '. Measured against each job’s own interval, doubled — not against a fixed threshold.'
-          : 'Every muster-* pg_cron job has a successful run inside twice its own interval.',
+          : 'Every scheduled job has a successful run inside twice its own interval.',
       },
       {
         name: 'Alert Delivery', state: al.dead_letter ? 'bad' : al.pending > 10 ? 'warn' : 'ok',
@@ -1292,9 +1292,11 @@
         tip: 'Outbound critical-finding email to tenants. Dead-letter means a send failed five times and stopped retrying — Resend’s own logs are the next place to look.',
       },
       {
-        name: 'Billing Webhook', state: 'ok',
-        val: 'Signature-verified',
-        tip: 'cavscope-stripe-webhook verifies the Stripe signature and gates on payment_status before recording a grant. A cancelled subscription (customer.subscription.deleted) downgrades the organization to trial once the Stripe endpoint is subscribed to that event; until it is, a cancelled customer keeps their plan until someone changes it.',
+        name: 'Billing Webhook', state: bill.stuck_grants > 0 ? 'bad' : 'ok',
+        val: bill.stuck_grants > 0
+          ? `${num(bill.stuck_grants)} paid checkout${bill.stuck_grants === 1 ? '' : 's'} unclaimed`
+          : bill.last_grant_at ? `Last checkout ${ago(bill.last_grant_at)}` : 'No checkouts recorded yet',
+        tip: 'Read from the paid checkouts the Stripe webhook has recorded. Unclaimed means Stripe took payment more than 24 hours ago and no organization has claimed the grant. Whether Stripe is still delivering events is not observable from here; the webhook verifies each signature and refuses a payload without a tier and stage.',
       },
     ];
 
@@ -1346,6 +1348,7 @@
           <span>— CavScope</span>
         </div>
       </div>
+      ${orgFilter === 'all' ? '' : '<p class="muted" role="note" tabindex="0" data-tooltip="Per-organization figures for these tiles are in the Organizations roster." style="margin:0 0 12px;">Organization filter is on: the tiles, activity chart, Organization Health, System Status and Action Items below still cover the whole platform.</p>'}
       ${kpiRow()}
       <div class="row a">
         ${panel('Platform Overview', 'Scans run across every organization, stacked by what started them', activityChart(), {
