@@ -1056,8 +1056,8 @@
         cls: 'teal', icon: '◈', label: 'Control Effectiveness', go: 'compliance',
         value: comp.rate == null ? '—' : comp.rate + '%',
         delta: { dir: comp.not_met > 0 ? 'down' : 'flat', text: num(comp.not_met) + ' not met' },
-        foot: comp.total ? `${num(comp.met)} met of ${num(comp.total)} · ${num(comp.partial)} partial` : 'no controls derived yet',
-        tip: 'Share of derived controls assessed "met". Partial is deliberately not rounded up to met — a half-implemented control is exactly what an auditor asks about. This is scanner evidence, never a certification of compliance.',
+        foot: comp.assessed ? `${num(comp.met)} met of ${num(comp.assessed)} assessed · ${num(comp.partial)} partial` : 'no controls derived yet',
+        tip: 'Share of assessed scanner-derived controls that are "met"; a control no check has looked at yet is in neither count. Partial is deliberately not rounded up to met — a half-implemented control is exactly what an auditor asks about. This is scanner evidence, never a certification of compliance.',
       },
       {
         cls: 'amber', icon: '◱', label: 'Monthly Revenue', go: 'billing',
@@ -2358,19 +2358,50 @@
       </div>`;
     return head('Compliance', 'Control effectiveness derived from scanner evidence. This is not a certification and must never be presented as one.') +
       `<div class="row b" style="grid-template-columns: 1fr 1fr;">
-        ${panel('Control effectiveness', `${num(total)} derived controls across every scanned site`, total ? `<div class="rows">
+        ${panel('Control effectiveness', `${num(total)} scanner-derived controls across every scanned customer site`, total ? `<div class="rows">
           ${bar('Met', c.met, 'var(--emerald)', 'No open scanner finding maps to this control.')}
           ${bar('Partial', c.partial, 'var(--amber)', 'Partly satisfied. Deliberately not counted toward the headline rate — a half-implemented control is exactly what an auditor asks about.')}
           ${bar('Not met', c.not_met, 'var(--rose)', 'An open finding maps directly to this control. Each one needs a remediation owner.')}
-          ${bar('Unassessed', c.unassessed, 'var(--text-dim)', 'Derived but not yet assessed either way.')}
-        </div>` : '<div class="empty">No controls derived yet. Controls come from completed scans.</div>')}
+          ${bar('Not assessed', c.unassessed, 'var(--text-dim)', 'Every check that maps to this control has not run on this site yet (for example a browser-only check before any browser scan). It is neither met nor failed, and it is left out of the headline rate.')}
+          ${c.not_applicable ? bar('Not applicable', c.not_applicable, 'var(--text-dim)', 'Marked as not applicable to this site.') : ''}
+        </div>
+        <p class="muted" style="font-size:12.5px; margin-top:12px;" data-tooltip="Headline rate: met divided by assessed (met + partial + not met). Controls no check has looked at yet are not counted as met or as failed." tabindex="0">
+          ${c.rate == null ? 'No assessed controls yet.' : `Headline rate ${c.rate}% of ${num(c.assessed)} assessed.`}
+          ${c.manual ? ` ${num(c.manual)} control${c.manual === 1 ? '' : 's'} entered by hand ${c.manual === 1 ? 'is' : 'are'} not counted here: only scanner-derived controls are.` : ''}
+        </p>` : '<div class="empty">No controls derived yet. Controls come from completed scans.</div>')}
         ${panel('What this number is', 'Read this before quoting it to a client', `<div class="notice">
           <b>Scanner evidence, not an audit opinion.</b>
           A control marked <code>met</code> means no open finding from the scan engine maps to it. It does not mean an
           auditor has tested it, and it does not mean the underlying obligation is satisfied. The same caveat is
           carried on every SITREP this platform generates, and it belongs on any number taken off this page.
         </div>`)}
-      </div>` + jurisdictionQueue();
+      </div>` + frameworkBreakdown() + jurisdictionQueue();
+  }
+
+  // The same population as the headline, split by framework, so "68%" can be traced to the
+  // framework that holds the open items. A citation is not a test: a row here counts the
+  // references CavScope maps checks to, not an assessment of the framework itself.
+  function frameworkBreakdown() {
+    const rows = (DATA.compliance_by_framework || []).filter((f) => matches(f.label, f.framework));
+    return panel('By framework', 'Where the open items sit', rows.length ? `<table class="tbl">
+      <thead><tr>
+        <th>Framework</th>
+        <th data-tooltip="References in this framework that CavScope maps at least one check to, counted per site." tabindex="0">Mapped</th>
+        <th data-tooltip="No open scanner finding maps to the reference." tabindex="0">Met</th>
+        <th data-tooltip="Only lower-severity findings map to the reference." tabindex="0">Partial</th>
+        <th data-tooltip="An open critical or high finding maps to the reference." tabindex="0">Not met</th>
+        <th data-tooltip="No mapped check has run, or the reference was marked not applicable." tabindex="0">Not assessed</th>
+      </tr></thead>
+      <tbody>${rows.map((f) => `<tr>
+        <td><b>${escapeHtml(f.label || f.framework)}</b></td>
+        <td class="num muted">${num(f.total)}</td>
+        <td class="num">${num(f.met)}</td>
+        <td class="num ${f.partial ? '' : 'muted'}">${num(f.partial)}</td>
+        <td class="num">${f.not_met ? `<span class="pill critical">${num(f.not_met)}</span>` : '<span class="muted">0</span>'}</td>
+        <td class="num muted">${num(f.unassessed)}</td>
+      </tr>`).join('')}</tbody></table>` : '<div class="empty">No controls derived yet.</div>', {
+      tip: 'A framework reference is a citation, not a test. These rows count the references CavScope maps its checks to; they are not an assessment of the framework and not a certification.',
+    });
   }
 
   // Law rows no human has reviewed in 180 days, or ever. A research and legal
