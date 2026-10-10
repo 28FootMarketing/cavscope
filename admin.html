@@ -1191,7 +1191,7 @@
       { key: 'at_risk',  label: 'At Risk',  colour: 'var(--amber)',   n: h.at_risk || 0,  tip: 'The organization’s worst site scores 60 to 84.' },
       { key: 'critical', label: 'Critical', colour: 'var(--rose)',    n: h.critical || 0, tip: 'The organization’s worst site scores below 60.' },
       { key: 'trial',    label: 'Trial',    colour: 'var(--cyan)',    n: h.trial || 0,    tip: 'On the trial plan; banded separately from scored tenants.' },
-      { key: 'unscored', label: 'Unscored', colour: 'var(--text-dim)', n: h.unscored || 0, tip: 'No website registered yet, so there is nothing to score.' },
+      { key: 'unscored', label: 'Unscored', colour: 'var(--text-dim)', n: h.unscored || 0, tip: 'No website with a completed scan yet, so there is nothing to score.' },
     ].filter((s) => s.n > 0);
 
     const total = h.total || 0;
@@ -1407,7 +1407,7 @@
           <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag. The small label beside it is the commercial stage it is priced at." tabindex="0">Plan</th>
           <th data-tooltip="Members with a seat, then registered websites out of the plan's website limit." tabindex="0">Members / Sites</th>
           <th data-tooltip="Open critical and high findings across all of this tenant's sites." tabindex="0">Open Risk</th>
-          <th data-tooltip="The posture score of this tenant's WORST site — a portfolio is only as assured as its weakest thing." tabindex="0">Worst Score</th>
+          <th data-tooltip="The posture score of this tenant's WORST scanned site — a portfolio is only as assured as its weakest thing. A site that has never been scanned is not scored." tabindex="0">Worst Score</th>
           <th data-tooltip="When any site in this organization last finished a scan." tabindex="0">Last Scan</th>
           <th data-tooltip="Opens the tenant's own workspace in the app." tabindex="0">Workspace</th>
         </tr></thead>
@@ -2214,17 +2214,17 @@
           <th>Website</th>
           <th>Organization</th>
           <th data-tooltip="Production, staging or development. Environment changes which rules are expected to apply." tabindex="0">Env</th>
-          <th data-tooltip="100 minus the weighted severity of everything still open on the site." tabindex="0">Score</th>
+          <th data-tooltip="100 minus the weighted severity of everything still open on the site. Shown only once a scan has completed on it." tabindex="0">Score</th>
           <th data-tooltip="Open or reopened findings of any severity." tabindex="0">Open</th>
           <th data-tooltip="Ownership proof. Until a site is verified, the deeper checks stay off." tabindex="0">Verified</th>
           <th data-tooltip="Last completed scan." tabindex="0">Last Scan</th>
           <th data-tooltip="The location this site's laws are chosen for, in the workspace and the SITREP alike, and where it came from. Set or clear an override below." tabindex="0">Location</th>
         </tr></thead>
         <tbody>${rows.map((w) => `<tr>
-          <td><b>${escapeHtml(w.name)}</b><br><small class="muted">${escapeHtml(w.url)}</small></td>
+          <td><b>${escapeHtml(w.name)}</b>${w.sandbox ? ' <span class="pill medium" data-tooltip="Parked in the internal sandbox organization by an ad-hoc admin audit. Not a customer\'s site." tabindex="0">sandbox</span>' : ''}<br><small class="muted">${escapeHtml(w.url)}</small></td>
           <td class="muted">${escapeHtml(w.organization)}</td>
           <td class="muted">${escapeHtml(w.environment || '—')}</td>
-          <td><span class="score ${band(w.score)}">${w.score}</span></td>
+          <td>${w.score == null ? '<span class="muted" data-tooltip="No scan has completed on this site yet, so it has no score. An unscanned site is never shown as 100: no findings only means something once a scan has looked." tabindex="0">not scanned</span>' : `<span class="score ${band(w.score)}">${w.score}</span>`}</td>
           <td class="num ${w.open_findings ? '' : 'muted'}">${num(w.open_findings)}</td>
           <td>${w.verified_at ? '<span class="pill ok">verified</span>' : '<span class="pill high">unverified</span>'}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(w.last_scan_at))}" tabindex="0">${escapeHtml(ago(w.last_scan_at))}</td>
