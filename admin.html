@@ -2937,10 +2937,12 @@
     workspaces: {
       title: 'Workspaces',
       sub: 'There is no separate workspace object in this schema.',
-      body: `An organization <em>is</em> the workspace: <code>muster.organizations</code> owns the websites, the members,
-        the findings and the plan, and RLS scopes everything to it. A distinct workspace layer would mean one organization
-        holding several isolated sets of sites — nothing in the product needs that today, and adding a table for it would
-        add a second thing for RLS to get wrong. Until that changes, <strong>Organizations</strong> is this screen.`,
+      body: `An organization <em>is</em> the workspace: <code>cavscope.organizations</code> owns the websites, the members,
+        the findings and the plan, and RLS scopes everything to it. An agency or Partner that serves several clients does
+        not need a layer inside one organization either: each client is its own organization, created under the Partner
+        and linked to it, so its sites, members and findings stay isolated by the same RLS. A distinct workspace table
+        would add a second thing for RLS to get wrong. <strong>Organizations</strong> lists every workspace, including
+        which are a Partner's clients, and <strong>Client Access</strong> sets what each one is allowed to do.`,
       go: 'organizations',
     },
     'ai-readiness': {
@@ -2949,8 +2951,8 @@
       body: `There is no AI-readiness assessment table, no scoring rules and no findings category for it — the scan engine
         currently produces website assurance, accessibility and compliance evidence only. Shipping a readiness dashboard
         before the assessment exists would mean inventing every number on it. What would have to land first: a rule set
-        in <code>muster.scan_rules</code>, a findings category the engine emits, and a score derivation to sit beside
-        <code>muster.posture_score</code>.`,
+        in <code>cavscope.scan_rules</code>, a findings category the engine emits, and a score derivation to sit beside
+        <code>cavscope.posture_score</code>.`,
       go: 'website-assurance',
     },
     'domain-monitor': {
