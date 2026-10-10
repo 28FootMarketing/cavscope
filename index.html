@@ -584,7 +584,7 @@
   <script>
     // Named and side-effect-free so tests/auth/landing-auth-fragment.test.ts
     // exercises this function rather than a copy of it.
-    const MUSTER_AUTH_HOST = 'https://app.muster.partners';
+    const CAVSCOPE_AUTH_ORIGIN = 'https://cavscope.28footsystems.com';
     // cavscope.28footsystems.com has no separate app host -- see middleware.js
     // and setWorkspaceCtaHref() below -- so the fix there is a path change on
     // the SAME origin (signin.html lives at /signin), not a cross-origin hop
@@ -608,7 +608,7 @@
       if (!isAuth) return null;
       let host = '';
       try { host = new URL(origin).hostname; } catch (e) { host = ''; }
-      const target = CAVSCOPE_UNIFIED_HOSTS.has(host) ? origin + '/signin' : MUSTER_AUTH_HOST;
+      const target = (CAVSCOPE_UNIFIED_HOSTS.has(host) ? origin : CAVSCOPE_AUTH_ORIGIN) + '/signin';
       // Never forward to ourselves. This page is not served on the app host
       // today, and if that ever changes this must not become a redirect loop.
       if (origin === target) return null;
@@ -815,7 +815,7 @@
           <li>Custom domain or subdomain capability where technically supported</li>
           <li>Expansion billing based on active client organizations <span data-tooltip="Billing for client organizations beyond the included number is not built yet. Until it is, the included number is the limit." tabindex="0">(in development)</span></li>
         </ul>
-        <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens a short intake so you can start your CavScope Partner subscription." tabindex="0">Become a CavScope Partner →</a>
+        <a class="btn-primary price-cta" id="partnerCta" data-tooltip="Opens an email to our team to start your CavScope Partner subscription." tabindex="0">Become a CavScope Partner →</a>
       </div>
 
       <div class="price-card enterprise-card" id="cardEnterprise" hidden>
@@ -882,7 +882,7 @@
     const CAVSCOPE_HOSTS = new Set(['cavscope.28footsystems.com', 'www.cavscope.28footsystems.com']);
     const href = CAVSCOPE_HOSTS.has(window.location.hostname)
       ? window.location.origin + '/signin'
-      : 'https://app.muster.partners/';
+      : 'https://cavscope.28footsystems.com/signin';
     for (const id of ['workspaceCtaNav', 'workspaceCtaHero']) {
       const el = document.getElementById(id);
       if (el) el.href = href;
@@ -909,38 +909,43 @@
   const SB_URL = 'https://hjowfnzpomzxazmzywxw.supabase.co';
   const SB_KEY = 'sb_publishable_VvbvcqDMSTBriHmIMmmvpg_Een-yuWL';
 
-  // No booking calendar, contact form, or phone number exists anywhere in this
-  // project yet. This is a placeholder destination -- replace with a real
-  // scheduling link (Calendly, GHL) or a confirmed monitored inbox before launch.
-  const ENTERPRISE_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Enterprise%20Inquiry';
+  // Where each pricing button goes comes from public.cavscope_public_pricing().cta, which the
+  // Billing section of the admin console edits. Until 2026-10-10 this page ignored that object and
+  // carried its own copies: two Stripe Payment Links, a paused flag fixed at true, an enterprise
+  // mailto, and a GHL intake URL that was still the placeholder
+  // https://forms.your-ghl-domain.example.com/... -- so the only visible card, "Become a CavScope
+  // Partner", linked to a host that does not exist, and nothing edited in Billing could change it.
+  //
+  // The constants below are only what a visitor gets if the read fails: every button goes to the
+  // sales inbox. Never a payment link and never a placeholder.
+  const FALLBACK_SALES_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Interest';
+  const FALLBACK_PARTNER_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Partner%20Inquiry';
+  const FALLBACK_ENTERPRISE_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Enterprise%20Inquiry';
 
-  // CavScope (base tier) self-serve checkout: PAUSED. Only CavScope Partner is
-  // meant to be active right now (explicit decision). The real self-serve
-  // path still exists end to end -- live Stripe Payment Links below, the
-  // backend accepting them via cavscope-stripe-webhook/PRD-003, and
-  // muster.feature_flags.self_serve_onboarding, which was turned off to
-  // match (see cavscope_admin_set_flag in app.html's admin console, or flip
-  // it back directly) -- it's just not linked from this CTA, so a visitor
-  // can't pay here and then hit a disabled-onboarding error afterward. To
-  // reactivate: re-enable that flag AND restore the musterCta.href line
-  // below.
-  const STRIPE_MUSTER_SEED_PAYMENT_LINK = 'https://buy.stripe.com/eVqbJ26yL2hw3gL2x3gIo0t';
-  const STRIPE_MUSTER_FRUIT_PAYMENT_LINK = 'https://buy.stripe.com/bJeeVe5uHaO2bNhb3zgIo0u';
-  const MUSTER_SELF_SERVE_PAUSED = true;
-  const MUSTER_PAUSED_CONTACT_HREF = 'mailto:sales@28footsystems.com?subject=CavScope%20Interest';
+  // The first usable destination wins; an empty or missing one falls through to the next.
+  // While self-serve is paused (or the flag is missing) every button goes to its sales contact,
+  // so a visitor can never pay for an account the platform will not onboard.
+  function resolveCta(cta, stage) {
+    const c = cta || {};
+    const first = (xs, fallback) => xs.find((x) => typeof x === 'string' && x.trim() !== '') || fallback;
+    const paused = c.muster_self_serve_paused !== false;
+    const seed = stage === 'seed';
+    return {
+      muster: paused
+        ? first([c.muster_contact_url], FALLBACK_SALES_HREF)
+        : first([seed ? c.muster_seed_checkout_url : c.muster_fruit_checkout_url, c.muster_contact_url], FALLBACK_SALES_HREF),
+      partner: paused
+        ? first([c.partner_contact_url], FALLBACK_PARTNER_HREF)
+        : first([seed ? c.partner_seed_checkout_url : c.partner_fruit_checkout_url, c.partner_intake_url, c.partner_contact_url], FALLBACK_PARTNER_HREF),
+      enterprise: first([c.enterprise_contact_url], FALLBACK_ENTERPRISE_HREF),
+    };
+  }
 
-  // CavScope Partner/Enterprise: still sales-assisted, payment collected
-  // inside GHL itself (native invoicing / Stripe-connect), not this Stripe
-  // account. This is a placeholder GHL funnel/form URL -- swap the base
-  // URL once a real one exists; keep the query params, GHL's form should
-  // capture them as hidden fields into the src:/product:/intent: tag
-  // taxonomy. Once a GHL workflow marks a deal won, it calls the
-  // cavscope-ghl-webhook Edge Function to provision the tenant.
-  const GHL_PARTNER_SIGNUP_URL = 'https://forms.your-ghl-domain.example.com/muster-partner-signup';
-
-  function buildGhlUrl(base, product, intent) {
+  // A form or intake page can capture where the visitor came from; an email link and a payment link cannot.
+  function withSource(href, product, intent) {
+    if (!/^https:\/\//i.test(href) || /(^|\.)stripe\.com\//i.test(href)) return href;
     const params = new URLSearchParams({ src: 'pricing_page', product, intent });
-    return `${base}?${params.toString()}`;
+    return href + (href.includes('?') ? '&' : '?') + params.toString();
   }
 
   // Which cards the public page shows. Partner-only is the intentional default
@@ -978,7 +983,7 @@
     countEl.setAttribute('data-tooltip', tip);
   }
 
-  function applyPricing(stage, muster, partner, visible) {
+  function applyPricing(stage, muster, partner, visible, cta) {
     const isSeed = stage === 'seed';
     const intent = isSeed ? 'seed_signup' : 'fruit_signup';
 
@@ -996,17 +1001,20 @@
     badge.classList.toggle('fruit', !isSeed);
     document.getElementById('partnerLock').hidden = !isSeed;
 
-    document.getElementById('musterCta').href = MUSTER_SELF_SERVE_PAUSED
-      ? MUSTER_PAUSED_CONTACT_HREF
-      : (isSeed ? STRIPE_MUSTER_SEED_PAYMENT_LINK : STRIPE_MUSTER_FRUIT_PAYMENT_LINK);
-    document.getElementById('partnerCta').href = buildGhlUrl(GHL_PARTNER_SIGNUP_URL, 'muster_partner', intent);
+    const hrefs = resolveCta(cta, stage);
+    document.getElementById('musterCta').href = withSource(hrefs.muster, 'muster', intent);
+    const partnerCta = document.getElementById('partnerCta');
+    partnerCta.href = withSource(hrefs.partner, 'muster_partner', intent);
+    partnerCta.setAttribute('data-tooltip', /^mailto:/i.test(hrefs.partner)
+      ? 'Opens an email to our team to start your CavScope Partner subscription.'
+      : 'Opens a short form so you can start your CavScope Partner subscription.');
+    document.getElementById('enterpriseCta').href = hrefs.enterprise;
 
     applyVisibility(visible || DEFAULT_VISIBLE);
   }
 
   async function initPricing() {
-    document.getElementById('enterpriseCta').href = ENTERPRISE_CONTACT_HREF;
-    applyPricing('seed', null, null, DEFAULT_VISIBLE); // static Partner-only fallback
+    applyPricing('seed', null, null, DEFAULT_VISIBLE, null); // static Partner-only fallback, every button to sales
 
     if (!window.supabase || !window.supabase.createClient) return;
     try {
@@ -1020,7 +1028,7 @@
       const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, detectSessionInUrl: false } });
       const { data, error } = await sb.rpc('cavscope_public_pricing');
       if (error || !data) return;
-      applyPricing(data.current_stage, data.muster, data.muster_partner, data.visible || DEFAULT_VISIBLE);
+      applyPricing(data.current_stage, data.muster, data.muster_partner, data.visible || DEFAULT_VISIBLE, data.cta);
     } catch {
       // Network or RLS failure: the static Partner-only fallback rendered above stays.
     }

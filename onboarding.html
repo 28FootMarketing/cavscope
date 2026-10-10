@@ -562,7 +562,7 @@
   // ---------- Step 3: website verification ----------
   function renderWebsiteStep() {
     const w = state.website || {};
-    const tag = `<meta name="muster-verification" content="${w.verification_token || ''}">`;
+    const tag = `<meta name="cavscope-verification" content="${w.verification_token || ''}">`;
     return `
       <div class="step-card">
         <h2>Step 3 of 7 — Verify you own the website</h2>
