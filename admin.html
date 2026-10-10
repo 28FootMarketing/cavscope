@@ -2886,7 +2886,21 @@
       // page: the registry is the editable view, but the flags still exist.
       return intro + panel('Flag editor unavailable', '', sideErrorPanel('registry', 'the flag registry, so the switches are not shown')) + flagListReadOnly();
     }
-    return intro + flagRegistry(EXTRA.registry);
+    return intro + flagRegistry(EXTRA.registry) + flagChangesPanel();
+  }
+
+  // Every switch on this page changes what some or all tenants can do, so each change is recorded
+  // with who made it. Changes before 2026-10-10 were not.
+  function flagChangesPanel() {
+    const rows = DATA.flag_changes || [];
+    return panel('Recent flag changes', 'The last fifteen changes to defaults, kill switches, plan gates, overrides and the flags themselves', rows.length ? `<div class="rows">${rows.map((r) => `
+      <div class="status" data-tooltip="${escapeHtml(stamp(r.at))}" tabindex="0">
+        <span class="dot ${/KILLED$/.test(r.detail || '') ? 'bad' : 'ok'}" aria-hidden="true"></span>
+        <span class="status-name">${escapeHtml(String(r.action || '').replace('Feature flag ', ''))} · ${escapeHtml(r.target || '')}</span>
+        <span class="status-val">${escapeHtml(r.detail || '')} · by ${escapeHtml(r.actor || 'unknown')} · ${escapeHtml(ago(r.at))}</span>
+      </div>`).join('')}</div>` : '<div class="empty">No flag changes recorded yet.</div>', {
+      tip: 'Changes made before 2026-10-10 were not recorded; an override carries its own reason and who set it for as long as it exists.',
+    });
   }
 
   function flagListReadOnly() {
@@ -2964,8 +2978,8 @@
             </div>
           </div>
           <div>
-            <select class="inline-select" data-act="flag-plan" data-key="${key}" aria-label="Plan gate for ${key}"
-                    data-tooltip="The lowest plan that gets this flag. An org below it resolves off whatever the default says; a per-org override still beats the plan gate.">${planOpts(f.plan_minimum)}</select>
+            <select class="inline-select" data-act="flag-plan" data-key="${key}" aria-label="Plan gate for ${key}" ${wired ? '' : 'disabled'}
+                    data-tooltip="${wired ? 'The lowest plan that gets this flag. An org below it resolves off whatever the default says; a per-org override still beats the plan gate.' : 'Disabled: nothing reads this key, so a plan gate on it would change nothing. The database refuses it too.'}">${planOpts(f.plan_minimum)}</select>
           </div>
           <div><label class="switch" data-tooltip="${wired ? 'Default on/off for every org, before plan gates and overrides.' : 'Disabled: nothing reads this key, so this switch would be theatre.'}" tabindex="0">
             <input type="checkbox" data-act="flag-default" data-key="${key}" aria-label="Default for ${key}"${f.default_enabled ? ' checked' : ''} ${wired ? '' : 'disabled'}><span class="slider"></span></label></div>
@@ -2996,7 +3010,8 @@
                               data-tooltip="Removes this exception. The target falls back to the plan gate and the default immediately.">Revoke</button></td>
                 </tr>`).join('')}</tbody></table>` : '<div class="muted" style="font-size:12px; margin-bottom:10px;">No overrides on this flag.</div>'}
 
-              <form data-act="override-add" data-key="${key}" class="form-grid" style="grid-template-columns:1.4fr 0.7fr 2fr 1fr auto; margin-top:12px; border-top:1px solid var(--surface-border); padding-top:12px;">
+              ${wired ? '' : `<div class="muted" style="font-size:12px; margin-top:12px; border-top:1px solid var(--surface-border); padding-top:12px;" data-tooltip="An override on a flag nothing reads would change nothing, so the database refuses it. Existing ones can still be revoked above." tabindex="0">Overrides cannot be added: nothing reads this key.</div>`}
+              ${wired ? `<form data-act="override-add" data-key="${key}" class="form-grid" style="grid-template-columns:1.4fr 0.7fr 2fr 1fr auto; margin-top:12px; border-top:1px solid var(--surface-border); padding-top:12px;">
                 <div class="field">
                   <label>Organization</label>
                   <select name="org" required aria-label="Organization" data-tooltip="Which tenant this exception applies to. An override beats both the plan gate and the default, in either direction.">
@@ -3019,7 +3034,7 @@
                   <input type="date" name="expires" aria-label="Override expiry date" value="${escapeHtml(od.expires || '')}" data-tooltip="Optional. An override with an expiry cleans itself up; one without stays until someone revokes it by hand.">
                 </div>
                 <button class="btn sm" type="submit" data-tooltip="Saves the exception. It takes effect on this org's next request -- no deploy, no restart.">Add override</button>
-              </form>
+              </form>` : ''}
 
               ${wired ? '' : `<div style="margin-top:12px;"><button class="btn danger sm" type="button" data-act="flag-delete" data-key="${key}"
                   data-tooltip="Removes the flag and every override on it. Only offered because nothing reads this key -- the database refuses to delete a flag that is enforced, since has_flag would then answer false for it everywhere.">Delete this flag</button></div>`}
