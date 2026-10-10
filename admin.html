@@ -1611,13 +1611,14 @@
   // Loaded on demand rather than in cavscope_admin_console(): the index is its own
   // RPC and the markdown is a second one, so opening the section does not pull
   // every report's prose to render a list.
+  const SITREP_LIMIT = 500; // the most cavscope_admin_sitreps will return; it was 200 against 266 reports on file
   let SITREPS = null;      // index, or null until first load
   let sitrepOpen = null;   // the full report being read, or null
   let sitrepBusy = false;
 
   async function loadSitreps(force) {
     if (SITREPS && !force) return;
-    const { data, error } = await sb.rpc('cavscope_admin_sitreps', { p_limit: 200 });
+    const { data, error } = await sb.rpc('cavscope_admin_sitreps', { p_limit: SITREP_LIMIT });
     if (error) throw error;
     SITREPS = data || [];
   }
@@ -1891,10 +1892,11 @@
         <div data-tooltip="deterministic-v1 is written by a template in Postgres from the findings. An LLM generator means prose a model wrote under citation checks -- worth knowing before quoting it to a client." tabindex="0"><small class="muted" style="display:block;">Generator</small><b>${escapeHtml(r.generator || 'unknown')}</b></div>
         <div data-tooltip="The engine build that produced the scan behind this report. Findings are only comparable across scans on the same version." tabindex="0"><small class="muted" style="display:block;">Engine</small><b>${escapeHtml(r.engine_version || 'unknown')}</b></div>
         <div><small class="muted" style="display:block;">Generated</small><b data-tooltip="${escapeHtml(stamp(r.generated_at))}" tabindex="0">${escapeHtml(ago(r.generated_at))}</b></div>
+        ${r.content_sha256 ? `<div data-tooltip="SHA-256 of the markdown exactly as stored: ${escapeHtml(r.content_sha256)}. A saved copy of the markdown hashes to this value; the PDFs print the same hash in their footer." tabindex="0"><small class="muted" style="display:block;">SHA-256</small><b class="num">${escapeHtml(String(r.content_sha256).slice(0, 12))}…</b></div>` : ''}
         <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn" type="button" data-act="sitrep-pdf-client" data-tooltip="Opens the print dialog with the client-facing briefing: plain-language findings and fixes, written for the person who owns the site. Choose 'Save as PDF'.">⤓ Client PDF</button>
           <button class="btn" type="button" data-act="sitrep-pdf-board" data-tooltip="Opens the print dialog with the company report: the board narrative, metrics, controls and evidence index, written for leadership. Choose 'Save as PDF'.">⤓ Company PDF</button>
-          <button class="btn" type="button" data-act="sitrep-export-md" data-tooltip="Downloads the report's markdown exactly as stored. Its SHA-256 matches the hash printed in the report, so a saved copy can be proven unaltered.">⤓ Markdown</button>
+          <button class="btn" type="button" data-act="sitrep-export-md" data-tooltip="Downloads the report's markdown exactly as stored. Its SHA-256 matches the hash shown above and printed in the PDFs' footer, so a saved copy can be proven unaltered. The markdown itself does not contain the hash.">⤓ Markdown</button>
           <button class="btn" type="button" data-act="sitrep-export-json" data-tooltip="Downloads the whole stored report as JSON: sections, citations, scores and hash. For pipelines that want the structure rather than the prose.">⤓ JSON</button>
         </div>
       </div>
@@ -1923,8 +1925,9 @@
     const rows = (SITREPS || []).filter((r) =>
       inOrg(r.organization_id) && matches(r.website, r.url, r.organization, r.headline));
 
-    return head('Reports', 'Every SITREP this platform has generated, newest first. A scan writes one about a second after it finishes.') +
-      panel('Generated SITREPs', `${rows.length} shown`, rows.length ? `<table class="tbl">
+    const capped = SITREPS.length >= SITREP_LIMIT;
+    return head('Reports', 'Generated SITREPs, newest first. A completed HTTP scan writes one about a second after it finishes; a browser-engine scan does not write one yet, so its findings are not in any report.') +
+      panel('Generated SITREPs', `${rows.length} shown${capped ? ` · the newest ${SITREP_LIMIT}; older reports are not listed` : ''}`, rows.length ? `<table class="tbl">
         <thead><tr>
           <th>Report</th>
           <th>Organization</th>
@@ -1944,7 +1947,7 @@
           <td class="num muted">${num(r.citations)}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(r.generated_at))}" tabindex="0">${escapeHtml(ago(r.generated_at))}</td>
         </tr>`).join('')}</tbody></table>`
-        : '<div class="empty">No reports match. A SITREP is written after every completed scan.</div>');
+        : '<div class="empty">No reports match. A SITREP is written after every completed HTTP scan.</div>');
   }
 
   // ---- audit runner -------------------------------------------------------
