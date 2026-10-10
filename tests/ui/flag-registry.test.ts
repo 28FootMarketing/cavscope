@@ -199,8 +199,9 @@ test("the console disables the switches on a flag nothing reads", () => {
   assert.ok(start > 0 && end > start, "flagRegistry() not found in admin.html");
   const panel = admin.slice(start, end);
   assert.ok(panel.includes("read by nothing"), "an unwired flag must be labelled in words");
-  // Both switches carry the wired-conditional disabled attribute.
-  assert.equal((panel.match(/\$\{wired \? '' : 'disabled'\}/g) || []).length, 2);
+  // The default switch, the kill switch and the plan gate carry the wired-conditional disabled
+  // attribute (the plan gate joined them 2026-10-10, when the database started refusing it too).
+  assert.equal((panel.match(/\$\{wired \? '' : 'disabled'\}/g) || []).length, 3);
   // And deletion is only offered for a flag nothing reads.
   assert.match(panel, /\$\{wired \? '' : `<div[^`]*data-act="flag-delete"/);
 });
