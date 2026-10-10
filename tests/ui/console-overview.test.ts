@@ -51,3 +51,10 @@ test("migration: each edit is asserted to apply once, and the console uses cavsc
   assert.match(mig, /cavscope_public_pricing\(\)'\);/);
   assert.match(mig, /'billing'|''billing''/);
 });
+
+test("the not-instrumented panels name the cavscope schema, never the retired one", () => {
+  const stubs = html.slice(html.indexOf("const STUBS = {"), html.indexOf("function renderStub("));
+  assert.doesNotMatch(stubs, /muster\./);
+  assert.match(stubs, /cavscope\.organizations/);
+  assert.match(stubs, /Client Access/);
+});
