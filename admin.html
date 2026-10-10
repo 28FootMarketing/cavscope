@@ -1405,7 +1405,7 @@
         <thead><tr>
           <th>Organization</th>
           <th data-tooltip="The plan drives website limits, scan cadence and every plan-gated feature flag. The small label beside it is the commercial stage it is priced at." tabindex="0">Plan</th>
-          <th data-tooltip="Members with a seat, and registered websites." tabindex="0">Members / Sites</th>
+          <th data-tooltip="Members with a seat, then registered websites out of the plan's website limit." tabindex="0">Members / Sites</th>
           <th data-tooltip="Open critical and high findings across all of this tenant's sites." tabindex="0">Open Risk</th>
           <th data-tooltip="The posture score of this tenant's WORST site — a portfolio is only as assured as its weakest thing." tabindex="0">Worst Score</th>
           <th data-tooltip="When any site in this organization last finished a scan." tabindex="0">Last Scan</th>
@@ -1414,9 +1414,11 @@
         <tbody>${rows.map((o) => `<tr>
           <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(o.name))}</span>
             <span><b>${escapeHtml(o.name)}</b>${o.is_admin_sandbox ? ' <span class="pill medium" data-tooltip="The internal organization ad-hoc URL scans are parked in. Nobody\'s data; not counted as a tenant." tabindex="0">sandbox</span>' : ''}
-            <br><small class="muted">${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${escapeHtml(o.onboarding_status)}</small></span></span></td>
+            <br><small class="muted">${escapeHtml(o.jurisdiction || 'no jurisdiction')} · ${escapeHtml(o.onboarding_status)} · joined ${escapeHtml(ago(o.created_at))}</small>
+            ${o.managed_by ? `<br><small class="muted" data-tooltip="A client organization created by this Partner. It inherits the Partner's plan when created and is managed from the Partner's workspace." tabindex="0">Client of ${escapeHtml(o.managed_by)}</small>` : ''}
+            ${o.client_orgs > 0 ? `<br><small class="muted" data-tooltip="Client organizations this Partner has created. Its allowance is set under Client Access." tabindex="0">${num(o.client_orgs)} client organization${o.client_orgs === 1 ? '' : 's'}</small>` : ''}</span></span></td>
           <td>${planSelect(o)} <small class="muted">${escapeHtml(o.stage || '')}</small></td>
-          <td class="muted num">${num(o.members)} / ${num(o.websites)}</td>
+          <td class="muted num" data-tooltip="${num(o.members)} member${o.members === 1 ? '' : 's'}; ${num(o.websites)} registered website${o.websites === 1 ? '' : 's'} of the ${num(o.website_limit)} this plan allows." tabindex="0">${num(o.members)} / ${num(o.websites)} of ${num(o.website_limit)}</td>
           <td>${o.open_critical ? `<span class="pill critical">${o.open_critical} critical</span> ` : ''}${o.open_high ? `<span class="pill high">${o.open_high} high</span>` : (!o.open_critical ? '<span class="muted">clear</span>' : '')}</td>
           <td>${o.worst_score == null ? '<span class="muted">—</span>' : `<span class="score ${band(o.worst_score)}">${o.worst_score}</span>`}</td>
           <td class="muted num" data-tooltip="${escapeHtml(stamp(o.last_scan_at))}" tabindex="0">${escapeHtml(ago(o.last_scan_at))}</td>
@@ -3154,7 +3156,11 @@
     const { org, name, current } = sel.dataset;
     const next = sel.value;
     if (next === current) return;
-    if (!window.confirm(`Move ${name} from ${current} to ${next}?\n\nPlan-gated features switch on or off for every member of this organization on their next request, and plan-implied revenue changes with it.`)) { render(); return; }
+    const row = (DATA.organizations || []).find((x) => String(x.id) === String(org)) || {};
+    const newLimit = (DATA.plan_limits || {})[next];
+    const over = newLimit != null && row.websites > newLimit
+      ? `\n\n${name} has ${row.websites} registered websites and ${next} allows ${newLimit}. Nothing is deleted or disabled, but it cannot add another until it is under the limit.` : '';
+    if (!window.confirm(`Move ${name} from ${current} to ${next}?\n\nPlan-gated features switch on or off for every member of this organization on their next request, and plan-implied revenue changes with it.${over}`)) { render(); return; }
     await write('cavscope_admin_set_plan', { p_organization_id: Number(org), p_plan: next }, `${name} is now on ${next}.`);
   }
 
