@@ -1003,7 +1003,7 @@
       case 'client-access': return (k.organizations || {}).total;
       case 'users': return (DATA.users || []).length;
       case 'website-assurance': return (DATA.websites || []).length;
-      case 'audit-queue': return (DATA.recent_scans || []).length;
+      case 'audit-queue': return ((k.assessments || {}).queued || 0) + ((k.assessments || {}).running || 0);
       case 'reports': return SITREPS && !SITREPS.error ? SITREPS.length : null;
       case 'system-health': return ((DATA.system || {}).incidents || {}).open;
       case 'settings': return (DATA.flags || []).length;
@@ -1241,11 +1241,11 @@
       <tbody>${rows.map((r) => `<tr>
         <td><span class="org-cell"><span class="avatar-sq" aria-hidden="true">${escapeHtml(initials(r.organization))}</span>${escapeHtml(r.organization)}</span></td>
         <td class="muted">${escapeHtml(r.website || '—')}</td>
-        <td class="muted">${escapeHtml(r.trigger || '—')}</td>
+        <td class="muted">${escapeHtml(r.trigger || '—')}${r.engine_version ? `<br><small data-tooltip="The engine that ran this scan. http_native is the edge-function engine; browser loads the page in Chromium." tabindex="0">${escapeHtml(r.engine_version)}</small>` : ''}</td>
         <td>${r.status === 'complete'
             ? '<span class="pill ok">complete</span>'
             : r.status === 'failed'
-              ? '<span class="pill critical">failed</span>'
+              ? `<span class="pill critical" data-tooltip="${escapeHtml(r.error || 'The engine did not record a reason.')}" tabindex="0">failed</span>`
               : `<span class="pill medium">${escapeHtml(r.status)}</span>`}</td>
         <td>${r.score == null ? '<span class="muted">—</span>' : `<span class="score ${band(r.score)}">${r.score}</span>`}</td>
         <td class="muted num" data-tooltip="${escapeHtml(stamp(r.at))}" tabindex="0">${escapeHtml(ago(r.at))}</td>
@@ -1275,8 +1275,8 @@
         tip: 'Open findings from cavscope-watchdog’s own health checks. The watchdog closes an incident when its check comes back clear, so this count can go down — that is what makes it an alarm and not a counter.',
       },
       {
-        name: 'Scan Queue', state: (q.queued > 20 || (q.oldest_queued_at && Date.now() - new Date(q.oldest_queued_at).getTime() > 30 * 60000)) ? 'warn' : 'ok',
-        val: `${num(q.queued)} queued · ${num(q.running)} running`,
+        name: 'Scan Queue', state: (q.stalled > 0 || q.queued > 20 || (q.oldest_queued_at && Date.now() - new Date(q.oldest_queued_at).getTime() > 30 * 60000)) ? 'warn' : 'ok',
+        val: `${num(q.queued)} queued · ${num(q.running)} running${q.stalled ? ` · ${num(q.stalled)} stalled` : ''}`,
         tip: q.oldest_queued_at ? `Oldest item queued ${ago(q.oldest_queued_at)}.` : 'Nothing is waiting. The engine drains the queue on the scan schedule.',
       },
       {
@@ -2194,10 +2194,11 @@
       panel('Audit pasted HTML', 'For a page CavScope does not scan', `<p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px;">Paste a page's HTML or upload the file, run the engine's page rules on it, apply fixes and download the corrected HTML. Nothing is stored and nothing is written to any register.</p>
         <a class="btn" href="/audit/html" data-tooltip="Opens the HTML audit. Super admins always have it; a workspace gets it only when the html_audit flag is turned on for it under Feature Flags.">Open the HTML audit</a>`) +
       `<div class="row b" style="grid-template-columns: 1.55fr 1fr;">
-        ${panel('Recent scans', 'Most recent runs across every organization', recentScans(50))}
-        ${panel('Queue depth', 'Live engine state', `<div class="rows">
+        ${panel('Recent scans', 'The 50 most recent runs across every organization', recentScans(50))}
+        ${panel('Queue depth', 'Live engine state, platform-wide', `<div class="rows">
           <div class="status" data-tooltip="Waiting for the next scheduled scan run to pick them up." tabindex="0"><span class="dot ${q.queued > 20 ? 'warn' : 'ok'}"></span><span class="status-name">Queued</span><span class="status-val">${num(q.queued)}</span></div>
           <div class="status" data-tooltip="Currently executing on the engine." tabindex="0"><span class="dot ok"></span><span class="status-name">Running</span><span class="status-val">${num(q.running)}</span></div>
+          <div class="status" data-tooltip="Scans queued or running for more than 30 minutes. A scan takes seconds to a few minutes, so any number above zero means an engine run died or is hung and the scan will not finish on its own." tabindex="0"><span class="dot ${q.stalled ? 'bad' : 'ok'}"></span><span class="status-name">Stalled</span><span class="status-val">${num(q.stalled)}</span></div>
           <div class="status" data-tooltip="Completed successfully in the last 24 hours." tabindex="0"><span class="dot ok"></span><span class="status-name">Completed (24h)</span><span class="status-val">${num(a.complete_24h)}</span></div>
           <div class="status" data-tooltip="Failed in the last 24 hours. A failed scan produces no findings, so a site that only fails silently keeps its old score." tabindex="0"><span class="dot ${a.failed_24h ? 'bad' : 'ok'}"></span><span class="status-name">Failed (24h)</span><span class="status-val">${num(a.failed_24h)}</span></div>
           <div class="status" data-tooltip="Completed in the last 7 days." tabindex="0"><span class="dot ok"></span><span class="status-name">Completed (7d)</span><span class="status-val">${num(a.complete_7d)}</span></div>
