@@ -2461,8 +2461,9 @@
           <div class="notice" style="margin-top:14px;">
             <b>This is not billed revenue.</b>
             Nothing in this platform reads Stripe invoices. The figure is each organization's plan multiplied by that
-            plan's price at its commercial stage. <code>customer.subscription.deleted</code> is unhandled, so a customer
-            who cancelled in Stripe still prices in here until someone changes their plan by hand.
+            plan's price at its commercial stage. A cancellation downgrades the plan once Stripe delivers
+            <code>customer.subscription.deleted</code> to the webhook, which has not been seen live yet, so until the
+            first real cancellation a customer who cancelled in Stripe may still price in here.
           </div>`)}
         ${panel('Pricing surface', 'What the public pricing page is showing buyers right now. Both controls take effect on the public page immediately, with no deploy.', `
           <div class="runner-row" style="margin-bottom:12px;">
@@ -2494,7 +2495,57 @@
             <span class="status-name">Self-serve checkout</span>
             <span class="status-val">${paused ? 'paused — sales-led' : 'live'}</span>
           </div>`)}
-      </div>`;
+      </div>` + ctaPanel(pricing.cta || {}, stage, tiers) + pricingChangesPanel();
+  }
+
+  // Where the public pricing page sends a buyer. cavscope_admin_set_checkout_url has existed
+  // since the pricing controls were built and nothing in the console called it, so these were
+  // changeable only by SQL while this page claimed to show what the public site offers. Every
+  // value is a link a buyer follows, or an address they write to, so a save asks first.
+  const CTA_ROWS = [
+    ['muster_seed_checkout_url',   'CavScope checkout, Seed',  'muster',         'seed'],
+    ['muster_fruit_checkout_url',  'CavScope checkout, Fruit', 'muster',         'fruit'],
+    ['muster_contact_url',         'CavScope sales contact',   'muster',         null],
+    ['partner_seed_checkout_url',  'Partner checkout, Seed',   'muster_partner', 'seed'],
+    ['partner_fruit_checkout_url', 'Partner checkout, Fruit',  'muster_partner', 'fruit'],
+    ['partner_intake_url',         'Partner intake form',      'muster_partner', null],
+    ['partner_contact_url',        'Partner sales contact',    'muster_partner', null],
+    ['enterprise_contact_url',     'Enterprise sales contact', 'enterprise',     null],
+  ];
+
+  function ctaPanel(cta, stage, tiers) {
+    const shown = new Set((tiers || []).filter((t) => t.visible).map((t) => t.key));
+    const rows = CTA_ROWS.map(([key, label, tier, rowStage]) => {
+      const cur = cta[key] || '';
+      const draft = (drafts['cta:' + key] || {}).url;
+      const value = draft != null ? draft : cur;
+      const needed = rowStage && rowStage === stage && shown.has(tier) && !cur;
+      return `<tr>
+        <td><b>${escapeHtml(label)}</b>${needed ? ' <span class="pill high" data-tooltip="The public page is showing this tier at the current stage and this has no link, so self-serve checkout cannot be turned on until it is set." tabindex="0">needed</span>' : ''}<br><small class="muted num">${escapeHtml(key)}</small></td>
+        <td><form data-act="cta-set" data-key="${escapeHtml(key)}" data-label="${escapeHtml(label)}" style="display:flex; gap:8px; align-items:center;">
+          <input type="text" name="url" aria-label="${escapeHtml(label)}" value="${escapeHtml(value)}" placeholder="https://… or mailto:…" style="flex:1; min-width:220px;"
+                 data-tooltip="An absolute https link to a real host, or a mailto: address. Leave empty to clear it. A Partner checkout link must be its own Stripe Payment Link carrying metadata tier=muster_partner; the base-tier link is refused.">
+          <button class="btn sm" type="submit" ${writing ? 'disabled' : ''} data-tooltip="Saves this destination. The public pricing page uses it immediately, with no deploy. Asks first, and the change is recorded below.">Save</button>
+        </form></td>
+      </tr>`;
+    }).join('');
+    return panel('Checkout and contact destinations', 'Where each button on the public pricing page goes', `<table class="tbl">
+      <thead><tr><th>Destination</th><th data-tooltip="The current value. Edit and save to change it." tabindex="0">Link or address</th></tr></thead>
+      <tbody>${rows}</tbody></table>`, {
+      tip: 'Checkout links are Stripe Payment Links. Each carries the tier and stage metadata the billing webhook reads; a link without it is refused by the webhook with a 400.',
+    });
+  }
+
+  function pricingChangesPanel() {
+    const rows = DATA.pricing_changes || [];
+    return panel('Recent pricing changes', 'The last ten changes to what buyers see or where they pay', rows.length ? `<div class="rows">${rows.map((r) => `
+      <div class="status" data-tooltip="${escapeHtml(stamp(r.at))}" tabindex="0">
+        <span class="dot ok" aria-hidden="true"></span>
+        <span class="status-name">${escapeHtml(r.action)}${r.target && r.target !== 'public pricing' ? ' · ' + escapeHtml(r.target) : ''}</span>
+        <span class="status-val">${escapeHtml(r.detail || '')} · by ${escapeHtml(r.actor || 'unknown')} · ${escapeHtml(ago(r.at))}</span>
+      </div>`).join('')}</div>` : '<div class="empty">No pricing changes recorded yet.</div>', {
+      tip: 'Changes made before 2026-10-10 were not recorded.',
+    });
   }
 
   function renderIntegrations() {
@@ -2814,6 +2865,7 @@
     const act = form.getAttribute('data-act');
     if (act === 'override-add') return 'override:' + form.getAttribute('data-key');
     if (act === 'flag-create') return 'create';
+    if (act === 'cta-set') return 'cta:' + form.getAttribute('data-key');
     return null;
   }
 
@@ -3262,6 +3314,17 @@
     await write('cavscope_admin_set_pricing_stage', { p_stage: next }, `Public pricing stage set to ${next}.`);
   }
 
+  async function setCtaDestination(form) {
+    const key = form.dataset.key, label = form.dataset.label;
+    const next = String(new FormData(form).get('url') || '').trim();
+    const cur = (((DATA.pricing || {}).cta) || {})[key] || '';
+    if (next === cur) { delete drafts['cta:' + key]; render(); return; }
+    const to = next ? next : 'nothing (the button falls back to sales)';
+    if (!window.confirm(`Change "${label}"?\n\nFrom: ${cur || 'nothing'}\nTo: ${to}\n\nThe public pricing page uses it immediately. Buyers who follow it land here.`)) { render(); return; }
+    const saved = await write('cavscope_admin_set_checkout_url', { p_key: key, p_url: next || null }, `${label} saved.`);
+    if (saved) { delete drafts['cta:' + key]; render(); }
+  }
+
   async function setPricingVisibility(box) {
     const { tier, name } = box.dataset;
     const on = box.checked;
@@ -3519,6 +3582,7 @@
     else if (kind === 'flag-create') createFlag(form);
     else if (kind === 'imp-start') startImpersonation();
     else if (kind === 'loc-set') setSiteLocation();
+    else if (kind === 'cta-set') setCtaDestination(form);
   });
 
   document.addEventListener('change', (e) => {
