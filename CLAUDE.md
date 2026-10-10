@@ -347,10 +347,13 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   metered anywhere in the schema (the tile reports issued/active/recently-used keys instead), and
   `revenue` is **plan-implied**, not billed -- nothing reads Stripe invoices, and
   a cancelled customer stops pricing in once `customer.subscription.deleted` is handled (see the
-  Stripe notes below; until the endpoint is subscribed to that event, one still prices in). Three nav sections (Workspaces, AI Readiness, Domain Monitor) render
+  Stripe notes below; until the endpoint is subscribed to that event, one still prices in). Two nav sections (Workspaces, Domain Monitor) render
   an explicit "not instrumented" panel naming what would have to exist first, because the schema
   cannot answer them; if you build one of those, replace the stub, don't fill it with a plausible
-  table. **Reports stopped being one of them on 2026-09-17**, backed by
+  table. **AI Readiness stopped being a stub on 2026-10-10**: its panel said no assessment existed,
+  which had been false since the nine-check AIO audit shipped on 2026-09-23. It is now backed by
+  `public.cavscope_admin_aio_overview()`, which judges every site's latest completed HTTP scan the way
+  the workspace's AIO view does (a check passes only if its rule could have fired). **Reports stopped being one of them on 2026-09-17**, backed by
   `muster_admin_sitreps()` and `muster_admin_sitrep()` (migration `20260917070953`): an index
   across every tenant, and the report body fetched only for the one opened, because `content_md`
   is a few KB each. The markdown is rendered **verbatim in a `<pre>`, never parsed** -- so the

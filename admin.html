@@ -854,7 +854,7 @@
       <div class="strip-badge" aria-hidden="true">▤</div>
       <div class="strip-links">
         <a href="#website-assurance" data-tooltip="Every registered site, its posture score and when it was last scanned.">Website Assurance</a>
-        <a href="#ai-readiness" data-tooltip="Readiness for AI systems and agent governance. Not instrumented in this schema yet.">AI Readiness</a>
+        <a href="#ai-readiness" data-tooltip="How readable each site is to AI assistants and search crawlers: nine automated checks from its latest scan.">AI Readiness</a>
         <a href="#audit-queue" data-tooltip="Every scan the engine has run, newest first.">Audit</a>
         <a href="#organizations" data-tooltip="The full tenant roster.">Assurance</a>
         <a href="#compliance" data-tooltip="Control effectiveness across every scanned site.">Compliance</a>
@@ -970,7 +970,7 @@
 
   // ---- sections -----------------------------------------------------------
   //
-  // Each nav entry names a renderer. The four marked `stub: true` are surfaces
+  // Each nav entry names a renderer. The two marked `stub: true` are surfaces
   // the design calls for that this schema genuinely cannot answer yet; they
   // render what is missing and where the nearest real thing lives, rather than
   // a plausible-looking screen. That is deliberate -- a console that invents a
@@ -985,7 +985,7 @@
     { id: 'support',           icon: '◐', label: 'Support Access',     tip: 'See what one user sees, read-only, for a bounded time and a stated reason the tenant can read. Every session is logged.' },
     { id: 'audit-queue',       icon: '▤', label: 'Audit Queue',        tip: 'Scans the engine has run, with status, trigger and the resulting site score.' },
     { id: 'website-assurance', icon: '◍', label: 'Website Assurance',  tip: 'Every registered site, its posture score, open findings and verification state.' },
-    { id: 'ai-readiness',      icon: '◈', label: 'AI Readiness',       tip: 'Sold on the landing page; no readiness assessment tables exist in this schema yet.', stub: true },
+    { id: 'ai-readiness',      icon: '◈', label: 'AI Readiness',       tip: 'How readable each site is to AI assistants and search crawlers: nine automated checks from its latest completed scan, across every customer and prospect site.' },
     { id: 'compliance',        icon: '▥', label: 'Compliance',         tip: 'Control effectiveness across every scanned site, plus the jurisdictions behind it.' },
     { id: 'domain-monitor',    icon: '◎', label: 'Domain Monitor',     tip: 'Continuous DNS, WHOIS and certificate watching. Not instrumented in this schema.', stub: true },
     { id: 'reports',           icon: '▧', label: 'Reports',            tip: 'Every SITREP this platform has generated, across every tenant, with the report itself.' },
@@ -2458,6 +2458,88 @@
     });
   }
 
+  // ---- ai readiness ---------------------------------------------------------
+  //
+  // Nine automated checks of how readable a site is to AI assistants and search crawlers, one
+  // engine rule per check, read from each site's latest completed HTTP scan by
+  // cavscope_admin_aio_overview(). It is the workspace's AIO view across every site, judged the
+  // same way: a check is a pass only if its rule could have fired (rule active, engine at or past
+  // the release that first emitted it, homepage actually read); otherwise it is "not assessed" and
+  // out of the index. This is readiness, not outcome: whether an assistant cites a site is decided
+  // by its provider and no provider publishes a test for it, so citability is never scored.
+  const AIO_PILLAR = {
+    crawl: 'Crawlability & rendering', entity: 'Entity clarity', schema: 'Structured data (JSON-LD)',
+    llms: 'LLM surface (/llms.txt)', aibots: 'AI crawler policy',
+  };
+
+  function aioCell(state, tip) {
+    const tt = escapeHtml(tip);
+    return state === 'pass' ? `<span class="pill ok" data-tooltip="${tt}" tabindex="0">pass</span>`
+      : state === 'fail' ? `<span class="pill high" data-tooltip="${tt}" tabindex="0">fail</span>`
+      : `<span class="muted" data-tooltip="${tt}" tabindex="0">n/a</span>`;
+  }
+
+  function renderAiReadiness() {
+    const intro = head('AI Readiness', 'How readable each site is to AI assistants and search crawlers: nine automated checks from its latest completed scan. This measures readiness, not whether any assistant cites the site.');
+    if (sideError('aio')) return intro + panel('AI Readiness unavailable', '', sideErrorPanel('aio', 'the AI-readiness checks'));
+    const rules = (EXTRA.aio || {}).rules || [];
+    const all = ((EXTRA.aio || {}).sites || []).filter((x) => inOrg(x.organization_id) && matches(x.website, x.url, x.organization));
+    const customers = all.filter((x) => !x.sandbox), prospects = all.filter((x) => x.sandbox);
+
+    const byRule = (sites) => rules.map((r) => {
+      let pass = 0, fail = 0, na = 0;
+      sites.forEach((x) => {
+        const c = (x.checks || []).find((k) => k.rule === r.rule);
+        if (!c || c.state === 'na') na++; else if (c.state === 'pass') pass++; else fail++;
+      });
+      return { r, pass, fail, na };
+    });
+
+    const matrix = (title, sites, sub) => panel(title, sub, sites.length ? `<table class="tbl">
+      <thead><tr>
+        <th>Check</th>
+        <th data-tooltip="The area of AI readiness this check belongs to." tabindex="0">Area</th>
+        <th data-tooltip="Sites where the check ran and found nothing wrong." tabindex="0">Pass</th>
+        <th data-tooltip="Sites with an open finding for this check." tabindex="0">Fail</th>
+        <th data-tooltip="Sites where the check could not run: the rule is held inactive, the scan predates the release that added it, or the engine could not read the homepage. These are never counted as passes." tabindex="0">Not assessed</th>
+      </tr></thead>
+      <tbody>${byRule(sites).map(({ r, pass, fail, na }) => `<tr>
+        <td><b>${escapeHtml(r.title || r.rule)}</b><br><small class="muted num">${escapeHtml(r.rule)}${r.active ? '' : ' · inactive'}</small></td>
+        <td class="muted">${escapeHtml(AIO_PILLAR[r.pillar] || r.pillar)}</td>
+        <td class="num">${num(pass)}</td>
+        <td class="num">${fail ? `<span class="pill high">${num(fail)}</span>` : '<span class="muted">0</span>'}</td>
+        <td class="num muted">${num(na)}</td>
+      </tr>`).join('')}</tbody></table>` : '<div class="empty">No sites match.</div>');
+
+    const siteTable = (sites) => sites.length ? `<table class="tbl">
+      <thead><tr>
+        <th>Site</th>
+        <th data-tooltip="Checks passed out of checks assessed. Not the security posture score, and not a promise about AI citation." tabindex="0">Index</th>
+        ${rules.map((r) => `<th data-tooltip="${escapeHtml((r.title || r.rule) + ' (' + r.rule + ')')}" tabindex="0">${escapeHtml(r.rule.replace('GOV-', 'G').replace('A11Y-', 'A'))}</th>`).join('')}
+        <th data-tooltip="The scan these results come from." tabindex="0">Scan</th>
+      </tr></thead>
+      <tbody>${sites.map((x) => `<tr>
+        <td><b>${escapeHtml(x.website)}</b><br><small class="muted">${escapeHtml(x.organization)}</small></td>
+        <td>${x.index == null
+            ? `<span class="muted" data-tooltip="${escapeHtml(x.scan_id ? (x.unread ? 'The engine could not read the homepage on this scan, so nothing was assessed.' : 'None of the checks could run on this scan.') : 'No completed scan yet.')}" tabindex="0">not assessed</span>`
+            : `<span class="score ${band(x.index)}" data-tooltip="${escapeHtml(x.passed + ' of ' + x.assessed + ' assessed checks pass')}" tabindex="0">${x.index}</span>`}</td>
+        ${rules.map((r) => { const c = (x.checks || []).find((k) => k.rule === r.rule) || { state: 'na' }; return `<td>${aioCell(c.state, c.state === 'fail' ? (c.detail || 'Open finding.') : c.state === 'pass' ? 'No open finding on the latest scan.' : 'Not assessed on this scan.')}</td>`; }).join('')}
+        <td class="muted num" data-tooltip="${escapeHtml(stamp(x.scanned_at))}" tabindex="0">${x.scan_id ? '#' + x.scan_id + ' · ' + escapeHtml(ago(x.scanned_at)) : '—'}</td>
+      </tr>`).join('')}</tbody></table>` : '<div class="empty">No sites match.</div>';
+
+    return intro +
+      `<div class="row b" style="grid-template-columns: 1fr 1fr;">
+        ${matrix('Customer sites', customers, `${customers.length} site${customers.length === 1 ? '' : 's'}`)}
+        ${matrix('Prospect audits', prospects, `${prospects.length} sandbox site${prospects.length === 1 ? '' : 's'}, parked by ad-hoc admin scans`)}
+      </div>` +
+      panel('Every site', `${all.length} shown, customers first, weakest first`, siteTable(all), {
+        tip: 'Each column is one check; hover a cell for the finding. A site with a low index and many failing checks is the one with the most to fix.',
+      }) +
+      `<div class="notice" style="max-width:820px; margin-top:16px;"><b>What this is not.</b>
+        It is not the site's security posture, and it does not say whether ChatGPT or any other assistant will cite the site: providers decide that and publish no test for it, so citability is never scored.
+        A check that could not run is "not assessed" and is left out of the index rather than counted as a pass. The checks read the homepage and a few well-known files from the public web surface only.</div>`;
+  }
+
   function renderBilling() {
     const rev = (DATA.kpi || {}).revenue || {};
     const pricing = DATA.pricing || {};
@@ -3124,16 +3206,6 @@
         which are a Partner's clients, and <strong>Client Access</strong> sets what each one is allowed to do.`,
       go: 'organizations',
     },
-    'ai-readiness': {
-      title: 'AI Readiness',
-      sub: 'Named on the landing page; not yet a module in this schema.',
-      body: `There is no AI-readiness assessment table, no scoring rules and no findings category for it — the scan engine
-        currently produces website assurance, accessibility and compliance evidence only. Shipping a readiness dashboard
-        before the assessment exists would mean inventing every number on it. What would have to land first: a rule set
-        in <code>cavscope.scan_rules</code>, a findings category the engine emits, and a score derivation to sit beside
-        <code>cavscope.posture_score</code>.`,
-      go: 'website-assurance',
-    },
     'domain-monitor': {
       title: 'Domain Monitor',
       sub: 'Continuous domain watching is not instrumented.',
@@ -3162,6 +3234,7 @@
     'audit-queue': renderAuditQueue,
     'website-assurance': renderWebsiteAssurance,
     compliance: renderCompliance,
+    'ai-readiness': renderAiReadiness,
     billing: renderBilling,
     integrations: renderIntegrations,
     'system-health': renderSystemHealth,
@@ -3221,6 +3294,8 @@
     // Which organizations are Partners (a client allowance is set) and how many
     // linked clients each has used. Not part of the console payload, so it is read here.
     partners: ['cavscope_admin_partner_allowances'],
+    // The nine AI-readiness checks on every site's latest completed scan, judged as the workspace judges them.
+    aio: ['cavscope_admin_aio_overview'],
   };
 
   async function fetchExtras() {

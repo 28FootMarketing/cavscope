@@ -65,6 +65,13 @@ function tooltipTags(html: string): string[] {
       if (c === ">") { end = j; break; }
     }
     if (end === -1) break;
+    // A tag has to contain the attribute that found it. If it does not, the attribute was built in a
+    // string outside any tag literal (a data-tooltip="..." held in a variable, say) and this scanner
+    // has lost its place; fail loudly instead of looping forever, as it did on 2026-10-10 (144 s,
+    // then "Invalid array length").
+    if (end < i) {
+      throw new Error(`data-tooltip at offset ${i} is not inside a tag literal; put the attribute in the tag template: ${html.slice(Math.max(0, i - 60), i + 40)}`);
+    }
     tags.push(html.slice(start, end + 1));
     i = html.indexOf("data-tooltip=", end);
   }
