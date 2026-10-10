@@ -1441,9 +1441,9 @@
   // cavscope_admin_set_flag / cavscope_admin_clear_flag_override, the same RPCs
   // the flag registry already calls to set or clear a per-org override --
   // this card just resolves and writes them per client instead of per flag.
-  // An unwired entitlement (client_management_enabled, commercial_use_enabled,
-  // custom_branding_enabled, partner_dashboard_enabled -- see Settings for
-  // why each one is unwired) renders the same disabled, "read by nothing"
+  // An unwired entitlement (commercial_use_enabled, custom_branding_enabled,
+  // partner_dashboard_enabled -- see Settings for why each one is unwired;
+  // client_management_enabled was wired 2026-10-02) renders the same disabled, "read by nothing"
   // treatment as the registry: a switch that changes nothing is worse than a
   // missing one.
   //
@@ -1507,15 +1507,26 @@
     const cur = mine.allowance == null ? '' : Number(mine.allowance);
     const list = PARTNER_ALLOWANCES.includes(cur) || cur === '' ? PARTNER_ALLOWANCES : PARTNER_ALLOWANCES.concat([cur]).sort((a, b) => a - b);
     const isClient = mine.managed_by_org_id != null;
+    const locked = isClient || !!o.is_admin_sandbox;
+    // An allowance only lets an organization create clients if client_management_enabled also
+    // resolves on for it. A Partner who was given an allowance on a plan below pro, or whose
+    // flag is overridden off, would otherwise see "5 client organizations" here and be refused
+    // when they tried to create one.
+    const cmFlag = ((EXTRA.registry || {}).flags || []).find((f) => f.key === 'client_management_enabled');
+    const cm = cmFlag ? resolvedForOrg(cmFlag, o) : null;
+    const gate = cur !== '' && cm && !cm.state
+      ? `<span class="pill high" data-tooltip="${escapeHtml(cmFlag.kill_switch ? 'The client_management_enabled kill switch is on, so nobody can create client organizations.' : cm.override ? 'client_management_enabled is overridden off for this organization.' : 'client_management_enabled is off for the ' + o.plan + ' plan (it starts at ' + (cmFlag.plan_minimum || 'pro') + '). Move the plan up or add an override below, or this organization will be refused when it tries to create a client.')}" tabindex="0">allowance set, creation is off</span>`
+      : '';
     return `<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
       <span data-tooltip="How many client organizations this organization may create under the Partner tier. Not a Partner means none, and the New client organization button stays hidden for them." tabindex="0"><b>Partner client allowance</b></span>
       <select class="inline-select" data-act="partner-allowance" data-org="${Number(o.id)}" data-name="${escapeHtml(o.name)}" data-current="${cur}" data-used="${Number(mine.used || 0)}"
-        ${isClient ? 'disabled' : ''} aria-label="Partner client allowance for ${escapeHtml(o.name)}"
-        data-tooltip="${isClient ? 'This organization is itself a client of a Partner, so it cannot be a Partner.' : 'Sets how many client organizations this organization may create. Asks before saving. It cannot go below the number already created.'}">
+        ${locked ? 'disabled' : ''} aria-label="Partner client allowance for ${escapeHtml(o.name)}"
+        data-tooltip="${o.is_admin_sandbox ? 'The internal sandbox is not a customer, so it cannot be a Partner.' : isClient ? 'This organization is itself a client of a Partner, so it cannot be a Partner.' : 'Sets how many client organizations this organization may create. Asks before saving. It cannot go below the number already created.'}">
         <option value=""${cur === '' ? ' selected' : ''}>Not a Partner</option>
         ${list.map((n) => `<option value="${n}"${n === cur ? ' selected' : ''}>${n} client organizations</option>`).join('')}
       </select>
       <small class="muted" data-tooltip="Client organizations this Partner has already created." tabindex="0">${Number(mine.used || 0)} used</small>
+      ${gate}
     </div>`;
   }
 
