@@ -31,7 +31,7 @@ test("Reports is a real section, not a stub", () => {
 test("the index and the report body are separate RPCs", () => {
   // content_md is a few KB per report; a console with hundreds of SITREPs must
   // not pull every one's markdown to render a list.
-  assert.match(reports, /sb\.rpc\('cavscope_admin_sitreps', \{ p_limit: 200 \}\)/);
+  assert.match(reports, /sb\.rpc\('cavscope_admin_sitreps', \{ p_limit: SITREP_LIMIT \}\)/);
   assert.match(reports, /sb\.rpc\('cavscope_admin_sitrep', \{ p_id: id \}\)/);
 });
 
