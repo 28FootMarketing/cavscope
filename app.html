@@ -1415,6 +1415,7 @@
       color: var(--text-muted);
       margin-bottom: 24px;
     }
+    .modal-dialog p.modal-desc a { color: var(--teal); text-decoration: underline; }
 
     .form-group {
       display: flex;
@@ -1711,7 +1712,7 @@
     .live-step { padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--surface-border); background: rgba(8, 16, 36, 0.6); font-size: 11px; color: var(--text-dim); }
     .live-step strong { display: block; color: #fff; font-size: 12px; }
     .live-advisory { margin-top: 10px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.07); font-size: 12px; line-height: 1.55; color: #e8ecf3; }
-    .live-advisory h5 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--amber); }
+    .live-advisory h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--amber); }
     .live-advisory p { margin: 0 0 8px; }
     .live-advisory .law { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; border: 1px solid rgba(255,255,255,0.14); color: #d0dbe9; }
     .live-advisory small { display: block; margin-top: 6px; color: var(--text-dim); font-size: 10.5px; }
@@ -2884,8 +2885,8 @@
   <!-- Universal Modal Backdrop -->
   <!-- Live mode: sign in -->
   <div class="modal-backdrop" id="liveAuthBackdrop" onclick="if(event.target.id==='liveAuthBackdrop') Live.closeAuth()">
-    <div class="modal-dialog" style="max-width: 460px;">
-      <h3>Sign in to CavScope</h3>
+    <div class="modal-dialog" style="max-width: 460px;" role="dialog" aria-modal="true" aria-labelledby="liveAuthTitle">
+      <h3 id="liveAuthTitle">Sign in to CavScope</h3>
       <p class="modal-desc">Live workspaces run on the CavScope backend with real scans and cited SITREPs. Demo mode stays available for walkthroughs.</p>
       <form id="liveAuthForm" onsubmit="Live.submitAuth(event, 'signin')">
         <div class="form-group">
@@ -2913,8 +2914,8 @@
 
   <!-- Live mode: self-serve onboarding -->
   <div class="modal-backdrop" id="liveOnboardBackdrop">
-    <div class="modal-dialog" style="max-width: 760px;">
-      <h3>Set up your workspace</h3>
+    <div class="modal-dialog" style="max-width: 760px;" role="dialog" aria-modal="true" aria-labelledby="liveOnboardTitle">
+      <h3 id="liveOnboardTitle">Set up your workspace</h3>
       <p class="modal-desc">Three steps, no human in the loop. Your first scan starts the moment you finish.</p>
       <div class="live-steps">
         <div class="live-step"><strong>1. Organization</strong>Name, industry, and where you operate. Laws follow your visitors, so the advisory updates as you choose.</div>
@@ -2986,7 +2987,7 @@
   </div>
 
   <div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
-    <div class="modal-dialog" id="modalDialog">
+    <div class="modal-dialog" id="modalDialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h3 id="modalTitle">Record Item</h3>
       <p class="modal-desc" id="modalDesc">Fill out the form below.</p>
 
@@ -3004,7 +3005,7 @@
 
   <!-- Score Breakdown & Path to 90+ Modal -->
   <div class="modal-backdrop" id="scoreExplainerBackdrop" onclick="if(event.target.id==='scoreExplainerBackdrop') closeScoreExplainer()">
-    <div class="modal-dialog wide">
+    <div class="modal-dialog wide" role="dialog" aria-modal="true" aria-labelledby="scoreModalTitle">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
         <div>
           <span class="eyebrow" style="color: var(--teal);">Scoring Transparency</span>
@@ -4565,6 +4566,7 @@
       document.getElementById('modalTitle').textContent = tpl.title;
       document.getElementById('modalDesc').textContent = tpl.desc;
       document.getElementById('modalFormFields').innerHTML = tpl.render();
+      linkFormLabels(document.getElementById('modalFormFields'));
       document.getElementById('modalBackdrop').classList.add('open');
     }
 
@@ -6170,6 +6172,88 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       });
     }
 
+
+    // ---------- Dialogs ----------
+    // The four modals (record forms, sign-in, onboarding, score breakdown) are plain
+    // backdrops that other code opens by adding `.open`. This gives all of them what a
+    // dialog owes a keyboard or screen-reader user without touching how they open:
+    // focus moves into the dialog when it opens and returns to what opened it when it
+    // closes, Tab stays inside while it is open, and Escape closes it by the same
+    // function its own Close button calls. Found 2026-10-11 by opening every modal in
+    // tools/site-axe/app.mjs: none of them did any of this.
+    function initModalA11y() {
+      var closers = {
+        modalBackdrop: function () { closeModal(); },
+        liveAuthBackdrop: function () { Live.closeAuth(); },
+        liveOnboardBackdrop: function () { Live.closeOnboard(); },
+        scoreExplainerBackdrop: function () { closeScoreExplainer(); }
+      };
+      var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      var returnTo = {};
+      function visible(el) { return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length); }
+      function focusables(root) { return Array.prototype.filter.call(root.querySelectorAll(FOCUSABLE), visible); }
+      Object.keys(closers).forEach(function (id) {
+        var backdrop = document.getElementById(id);
+        if (!backdrop) return;
+        var was = false;
+        new MutationObserver(function () {
+          var now = backdrop.classList.contains('open');
+          if (now === was) return;
+          was = now;
+          if (now) {
+            returnTo[id] = document.activeElement;
+            var dlg = backdrop.querySelector('.modal-dialog');
+            if (!dlg) return;
+            // After the content is in: record forms are rendered into the dialog just before `.open` is added.
+            var list = focusables(dlg);
+            var target = list.filter(function (el) { return /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName); })[0] || list[0];
+            if (target && !dlg.contains(document.activeElement)) target.focus();
+          } else {
+            var back = returnTo[id];
+            returnTo[id] = null;
+            if (back && back.focus && document.contains(back)) back.focus();
+          }
+        }).observe(backdrop, { attributes: true, attributeFilter: ['class'] });
+      });
+      document.addEventListener('keydown', function (e) {
+        var open = Object.keys(closers).map(function (id) { return document.getElementById(id); })
+          .filter(function (b) { return b && b.classList.contains('open'); });
+        if (!open.length) return;
+        var top = open[open.length - 1];
+        if (e.key === 'Escape') { e.preventDefault(); closers[top.id](); return; }
+        if (e.key !== 'Tab') return;
+        var dlg = top.querySelector('.modal-dialog');
+        var list = dlg ? focusables(dlg) : [];
+        if (!list.length) return;
+        var first = list[0], last = list[list.length - 1];
+        if (!dlg.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      });
+    }
+
+    // A record form is built from templates that write `<label>` and the control as siblings with no
+    // `for`, so every field in them had no name. Tie each pair together after the form is drawn, and
+    // move the label's tooltip onto the control it names (CLAUDE.md: a tooltip lives on the control,
+    // not on a label that points at it).
+    var labelSeq = 0;
+    function linkFormLabels(root) {
+      if (!root) return;
+      root.querySelectorAll('.form-group').forEach(function (g) {
+        var label = g.querySelector('label:not([for])');
+        var control = g.querySelector('input:not([type="hidden"]), select, textarea');
+        if (!label || !control || control.labels && control.labels.length) return;
+        if (!control.id) control.id = 'fld' + (++labelSeq);
+        label.setAttribute('for', control.id);
+        var tip = label.getAttribute('data-tooltip');
+        if (tip) {
+          if (!control.hasAttribute('data-tooltip')) control.setAttribute('data-tooltip', tip);
+          label.removeAttribute('data-tooltip');
+          label.removeAttribute('tabindex');
+        }
+      });
+    }
+
     // ---------- Accordions ----------
     // Instructions and long lists open one at a time: opening a <details> with a
     // data-acc-group closes the others in that group, and the newly opened one is
@@ -6313,7 +6397,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      initTooltips(); initAccordions(); initContextMenuGuard();
+      initTooltips(); initAccordions(); initContextMenuGuard(); initModalA11y();
       const versionEl = document.getElementById('lblAppVersion');
       if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
 
@@ -6656,7 +6740,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           // "Commonly relevant", never "applies to you": this list is chosen by
           // the location you picked, and laws also reach a business through
           // where its customers live. residency_note is written by SQL.
-          box.innerHTML = `<h5 data-tooltip="Laws commonly relevant to an organization based where you selected. Whether each applies to you depends on facts this form cannot see." tabindex="0">Commonly relevant where you are based (${adv.law_count} laws${adv.profile_available ? '' : ', global baseline only'})</h5>` +
+          box.innerHTML = `<h4 data-tooltip="Laws commonly relevant to an organization based where you selected. Whether each applies to you depends on facts this form cannot see." tabindex="0">Commonly relevant where you are based (${adv.law_count} laws${adv.profile_available ? '' : ', global baseline only'})</h5>` +
             (adv.jurisdictions || []).map(j => `<p><strong>${escapeHtml(j.name)}.</strong> ${escapeHtml(j.advisory)}</p>`).join('') +
             (laws.length ? `<div>${laws.map(l => `<span class="law" title="${escapeHtml(l.full_name)}">${escapeHtml(l.short_name)}</span>`).join('')}</div>` : '') +
             (adv.residency_note ? `<p data-tooltip="Which laws apply can depend on where your customers live, not only where you are based." tabindex="0">${escapeHtml(adv.residency_note)}</p>` : '') +

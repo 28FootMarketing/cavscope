@@ -77,6 +77,16 @@ for (const id of sections) {
 { await page.click('#nav button[data-section="reports"]'); await page.click("tr[data-sitrep]").catch(() => {}); await page.waitForTimeout(200); await page.mouse.move(700, 880); await page.keyboard.press("Escape");
   const res = await page.evaluate(async () => (await axe.run(document, { resultTypes: ["violations"] })).violations.map((v) => `${v.id}(${v.nodes.length},${v.impact})`));
   if (res.length) bad++; console.log(`${"reports:detail".padEnd(18)} ${res.length ? res.join(" ") : "no violations"}`); }
+{ // The support tab opens a (non-modal) dialog on the right edge; scan it open.
+  await page.evaluate(() => { const t = document.getElementById("csSupportTab"); if (t) t.click(); });
+  await page.waitForFunction(() => { const p = document.getElementById("csSupportPanel"); return p && !p.hidden; }, null, { timeout: 8000 }).catch(() => {});
+  const open = await page.evaluate(() => !document.getElementById("csSupportPanel").hidden);
+  const res = open ? await page.evaluate(async () => (await axe.run({ exclude: [["#appTooltip"]] }, { resultTypes: ["violations"] })).violations.map((v) => `${v.id}(${v.nodes.length},${v.impact})`)) : ["did not open"];
+  const dlg = await page.evaluate(() => document.getElementById("csSupportPanel").getAttribute("role") === "dialog");
+  await page.keyboard.press("Escape"); await page.waitForTimeout(150);
+  const esc = await page.evaluate(() => document.getElementById("csSupportPanel").hidden);
+  const gaps = [!dlg && "no dialog role", !esc && "Escape does not close"].filter(Boolean);
+  if (res.length || gaps.length) bad++; console.log(`${"support panel".padEnd(18)} ${res.length ? res.join(" ") : "no violations"}${gaps.length ? "  | " + gaps.join(", ") : ""}`); }
 if (process.env.PEEK) for (const id of process.env.PEEK.split(",")) { await page.click(`#nav button[data-section="${id}"]`); await page.waitForTimeout(150); console.log("\n## " + id + ": " + (await page.evaluate(() => document.getElementById("page").innerText)).replace(/\s+/g, " ").slice(0, 500)); }
 if (!sections.length) { console.log("shell never rendered", errors.join(" | "), "| gate:", await page.evaluate(() => document.getElementById("gateLoadingMsg")?.textContent + " denied=" + !document.getElementById("gateDenied")?.hidden + " url=" + location.href)); bad++; }
 await browser.close();
