@@ -65,6 +65,11 @@ on:
         type: choice
         options: ['skip', 'report', 'on', 'off']
         default: 'skip'
+      leaked_password_protection:
+        description: 'Reject passwords found in HaveIBeenPwned when one is set or changed. report = read the switch; on = enable; off = disable. Default change nothing.'
+        type: choice
+        options: ['skip', 'report', 'on', 'off']
+        default: 'skip'
       smtp_sender_name:
         description: 'SMTP sender display name to set (e.g. CavScope). Empty = report the current value and change nothing.'
         type: string
@@ -522,6 +527,49 @@ jobs:
             exit 1
           fi
           echo "::notice::All templates and subjects applied and verified by readback."
+
+      # Leaked-password protection (GoTrue's password_hibp_enabled). Supabase's own
+      # security advisor flags it as disabled (auth_leaked_password_protection, WARN,
+      # read 2026-10-11). Enabled, GoTrue refuses a new or changed password that appears
+      # in the HaveIBeenPwned corpus, by k-anonymity (only a hash prefix leaves the
+      # project). It is checked when a password is SET: existing passwords are not
+      # re-checked, and cavscope-set-password already shows GoTrue's refusal text. The
+      # project plan may not offer the setting; then the PATCH fails and so does this
+      # step, which is the correct outcome. Same contract as the switch above: report
+      # reads, on/off writes and the job fails unless the readback agrees.
+      - name: Leaked-password protection switch
+        if: inputs.leaked_password_protection != 'skip'
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          MODE: ${{ inputs.leaked_password_protection }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+          SW=password_hibp_enabled
+
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/cfg.json
+          LIVE_SW=$(jq -r --arg k "$SW" '.[$k] | tostring' /tmp/cfg.json)
+          MINLEN=$(jq -r '.password_min_length | tostring' /tmp/cfg.json)
+          rm -f /tmp/cfg.json
+          echo "switch $SW = $LIVE_SW; password_min_length = $MINLEN"
+          {
+            echo "### Leaked-password protection"
+            echo "- switch $SW: **$LIVE_SW**"
+            echo "- password_min_length: **$MINLEN**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$MODE" = "report" ]; then echo "::notice::Report only. Nothing was written."; exit 0; fi
+
+          if [ "$MODE" = "on" ]; then VAL=true; else VAL=false; fi
+          jq -n --arg k "$SW" --argjson v "$VAL" '{($k): $v}' > /tmp/payload.json
+          curl -sS -f -X PATCH "$API" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data @/tmp/payload.json > /dev/null
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/after.json
+          NOW=$(jq -r --arg k "$SW" '.[$k] | tostring' /tmp/after.json)
+          rm -f /tmp/after.json /tmp/payload.json
+          echo "- after write, read back: **$NOW**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$NOW" != "$VAL" ]; then echo "::error::Readback says $NOW, wanted $VAL."; exit 1; fi
+          echo "::notice::$SW is now $NOW, verified by readback."
 
       # The password-changed notification switch. Off since the project began, so
       # changing a password mails the account holder nothing. Turning it on starts
