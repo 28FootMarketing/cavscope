@@ -41,7 +41,7 @@ const SIDE = {
 };
 const STUB = `window.supabase={createClient:function(){var s={user:{email:'owner@example.org',app_metadata:{}},access_token:'x'};
 return{auth:{getSession:function(){return Promise.resolve({data:{session:s}})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}},signOut:function(){return Promise.resolve({})}},
-rpc:function(n,a){return fetch('/__rpc/'+n).then(function(r){return r.json()}).then(function(d){return{data:d,error:null}})},
+rpc:function(n,a){return fetch('/__rpc/'+n).then(function(r){return r.json()}).then(function(d){return d&&d.__error?{data:null,error:{message:d.__error}}:{data:d,error:null}})},
 from:function(){var q={select:function(){return q},eq:function(){return q},order:function(){return q},limit:function(){return q},then:function(f){return Promise.resolve({data:[],error:null}).then(f)}};return q}}}};`;
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
@@ -88,6 +88,38 @@ for (const id of sections) {
   const gaps = [!dlg && "no dialog role", !esc && "Escape does not close"].filter(Boolean);
   if (res.length || gaps.length) bad++; console.log(`${"support panel".padEnd(18)} ${res.length ? res.join(" ") : "no violations"}${gaps.length ? "  | " + gaps.join(", ") : ""}`); }
 if (process.env.PEEK) for (const id of process.env.PEEK.split(",")) { await page.click(`#nav button[data-section="${id}"]`); await page.waitForTimeout(150); console.log("\n## " + id + ": " + (await page.evaluate(() => document.getElementById("page").innerText)).replace(/\s+/g, " ").slice(0, 500)); }
+
+// States the default fixture does not reach, scanned across every section: a super admin with a support-access session
+// open (banner, countdown, the target's view, a populated log), and the console with every side read failing (each panel
+// that depends on one must say so instead of showing nothing).
+async function scanState(tag, mutate) {
+  const saved = { ...SIDE };
+  mutate();
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForSelector("#shell:not([hidden])", { timeout: 15000 }).catch(() => {});
+  await page.evaluate(axeSrc);
+  const before = errors.length;
+  const out = [];
+  for (const id of sections) {
+    await page.click(`#nav button[data-section="${id}"]`);
+    await page.mouse.move(700, 880); await page.keyboard.press("Escape"); await page.waitForTimeout(250);
+    const full = await page.evaluate(async () => (await axe.run({ exclude: [["#appTooltip"]] }, { resultTypes: ["violations"] })).violations.map((v) => ({ s: `${v.id}(${v.nodes.length},${v.impact})`, nodes: v.nodes.slice(0, 3).map((n) => `${n.target.join(" ")} :: ${n.html.slice(0, 110).replace(/\s+/g, " ")} :: ${n.failureSummary.replace(/\s+/g, " ").slice(0, 170)}`) })));
+    const res = full.map((v) => v.s);
+    if (res.length) { bad++; out.push(`${id}: ${res.join(" ")}`); if (process.env.DETAIL) full.forEach((v) => v.nodes.forEach((n) => console.log("     ", n))); }
+  }
+  const errs = errors.slice(before);
+  if (errs.length) { bad++; out.push("SCRIPT ERROR: " + errs.join(" | ")); }
+  console.log(`${tag.padEnd(26)} ${out.length ? out.join(" ; ") : `${sections.length} sections, no violations`}`);
+  Object.keys(SIDE).forEach((k) => delete SIDE[k]); Object.assign(SIDE, saved);
+}
+await scanState("support session open", () => {
+  SIDE.cavscope_admin_impersonate_status = { active: true, target_user_id: 2, target_email: "member@example.org", reason: "ticket 412, cannot see their SITREP", seconds_remaining: 1200 };
+  SIDE.cavscope_admin_impersonation_log = [{ admin_email: "owner@example.org", target_email: "member@example.org", reason: "ticket 412", started_at: now, events: 3, active: true }, { admin_email: "owner@example.org", target_email: "viewer@example.org", reason: "earlier ticket", started_at: now, events: 1, active: false, ended_reason: "expired" }];
+  SIDE.cavscope_admin_impersonated_view = { organizations: [{ name: "Example Org", role: "viewer", websites: [{ url: "https://site1.example.org", posture_score: 74, open_critical_high: 1, open_findings: 4 }] }] };
+});
+await scanState("side reads failing", () => {
+  for (const k of ["cavscope_admin_flag_registry", "cavscope_admin_impersonate_status", "cavscope_admin_impersonation_log", "cavscope_admin_overview", "cavscope_admin_platform_extras", "cavscope_admin_site_jurisdictions", "cavscope_admin_partner_allowances", "cavscope_admin_aio_overview"]) SIDE[k] = { __error: "permission denied for function (fixture)" };
+});
 if (!sections.length) { console.log("shell never rendered", errors.join(" | "), "| gate:", await page.evaluate(() => document.getElementById("gateLoadingMsg")?.textContent + " denied=" + !document.getElementById("gateDenied")?.hidden + " url=" + location.href)); bad++; }
 await browser.close();
 process.exit(bad ? 1 : 0);

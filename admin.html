@@ -346,7 +346,7 @@
     }
     .kpi-ico.teal { background: var(--teal-dim); color: var(--teal); border-color: rgba(54, 226, 201, 0.3); }
     .kpi-ico.amber { background: var(--amber-dim); color: var(--amber); border-color: rgba(251, 191, 36, 0.3); }
-    .kpi-ico.rose { background: var(--rose-dim); color: var(--rose); border-color: rgba(244, 63, 94, 0.32); }
+    .kpi-ico.rose { background: var(--rose-dim); color: var(--rose-text); border-color: rgba(244, 63, 94, 0.32); }
     .kpi-ico.purple { background: var(--purple-dim); color: var(--purple); border-color: rgba(168, 85, 247, 0.3); }
     .kpi-body { min-width: 0; }
     .kpi-label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
@@ -356,7 +356,7 @@
     .kpi-foot { font-size: 10.5px; color: var(--text-dim); line-height: 1.45; overflow-wrap: anywhere; }
     .delta { font-size: 11px; font-weight: 600; white-space: nowrap; }
     .delta.up { color: var(--emerald); }
-    .delta.down { color: var(--rose); }
+    .delta.down { color: var(--rose-text); }
     .delta.flat { color: var(--text-dim); }
     .uninstrumented { color: var(--amber); font-weight: 600; }
 
@@ -424,7 +424,7 @@
     .runner-msg { font-size: 12.5px; line-height: 1.5; }
     .runner-msg.ok { color: var(--teal); }
     .runner-msg.warn { color: var(--amber); }
-    .runner-msg.bad { color: var(--rose); }
+    .runner-msg.bad { color: var(--rose-text); }
     .runner-msg.busy { color: var(--text-muted); }
     .runner-note {
       font-size: 12px; color: var(--text-dim); line-height: 1.55;
@@ -436,7 +436,7 @@
      * changes, incident triage, pricing, the flag registry and support access.
      * Same plain language as the runner above; one design language per page. */
     .btn.ghost { color: var(--text); background: transparent; border-color: var(--surface-border-strong); }
-    .btn.danger { color: var(--rose); background: transparent; border-color: var(--rose); }
+    .btn.danger { color: var(--rose-text); background: transparent; border-color: var(--rose); }
     .btn.sm { padding: 5px 10px; font-size: 11.5px; }
     .inline-select {
       padding: 5px 8px; font-size: 12px; font-family: var(--font-sans); color: var(--text);
@@ -501,7 +501,7 @@
     }
     .imp-eyebrow { color: var(--amber); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
     .imp-who { color: var(--text); font-size: 14px; font-weight: 600; margin-top: 3px; }
-    .imp-why { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+    .imp-why { color: var(--text); font-size: 12px; margin-top: 4px; }
     .imp-clock { color: var(--amber); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
     .imp-org { border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px; }
     .imp-site { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12px; }
@@ -553,7 +553,7 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .pill.critical { background: var(--rose-dim); color: var(--rose); }
+    .pill.critical { background: var(--rose-dim); color: var(--rose-text); }
     .pill.high { background: var(--amber-dim); color: var(--amber); }
     .pill.medium { background: var(--surface-raised); color: var(--text-muted); }
     .pill.low { background: var(--teal-dim); color: var(--teal); }
@@ -637,7 +637,7 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 12px;
     }
-    .action-ico.critical { background: var(--rose-dim); color: var(--rose); }
+    .action-ico.critical { background: var(--rose-dim); color: var(--rose-text); }
     .action-ico.high { background: var(--amber-dim); color: var(--amber); }
     .action-ico.medium { background: var(--surface-raised); color: var(--cyan); }
     .action-ico.low { background: var(--surface-raised); color: var(--text-muted); }
@@ -4031,7 +4031,7 @@
   .cs-support-btn:disabled { opacity: 0.6; cursor: default; }
   .cs-support-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
   .cs-support-status { min-height: 18px; font-weight: 600; }
-  .cs-support-status.err { color: var(--rose); }
+  .cs-support-status.err { color: var(--rose-text); }
   .cs-support-status.ok { color: var(--emerald); }
   @media (max-width: 600px) { .cs-support-tab { padding: 14px 7px; font-size: 11px; } }
   @media print { .cs-support-tab, .cs-support-panel { display: none !important; } }

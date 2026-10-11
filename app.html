@@ -756,7 +756,7 @@
     }
 
     .metric-sub span.alert {
-      color: var(--rose);
+      color: var(--rose-text);
       font-weight: 600;
     }
 
@@ -800,7 +800,7 @@
 
     .benchmark-needs-work {
       background: rgba(244, 63, 94, 0.15);
-      color: var(--rose);
+      color: var(--rose-text);
     }
 
     /* Universal Run-It-All Master Bar */
@@ -1135,7 +1135,7 @@
     .terminal-time { color: var(--text-dim); font-size: 10px; }
     .terminal-ok { color: var(--teal); }
     .terminal-warn { color: var(--amber); }
-    .terminal-crit { color: var(--rose); }
+    .terminal-crit { color: var(--rose-text); }
 
     /* Code Blocks */
     .code-box {
@@ -1600,12 +1600,12 @@
     .rd-table .rd-dim { color: var(--text-dim); font-size: 11.5px; margin-top: 3px; }
     .rd-scroll { overflow-x: auto; }
     .rd-sev { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap; }
-    .rd-sev-critical { background: rgba(244, 63, 94, 0.18); color: var(--rose); border-color: rgba(244, 63, 94, 0.4); }
+    .rd-sev-critical { background: rgba(244, 63, 94, 0.18); color: var(--rose-text); border-color: rgba(244, 63, 94, 0.4); }
     .rd-sev-high { background: rgba(251, 146, 60, 0.16); color: #fdba74; border-color: rgba(251, 146, 60, 0.4); }
     .rd-sev-medium { background: rgba(251, 191, 36, 0.14); color: var(--amber); border-color: rgba(251, 191, 36, 0.4); }
     .rd-sev-low { background: rgba(56, 189, 248, 0.14); color: var(--cyan); border-color: rgba(56, 189, 248, 0.4); }
     .rd-sev-info { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
-    .rd-sev-not_met { background: rgba(244, 63, 94, 0.18); color: var(--rose); border-color: rgba(244, 63, 94, 0.4); }
+    .rd-sev-not_met { background: rgba(244, 63, 94, 0.18); color: var(--rose-text); border-color: rgba(244, 63, 94, 0.4); }
     .rd-sev-partial { background: rgba(251, 191, 36, 0.14); color: var(--amber); border-color: rgba(251, 191, 36, 0.4); }
     .rd-law { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .rd-law:last-child { border-bottom: 0; }
@@ -1614,7 +1614,7 @@
     .rd-law-meta { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
     .rd-law-meta a { color: var(--teal); }
     .rd-law-note { font-size: 12px; color: var(--text-muted); font-style: italic; margin: 0 0 8px; }
-    .rd-missing { border-color: rgba(244, 63, 94, 0.45); color: var(--rose); }
+    .rd-missing { border-color: rgba(244, 63, 94, 0.45); color: var(--rose-text); }
     .rd-empty { text-align: center; padding: 34px 18px; color: var(--text-muted); font-size: 13px; }
     .rd-foot { font-size: 11.5px; color: var(--text-dim); line-height: 1.6; padding: 14px 4px 0; }
     .rd-foot .rd-mono { font-family: var(--font-mono); font-size: 10.5px; word-break: break-all; }
@@ -1665,7 +1665,7 @@
     .gl-rule > summary { font-size: 13.5px; font-weight: 600; color: var(--text); flex-wrap: wrap; }
     .gl-id { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); font-weight: 500; }
     .gl-sev { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid currentColor; }
-    .gl-sev.critical { color: var(--rose); } .gl-sev.high { color: var(--amber); } .gl-sev.medium { color: var(--cyan); }
+    .gl-sev.critical { color: var(--rose-text); } .gl-sev.high { color: var(--amber); } .gl-sev.medium { color: var(--cyan); }
     .gl-sev.low, .gl-sev.info { color: var(--text-muted); }
     .gl-off { font-size: 10.5px; color: var(--text-dim); border: 1px dashed var(--surface-border-strong); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 500; }
     .gl-body { margin: 10px 0 4px 20px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
@@ -2436,7 +2436,7 @@
             <div class="grid-2" style="margin-bottom: 24px;">
               <div class="panel panel-body">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span class="eyebrow" style="color: var(--rose);">#1 Technical Blocker</span>
+                  <span class="eyebrow" style="color: var(--rose-text);">#1 Technical Blocker</span>
                   <button class="btn-copy-llm" onclick="copyCardLlmPrompt('blocker')" data-tooltip="Copies a prompt for an AI assistant to fix this specific blocker.">🤖 Copy LLM Fix</button>
                 </div>
                 <h3 style="font-size: 17px; margin: 6px 0 10px; color: #fff;" id="aioBlockerTitle">Client-Side JavaScript Rendering (#root shell)</h3>
@@ -3636,7 +3636,7 @@
     }
 
     function reportBandColor(band) {
-      return ({ green: 'var(--teal)', amber: 'var(--amber)', red: 'var(--rose)' })[String(band || '').toLowerCase()] || 'var(--text-muted)';
+      return ({ green: 'var(--teal)', amber: 'var(--amber)', red: 'var(--rose-text)' })[String(band || '').toLowerCase()] || 'var(--text-muted)';
     }
 
     function reportCite(claim) {
@@ -5037,7 +5037,7 @@
       if (pillarsGrid) {
         pillarsGrid.innerHTML = aio.pillars.map(p => {
           const assessed = p.score != null;
-          const colour = !assessed ? 'var(--text-dim)' : (p.score >= 8 ? 'var(--emerald)' : (p.score >= 5 ? 'var(--amber)' : 'var(--rose)'));
+          const colour = !assessed ? 'var(--text-dim)' : (p.score >= 8 ? 'var(--emerald)' : (p.score >= 5 ? 'var(--amber)' : 'var(--rose-text)'));
           return `
           <div style="background: rgba(8, 16, 36, 0.7); border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 14px 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -5454,7 +5454,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
               <strong style="color: #fff; font-size: 12.5px;">${escapeHtml(p.name)}</strong>
               ${p.score == null
                 ? `<span style="font-family: var(--font-mono); font-weight: 800; font-size: 11.5px; color: var(--text-dim);" data-tooltip="This scan could not assess this area, so it is left out of the index rather than counted as a pass." tabindex="0">Not assessed</span>`
-                : `<span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: ${p.score >= 9 ? 'var(--emerald)' : (p.score >= 8 ? 'var(--cyan)' : 'var(--rose)')};">${live ? (p.score === 10 ? 'Pass' : 'Fail') : p.score + '/10'}</span>`}
+                : `<span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: ${p.score >= 9 ? 'var(--emerald)' : (p.score >= 8 ? 'var(--cyan)' : 'var(--rose-text)')};">${live ? (p.score === 10 ? 'Pass' : 'Fail') : p.score + '/10'}</span>`}
             </div>
             <p style="font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -7840,7 +7840,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
   .cs-support-btn:disabled { opacity: 0.6; cursor: default; }
   .cs-support-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
   .cs-support-status { min-height: 18px; font-weight: 600; }
-  .cs-support-status.err { color: var(--rose); }
+  .cs-support-status.err { color: var(--rose-text); }
   .cs-support-status.ok { color: var(--emerald); }
   @media (max-width: 600px) { .cs-support-tab { padding: 14px 7px; font-size: 11px; } }
   @media print { .cs-support-tab, .cs-support-panel { display: none !important; } }
