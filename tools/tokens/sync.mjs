@@ -28,6 +28,7 @@ export const PAGES = [
   "sitrep-sample.html",
   "admin.html",
   "privacy.html",
+  "terms.html",
   "beta.html",
   "html-audit.html",
 ];

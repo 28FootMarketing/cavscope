@@ -12,7 +12,7 @@ import * as c from "../../workers/browser-scan/lib/contrast.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (p: string) => readFileSync(join(root, p), "utf8");
-const PAGES = ["index.html", "signin.html", "onboarding.html", "sitrep.html", "sitrep-sample.html", "privacy.html", "app.html", "admin.html", "beta.html", "html-audit.html"];
+const PAGES = ["index.html", "signin.html", "onboarding.html", "sitrep.html", "sitrep-sample.html", "privacy.html", "terms.html", "app.html", "admin.html", "beta.html", "html-audit.html"];
 const tokens = read("assets/tokens.css");
 const token = (name: string) => new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(tokens)![1];
 const ratio = (a: string, b: string) => c.contrastRatio(c.parseColor(a), c.parseColor(b));
@@ -50,7 +50,7 @@ test("every page's tooltip is hidden until it has text: an empty role=tooltip no
 });
 
 test("each public page has exactly one main landmark, a real header, and nothing in a bare div as its page body", () => {
-  for (const f of ["index.html", "signin.html", "onboarding.html", "sitrep.html", "sitrep-sample.html", "privacy.html"]) {
+  for (const f of ["index.html", "signin.html", "onboarding.html", "sitrep.html", "sitrep-sample.html", "privacy.html", "terms.html"]) {
     const s = read(f);
     assert.equal((s.match(/<main[\s>]/g) ?? []).length, 1, `${f}: one <main>`);
     assert.equal((s.match(/<\/main>/g) ?? []).length, 1, `${f}: closed`);

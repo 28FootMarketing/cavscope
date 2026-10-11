@@ -53,7 +53,7 @@ on `cavscope.28footsystems.com`, which is where that rule applies.
 
 ## Tooltips are mandatory on every page
 
-Every page in this repo (`index.html`, `app.html`, `admin.html`, `signin.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, and any future page) must have
+Every page in this repo (`index.html`, `app.html`, `admin.html`, `signin.html`, `onboarding.html`, `sitrep.html`, `sitrep-sample.html`, `privacy.html`, `terms.html`, and any future page) must have
 tooltips on its interactive and informational elements — buttons, links, nav items, form fields,
 status indicators, data points, badges, chips, and anything else a user might not immediately
 understand. This is a standing requirement; do not wait to be asked again per page or per change.
@@ -135,7 +135,7 @@ summary, open-all, and print.
 
 **A new page, or a new list of steps or fixes, gets the same treatment.** Onboarding is
 already one step at a time and is the exception by design. Legal and policy pages
-(`privacy.html`) stay fully expanded: a disclosure someone has to open to read is a disclosure
+(`privacy.html`, `terms.html`) stay fully expanded: a disclosure someone has to open to read is a disclosure
 that was not made.
 
 ## Right-click is suppressed on every page, and it is not a security control
@@ -325,7 +325,7 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 - **The public beta signup is closed, as of 2026-10-02, at the owner's instruction.** `/beta` answers a 307 to `/` and `beta.html` is kept, unrouted. The real control is the `public_insert_only` policy on `public.muster_beta_signups`, now `with check (false)` (migration `20261002001225`), because the table was insertable straight through PostgREST regardless of the page. The 2 existing rows are untouched. To reopen: set the policy back to `with check (true)` and restore the `/beta` rewrite in `middleware.js`.
 
 - **`cavscope.28footsystems.com` is the one host, path-routed for everything.** `/` is the landing
-  page, `/onboarding`, `/sitrep`, `/sitrep/sample`, `/privacy`, `/signin` and `/reset`
+  page, `/onboarding`, `/sitrep`, `/sitrep/sample`, `/privacy`, `/terms`, `/signin` and `/reset`
   (both `signin.html`), `/app` and `/admin`. Marketing, sign-in, the workspace and the console
   share one origin, which is what a Supabase session needs: it is stored per-origin, so
   `signin.html` and `app.html` on different hosts would make sign-in appear to succeed and then
@@ -543,7 +543,13 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   because all six pages ship an inline `<script>`; extracting those is the prerequisite for tightening
   it, and `tests/routing/middleware.test.ts` asserts the current state so the change has to be
   deliberate. Any new external origin a page loads must be added to the CSP or it is silently blocked.
-- `/privacy` is `privacy.html` on `muster.partners`. `/robots.txt`, `/sitemap.xml` and
+- `/privacy` is `privacy.html` on `muster.partners`. **`/terms` is `terms.html`, added 2026-10-09** after
+  the site's own local scan reported `PRIV-004` (no Terms of Service link): it is built from `privacy.html`'s
+  template (same tokens block, tooltip and context-menu engines, fully expanded, no Supabase client), is
+  linked from the `index.html`, `privacy.html` and `beta.html` footers, the sitemap and `llms.txt`, and is
+  in every page registry (`tools/tokens/sync.mjs`, `tools/site-axe/run.mjs`, the UI tests). Its liability and
+  governing-law sections say on the page that counsel has not reviewed them; that is the owner's follow-up,
+  and the page must not drop that notice until it is done. `/robots.txt`, `/sitemap.xml` and
   `/.well-known/security.txt` are real files at the repo root; `/.well-known/` and `/sitemap.xml` are
   shared across every host (like `/assets/`) so a researcher on an app host finds the disclosure policy
   rather than a login page, and the app hosts serve `robots-app.txt` instead, which disallows

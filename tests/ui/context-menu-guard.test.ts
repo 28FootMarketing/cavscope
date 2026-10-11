@@ -32,7 +32,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const PAGES = [
   "index.html", "app.html", "signin.html", "onboarding.html",
-  "sitrep.html", "sitrep-sample.html", "privacy.html", "admin.html",
+  "sitrep.html", "sitrep-sample.html", "privacy.html", "terms.html", "admin.html",
   "beta.html",
 ];
 

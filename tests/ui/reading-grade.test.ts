@@ -6,7 +6,7 @@
 // grade; lowering one after rewriting copy is the intended direction, raising one needs a
 // reason in the commit. Flesch-Kincaid by vowel-group syllables is a rough instrument (about
 // half a grade), so this catches drift, it does not certify readability.
-// Scope: data-tooltip text only. Legal pages (privacy.html) are excluded on purpose: precise
+// Scope: data-tooltip text only. Legal pages (privacy.html, terms.html) are excluded on purpose: precise
 // wording there outranks reading level. Source of the grader: tools/readability/grade.mjs.
 
 import { test } from "node:test";

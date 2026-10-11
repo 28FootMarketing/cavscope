@@ -38,7 +38,7 @@ const read = (p: string) => readFileSync(join(repoRoot, p), "utf8");
 
 const PAGES = [
   "index.html", "app.html", "signin.html", "onboarding.html",
-  "sitrep.html", "sitrep-sample.html", "privacy.html", "admin.html", "html-audit.html",
+  "sitrep.html", "sitrep-sample.html", "privacy.html", "terms.html", "admin.html", "html-audit.html",
 ];
 
 const NATURALLY_FOCUSABLE = new Set(["a", "button", "input", "textarea", "select"]);
