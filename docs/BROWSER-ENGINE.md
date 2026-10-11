@@ -68,7 +68,7 @@ blocks the other. `engine_claim` and `do_request_scan` were changed to ignore br
 | `OPS-002` | | "DNS is managed at <provider>" appended to DNS-type fixes in the report |
 
 Every rule yields a result, so a clean scan lists what passed (`summary.browser_checks`, rendered as
-**Browser Engine Results** in the report). A pass means these checks found nothing on this date. Nothing here
+**Browser Engine Results** in the markdown, in `/sitrep` and in the workspace reports, all from `sections.browser`). A pass means these checks found nothing on this date. Nothing here
 says a site is compliant.
 
 Two design points worth knowing:

@@ -28,6 +28,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { finalFunctionSql } from "./patched-sql.ts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const migrationsDir = join(repoRoot, "supabase", "migrations");
@@ -41,16 +42,10 @@ const newestDefining = (re: RegExp) => {
   return readFileSync(join(migrationsDir, files[files.length - 1]), "utf8");
 };
 
-const modelSql = (() => {
-  const sql = newestDefining(/create or replace function muster\.sitrep_report_model/i);
-  const at = sql.indexOf("create or replace function muster.sitrep_report_model");
-  return sql.slice(at, sql.indexOf("$$;", sql.indexOf("as $$", at) + 5));
-})();
-const generatorSql = (() => {
-  const sql = newestDefining(/create or replace function muster\.generate_sitrep/i);
-  const at = sql.indexOf("create or replace function muster.generate_sitrep");
-  return sql.slice(at, sql.indexOf("$function$;", at));
-})();
+// The final text, with any in-place edits applied (see patched-sql.ts): the browser
+// section is added to generate_sitrep and the report model that way.
+const modelSql = finalFunctionSql("sitrep_report_model");
+const generatorSql = finalFunctionSql("generate_sitrep");
 
 /** profile name -> section keys, as SQL declares them. */
 function sqlProfiles(): Record<string, string[]> {
