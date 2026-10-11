@@ -10,7 +10,9 @@
 //   FIXTURE=tools/live-sweep/fixture.local.json node tools/site-axe/app.mjs
 //       a real tenant's payloads, if you built that gitignored file for tools/live-sweep; never commit output
 //
-// Covers what the fixture draws. Not covered: open modals, error states, a Partner or super admin session.
+// Four passes: demo (signed out), a plain tenant, a Partner (client organizations, the "+ Tenant" button, white-label and
+// domain entitlements) and a super admin (Platform Console links, HTML Audit, entering a tenant's workspace).
+// Covers what the fixture draws. Not covered: error states, the native confirm() prompts, a screen reader.
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { chromium } from "../../workers/browser-scan/node_modules/playwright-core/index.mjs";
@@ -46,16 +48,23 @@ const org = { id: 1, name: "Example Org", plan: "pro", brand, flags, agents: [],
 const risk = { id: 4, title: "Cookie consent banner missing", source: "privacy_assessment", status: "open", category: "privacy", owner_id: 2, severity: "medium", treatment: "mitigate", created_at: now, owner_name: "Owner", updated_at: now, website_id: 5, target_date: later, identified_at: now, inherent_score: 12, residual_score: 12, escalation_context: null, remediation_actions: [{ id: 3, title: "Deploy consent script", status: "not_started", risk_id: 4, due_date: later, owner_id: 2, progress: 0, control_id: null, created_at: now, updated_at: now, description: "Add the consent manager.", verified_at: null, escalated_at: null, status_update: null, escalation_status: null }] };
 const appetite = { id: 2, owner_id: 2, statement: "Critical risks are not tolerated in production.", updated_at: now, high_threshold: 2, next_review_at: later, review_cadence: "quarterly", organization_id: 1, critical_threshold: 0 };
 let FX = { org, overview, sitrep, risks: [risk], appetite, rules: {} };
+let MODE = "demo";
+// A Partner: an allowance, the entitlements that come with the tier, and one linked client organization.
+const partnerOrg = { ...org, name: "Example Partner", partner_client_allowance: 3, flags: { ...flags, client_management_enabled: true, partner_dashboard_enabled: true, white_label_enabled: true, custom_domain_enabled: true, custom_branding_enabled: true } };
+const clientOrg = { ...org, id: 2, name: "Client One", managed_by_org_id: 1, partner_client_allowance: null, websites: [{ ...website, id: 6, organization_id: 2, name: "client.example.com", url: "https://client.example.com/" }] };
+const partnerState = { is_partner: true, enabled: true, allowance: 3, clients: [{ id: 2, name: "Client One", industry: "Technology", plan: "pro", websites: 1, posture_score: 74, created_at: now }] };
 const local = process.env.FIXTURE && (existsSync(process.env.FIXTURE) ? process.env.FIXTURE : `${R}/${process.env.FIXTURE}`);
 if (local) FX = JSON.parse(readFileSync(local, "utf8"));
 const handlers = {
   cavscope_claim_invites: () => null, cavscope_onboarding_status: () => ({ next: "workspace", organizations: [{ id: FX.org.id }] }),
-  cavscope_my_workspace: () => ({ user: { id: 2, name: "Owner" }, preferences: null, is_super_admin: false, platform_flags: {}, organizations: [FX.org] }),
+  cavscope_my_workspace: () => ({ user: { id: 2, name: "Owner" }, preferences: null, is_super_admin: MODE === "super", platform_flags: {}, organizations: MODE === "partner" ? [partnerOrg, clientOrg] : [FX.org] }),
+  cavscope_admin_tenant: (a) => (a.p_organization_id === 2 ? clientOrg : FX.org),
+  cavscope_client_orgs: () => (MODE === "partner" ? partnerState : { is_partner: false, enabled: false, allowance: null, clients: [] }),
   cavscope_website_overview: () => FX.overview, cavscope_latest_sitrep: () => FX.sitrep, cavscope_risks: () => FX.risks, cavscope_risk_appetite: () => FX.appetite,
   cavscope_pending_invites: () => [], cavscope_finding_glossary: () => [{ rule_id: "SEC-001", title: "Missing HSTS", severity: "high", category: "security", plain_english: "Meaning.", remediation: "Fix.", checked: true }],
   cavscope_rule_status: (a) => (a.p_rule_ids || []).map((id) => ({ rule_id: id, active: true, title: id, default_severity: "low", engine_floor: null })),
   cavscope_countries: () => [{ code: "US", name: "United States" }], cavscope_regions: () => [{ code: "US-PA", name: "Pennsylvania", country: "US" }],
-  cavscope_industries: () => [{ name: "Technology" }, { name: "Healthcare" }], cavscope_llm_config: () => null, cavscope_client_orgs: () => [], cavscope_jurisdiction_advisory: () => FX.org.advisory,
+  cavscope_industries: () => [{ name: "Technology" }, { name: "Healthcare" }], cavscope_llm_config: () => null, cavscope_jurisdiction_advisory: () => FX.org.advisory,
 };
 const unstubbed = new Set();
 const STUB = `window.supabase={createClient:function(){var s=window.__AXE_SIGNED_OUT?null:{user:{email:'owner@example.org',app_metadata:{}},access_token:'x'};
@@ -64,7 +73,9 @@ rpc:function(n,a){return fetch('/__rpc/'+n+'?a='+encodeURIComponent(JSON.stringi
 from:function(){var q={select:function(){return q},eq:function(){return q},order:function(){return q},limit:function(){return q},then:function(f){return Promise.resolve({data:[],error:null}).then(f)}};return q}}}};`;
 
 const browser = await chromium.launch();
-async function pass(label, signedIn) {
+async function pass(label, mode) {
+  const signedIn = mode !== "demo";
+  MODE = mode;
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
   await ctx.route(/^https?:/, async (route) => {
     const u = new URL(route.request().url());
@@ -86,7 +97,8 @@ async function pass(label, signedIn) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message).slice(0, 200)));
   if (!signedIn) await page.addInitScript("window.__AXE_SIGNED_OUT = true");
-  await page.goto(`${ORIGIN}/app`, { waitUntil: "networkidle" });
+  // A super admin arriving with no fragment is sent to /admin once; #overview is what the console's own link uses.
+  await page.goto(`${ORIGIN}/app${mode === "super" ? "#overview" : ""}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
   await page.evaluate(axeSrc);
   const live = await page.evaluate(() => typeof Live !== "undefined" && !!Live.session);
@@ -107,6 +119,36 @@ async function pass(label, signedIn) {
   }
   if (!views.length) { console.log(`[${label}] no views found`, errors.join(" | ")); bad++; }
 
+  // What each session is entitled to see, and not to see. Hiding is presentation (the RPCs enforce), but a link shown
+  // to the wrong person, or hidden from the right one, is a defect this pass can see.
+  if (signedIn) {
+    const vis = await page.evaluate(() => { const v = (id) => { const e = document.getElementById(id); return !!e && !e.hidden && !!(e.offsetWidth || e.offsetHeight); }; return { tenantBtn: v("btnCreateTenant"), console: v("navPlatformConsole"), consoleBtn: v("btnPlatformConsole"), htmlAudit: v("navHtmlAudit") }; });
+    const want = { tenant: { tenantBtn: false, console: false, consoleBtn: false, htmlAudit: true }, partner: { tenantBtn: true, console: false, consoleBtn: false, htmlAudit: true }, super: { tenantBtn: false, console: true, consoleBtn: true, htmlAudit: true } }[mode];
+    const wrong = Object.keys(want).filter((k) => vis[k] !== want[k] && !(k === "htmlAudit" && mode === "tenant"));
+    if (wrong.length) { bad++; console.log(`${label.padEnd(5)} ENTITLEMENT: ${wrong.map((k) => `${k} is ${vis[k] ? "shown" : "hidden"}, expected ${want[k] ? "shown" : "hidden"}`).join("; ")}`); }
+    else console.log(`${label.padEnd(5)} entitlements as expected (${Object.entries(vis).map(([k, v]) => `${k}:${v ? "shown" : "hidden"}`).join(" ")})`);
+  }
+  if (mode === "partner") {
+    // The fixture must actually reach the page: the tenant switcher lists the client organization.
+    const opts = await page.evaluate(() => [...document.querySelectorAll("#topbarTenantSelect option")].map((o) => o.textContent.trim()));
+    const ok = opts.some((t) => /Client One/.test(t));
+    if (!ok) bad++;
+    console.log(`${label.padEnd(5)} tenant switcher lists: ${opts.join(" | ") || "(nothing)"}${ok ? "" : "  CLIENT ORG MISSING"}`);
+  }
+  if (mode === "super") {
+    // Entering a tenant's workspace as a super admin renders that tenant's data under the super admin's session.
+    await page.evaluate(() => Live.openTenant(2)).catch((e) => errors.push(`openTenant: ${String(e.message).slice(0, 120)}`));
+    await page.waitForTimeout(500);
+    for (const v of ["overview", "teamSettings", "subclients"]) {
+      await page.evaluate((id) => showView(id), v); await page.mouse.move(700, 890); await page.waitForTimeout(200);
+      const res = await page.evaluate(async () => (await axe.run({ exclude: [["#appTooltip"]] }, { resultTypes: ["violations"] })).violations.map((x) => `${x.id}(${x.nodes.length},${x.impact})`));
+      if (res.length) bad++;
+      console.log(`${label.padEnd(5)} ${("entered:" + v).padEnd(22)} ${res.length ? res.join(" ") : "no violations"}`);
+    }
+    await page.evaluate(() => Live.openTenant(1)).catch(() => {});
+    await page.waitForTimeout(300);
+  }
+
   // Modals. axe sees only what is on screen, so each one is opened, scanned, then checked for the things axe
   // cannot: a dialog role and name, focus moved inside, and Escape closing it.
   await page.evaluate(() => showView("overview"));
@@ -117,6 +159,7 @@ async function pass(label, signedIn) {
     ...(signedIn ? [{ name: "onboarding", backdrop: "#liveOnboardBackdrop", open: "Live.openOnboard()", close: 'document.getElementById("liveOnboardBackdrop").classList.remove("open")' }, { name: "support panel", backdrop: "#csSupportPanel", open: 'document.getElementById("csSupportTab").click()', close: 'document.getElementById("csSupportTab").click()', panel: true }]
       : [{ name: "sign-in", backdrop: "#liveAuthBackdrop", open: "Live.openAuth()", close: "Live.closeAuth()" }]),
   ];
+  if (mode === "partner") MODALS.push({ name: "+ Tenant (partner)", backdrop: "#modalBackdrop", open: "Live.beginClientOrg()", close: "closeModal()" });
   for (const m of MODALS) {
     const before = errors.length;
     await page.evaluate(m.open).catch((e) => errors.push(`open ${m.name}: ${String(e.message).slice(0, 120)}`));
@@ -145,8 +188,31 @@ async function pass(label, signedIn) {
   await ctx.close();
   return bad;
 }
-let bad = await pass("demo", false);
-bad += await pass("live", true);
+let bad = await pass("demo", "demo");
+bad += await pass("live", "tenant");
+bad += await pass("part", "partner");
+bad += await pass("super", "super");
+
+// A super admin who arrives with no fragment is sent to the console, once. Check it, and that nobody else is.
+for (const [mode, expectConsole] of [["super", true], ["tenant", false]]) {
+  MODE = mode;
+  const ctx = await browser.newContext();
+  await ctx.route(/^https?:/, async (route) => {
+    const u = new URL(route.request().url());
+    if (u.origin === ORIGIN && u.pathname.startsWith("/__rpc/")) { const h = handlers[u.pathname.slice(7)]; return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: h ? h(JSON.parse(u.searchParams.get("a") || "{}")) : null, error: h ? null : { message: "unstubbed" } }) }); }
+    if (u.origin === ORIGIN && u.pathname === "/app") return route.fulfill({ status: 200, contentType: "text/html", body: appHtml.replace(/(supabase\.min\.js")\s+integrity="[^"]*"/, "$1") });
+    if (u.origin === ORIGIN) return route.fulfill({ status: 200, contentType: "text/html", body: "<title>console</title>" });
+    if (/supabase\.min\.js/.test(u.pathname)) return route.fulfill({ status: 200, contentType: "text/javascript", body: STUB });
+    return route.abort("blockedbyclient");
+  });
+  const page = await ctx.newPage();
+  await page.goto(`${ORIGIN}/app`).catch(() => {});
+  await page.waitForTimeout(1500);
+  const went = new URL(page.url()).pathname === "/admin";
+  if (went !== expectConsole) bad++;
+  console.log(`${mode.padEnd(5)} /app with no fragment ${went ? "goes to /admin" : "stays in the workspace"}${went === expectConsole ? "" : "  UNEXPECTED"}`);
+  await ctx.close();
+}
 if (unstubbed.size) console.log(`\nRPCs the page called that the fixture does not stub (they answered an error): ${[...unstubbed].join(", ")}`);
 await browser.close();
 process.exit(bad ? 1 : 0);
