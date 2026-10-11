@@ -3295,9 +3295,49 @@
   // DNS text is third-party content and is escaped everywhere it is printed.
   const DM_NOT_WATCHED = [
     ['Registration and expiry (WHOIS / RDAP)', 'No scan and no table reads a registrar. A domain that is about to lapse is not flagged here.'],
-    ['TLS certificate expiry and chain', 'The engine\'s HTTP client validates the certificate when it fetches a page but records neither the certificate nor its expiry date. A certificate that is about to expire is not flagged here.'],
     ['Nameserver changes', 'The HTTP engine writes no NS record. A move to different nameservers shows only through what else changes.'],
   ];
+
+  // What the certificate column can honestly say depends on what the scans have actually done, so this is
+  // decided from the data. 'not_observed' = no scan on an engine that records certificates (1.16.0 and later) has
+  // run for the site; 'unavailable' = the engine tried and the runtime or server did not allow the read, with a
+  // reason; 'ok' = it read one. The wording must never claim more than the strongest state present.
+  function dmCertNote(seen) {
+    const states = seen.map((s) => (s.certificate || {}).state);
+    const read = states.includes('ok');
+    const tried = read || states.includes('unavailable') || states.includes('unreadable');
+    if (!tried) return ['TLS certificate expiry', 'Recorded by scan engine 1.16.0 and later. No scan on that version has run for the sites shown, so the Certificate column is empty. It is not a clean result.'];
+    if (!read) return ['TLS certificate expiry', 'The engine has tried and could not read a certificate for any site shown (the reason is in each cell), so nothing is reported. This is not a clean result.'];
+    return null;
+  }
+
+  const DM_CERT_REASON = {
+    requires_tls13: 'The server accepts only TLS 1.3, which encrypts its certificate, so this check cannot read it.',
+    connect_failed: 'The scan could not open a connection to port 443.',
+    timeout: 'The server did not answer in time.',
+    closed_early: 'The server closed the connection before sending a certificate.',
+    tls_alert: 'The server refused the handshake.',
+    no_socket_api: 'The scan runtime offers no raw socket, so certificates cannot be read here.',
+    parse_error: 'The server sent something the check could not read as a certificate.',
+    no_certificate: 'The server sent no certificate.',
+    ip_literal: 'The site is addressed by IP, which has no certificate name to check.',
+    single_label: 'The host name is not a public domain name.',
+    internal_name: 'The host name is an internal name.',
+    not_a_hostname: 'The host name could not be checked.',
+    no_host: 'The scan ended on no host name.',
+  };
+
+  function dmCert(f) {
+    if (f.state === 'not_observed') return dmCell('Certificate', f.state, '<span class="muted">not observed</span>', 'The latest scan of this site did not record a certificate: it ran on an engine older than 1.16.0, or has not run.');
+    if (f.state === 'unavailable') return dmCell('Certificate', f.state, '<span class="muted">could not read</span>', DM_CERT_REASON[f.reason] || `The scan could not read the certificate (${f.reason || 'unknown reason'}).`);
+    if (f.state === 'unreadable') return dmCell('Certificate', f.state, '<span class="muted">unreadable</span>', 'A certificate record exists for the latest scan but could not be read back.');
+    const d = f.days_remaining;
+    const cls = d < 0 ? 'critical' : d <= 7 ? 'high' : d <= 14 ? 'medium' : 'ok';
+    const text = d < 0 ? 'expired' : `${num(d)} d`;
+    return dmCell('Certificate', f.state, `<span class="pill ${cls}">${text}</span>`,
+      `${d < 0 ? 'Expired' : 'Expires'} ${String(f.not_after || '').slice(0, 10)}, as of the last scan. Issued by ${f.issuer || 'an unnamed authority'}; ${num(f.names)} ${f.names === 1 ? 'name' : 'names'} on it; ${f.tls_version || 'TLS'}${f.self_signed ? '; self-signed' : ''}. Read for ${f.host || 'the site'} on port 443 only.`);
+  }
+
 
   function dmCell(label, state, html, tip) {
     return `<td><span data-tooltip="${escapeHtml(tip)}" tabindex="0">${html}</span></td>`;
@@ -3365,11 +3405,14 @@
       ${tile('DNSSEC on', of('dnssec', (x) => x === 'on'), 'Sites whose domain has DS records published at the parent, out of the sites where DS was looked up.')}
       ${tile('CAA set', of('caa', (x) => x === 'present'), 'Sites whose domain restricts which authorities may issue its certificates, out of the sites where CAA was looked up.')}
       ${tile('HSTS absent', of('hsts', (x) => x === 'absent'), 'Sites that answered without a Strict-Transport-Security header, out of the sites that answered.')}
+      <div data-tooltip="Sites whose certificate the latest scan could read, out of the sites scanned. Low until the engine that records certificates has scanned them, and it counts the sites the runtime or the server did not allow." tabindex="0"><small>Certificates read</small><strong>${num(seen.filter((s) => (s.certificate || {}).state === 'ok').length)}<span class="muted"> of ${num(seen.length)}</span></strong></div>
+      <div data-tooltip="Certificates read that expire within 14 days or have already expired." tabindex="0"><small>Expiring or expired</small><strong>${num(seen.filter((s) => (s.certificate || {}).state === 'ok' && s.certificate.days_remaining <= 14).length)}</strong></div>
       <div data-tooltip="Sites where any watched record differed between two scans in the last ${d.window_days || 30} days." tabindex="0"><small>Changed in ${d.window_days || 30} d</small><strong>${num(seen.filter((s) => s.changes_30d > 0).length)}</strong></div>
     </div>`;
     const notice = `<div class="notice" style="max-width:900px; margin-bottom:16px;" data-tooltip="Read this before relying on the table: it lists what these checks cannot see." tabindex="0">
       <b>What this does not watch.</b> Checks run when a site is scanned, at most daily, so a change that is made and reverted between two scans is never seen. Not observed at all:
-      <ul style="margin:8px 0 0 18px; padding:0;">${DM_NOT_WATCHED.map(([t, why]) => `<li><b>${escapeHtml(t)}.</b> ${escapeHtml(why)}</li>`).join('')}</ul>
+      <ul style="margin:8px 0 0 18px; padding:0;">${[...(dmCertNote(seen) ? [dmCertNote(seen)] : []), ...DM_NOT_WATCHED].map(([t, why]) => `<li><b>${escapeHtml(t)}.</b> ${escapeHtml(why)}</li>`).join('')}</ul>
+      ${dmCertNote(seen) ? '' : '<div style="margin-top:8px;">Certificate expiry is read from port 443 for the host name each scan ended on. Where a server accepts only TLS 1.3 the engine cannot read its certificate and says so in the cell; other names under the same domain have their own certificates.</div>'}
       <div style="margin-top:8px;">A cell reading "not observed" means the latest scan did not look, which is different from the record being absent. It is counted on neither side.</div>
     </div>`;
     const table = panel('Sites', `${sites.length} shown · generated ${d.generated_at ? ago(d.generated_at) : '—'}`, sites.length ? `<table class="tbl">
@@ -3383,6 +3426,7 @@
         <th data-tooltip="Whether the domain restricts which certificate authorities may issue for it." tabindex="0">CAA</th>
         <th data-tooltip="Whether a TXT record starting v=STSv1 is published for _mta-sts." tabindex="0">MTA-STS</th>
         <th data-tooltip="Strict-Transport-Security on the site's own response, with its max-age in days." tabindex="0">HSTS</th>
+        <th data-tooltip="Days until the TLS certificate the server presents expires, as of the last scan. Read for the host name the scan ended on, on port 443 only." tabindex="0">Certificate</th>
         <th data-tooltip="Times a watched record differed from the scan before it, in the last 30 days." tabindex="0">Changes</th>
       </tr></thead>
       <tbody>${sites.map((s) => `<tr>
@@ -3397,6 +3441,7 @@
         ${dmSimple('CAA', s.caa || { state: 'not_observed' }, 'set', 'none', 'The domain restricts which authorities may issue certificates for it.', 'No CAA records: any authority may issue.')}
         ${dmSimple('MTA-STS', s.mta_sts || { state: 'not_observed' }, 'set', 'none', 'A v=STSv1 record is published.', 'No MTA-STS record. It is optional hardening for inbound mail.')}
         ${dmHsts(s.hsts || { state: 'not_observed' })}
+        ${dmCert(s.certificate || { state: 'not_observed' })}
         <td class="num ${s.changes_30d ? '' : 'muted'}">${num(s.changes_30d)}</td>
       </tr>`).join('')}</tbody></table>` : '<div class="empty">No sites match.</div>', { tip: 'The latest completed scan of every registered site, customers first.' });
     const changes = sites.flatMap((s) => (s.recent_changes || []).map((c) => ({ ...c, site: s.website, domain: s.domain })))

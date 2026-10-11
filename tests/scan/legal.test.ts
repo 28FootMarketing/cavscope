@@ -6,9 +6,9 @@
 //
 //   node --experimental-strip-types --test tests/scan/legal.test.ts
 //
-// This file owns the ENGINE_VERSION equality pin (CLAUDE.md: the newest
-// rule's test owns it); tests/scan/aio.test.ts and login.test.ts assert
-// floors.
+// The ENGINE_VERSION equality pin moved to tests/scan/tls-cert.test.ts with
+// SEC-023/SEC-024 (CLAUDE.md: the newest rule's test owns it); this file
+// asserts a floor and its own changelog line.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -377,6 +377,8 @@ test("end to end: the scan ships basis and source URL with a detection, and null
 
 test("the engine version moved with the rule set", () => {
   // A finding's severity is only comparable across scans on the same version.
-  assert.match(engine, /const ENGINE_VERSION = "http-native-1\.15\.0";/);
+  const m = engine.match(/const ENGINE_VERSION = "http-native-(\d+)\.(\d+)\.(\d+)";/);
+  assert.ok(m, "ENGINE_VERSION is not in the expected form");
+  assert.ok(Number(m[1]) > 1 || Number(m[2]) >= 15, `engine ${m[0]} is older than the release that added the JSON-LD tier`);
   assert.match(engine, /1\.15\.0 adds a JSON-LD tier and records where every detection came from/);
 });

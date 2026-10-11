@@ -17,6 +17,7 @@ import { PROBE_ORIGIN, evaluateCors } from "./cors.ts";
 import { evaluateCspQuality } from "./csp.ts";
 import { extractUsState, type StateSignal } from "./legal.ts";
 import { contentChecks, resourceChecks, type PageStep } from "./page-checks.ts";
+import { certHostProblem, certificateEvidence, defaultConnect, evaluateCertificate, readCertificate, type CertReading } from "./tls-cert.ts";
 
 // CavScope scan engine, phase 1: HTTP-native checks.
 // Reads nothing from the muster schema directly; every DB call goes through public.muster_engine_* RPCs
@@ -183,7 +184,20 @@ import { contentChecks, resourceChecks, type PageStep } from "./page-checks.ts";
 // meta_description) and the URL it was read from, so a report can say how
 // much weight its location deserves rather than presenting a meta-description
 // guess with the same confidence as a governing-law clause.
-const ENGINE_VERSION = "http-native-1.15.0";
+//
+// 1.16.0 adds SEC-023 (the certificate the site presents has expired) and SEC-024 (it expires within
+// 14 days; high within 7), and writes a tls_certificate evidence row on EVERY scan. fetch() cannot return
+// a certificate, and Certificate Transparency logs say what was issued, not what is served, so tls-cert.ts
+// opens a socket and reads the server's TLS 1.2 Certificate message (sent in the clear) -- see its header
+// for what that does and does not claim. This is the first thing in the engine that is not fetch(), and the
+// comment above on SEC-019 records that a raw socket has never been shown to work inside the DEPLOYED
+// function. So the evidence row is the proof: it reads state "ok" when the runtime allowed it and
+// state "unavailable" with a reason (connect_failed, no_socket_api, requires_tls13, ...) when it did not,
+// either way, every scan. SEC-023 and SEC-024 are added INACTIVE (migration 20261011013757, with the new
+// scan_evidence kind) and stay so until a deployed scan shows state "ok"; ingest then drops their findings
+// as skipped_inactive, exactly as for every rule held this way. Needs scan_evidence_kind_check to allow
+// tls_certificate, applied before this deploys.
+const ENGINE_VERSION = "http-native-1.16.0";
 const TIMEOUT_MS = 15000;
 const MAX_BODY_BYTES = 1_000_000;
 const EXCERPT_BYTES = 4096;
@@ -467,6 +481,22 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
   if (reachable && !isHttps) {
     add({ rule_id: "SEC-013", severity: "critical", title: "Final page served over HTTP", detail: `After redirects the homepage resolved to ${finalUrl}, which is not HTTPS.`,
       location: "homepage", confidence: "high", evidence_keys: ["chain", "primary"] });
+  }
+
+  // SEC-023 / SEC-024: the certificate the server presents, read for the host the visitor ends up on. Run
+  // whether or not the homepage loaded -- an expired certificate is the usual reason it did not -- and
+  // written as evidence whatever happens, so a runtime that will not allow a socket is visible.
+  {
+    const certHost = hostOf(finalUrl) ?? hostOf(target);
+    const problem = certHostProblem(certHost);
+    const reading: CertReading = problem
+      ? { state: "unavailable", host: certHost ?? "", port: 443, reason: problem, detail: null, ms: 0 }
+      : await readCertificate(certHost!, { connect: await defaultConnect() });
+    const excerpt = certificateEvidence(reading);
+    await ev({ key: "tls_certificate", kind: "tls_certificate", url: `tls:${certHost ?? "unknown"}:443`, http_status: null, content_type: null,
+      response_ms: reading.ms, headers: null, excerpt, byte_length: null },
+      reading.state === "ok" ? reading.cert.fingerprint_sha256 : `unavailable:${reading.reason}`);
+    for (const f of evaluateCertificate({ host: certHost ?? "", reading, now: new Date(), evidenceKey: "tls_certificate" })) add(f);
   }
 
   // 2. HTTP -> HTTPS probe.

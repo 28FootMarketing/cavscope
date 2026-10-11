@@ -282,6 +282,20 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 
 ## Other notes
 
+- **The engine reads the TLS certificate, and the rules that act on it ship dark, as of 2026-10-11.** Engine
+  `http-native-1.16.0` opens a raw socket to :443 (`cavscope-scan/tls-cert.ts`), sends a TLS 1.2-only ClientHello and
+  parses the unencrypted Certificate message; it validates nothing and reads only the host the scan ended on. This is
+  the one exception to "every reach is an HTTPS request", and **a raw socket has never been shown to work inside the
+  deployed function**, so `SEC-023` (expired, critical) and `SEC-024` (expires within 14 days, medium; high within 7) were
+  added **inactive** by migration `20261011013757`, which also admitted the `tls_certificate` evidence kind (apply it
+  before an engine that emits the kind deploys, or ingest fails the whole scan). Every scan writes one `tls_certificate`
+  evidence row, `ok` or `unavailable` with a reason (`requires_tls13` is expected for TLS 1.3-only servers, which encrypt
+  the certificate; `connect_failed` or `no_socket_api` on every site means the runtime refuses sockets). **Activate the
+  rules by a follow-up migration only after a deployed scan shows `state: ok`**:
+  `select excerpt::jsonb->>'state' from cavscope.scan_evidence where kind='tls_certificate' order by id desc limit 20`.
+  Domain Monitor (`20261011013811`) shows the certificate where one was read and says `not observed` / `could not read`
+  otherwise, never a clean result. `tests/scan/tls-cert.test.ts` owns the `ENGINE_VERSION` pin. Table in `docs/SCAN-RULES.md`.
+
 - **The browser engine exists, is tested, and is dark, as of 2026-10-05.** `workers/browser-scan/` loads
   pages in headless Chromium (Playwright, axe-core pinned) and reports rendered accessibility, third-party
   requests, cookies before interaction, CSP behaviour and forms. It is a second engine, `browser-1.0.0`,
