@@ -52,9 +52,9 @@ test("migration: each edit is asserted to apply once, and the console uses cavsc
   assert.match(mig, /'billing'|''billing''/);
 });
 
-test("the not-instrumented panels name the cavscope schema, never the retired one", () => {
-  const stubs = html.slice(html.indexOf("const STUBS = {"), html.indexOf("function renderStub("));
-  assert.doesNotMatch(stubs, /muster\./);
-  assert.match(stubs, /cavscope\.organizations/);
-  assert.match(stubs, /Client Access/);
+test("the two sections that were not-instrumented stubs name the cavscope schema, never the retired one", () => {
+  const built = html.slice(html.indexOf("// ---- workspaces"), html.indexOf("const RENDER = {"));
+  assert.ok(built.length > 2000, "workspaces and domain monitor not found");
+  assert.doesNotMatch(built, /muster/i);
+  assert.doesNotMatch(html, /const STUBS = \{|function renderStub\(/);
 });
