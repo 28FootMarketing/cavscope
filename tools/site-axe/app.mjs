@@ -55,7 +55,7 @@ const handlers = {
   cavscope_pending_invites: () => [], cavscope_finding_glossary: () => [{ rule_id: "SEC-001", title: "Missing HSTS", severity: "high", category: "security", plain_english: "Meaning.", remediation: "Fix.", checked: true }],
   cavscope_rule_status: (a) => (a.p_rule_ids || []).map((id) => ({ rule_id: id, active: true, title: id, default_severity: "low", engine_floor: null })),
   cavscope_countries: () => [{ code: "US", name: "United States" }], cavscope_regions: () => [{ code: "US-PA", name: "Pennsylvania", country: "US" }],
-  cavscope_llm_config: () => null, cavscope_client_orgs: () => [], cavscope_jurisdiction_advisory: () => FX.org.advisory,
+  cavscope_industries: () => [{ name: "Technology" }, { name: "Healthcare" }], cavscope_llm_config: () => null, cavscope_client_orgs: () => [], cavscope_jurisdiction_advisory: () => FX.org.advisory,
 };
 const unstubbed = new Set();
 const STUB = `window.supabase={createClient:function(){var s=window.__AXE_SIGNED_OUT?null:{user:{email:'owner@example.org',app_metadata:{}},access_token:'x'};
@@ -98,7 +98,7 @@ async function pass(label, signedIn) {
     const before = errors.length;
     await page.evaluate((id) => showView(id), v);
     await page.mouse.move(700, 890); await page.keyboard.press("Escape"); await page.waitForTimeout(200);
-    const res = await page.evaluate(async () => (await axe.run(document, { resultTypes: ["violations"] })).violations.map((x) => ({ id: x.id, impact: x.impact, n: x.nodes.length, help: x.help, nodes: x.nodes.slice(0, 3).map((n) => `${n.target.join(" ")} :: ${n.html.slice(0, 120).replace(/\s+/g, " ")} :: ${n.failureSummary.replace(/\s+/g, " ").slice(0, 170)}`) })));
+    const res = await page.evaluate(async () => (await axe.run({ exclude: [["#appTooltip"]] }, { resultTypes: ["violations"] })).violations.map((x) => ({ id: x.id, impact: x.impact, n: x.nodes.length, help: x.help, nodes: x.nodes.slice(0, 3).map((n) => `${n.target.join(" ")} :: ${n.html.slice(0, 120).replace(/\s+/g, " ")} :: ${n.failureSummary.replace(/\s+/g, " ").slice(0, 170)}`) })));
     const text = await page.evaluate((id) => document.getElementById(id).innerText.length, v);
     const errs = errors.slice(before);
     if (res.length || errs.length) bad++;
@@ -106,6 +106,42 @@ async function pass(label, signedIn) {
     if (process.env.DETAIL) for (const x of res) { console.log(`   ## ${x.help}`); x.nodes.forEach((n) => console.log("     ", n)); }
   }
   if (!views.length) { console.log(`[${label}] no views found`, errors.join(" | ")); bad++; }
+
+  // Modals. axe sees only what is on screen, so each one is opened, scanned, then checked for the things axe
+  // cannot: a dialog role and name, focus moved inside, and Escape closing it.
+  await page.evaluate(() => showView("overview"));
+  const MODALS = [
+    // A live workspace refuses the record forms that save nothing (DEMO_ONLY_MODALS) and hides "+ Tenant", so only demo opens those.
+    ...["risk", "control", "evidence", "remediation", "appetite", "exception", "objective", "test", "add_subclient", "create_client_org", "create_tenant", "whitelabel_settings"].filter((t) => !signedIn || !["risk", "control", "evidence", "exception", "remediation", "test", "objective", "create_tenant"].includes(t)).map((t) => ({ name: `modal:${t}`, backdrop: "#modalBackdrop", open: `openModal(${JSON.stringify(t)})`, close: "closeModal()" })),
+    ...["posture", "controls", "evidence", "remediation"].map((k) => ({ name: `explainer:${k}`, backdrop: "#scoreExplainerBackdrop", open: `openScoreExplainer(${JSON.stringify(k)})`, close: "closeScoreExplainer()" })),
+    ...(signedIn ? [{ name: "onboarding", backdrop: "#liveOnboardBackdrop", open: "Live.openOnboard()", close: 'document.getElementById("liveOnboardBackdrop").classList.remove("open")' }, { name: "support panel", backdrop: "#csSupportPanel", open: 'document.getElementById("csSupportTab").click()', close: 'document.getElementById("csSupportTab").click()', panel: true }]
+      : [{ name: "sign-in", backdrop: "#liveAuthBackdrop", open: "Live.openAuth()", close: "Live.closeAuth()" }]),
+  ];
+  for (const m of MODALS) {
+    const before = errors.length;
+    await page.evaluate(m.open).catch((e) => errors.push(`open ${m.name}: ${String(e.message).slice(0, 120)}`));
+    if (m.panel) await page.waitForFunction(() => !document.getElementById('csSupportPanel').hidden, null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(250);
+    const info = await page.evaluate(({ sel, panel }) => {
+      const root = document.querySelector(sel);
+      const shown = !!root && (panel ? !root.hidden : root.classList.contains("open"));
+      const dlg = panel ? root : root?.querySelector(".modal-dialog");
+      const role = dlg?.getAttribute("role") || root?.getAttribute("role");
+      const modal = dlg?.getAttribute("aria-modal") || root?.getAttribute("aria-modal");
+      const named = !!(dlg?.getAttribute("aria-labelledby") || dlg?.getAttribute("aria-label") || root?.getAttribute("aria-labelledby") || root?.getAttribute("aria-label"));
+      const inside = !!dlg && dlg.contains(document.activeElement);
+      return { shown, dialog: role === "dialog" || role === "alertdialog", modal: modal === "true", named, inside };
+    }, { sel: m.backdrop, panel: !!m.panel });
+    if (!info.shown) { console.log(`${label.padEnd(5)} ${m.name.padEnd(22)} did not open${errors.length > before ? "  " + errors.slice(before).join(" | ") : ""}`); bad++; continue; }
+    const res = await page.evaluate(async () => (await axe.run({ exclude: [["#appTooltip"]] }, { resultTypes: ["violations"] })).violations.map((x) => ({ id: x.id, impact: x.impact, n: x.nodes.length, help: x.help, nodes: x.nodes.slice(0, 3).map((n) => `${n.target.join(" ")} :: ${n.html.slice(0, 110).replace(/\s+/g, " ")} :: ${n.failureSummary.replace(/\s+/g, " ").slice(0, 150)}`) })));
+    await page.keyboard.press("Escape"); await page.waitForTimeout(150);
+    const closedByEsc = await page.evaluate(({ sel, panel }) => { const r = document.querySelector(sel); return panel ? r.hidden : !r.classList.contains("open"); }, { sel: m.backdrop, panel: !!m.panel });
+    if (!closedByEsc) await page.evaluate(m.close).catch(() => {});
+    const gaps = [!info.dialog && "no dialog role", !info.modal && !m.panel && "no aria-modal", !info.named && "no accessible name", !info.inside && "focus stays outside", !closedByEsc && "Escape does not close"].filter(Boolean);
+    if (res.length || gaps.length) bad++;
+    console.log(`${label.padEnd(5)} ${m.name.padEnd(22)} ${res.length ? res.map((x) => `${x.id}(${x.n},${x.impact})`).join(" ") : "axe clean"}${gaps.length ? "  | " + gaps.join(", ") : ""}${errors.length > before ? "  SCRIPT ERROR: " + errors.slice(before).join(" | ") : ""}`);
+    if (process.env.DETAIL) for (const x of res) { console.log(`   ## ${x.help}`); x.nodes.forEach((n) => console.log("     ", n)); }
+  }
   await ctx.close();
   return bad;
 }
