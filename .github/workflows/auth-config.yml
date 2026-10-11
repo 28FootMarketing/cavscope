@@ -137,12 +137,12 @@ jobs:
           echo "uri_allow_list  : $ALLOW"
 
           {
-            echo "### Supabase Auth config -- `$REF`"
+            echo "### Supabase Auth config -- \`$REF\`"
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| site_url before | `$BEFORE` |"
-            echo "| requested | `$WANT` |"
+            echo "| site_url before | \`$BEFORE\` |"
+            echo "| requested | \`$WANT\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$APPLY" != "true" ]; then
@@ -152,9 +152,9 @@ jobs:
               echo ""
               echo "Redirect allowlist, unchanged by this job:"
               echo ""
-              echo "```"
+              echo '```'
               echo "$ALLOW"
-              echo "```"
+              echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -172,7 +172,7 @@ jobs:
           if [ "$AFTER" != "$WANT" ]; then
             echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'. Site URL is NOT set."
             {
-              echo "| site_url after | `$AFTER` |"
+              echo "| site_url after | \`$AFTER\` |"
               echo "| result | **FAILED -- readback disagrees, value not applied** |"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -180,14 +180,14 @@ jobs:
 
           AFTER_ALLOW=$(get_list)
           {
-            echo "| site_url after | `$AFTER` |"
+            echo "| site_url after | \`$AFTER\` |"
             echo "| result | **applied and verified by readback** |"
             echo ""
             echo "Redirect allowlist, untouched by this job:"
             echo ""
-            echo "```"
+            echo '```'
             echo "$AFTER_ALLOW"
-            echo "```"
+            echo '```'
             echo ""
             echo "A magic link still has to be sent and followed to call this done end to end."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -230,8 +230,8 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| before | `$BEFORE` |"
-            echo "| after | `$AFTER` |"
+            echo "| before | \`$BEFORE\` |"
+            echo "| after | \`$AFTER\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$AFTER" != "$WANT" ]; then
@@ -261,8 +261,8 @@ jobs:
           echo "smtp_admin_email after  : $AFTER"
           {
             echo "### SMTP sender address"
-            echo "| before | `$BEFORE` |"
-            echo "| after | `$AFTER` |"
+            echo "| before | \`$BEFORE\` |"
+            echo "| after | \`$AFTER\` |"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$AFTER" != "$WANT" ]; then
             echo "::error::Readback disagrees. Wanted '$WANT', the API reports '$AFTER'."
@@ -391,10 +391,10 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| site_url in effect | `$SITE` |"
+            echo "| site_url in effect | \`$SITE\` |"
             echo "| custom SMTP | **$SMTP_HOST** |"
-            echo "| sender | `$SMTP_FROM` |"
-            echo "| POST /auth/v1/otp | `$CODE` |"
+            echo "| sender | \`$SMTP_FROM\` |"
+            echo "| POST /auth/v1/otp | \`$CODE\` |"
             echo "| redirect_to sent | **none, on purpose** -- the link should follow site_url |"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
@@ -410,8 +410,8 @@ jobs:
             echo "**A 200 means GoTrue accepted the request. It does not mean the email arrived.**"
             echo "Check the inbox, then click the link and read the host it lands on:"
             echo ""
-            echo "- lands on `app.muster.partners` -- Site URL is fixed and the flow works"
-            echo "- lands on `www.muster.partners` -- the setting did not take effect"
+            echo "- lands on \`app.muster.partners\` -- Site URL is fixed and the flow works"
+            echo "- lands on \`www.muster.partners\` -- the setting did not take effect"
             echo "- never arrives -- a mail transport problem, not a Site URL problem"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::GoTrue accepted the request ($CODE). Delivery is not confirmed by this; check the inbox."
@@ -521,7 +521,7 @@ jobs:
             GOT_SUBJ=$(jq -r --arg k "mailer_subjects_${flow}" '.[$k] // ""' /tmp/after.json)
             WANT_SUBJ=$(jq -r --arg f "$flow" '.[] | select(.flow==$f) | .subject' $DIR/manifest.json)
             if [ "$WANT_SHA" = "$GOT_SHA" ] && [ "$WANT_SUBJ" = "$GOT_SUBJ" ]; then OK="yes"; else OK="**NO**"; FAIL=1; fi
-            echo "| `$flow` | `$GOT_SUBJ` | `$GOT_SHA` | $OK |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| \`$flow\` | \`$GOT_SUBJ\` | \`$GOT_SHA\` | $OK |" >> "$GITHUB_STEP_SUMMARY"
             echo "$flow: want ${#WANT} chars/$WANT_SHA, got ${#GOT} chars/$GOT_SHA, subject match=$([ "$WANT_SUBJ" = "$GOT_SUBJ" ] && echo yes || echo NO)"
           done < <(jq -r '.[] | "\(.flow) \(.file) \(.subject)"' $DIR/manifest.json)
 
