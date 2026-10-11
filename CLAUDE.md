@@ -316,7 +316,14 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   was left alone and `browser_engine` is the flag that is actually read. **The active tests (FORM-010,
   FORM-011) send data and are gated in SQL and again in the worker**; never aim them at a site without a
   stored authorization, and never at a live site to "see if it works". Fixtures and the Playwright run live in
-  `tests/browser/` (`npm run test:browser`; the unit half is in `npm test`). **The Supabase MCP connection
+  `tests/browser/` (`npm run test:browser`; the unit half is in `npm test`). **A report carries the browser results
+  as data, as of 2026-10-11** (`20261011032759`): `sections.browser` (from `cavscope.sitrep_browser_section`, null when
+  no complete browser scan for the site falls in the seven days before the reported scan) is drawn by `sitrep.html` and
+  both workspace reports, and the report model names it after `top_findings` in both profiles. Until then only the
+  markdown had a "Browser Engine Results" section, so the viewer and the markdown were different documents. Every
+  check is listed, passes included, and a pass is never worded as secure or accessible; the demo fixture names the
+  section but carries no browser data. `tests/sitrep/browser-section.test.ts` runs both pages' real renderers.
+  **The Supabase MCP connection
   hangs on `DELETE` and `DROP FUNCTION` statements (observed 2026-10-05); write such steps so they do not
   need them, or hand the SQL to the owner.**
 

@@ -644,6 +644,8 @@
         </div>
       </section>` : ''}
 
+      ${renderBrowser(s.browser)}
+
       ${controls ? `
       <section class="block">
         <h2 data-tooltip="Framework controls derived from this site's findings. A citation to a framework is not a test of it; this is not an audit opinion." tabindex="0">Controls</h2>
@@ -687,6 +689,34 @@
     `;
     // Each report section collapses; the first stays open. See initAccordions().
     accordionSections(root, ':scope > section.block', 'sitrep-sections');
+  }
+
+  // Browser Engine Results. Mirrors cavscope.sitrep_browser_md and reads the same
+  // sections.browser, so the viewer and the markdown print one set of checks. Every
+  // check is listed, passes included, and a pass is never worded as secure or
+  // accessible. A report with no browser scan in its window has no section.
+  function renderBrowser(b) {
+    if (!b || !Array.isArray(b.checks)) return '';
+    const cls = { finding: 'high', needs_review: 'medium' };
+    const rows = b.checks.map(c => {
+      const o = String(c.outcome || '');
+      return `<tr>
+        <td class="mono-cell" data-tooltip="Internal rule code for this browser check." tabindex="0">${escapeHtml(c.rule_id || '')}</td>
+        <td><span class="sev-chip sev-${escapeHtml(cls[o] || 'info')}">${escapeHtml(o.replace(/_/g, ' '))}</span></td>
+        <td>${escapeHtml(c.detail || '')}</td>
+      </tr>`;
+    }).join('');
+    const when = b.completed_at ? new Date(b.completed_at).toLocaleString() : 'an unrecorded time';
+    return `
+      <section class="block">
+        <h2 data-tooltip="What the browser engine (headless Chromium) found on the pages it loaded and ran. Every check is listed, including those that passed." tabindex="0">Browser Engine Results</h2>
+        <p class="law-lede">Engine ${escapeHtml(String(b.engine_version || 'browser'))}, scan #${escapeHtml(String(b.scan_id ?? ''))}, completed ${escapeHtml(when)}. Pages visited: ${escapeHtml(String(b.pages_visited ?? 'n/a'))}. Every check is listed, including those that passed. A passed check means these checks found nothing on this date; it is not a statement that the site is secure or accessible.</p>
+        ${rows ? `<div class="overflow-x"><table class="data-table">
+          <thead><tr><th>Check</th><th>Outcome</th><th>Detail</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>` : '<p class="law-lede">The browser engine recorded no checks for this scan.</p>'}
+        ${b.active_tests_unauthorized ? '<p class="law-lede">Active tests were requested for this scan but the site has no current authorization on file, so none were run.</p>' : ''}
+      </section>`;
   }
 
   // Laws and Standards. Mirrors muster.sitrep_jurisdiction_md (migration 082) and

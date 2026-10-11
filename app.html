@@ -3714,6 +3714,32 @@
         </footer>`;
     }
 
+    // The browser engine's results, drawn from sections.browser. Mirrors the "Browser
+    // Engine Results" block the markdown prints (sitrep_browser_md): every check is
+    // listed, passes included, and a pass is never worded as the site being secure or
+    // accessible. A report with no browser scan in its window has no section at all.
+    function renderReportBrowser(b) {
+      if (!b || !Array.isArray(b.checks)) return '';
+      const outcomeClass = { finding: 'high', needs_review: 'medium' };
+      const rows = b.checks.map(c => {
+        const o = String(c.outcome || '');
+        return `<tr>
+          <td class="rd-mono" data-tooltip="Internal rule code for this browser check." tabindex="0">${escapeHtml(c.rule_id || '')}</td>
+          <td><span class="rd-sev rd-sev-${escapeHtml(outcomeClass[o] || 'info')}">${escapeHtml(o.replace(/_/g, ' '))}</span></td>
+          <td>${escapeHtml(c.detail || '')}</td>
+        </tr>`;
+      }).join('');
+      return `<section class="rd-block">
+        <h3 data-tooltip="What the browser engine (headless Chromium) found on the pages it loaded and ran. Every check is listed, including those that passed." tabindex="0">Browser Engine Results</h3>
+        <p class="rd-lede">Engine ${escapeHtml(String(b.engine_version || 'browser'))}, scan #${escapeHtml(String(b.scan_id ?? ''))}, completed ${reportWhen(b.completed_at)}. Pages visited: ${escapeHtml(String(b.pages_visited ?? 'n/a'))}. Every check is listed, including those that passed. A passed check means these checks found nothing on this date; it is not a statement that the site is secure or accessible.</p>
+        ${rows ? `<div class="rd-scroll"><table class="rd-table">
+          <thead><tr><th>Check</th><th>Outcome</th><th>Detail</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>` : '<p class="rd-lede">The browser engine recorded no checks for this scan.</p>'}
+        ${b.active_tests_unauthorized ? '<p class="rd-lede">Active tests were requested for this scan but the site has no current authorization on file, so none were run.</p>' : ''}
+      </section>`;
+    }
+
     function renderReportSection(key, ctx) {
       const { s, r, m, live } = ctx;
       switch (key) {
@@ -3755,6 +3781,8 @@
             </div>
           </section>`;
         }
+        case 'browser':
+          return renderReportBrowser(s.browser);
         case 'controls': {
           const c = r.controls || {};
           const items = c.items || [];
@@ -3964,8 +3992,8 @@
             { framework: 'OWASP_SECURE_HEADERS', framework_label: 'OWASP Secure Headers', reference: 'Strict-Transport-Security', title: 'OWASP Secure Headers Strict-Transport-Security', assessment: 'partial' },
           ] },
           profiles: {
-            client: { title: 'Plain English Briefing', audience: 'For the people who own this website: every open finding in everyday language, with the fix.', sections: ['plain_english', 'top_findings', 'scope_note', 'jurisdiction'] },
-            board: { title: 'Board & Committee Risk Report', audience: 'For leadership: posture, exposure by severity, control coverage, and the evidence behind every claim.', sections: ['board_report', 'metrics', 'controls', 'top_findings', 'scope_note', 'evidence_index'] },
+            client: { title: 'Plain English Briefing', audience: 'For the people who own this website: every open finding in everyday language, with the fix.', sections: ['plain_english', 'top_findings', 'browser', 'scope_note', 'jurisdiction'] },
+            board: { title: 'Board & Committee Risk Report', audience: 'For leadership: posture, exposure by severity, control coverage, and the evidence behind every claim.', sections: ['board_report', 'metrics', 'controls', 'top_findings', 'browser', 'scope_note', 'evidence_index'] },
           },
           disclaimer: "CavScope's SITREP is a technical assessment, not a compliance certification or legal opinion. It does not constitute legal advice; organizations remain solely responsible for their own legal and regulatory obligations.",
         },
