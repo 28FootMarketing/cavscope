@@ -37,11 +37,38 @@ test("a failed read says so instead of drawing an empty table", () => {
   assert.match(domains, /if \(sideError\('domains'\)\) return/);
 });
 
-test("Domain Monitor states what it does not watch, and a certificate or registration date is not claimed", () => {
-  for (const t of ["Registration and expiry (WHOIS / RDAP)", "TLS certificate expiry and chain", "Nameserver changes"]) assert.ok(domains.includes(t), t);
+test("Domain Monitor states what it does not watch, and never reads a missing certificate as a clean one", () => {
+  for (const t of ["Registration and expiry (WHOIS / RDAP)", "Nameserver changes"]) assert.ok(domains.includes(t), t);
   assert.match(domains, /A cell reading "not observed" means the latest scan did not look/);
   assert.match(domains, /a change that is made and reverted between two scans is never seen/);
   assert.doesNotMatch(domains, /continuous/i);
+  // Certificate expiry is claimed only as far as the scans have actually read one.
+  assert.match(domains, /Recorded by scan engine 1\.16\.0 and later\. No scan on that version has run for the sites shown[^']*It is not a clean result/);
+  assert.match(domains, /The engine has tried and could not read a certificate for any site shown[^']*This is not a clean result/);
+  assert.match(domains, /The server accepts only TLS 1\.3, which encrypts its certificate, so this check cannot read it/);
+});
+
+test("the Certificate column separates not observed, could not read and a reading, and uses the engine's thresholds", () => {
+  const cert = section("function dmCert(f)", "function dmCell(") || domains.slice(domains.indexOf("function dmCert(f)"));
+  const body = domains.slice(domains.indexOf("function dmCert(f)"), domains.indexOf("function dmCert(f)") + 2200);
+  assert.match(body, /f\.state === 'not_observed'[^\n]*muted/);
+  assert.match(body, /f\.state === 'unavailable'[^\n]*could not read/);
+  assert.match(body, /f\.state === 'unreadable'/);
+  void cert;
+  // The colours must change at the days the engine raises findings at.
+  const engine = readFileSync(join(root, "supabase/functions/cavscope-scan/tls-cert.ts"), "utf8");
+  const high = Number(engine.match(/EXPIRING_HIGH_DAYS = (\d+)/)![1]);
+  const any = Number(engine.match(/EXPIRING_DAYS = (\d+)/)![1]);
+  assert.match(body, new RegExp(`d < 0 \\? 'critical' : d <= ${high} \\? 'high' : d <= ${any} \\? 'medium' : 'ok'`));
+  assert.match(domains, new RegExp(`days_remaining <= ${any}`));
+  assert.match(html, /certificate: \{ state: "ok"/.source ? /cavscope_admin_domain_monitor/ : /x/);
+});
+
+test("every reason the engine can give for not reading a certificate has words on the page", () => {
+  const engine = readFileSync(join(root, "supabase/functions/cavscope-scan/tls-cert.ts"), "utf8");
+  const reasons = new Set([...engine.matchAll(/(?:unavailable\(host, port, started, |reason: ")"?([a-z_0-9]+)"/g)].map((m) => m[1]));
+  for (const r of ["no_socket_api", "connect_failed", "timeout", "closed_early", "tls_alert", "requires_tls13", "parse_error", "no_certificate"]) reasons.add(r);
+  for (const r of reasons) assert.ok(new RegExp(`\\b${r}:`).test(domains), `no explanation on the page for reason ${r}`);
 });
 
 test("not observed is never drawn as a pill, and an HSTS with no response is not 'absent'", () => {
