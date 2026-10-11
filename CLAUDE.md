@@ -282,12 +282,12 @@ shows — so a partial load must not silently strip half a tenant's workspace.
 
 ## Other notes
 
-- **The engine reads the TLS certificate, and the rules that act on it ship dark, as of 2026-10-11.** Engine
+- **The engine reads the TLS certificate, and the rules that act on it are active, as of 2026-10-11.** Engine
   `http-native-1.16.0` opens a raw socket to :443 (`cavscope-scan/tls-cert.ts`), sends a TLS 1.2-only ClientHello and
   parses the unencrypted Certificate message; it validates nothing and reads only the host the scan ended on. This is
-  the one exception to "every reach is an HTTPS request", and **a raw socket has never been shown to work inside the
-  deployed function**, so `SEC-023` (expired, critical) and `SEC-024` (expires within 14 days, medium; high within 7) were
-  added **inactive** by migration `20261011013757`, which also admitted the `tls_certificate` evidence kind (apply it
+  the one exception to "every reach is an HTTPS request", and **a raw socket was shown to work inside the
+  deployed function** (scans 290 to 309: 16 of 16 completed scans `ok`), so `SEC-023` (expired, critical) and `SEC-024` (expires within 14 days, medium; high within 7) were
+  added inactive by migration `20261011013757` and **activated by `20261011021902`**, which also admitted the `tls_certificate` evidence kind (apply it
   before an engine that emits the kind deploys, or ingest fails the whole scan). Every scan writes one `tls_certificate`
   evidence row, `ok` or `unavailable` with a reason (`requires_tls13` is expected for TLS 1.3-only servers, which encrypt
   the certificate; `connect_failed` or `no_socket_api` on every site means the runtime refuses sockets). **Activate the

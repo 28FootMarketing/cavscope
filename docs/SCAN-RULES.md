@@ -28,9 +28,10 @@ Certificate Transparency logs say what was issued, not what is served, so `tls-c
 sends a TLS 1.2 ClientHello and reads the server's Certificate message, which TLS 1.2 sends in the clear. It validates
 nothing (a site whose certificate does not validate already fails `fetch()` and is reported unreachable) and reads only
 the host name the scan ended on. `check_type` stays `http_native` because the column has no socket value. **They were added
-inactive** (`20261011013757`), because a raw socket has never been shown to work inside the deployed edge function: the engine
+inactive** (`20261011013757`) and **activated by `20261011021902`** after scans 290 to 309 showed the read working in the deployed
+edge function (16 of 16 completed scans `ok`, 37 to 181 days remaining). The gate was that the engine
 writes a `tls_certificate` evidence row on every scan, `state: "ok"` or `"unavailable"` with a reason, and that row is the
-proof. Activate them only after a deployed scan shows `ok`, with:
+proof, read with:
 `select state from (select excerpt::jsonb->>'state' as state from cavscope.scan_evidence where kind = 'tls_certificate' order by id desc limit 20) t group by 1;`
 `requires_tls13` (a server that accepts only TLS 1.3) is expected for some sites and is not a failure of the check;
 `connect_failed` or `no_socket_api` on **every** site means the runtime does not allow it, and the rules must stay inactive.
