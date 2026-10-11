@@ -17,6 +17,7 @@ import { PROBE_ORIGIN, evaluateCors } from "./cors.ts";
 import { evaluateCspQuality } from "./csp.ts";
 import { extractUsState, type StateSignal } from "./legal.ts";
 import { contentChecks, resourceChecks, type PageStep } from "./page-checks.ts";
+import { checkEngineAuth } from "./engine-auth.ts";
 import { certHostProblem, certificateEvidence, defaultConnect, evaluateCertificate, readCertificate, type CertReading } from "./tls-cert.ts";
 
 // CavScope scan engine, phase 1: HTTP-native checks.
@@ -975,9 +976,14 @@ async function runScan(job: { scan_id: number; website_id: number; target_url: s
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
-  const { data: secret } = await db.rpc("cavscope_engine_secret");
-  const provided = req.headers.get("x-muster-secret") ?? "";
-  if (!secret || provided !== secret) return json({ error: "unauthorized" }, 401);
+  const verdict = await checkEngineAuth(
+    async () => { const { data, error } = await db.rpc("cavscope_engine_secret"); return { data: (data as string | null) ?? null, error }; },
+    req.headers.get("x-muster-secret") ?? "",
+  );
+  if (!verdict.ok) {
+    if (verdict.status === 503) console.error("engine auth: could not read the secret: " + verdict.body.detail);
+    return json(verdict.body, verdict.status);
+  }
 
   let body: { scan_id?: number; mode?: string; limit?: number } = {};
   try { body = await req.json(); } catch { /* empty body means due mode */ }
