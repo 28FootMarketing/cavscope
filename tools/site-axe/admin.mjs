@@ -38,6 +38,44 @@ const SIDE = {
   cavscope_admin_sitreps: [{ id: 7, website: "site1.example.org", url: "https://site1.example.org", headline: "site1.example.org: posture 74/100 (amber)", organization: "Example Org", organization_id: 1, is_admin_sandbox: false, posture_score: 74, posture_band: "amber", generator: "deterministic-v1", engine_version: "http-native-1.14.0", citations: 6, generated_at: now }],
   cavscope_admin_sitrep: { id: 7, posture_score: 74, posture_band: "amber", generator: "deterministic-v1", engine_version: "http-native-1.14.0", generated_at: now, content_md: "# Report\n\nBody.", content_sha256: "ab".repeat(32), headline: "site1.example.org" },
   cavscope_scans: [],
+  cavscope_admin_workspaces: [
+    { organization_id: 1, name: "Example Org", plan: "pro", is_sandbox: false, onboarding_status: "complete", created_at: now, last_activity_at: now, managed_by: null,
+      partner: { allowance: 3, clients_used: 1, clients: [{ id: 3, name: "Client One" }] },
+      team: { members: 3, by_role: { executive: 1, viewer: 2 }, pending_invites: 1, last_sign_in: now },
+      sites: { registered: 3, limit: 5, verified: 1, scheduled: 2, scanned: 2, cadence_minutes: 1440, last_scan_at: now },
+      access: { keys_active: 1, keys_total: 2, keys_last_used: now, agents_active: 1 },
+      ai: { configured: true, enabled: true, label: "Provider", model: "model-x", last_ok_at: now, last_error_at: null, last_error: null },
+      brand: { mode: "white-label", name: "Agency Co", custom_domain: "reports.agency.example" },
+      alerts: { critical: true, sitrep_ready: false, custom_recipients: 2 }, overrides: 2,
+      gaps: ["2 of 3 sites have not proven ownership.", "1 of 3 sites have no completed scan."] },
+    { organization_id: 3, name: "Client One", plan: "pro", is_sandbox: false, onboarding_status: "complete", created_at: now, last_activity_at: null, managed_by: { id: 1, name: "Example Org" },
+      partner: { allowance: null, clients_used: 0, clients: [] },
+      team: { members: 1, by_role: { executive: 1 }, pending_invites: 0, last_sign_in: null },
+      sites: { registered: 1, limit: 5, verified: 1, scheduled: 1, scanned: 1, cadence_minutes: 60, last_scan_at: now },
+      access: { keys_active: 0, keys_total: 0, keys_last_used: null, agents_active: 0 },
+      ai: { configured: true, enabled: true, label: "Provider", model: "model-x", last_ok_at: null, last_error_at: now, last_error: "401 invalid key <b>x</b>" },
+      brand: { mode: "default", name: null, custom_domain: null },
+      alerts: { critical: true, sitrep_ready: true, custom_recipients: 0 }, overrides: 0, gaps: ["The AI provider's last call failed."] },
+    { organization_id: 2, name: "Sandbox", plan: "trial", is_sandbox: true, onboarding_status: "complete", created_at: now, last_activity_at: now, managed_by: null,
+      partner: { allowance: null, clients_used: 0, clients: [] },
+      team: { members: 1, by_role: { executive: 1 }, pending_invites: 0, last_sign_in: now },
+      sites: { registered: 1, limit: 1000, verified: 0, scheduled: 1, scanned: 1, cadence_minutes: 1440, last_scan_at: now },
+      access: { keys_active: 0, keys_total: 0, keys_last_used: null, agents_active: 0 },
+      ai: { configured: false }, brand: { mode: "co-branded", name: "28 Foot Systems", custom_domain: null },
+      alerts: { critical: true, sitrep_ready: false, custom_recipients: 0 }, overrides: 0, gaps: [] },
+  ],
+  cavscope_admin_domain_monitor: { generated_at: now, window_days: 30, sites: [
+    { website_id: 1, website: "site1.example.org", url: "https://site1.example.org", organization_id: 1, organization: "Example Org", sandbox: false, scanned: true, scan_id: 1, scanned_at: now, engine_version: "http-native-1.14.0", scan_enabled: true, cadence_minutes: 1440, domain: "site1.example.org",
+      mx: { state: "present", records: ["1 smtp.example.org."] }, spf: { state: "present", value: "v=spf1 include:_spf.example.org ~all", lookups: 2 }, dmarc: { state: "reject", value: "v=DMARC1; p=reject" },
+      caa: { state: "present" }, dnssec: { state: "on" }, mta_sts: { state: "present" }, hsts: { state: "present", value: "max-age=31536000", max_age: 31536000 },
+      changes_30d: 2, recent_changes: [{ record: "DMARC", at: now, from: "no DMARC at _dmarc.site1.example.org", to: "v=DMARC1; p=reject <script>x</script>", engine_changed: false }, { record: "SPF", at: now, from: "(none)", to: "v=spf1 -all", engine_changed: true }] },
+    { website_id: 2, website: "site2.example.org", url: "https://site2.example.org", organization_id: 1, organization: "Example Org", sandbox: false, scanned: true, scan_id: 2, scanned_at: "2026-01-01T00:00:00Z", engine_version: "http-native-1.14.0", scan_enabled: false, cadence_minutes: null, domain: "site2.example.org",
+      mx: { state: "none" }, spf: { state: "missing" }, dmarc: { state: "missing" }, caa: { state: "none" }, dnssec: { state: "off" }, mta_sts: { state: "none" }, hsts: { state: "absent" }, changes_30d: 0, recent_changes: [] },
+    { website_id: 3, website: "site3.example.org", url: "https://site3.example.org", organization_id: 1, organization: "Example Org", sandbox: false, scanned: true, scan_id: 3, scanned_at: now, engine_version: "http-native-1.14.0", scan_enabled: true, cadence_minutes: 1440, domain: "site3.example.org",
+      mx: { state: "present", records: ["1 a.", "2 b."] }, spf: { state: "multiple" }, dmarc: { state: "monitor", value: "v=DMARC1; p=none" }, caa: { state: "not_observed" }, dnssec: { state: "not_observed" }, mta_sts: { state: "not_observed" }, hsts: { state: "not_observed" }, changes_30d: 0, recent_changes: [] },
+    { website_id: 4, website: "site4.example.org", url: "https://site4.example.org", organization_id: 2, organization: "Sandbox", sandbox: true, scanned: false, scan_id: null, scanned_at: null, engine_version: null, scan_enabled: true, cadence_minutes: 1440, domain: null,
+      mx: { state: "not_observed" }, spf: { state: "not_observed" }, dmarc: { state: "not_observed" }, caa: { state: "not_observed" }, dnssec: { state: "not_observed" }, mta_sts: { state: "not_observed" }, hsts: { state: "not_observed" }, changes_30d: 0, recent_changes: [] },
+  ] },
 };
 const STUB = `window.supabase={createClient:function(){var s={user:{email:'owner@example.org',app_metadata:{}},access_token:'x'};
 return{auth:{getSession:function(){return Promise.resolve({data:{session:s}})},onAuthStateChange:function(){return{data:{subscription:{unsubscribe:function(){}}}}},signOut:function(){return Promise.resolve({})}},
@@ -87,6 +125,13 @@ for (const id of sections) {
   const esc = await page.evaluate(() => document.getElementById("csSupportPanel").hidden);
   const gaps = [!dlg && "no dialog role", !esc && "Escape does not close"].filter(Boolean);
   if (res.length || gaps.length) bad++; console.log(`${"support panel".padEnd(18)} ${res.length ? res.join(" ") : "no violations"}${gaps.length ? "  | " + gaps.join(", ") : ""}`); }
+{ // DNS text and provider errors are third-party content: the fixture plants markup in both, and it must print as text.
+  const probe = async (id, needle) => { await page.click(`#nav button[data-section="${id}"]`); await page.waitForTimeout(150);
+    return page.evaluate((n) => { const el = document.getElementById("page"); return { shown: el.innerText.includes(n), injected: !!el.querySelector("script") || el.innerHTML.includes(n) }; }, needle); };
+  const a = await probe("domain-monitor", "<script>x</script>"), b = await probe("workspaces", "<b>x</b>");
+  const ok = a.shown && !a.injected && b.shown && !b.injected;
+  if (!ok) bad++;
+  console.log(`${"escaping".padEnd(18)} ${ok ? "hostile DNS text and provider error print as text" : `FAILED domain ${JSON.stringify(a)} workspaces ${JSON.stringify(b)}`}`); }
 if (process.env.PEEK) for (const id of process.env.PEEK.split(",")) { await page.click(`#nav button[data-section="${id}"]`); await page.waitForTimeout(150); console.log("\n## " + id + ": " + (await page.evaluate(() => document.getElementById("page").innerText)).replace(/\s+/g, " ").slice(0, 500)); }
 
 // States the default fixture does not reach, scanned across every section: a super admin with a support-access session

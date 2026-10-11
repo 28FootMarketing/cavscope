@@ -195,7 +195,7 @@ test("the console disables the switches on a flag nothing reads", () => {
   // The registry editor lives in admin.html, the only super admin console.
   const admin = read("admin.html");
   const start = admin.indexOf("function flagRegistry(reg)");
-  const end = admin.indexOf("// Surfaces the design calls for", start);
+  const end = admin.indexOf("// ---- workspaces", start);
   assert.ok(start > 0 && end > start, "flagRegistry() not found in admin.html");
   const panel = admin.slice(start, end);
   assert.ok(panel.includes("read by nothing"), "an unwired flag must be labelled in words");
