@@ -489,10 +489,10 @@
         <h2>Step 1 of 7 — Secure your account</h2>
         <p class="step-desc">You're signed in via your invite link. Set a real password before continuing.</p>
         <form onsubmit="return submitAccount(event)">
-          <label for="pw1">New password</label>
-          <input type="password" id="pw1" minlength="8" required autocomplete="new-password" data-tooltip="At least 8 characters.">
+          <label for="pw1">New password <span class="hint">(at least 12 characters)</span></label>
+          <input type="password" id="pw1" minlength="12" required autocomplete="new-password" data-tooltip="At least 12 characters. Length is what makes a password hard to guess; mixing in punctuation is not a substitute for it.">
           <label for="pw2">Confirm password</label>
-          <input type="password" id="pw2" minlength="8" required autocomplete="new-password">
+          <input type="password" id="pw2" minlength="12" required autocomplete="new-password" data-tooltip="Must match the password above. Guards against a typo locking you out.">
           <div class="step-msg" id="accountMsg"></div>
           <button type="submit" class="btn-primary">Set password & continue →</button>
         </form>

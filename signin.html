@@ -390,9 +390,9 @@
 
   // Twelve, matching validateNewPassword() in the edge function. Server side is
   // the copy that decides; this one is here so the refusal arrives before the
-  // round trip. Note the asymmetry: on the ordinary recovery path below,
-  // updateUser goes straight to GoTrue, so 12 is advice until GoTrue's own
-  // minimum password length is raised to match in the dashboard.
+  // round trip. On the ordinary recovery path below, updateUser goes straight to
+  // GoTrue, whose own minimum password length is also 12 (set by the auth-config
+  // workflow, read back), so the same floor holds on both paths.
   const MIN_PASSWORD_CHARS = 12;
 
   // Provisioning tools write the flag as a JSON boolean and as the string

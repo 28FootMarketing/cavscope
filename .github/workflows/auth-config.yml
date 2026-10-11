@@ -70,6 +70,10 @@ on:
         type: choice
         options: ['skip', 'report', 'on', 'off']
         default: 'skip'
+      password_min_length:
+        description: 'GoTrue minimum password length (6 to 72). Empty = change nothing. Never lowers the current value. Applies when a password is set or changed.'
+        type: string
+        default: ''
       smtp_sender_name:
         description: 'SMTP sender display name to set (e.g. CavScope). Empty = report the current value and change nothing.'
         type: string
@@ -570,6 +574,39 @@ jobs:
           echo "- after write, read back: **$NOW**" >> "$GITHUB_STEP_SUMMARY"
           if [ "$NOW" != "$VAL" ]; then echo "::error::Readback says $NOW, wanted $VAL."; exit 1; fi
           echo "::notice::$SW is now $NOW, verified by readback."
+
+      # GoTrue's minimum password length (password_min_length). It was 6 on
+      # 2026-10-11 while the 12-character rule lived only in cavscope-set-password,
+      # so the two flows that call auth.updateUser directly (password recovery in
+      # signin.html, invite setup in onboarding.html) accepted 6. Setting it here
+      # closes that at the source. The step runs only when a value is given. It must be an
+      # integer from 6 to 72 and is verified by readback. It applies to passwords set
+      # from now on; existing ones are untouched.
+      - name: Minimum password length
+        if: inputs.password_min_length != ''
+        env:
+          TOKEN: ${{ secrets.MUSTER_SUPABASE_ACCESS_TOKEN || secrets.SUPABASE_ACCESS_TOKEN }}
+          WANT: ${{ inputs.password_min_length }}
+        run: |
+          set -euo pipefail
+          REF=$(grep -E '^project_id' supabase/config.toml | head -1 | cut -d'"' -f2)
+          API="https://api.supabase.com/v1/projects/$REF/config/auth"
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/cfg.json
+          LIVE=$(jq -r '.password_min_length | tostring' /tmp/cfg.json)
+          rm -f /tmp/cfg.json
+          echo "password_min_length = $LIVE"
+          { echo "### Minimum password length"; echo "- live: **$LIVE**"; } >> "$GITHUB_STEP_SUMMARY"
+          case "$WANT" in ''|*[!0-9]*) echo "::error::password_min_length must be an integer, got '$WANT'."; exit 1;; esac
+          if [ "$WANT" -lt 6 ] || [ "$WANT" -gt 72 ]; then echo "::error::password_min_length must be between 6 and 72, got $WANT."; exit 1; fi
+          if [ "$WANT" -lt "$LIVE" ]; then echo "::error::Refusing to lower the minimum from $LIVE to $WANT."; exit 1; fi
+          jq -n --argjson v "$WANT" '{password_min_length: $v}' > /tmp/payload.json
+          curl -sS -f -X PATCH "$API" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data @/tmp/payload.json > /dev/null
+          curl -sS -f -H "Authorization: Bearer $TOKEN" "$API" > /tmp/after.json
+          NOW=$(jq -r '.password_min_length | tostring' /tmp/after.json)
+          rm -f /tmp/after.json /tmp/payload.json
+          echo "- after write, read back: **$NOW**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$NOW" != "$WANT" ]; then echo "::error::Readback says $NOW, wanted $WANT."; exit 1; fi
+          echo "::notice::password_min_length is now $NOW, verified by readback."
 
       # The password-changed notification switch. Off since the project began, so
       # changing a password mails the account holder nothing. Turning it on starts
