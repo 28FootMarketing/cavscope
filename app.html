@@ -2646,11 +2646,11 @@
 
           <div class="panel">
             <div class="table-header grid-controls">
-              <span>Framework / Code</span>
-              <span>Obligation & Scope</span>
-              <span>Owner</span>
-              <span>Assessment Status</span>
-              <span style="text-align: right;">Modify</span>
+              <span data-tooltip="The framework, law or standard this requirement comes from, and its control or article number. Citing a framework says which family a requirement belongs to; it is not a test of that framework." tabindex="0">Framework / Code</span>
+              <span data-tooltip="What the requirement asks for, and the part of this website it covers." tabindex="0">Obligation & Scope</span>
+              <span data-tooltip="The person or team accountable for meeting this requirement." tabindex="0">Owner</span>
+              <span data-tooltip="Where this requirement stands today, from the evidence reviewed to date. It is a working status, not a certification or an audit opinion." tabindex="0">Assessment Status</span>
+              <span style="text-align: right;" data-tooltip="Copies a prompt for an AI assistant to help satisfy the requirement on that row." tabindex="0">Modify</span>
             </div>
             <div id="controlTableBody" class="list">
             </div>
@@ -3791,11 +3791,11 @@
             <h3 data-tooltip="Framework controls derived from this site's findings. A citation to a framework is not a test of it; this is not an audit opinion." tabindex="0">Controls</h3>
             <p class="rd-lede">${c.met || 0} of ${c.total || 0} derived controls met, ${c.partial || 0} partial, ${c.not_met || 0} not met, ${c.not_assessed || 0} not assessed. Controls are derived from findings against the frameworks each rule cites; a citation is not a test of the framework, and this is not an audit opinion.</p>
             ${items.length ? `<div class="rd-scroll"><table class="rd-table">
-              <thead><tr><th>Framework</th><th>Reference</th><th>Assessment</th></tr></thead>
+              <thead><tr><th data-tooltip="The framework, law or standard a control comes from. Controls are derived from the frameworks each scan rule cites." tabindex="0">Framework</th><th data-tooltip="The control, clause or article number inside that framework." tabindex="0">Reference</th><th data-tooltip="How this site's findings leave the control: met, partial, not met or not assessed. Derived from scanner findings; it is not an audit opinion." tabindex="0">Assessment</th></tr></thead>
               <tbody>${items.map(i => `<tr>
-                <td>${escapeHtml(i.framework_label || i.framework || '')}</td>
-                <td class="rd-mono">${escapeHtml(i.reference || '')}</td>
-                <td><span class="rd-sev rd-sev-${escapeHtml(String(i.assessment || ''))}">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
+                <td data-tooltip="${escapeHtml(frameworkTip(i.framework_label || i.framework))}" tabindex="0">${escapeHtml(i.framework_label || i.framework || '')}</td>
+                <td class="rd-mono" data-tooltip="The control, clause or article number inside that framework." tabindex="0">${escapeHtml(i.reference || '')}</td>
+                <td><span class="rd-sev rd-sev-${escapeHtml(String(i.assessment || ''))}" data-tooltip="${escapeHtml(controlAssessmentTip(i.assessment))}" tabindex="0">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
               </tr>`).join('')}</tbody>
             </table></div>` : '<p>Every derived control is met or not assessed.</p>'}
             ${items.length < gaps ? `<p class="rd-lede">Showing ${items.length} of ${gaps} controls that are not fully met; the rest are under Controls in this workspace.</p>` : ''}
@@ -4161,7 +4161,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Compliance Framework</label>
-              <select name="framework">
+              <select name="framework" data-tooltip="The framework, law or standard the requirement comes from. Mapping a requirement to it is a citation, not a test of the framework.">
                 <option>SOC 2</option>
                 <option>GDPR</option>
                 <option>WCAG 2.2</option>
@@ -4173,7 +4173,7 @@
             </div>
             <div class="form-group">
               <label>Control Code / Ref</label>
-              <input required name="code" placeholder="e.g. CC6.1 or Art. 7">
+              <input required name="code" placeholder="e.g. CC6.1 or Art. 7" data-tooltip="The control, clause or article number inside the framework you chose.">
             </div>
           </div>
           <div class="form-group">
@@ -5609,6 +5609,44 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       }
     }
 
+    // What a framework is, in the words a reader needs before they trust a mapping. Every
+    // entry says the mapping is a citation, never a certification: CavScope produces
+    // evidence and readiness signal, and the attestation belongs to the framework's own
+    // assessor. An unrecognised name (a jurisdiction code from the laws list, a framework
+    // added later) gets the general sentence rather than a guess.
+    function frameworkTip(name) {
+      const n = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      const tips = [
+        [/^soc ?2/, 'SOC 2: the AICPA Trust Services Criteria for how a service organization protects customer data. An opinion comes only from a licensed CPA firm\'s examination; CavScope supplies evidence for one, not the opinion.'],
+        [/^iso 27001/, 'ISO/IEC 27001: an international standard for running an information security management system. Certification is granted by an accredited certification body; CavScope does not certify.'],
+        [/^gdpr/, 'GDPR: the European Union regulation on personal data. Whether it applies to you depends partly on where your customers live, which a scan cannot see.'],
+        [/^pci/, 'PCI DSS: the payment card industry\'s security standard for anyone who handles card data. Validation is done by the card brands\' assessors, not by CavScope.'],
+        [/^wcag/, 'WCAG: the W3C Web Content Accessibility Guidelines. Automated checks find only part of what WCAG asks, so this is not an accessibility conformance rating.'],
+        [/^nist csf/, 'NIST Cybersecurity Framework: a voluntary U.S. framework that groups security outcomes into functions and categories. It is guidance, not a certification.'],
+        [/^nist (sp )?800 53/, 'NIST SP 800-53: the U.S. catalogue of security and privacy controls. It is a catalogue to cite, not a certification.'],
+        [/^owasp/, 'OWASP: the Open Worldwide Application Security Project\'s community guidance on web application risk. A category says where a finding belongs; it does not mean CavScope tests the whole category.'],
+        [/^hipaa/, 'HIPAA: the U.S. law on protected health information. Compliance is a legal question for your counsel and compliance office; CavScope offers no opinion on it.'],
+      ];
+      for (const [re, tip] of tips) if (re.test(n)) return tip;
+      return 'The framework, law or standard this requirement comes from. Citing it says which family a requirement belongs to; it is not a test of that framework and not legal advice.';
+    }
+    function controlAssessmentTip(a) {
+      const tips = {
+        met: 'Met: no open finding on the checks that cite this control. That is what the scan could see, not proof the control is satisfied.',
+        partial: 'Partial: some of the checks that cite this control have open findings and some do not.',
+        not_met: 'Not met: open findings on the checks that cite this control.',
+        not_assessed: 'Not assessed: no check that could have fired for this control ran on this scan, so nothing is concluded either way.',
+      };
+      return tips[a] || tips.not_assessed;
+    }
+    function controlStatusTip(status) {
+      const tips = {
+        Effective: 'Reviewed to date and found to be working. A working status from the evidence on file, not a certification.',
+        Deficient: 'Reviewed to date and found to have a gap that needs attention.',
+      };
+      return tips[status] || 'Not yet reviewed, or waiting on evidence. Nothing is concluded about this requirement until it is.';
+    }
+
     function renderControls() {
       const tableBody = document.getElementById('controlTableBody');
       const badge = document.getElementById('badgeControls');
@@ -5618,15 +5656,15 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       tableBody.innerHTML = state.controls.map(c => `
         <div class="table-row grid-controls">
           <div>
-            <span class="pill pill-medium" style="margin-bottom: 4px;">${escapeHtml(c.framework)}</span>
-            <strong style="display: block; font-family: var(--font-mono); font-size: 12px; color: #fff;">${escapeHtml(c.code)}</strong>
+            <span class="pill pill-medium" style="margin-bottom: 4px;" data-tooltip="${escapeHtml(frameworkTip(c.framework))}" tabindex="0">${escapeHtml(c.framework)}</span>
+            <strong style="display: block; font-family: var(--font-mono); font-size: 12px; color: #fff;" data-tooltip="The control, clause or article number within that framework. Use it to find the requirement in the framework's own text." tabindex="0">${escapeHtml(c.code)}</strong>
           </div>
           <div>
             <strong style="display: block; font-size: 13px; color: #fff;">${escapeHtml(c.title)}</strong>
             <small style="color: var(--text-dim); font-size: 11px;">${escapeHtml(c.description)}</small>
           </div>
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.owner)}</span></div>
-          <div><span class="pill ${c.status === 'Effective' ? 'pill-approved' : (c.status === 'Deficient' ? 'pill-critical' : 'pill-pending')}">${c.status}</span></div>
+          <div><span class="pill ${c.status === 'Effective' ? 'pill-approved' : (c.status === 'Deficient' ? 'pill-critical' : 'pill-pending')}" data-tooltip="${escapeHtml(controlStatusTip(c.status))}" tabindex="0">${escapeHtml(c.status)}</span></div>
           <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('ctl_' + c.code, { id: c.code, fields: [
             ['Control', c.name], ['Framework reference', c.code], ['Status', c.status], ['Owner', c.owner],
           ] })}')" data-tooltip="Copies a prompt for an AI assistant to help satisfy this control.">🤖 Fix</button></div>
@@ -7403,14 +7441,14 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           </div>
           ${laws.length ? `
           <div class="table-header grid-live-jurisdictions">
-            <span>Framework / Jurisdiction</span>
-            <span>Obligations</span>
-            <span>Status</span>
+            <span data-tooltip="The law or standard, and the jurisdiction it comes from. Which laws apply to you can depend on where your customers live, not only where you are based." tabindex="0">Framework / Jurisdiction</span>
+            <span data-tooltip="What the law or standard asks an organization to do, in short." tabindex="0">Obligations</span>
+            <span data-tooltip="What this site's scan found on the checks mapped to this law. A law with no mapped check is not assessed, which is different from passing." tabindex="0">Status</span>
           </div>
           <div class="list">
             ${laws.map(l => `
             <div class="table-row grid-live-jurisdictions">
-              <div><strong style="color:#fff;">${escapeHtml(l.short_name)}</strong><br><span class="live-muted">${escapeHtml(l.jurisdiction_code)} · ${escapeHtml(l.category)}</span></div>
+              <div><strong style="color:#fff;" data-tooltip="${escapeHtml(l.full_name || l.short_name || '')}" tabindex="0">${escapeHtml(l.short_name)}</strong><br><span class="live-muted" data-tooltip="The jurisdiction this law comes from, and the kind of law it is." tabindex="0">${escapeHtml(l.jurisdiction_code)} · ${escapeHtml(l.category)}</span></div>
               <div class="live-muted">${(l.obligations || []).map(o => escapeHtml(o)).join(' · ')}</div>
               <div><span class="pill ${l.status === 'evidence_gap' ? 'pill-high' : (l.status === 'clear' ? 'pill-low' : 'pill-pending')}" data-tooltip="${escapeHtml(LAW_STATUS_TIP[l.status] || LAW_STATUS_TIP.manual_review)}" tabindex="0">${escapeHtml(LAW_STATUS_LABEL[l.status] || 'Not assessed')}${l.open_findings ? ` (${l.open_findings})` : ''}</span></div>
             </div>`).join('')}

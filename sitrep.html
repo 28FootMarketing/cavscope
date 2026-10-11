@@ -651,11 +651,11 @@
         <h2 data-tooltip="Framework controls derived from this site's findings. A citation to a framework is not a test of it; this is not an audit opinion." tabindex="0">Controls</h2>
         <p class="law-lede">${controls.met || 0} of ${controls.total || 0} derived controls met, ${controls.partial || 0} partial, ${controls.not_met || 0} not met, ${controls.not_assessed || 0} not assessed. Controls are derived from findings against the frameworks each rule cites; a citation is not a test of the framework, and this is not an audit opinion.</p>
         ${(controls.items || []).length ? `<div class="overflow-x"><table class="data-table">
-          <thead><tr><th>Framework</th><th>Reference</th><th>Assessment</th></tr></thead>
+          <thead><tr><th data-tooltip="The framework, law or standard a control comes from. Controls are derived from the frameworks each scan rule cites." tabindex="0">Framework</th><th data-tooltip="The control, clause or article number inside that framework." tabindex="0">Reference</th><th data-tooltip="How this site's findings leave the control: not met, partial, or not assessed. Derived from scanner findings; it is not an audit opinion." tabindex="0">Assessment</th></tr></thead>
           <tbody>${(controls.items || []).map(i => `<tr>
-            <td>${escapeHtml(i.framework_label || i.framework || '')}</td>
-            <td class="mono-cell">${escapeHtml(i.reference || '')}</td>
-            <td><span class="sev-chip sev-${i.assessment === 'not_met' ? 'high' : 'medium'}">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
+            <td data-tooltip="${escapeHtml(frameworkTip(i.framework_label || i.framework))}" tabindex="0">${escapeHtml(i.framework_label || i.framework || '')}</td>
+            <td class="mono-cell" data-tooltip="The control, clause or article number inside that framework." tabindex="0">${escapeHtml(i.reference || '')}</td>
+            <td><span class="sev-chip sev-${i.assessment === 'not_met' ? 'high' : 'medium'}" data-tooltip="${escapeHtml(controlAssessmentTip(i.assessment))}" tabindex="0">${escapeHtml(String(i.assessment || '').replace('_', ' '))}</span></td>
           </tr>`).join('')}</tbody>
         </table></div>` : '<p class="law-lede">Every derived control is met or not assessed.</p>'}
         ${(controls.items || []).length < (Number(controls.not_met) || 0) + (Number(controls.partial) || 0) ? `<p class="law-lede">Showing ${(controls.items || []).length} of ${(Number(controls.not_met) || 0) + (Number(controls.partial) || 0)} controls that are not fully met; the rest are in the CavScope workspace under Controls.</p>` : ''}
@@ -691,6 +691,33 @@
     accordionSections(root, ':scope > section.block', 'sitrep-sections');
   }
 
+  // Framework and assessment tips for the Controls table. A copy of the two helpers in
+  // app.html; tests/ui/framework-tooltips.test.ts fails if their answers differ.
+  function frameworkTip(name) {
+    const n = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const tips = [
+      [/^soc ?2/, 'SOC 2: the AICPA Trust Services Criteria for how a service organization protects customer data. An opinion comes only from a licensed CPA firm\'s examination; CavScope supplies evidence for one, not the opinion.'],
+      [/^iso 27001/, 'ISO/IEC 27001: an international standard for running an information security management system. Certification is granted by an accredited certification body; CavScope does not certify.'],
+      [/^gdpr/, 'GDPR: the European Union regulation on personal data. Whether it applies to you depends partly on where your customers live, which a scan cannot see.'],
+      [/^pci/, 'PCI DSS: the payment card industry\'s security standard for anyone who handles card data. Validation is done by the card brands\' assessors, not by CavScope.'],
+      [/^wcag/, 'WCAG: the W3C Web Content Accessibility Guidelines. Automated checks find only part of what WCAG asks, so this is not an accessibility conformance rating.'],
+      [/^nist csf/, 'NIST Cybersecurity Framework: a voluntary U.S. framework that groups security outcomes into functions and categories. It is guidance, not a certification.'],
+      [/^nist (sp )?800 53/, 'NIST SP 800-53: the U.S. catalogue of security and privacy controls. It is a catalogue to cite, not a certification.'],
+      [/^owasp/, 'OWASP: the Open Worldwide Application Security Project\'s community guidance on web application risk. A category says where a finding belongs; it does not mean CavScope tests the whole category.'],
+      [/^hipaa/, 'HIPAA: the U.S. law on protected health information. Compliance is a legal question for your counsel and compliance office; CavScope offers no opinion on it.'],
+    ];
+    for (const [re, tip] of tips) if (re.test(n)) return tip;
+    return 'The framework, law or standard this requirement comes from. Citing it says which family a requirement belongs to; it is not a test of that framework and not legal advice.';
+  }
+  function controlAssessmentTip(a) {
+    const tips = {
+      met: 'Met: no open finding on the checks that cite this control. That is what the scan could see, not proof the control is satisfied.',
+      partial: 'Partial: some of the checks that cite this control have open findings and some do not.',
+      not_met: 'Not met: open findings on the checks that cite this control.',
+      not_assessed: 'Not assessed: no check that could have fired for this control ran on this scan, so nothing is concluded either way.',
+    };
+    return tips[a] || tips.not_assessed;
+  }
   // Browser Engine Results. Mirrors cavscope.sitrep_browser_md and reads the same
   // sections.browser, so the viewer and the markdown print one set of checks. Every
   // check is listed, passes included, and a pass is never worded as secure or
