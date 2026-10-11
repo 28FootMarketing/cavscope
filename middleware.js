@@ -1,4 +1,5 @@
 import { rewrite, next } from '@vercel/functions';
+import INLINE_SCRIPT_HASHES from './tools/csp/manifest.js';
 
 // Routes each CavScope host to its own static file. vercel.json's declarative
 // rewrites cannot branch on the Host header (only real code can), so this uses
@@ -41,38 +42,61 @@ function isUnder(path, base) {
 // these domains (SEC-002 and SEC-003 do not fire), so it is deliberately not
 // duplicated here -- two sources for one header is how they drift apart.
 //
-// The CSP is honest about what these pages actually are. They are static HTML
-// with one inline <style> and one inline <script> each, so 'unsafe-inline' is
-// required on both style-src and script-src until those blocks are extracted
-// to files. That is a real weakening: this policy stops an attacker loading a
-// script from a host that is not jsdelivr, and stops the pages being framed,
-// but it does not stop injected inline script. Extracting the inline blocks and
-// dropping 'unsafe-inline' from script-src is the next step, not a finished one.
+// The CSP names every inline script by hash, so script-src carries no
+// 'unsafe-inline'. Each page is static HTML with one or two inline <script>
+// blocks and, on five pages, inline event handlers in the markup; the policy
+// allows exactly those by SHA-256 ('sha256-...' for a block, 'unsafe-hashes'
+// plus 'sha256-...' for a handler attribute) and refuses any inline script that
+// is not in the file. The hashes come from tools/csp/manifest.js, written by
+// `node tools/csp/sync.mjs` from the pages themselves, and
+// tests/routing/csp-inline.test.ts fails if a page changes and the manifest is
+// not regenerated -- in production a stale hash means the browser refuses that
+// page's script, so the sync is not optional. Until 2026-10-11 script-src said
+// 'unsafe-inline' instead, which CavScope's own SEC-018 reported against this
+// site (scan 332): a policy that still allows the one thing injection needs.
+//
+// style-src still carries 'unsafe-inline'. Every page has one inline <style>
+// and hundreds of style="" attributes, and SEC-018 is about script execution;
+// hashing styles is a possible next step, not a finished one.
 //
 // Every allowed origin below is one the pages demonstrably use:
-//   cdn.jsdelivr.net       the supabase-js UMD bundle, on all six pages
+//   cdn.jsdelivr.net       the supabase-js UMD bundle, and html2canvas for the
+//                          support widget's screenshot
 //   fonts.googleapis.com   the stylesheet <link>
 //   fonts.gstatic.com      the font files that stylesheet pulls
 //   *.supabase.co          RPC and auth calls, plus realtime over wss
 //
 // frame-ancestors 'none' is what answers SEC-005; X-Frame-Options is sent too
 // for the older browsers that never learned the CSP directive.
-const CSP = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  "img-src 'self' data:",
-  "font-src 'self' https://fonts.gstatic.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  "upgrade-insecure-requests",
-].join('; ');
+const SCRIPT_SRC_HOSTS = "'self' https://cdn.jsdelivr.net";
+
+// The policy for one page's file (e.g. 'app.html'), or for no page at all (a
+// static asset, a redirect), where script-src names only the hosts.
+export function cspFor(pageFile) {
+  const inline = pageFile ? INLINE_SCRIPT_HASHES[pageFile] : null;
+  const scriptSrc = [SCRIPT_SRC_HOSTS];
+  if (inline) {
+    scriptSrc.push(...inline.scripts);
+    if (inline.handlers.length) scriptSrc.push("'unsafe-hashes'", ...inline.handlers);
+  }
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data:",
+    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    'script-src ' + scriptSrc.join(' '),
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "upgrade-insecure-requests",
+  ].join('; ');
+}
+
 
 const SECURITY_HEADERS = {
-  'content-security-policy': CSP,
+  'content-security-policy': cspFor(null),
   'x-frame-options': 'DENY',
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
@@ -91,12 +115,22 @@ const SECURITY_HEADERS = {
 // in @vercel/functions/middleware.d.ts. Wrapping both here means a new branch
 // added below cannot forget the headers: there is no bare rewrite() or next()
 // left in this file to copy from.
-function secureRewrite(url, extraHeaders = {}) {
-  return rewrite(url, { headers: { ...SECURITY_HEADERS, ...extraHeaders } });
+// The headers for a response that serves the page file at `pathname`
+// ('/app.html'), or the page-less set for anything that is not one of the pages.
+function headersFor(pathname) {
+  const file = pathname.replace(/^\//, '');
+  if (!Object.prototype.hasOwnProperty.call(INLINE_SCRIPT_HASHES, file)) return SECURITY_HEADERS;
+  return { ...SECURITY_HEADERS, 'content-security-policy': cspFor(file) };
 }
 
-function secureNext() {
-  return next({ headers: SECURITY_HEADERS });
+function secureRewrite(url, extraHeaders = {}) {
+  return rewrite(url, { headers: { ...headersFor(url.pathname), ...extraHeaders } });
+}
+
+// A pass-through. `path` is the request path, so a page asked for by its file
+// name (/app.html rather than /app) still gets the policy that names its script.
+function secureNext(path = '') {
+  return next({ headers: headersFor(path) });
 }
 
 // A permanent redirect to the same page on the CavScope host. 308 rather than
@@ -240,8 +274,9 @@ export default function middleware(request) {
     }
     // Anything else falls through to the static file of that name -- an
     // unknown path on this host is a 404, not a silent bounce to the sign-in
-    // page.
-    return secureNext();
+    // page. The path is passed so /app.html, asked for directly, carries the
+    // CSP that names app.html's own script rather than one that refuses it.
+    return secureNext(path);
   }
 
   return secureNext();

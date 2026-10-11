@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { PAGES, START, END, source } from "../../tools/support/sync.mjs";
+import { cspFor } from "../../middleware.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (p: string) => readFileSync(join(root, p), "utf8");
@@ -45,8 +46,8 @@ test("the screenshot tool is pinned by integrity hash on an origin the CSP alrea
   assert.match(src, /html2canvas@1\.4\.1/);
   assert.match(src, /sha384-[A-Za-z0-9+/=]{64}/);
   assert.match(src, /integrity = H2C_SRI/);
-  const mw = read("middleware.js");
-  assert.match(mw, /script-src[^"]*https:\/\/cdn\.jsdelivr\.net/);
+  // Read off the policy middleware actually emits for the two pages that carry the widget, not off its source.
+  for (const file of ["app.html", "admin.html"]) assert.match(cspFor(file), /script-src[^;]*https:\/\/cdn\.jsdelivr\.net/);
 });
 
 test("password fields are blanked in the capture and the widget is left out of its own picture", () => {

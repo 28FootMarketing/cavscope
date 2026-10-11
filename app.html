@@ -3817,10 +3817,10 @@
                 <td><span class="rd-sev rd-sev-${escapeHtml(String(f.severity || 'info').toLowerCase())}">${escapeHtml(f.severity || '')}</span></td>
                 <td>${f.remediation ? `<details class="acc acc-fix" data-acc-group="report-fix"><summary>How to fix</summary><div class="acc-body">${escapeHtml(f.remediation)}</div></details>` : ''}</td>
                 ${live ? `<td class="no-print"><div class="rd-actions">
-                  <select class="filter-select" style="padding:4px 6px;font-size:10.5px;" onchange="Live.updateFindingStatus(${Number(f.finding_id)}, this.value)" data-tooltip="Change this finding's status.">
+                  <select class="filter-select" style="padding:4px 6px;font-size:10.5px;" data-act="finding-status" data-finding-id="${Number(f.finding_id)}" data-tooltip="Change this finding's status.">
                     <option value="">Status…</option><option value="open">Open</option><option value="reopened">Reopened</option><option value="accepted">Accepted risk</option><option value="resolved">Resolved</option>
                   </select>
-                  <button class="btn-ghost" style="padding:4px 9px;font-size:10.5px;" onclick="Live.promoteFinding(${Number(f.finding_id)})" data-tooltip="Manually opens a tracked risk with a remediation action for this finding.">Promote</button>
+                  <button class="btn-ghost" style="padding:4px 9px;font-size:10.5px;" data-act="promote-finding" data-finding-id="${Number(f.finding_id)}" data-tooltip="Manually opens a tracked risk with a remediation action for this finding.">Promote</button>
                 </div></td>` : ''}
               </tr>`).join('')}</tbody>
             </table></div>` : '<p>No findings are open against this site.</p>'}
@@ -5075,10 +5075,10 @@
             <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <small style="color: var(--teal); font-weight: 700;">${assessed && p.pointsToTen ? `+${p.pointsToTen} pts to reach 10/10` : ''}</small>
-              ${assessed && p.pointsToTen ? `<button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('aio_' + p.id, { id: p.id, fields: [
+              ${assessed && p.pointsToTen ? `<button class="btn-copy-llm" data-act="copy-llm-prompt" data-prompt-key="${escapeHtml(registerLlmPrompt('aio_' + p.id, { id: p.id, fields: [
                 ['AI-readiness area', p.name], ['CavScope score', p.score + '/10'],
                 ['What CavScope observed', p.rationale], ['Points available', '+' + p.pointsToTen],
-              ] })}')" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>` : ''}
+              ] }))}" data-tooltip="Copies a prompt for an AI assistant to improve this AI-readiness area.">🤖 Copy Fix</button>` : ''}
             </div>
           </div>`;
         }).join('');
@@ -5453,7 +5453,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
             <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13px; color: ${c.score == null ? 'var(--text-dim)' : (c.score >= 80 ? 'var(--emerald)' : 'var(--amber)')};">${c.score == null ? 'Not scanned' : c.score + '/100'}</span>
           </div>
           <div style="text-align: right; display: flex; gap: 6px; justify-content: flex-end;">
-            <button class="btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="applyMasterUrl('${c.domain}', '${c.name}', '${c.industry}'); runUniversalAudit();" data-tooltip="Makes this client the active target and runs the full audit now.">⚡ Audit</button>
+            <button class="btn-primary" style="padding: 4px 10px; font-size: 11px;" data-act="audit-client" data-domain="${escapeHtml(c.domain)}" data-name="${escapeHtml(c.name)}" data-industry="${escapeHtml(c.industry)}" data-tooltip="Makes this client the active target and runs the full audit now.">⚡ Audit</button>
           </div>
         </div>
       `).join('');
@@ -5487,10 +5487,10 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
             <p style="font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(p.rationale)}</p>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <small style="color: var(--teal); font-weight: 700;">${p.pointsToTen ? '+' + p.pointsToTen + ' pts' : ''}</small>
-              <button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('wcag_' + p.id, { id: p.id, fields: [
+              <button class="btn-copy-llm" data-act="copy-llm-prompt" data-prompt-key="${escapeHtml(registerLlmPrompt('wcag_' + p.id, { id: p.id, fields: [
                 ['Accessibility area', p.name], ['CavScope result', p.score == null ? 'Not assessed' : (live ? (p.score === 10 ? 'Pass' : 'Fail') : p.score + '/10')],
                 ['What CavScope observed', p.rationale], ['Points available', '+' + p.pointsToTen],
-              ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this accessibility area.">🤖 Copy Fix</button>
+              ] }))}" data-tooltip="Copies a prompt for an AI assistant to fix this accessibility area.">🤖 Copy Fix</button>
             </div>
           </div>
         `).join('');
@@ -5514,13 +5514,13 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
               <small style="color: var(--text-dim); font-family: var(--font-mono);">${d.location}</small>
             </div>
             <div><span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(d.validation || '')}</span></div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('defect_' + d.id, { id: d.id, fields: [
+            <div style="text-align: right;"><button class="btn-copy-llm" data-act="copy-llm-prompt" data-prompt-key="${escapeHtml(registerLlmPrompt('defect_' + d.id, { id: d.id, fields: [
               ['Title', d.criterionName], ['Standard', d.criterion], ['Severity', d.severity],
               ['Affected component', d.component], ['Page', d.location],
               ['Impact on users', d.impact], ['Root cause CavScope observed', d.rootCause],
               ['CavScope recommended fix', d.fix], ['How CavScope validates it', d.validation],
               ['Current status', d.status],
-            ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this specific defect.">🤖 Copy Fix</button></div>
+            ] }))}" data-tooltip="Copies a prompt for an AI assistant to fix this specific defect.">🤖 Copy Fix</button></div>
           </div>
         `).join('');
       }
@@ -5600,10 +5600,10 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
             <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(r.source)}</span></div>
             <div><span style="font-size: 12px; color: #e2e8f0;">${escapeHtml(r.owner)}</span></div>
             <div><span style="font-size: 12px; color: var(--teal);">${escapeHtml(r.status)}</span></div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('risk_' + r.id, { id: r.id, fields: [
+            <div style="text-align: right;"><button class="btn-copy-llm" data-act="copy-llm-prompt" data-prompt-key="${escapeHtml(registerLlmPrompt('risk_' + r.id, { id: r.id, fields: [
               ['Title', r.title], ['Severity', r.severity], ['Affected site', r.website],
               ['Source', r.source], ['Owner', r.owner], ['Status', r.status],
-            ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
+            ] }))}" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
           </div>
         `).join('');
       }
@@ -5627,9 +5627,9 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
           </div>
           <div><span style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.owner)}</span></div>
           <div><span class="pill ${c.status === 'Effective' ? 'pill-approved' : (c.status === 'Deficient' ? 'pill-critical' : 'pill-pending')}">${c.status}</span></div>
-          <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('ctl_' + c.code, { id: c.code, fields: [
+          <div style="text-align: right;"><button class="btn-copy-llm" data-act="copy-llm-prompt" data-prompt-key="${escapeHtml(registerLlmPrompt('ctl_' + c.code, { id: c.code, fields: [
             ['Control', c.name], ['Framework reference', c.code], ['Status', c.status], ['Owner', c.owner],
-          ] })}')" data-tooltip="Copies a prompt for an AI assistant to help satisfy this control.">🤖 Fix</button></div>
+          ] }))}" data-tooltip="Copies a prompt for an AI assistant to help satisfy this control.">🤖 Fix</button></div>
         </div>
       `).join('');
     }
@@ -5943,10 +5943,10 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
               <span class="eyebrow" style="color: var(--text-dim);">Status</span>
               <span style="font-size: 12px; color: var(--teal);">${escapeHtml(r.status)}</span>
             </div>
-            <div style="text-align: right;"><button class="btn-copy-llm" onclick="copyCardLlmPrompt('${registerLlmPrompt('risk_' + r.id, { id: r.id, fields: [
+            <div style="text-align: right;"><button class="btn-copy-llm" data-act="copy-llm-prompt" data-prompt-key="${escapeHtml(registerLlmPrompt('risk_' + r.id, { id: r.id, fields: [
               ['Title', r.title], ['Severity', r.severity], ['Affected site', r.website],
               ['Source', r.source], ['Owner', r.owner], ['Status', r.status],
-            ] })}')" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
+            ] }))}" data-tooltip="Copies a prompt for an AI assistant to fix this risk.">🤖 Fix</button></div>
           </div>
         `).join('');
       }
@@ -6191,6 +6191,38 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
     //      textarea or contenteditable is how people paste and how spellcheck
     //      suggestions are reached. Taking that away is a usability failure with no
     //      upside, because a form field exposes no source.
+    // Delegated actions for rows that are rendered from data.
+    //
+    // Every inline handler on this page is a fixed string, so the response's
+    // Content-Security-Policy can name each one by hash (tools/csp/sync.mjs) and
+    // script-src no longer needs 'unsafe-inline' -- which is CavScope's own
+    // SEC-018, reported against this site on 2026-10-11. A handler built from
+    // data (a finding id, a key id, a client's domain) has no fixed hash, so those
+    // rows carry a data-act attribute and the arguments as data-* attributes, and
+    // this one listener dispatches them. Add a new data-driven row here, never as
+    // an onclick built from data: the CSP would refuse it and the button would do nothing.
+    const ACTIONS = {
+      'finding-status': { event: 'change', run: (el) => Live.updateFindingStatus(Number(el.dataset.findingId), el.value) },
+      'promote-finding': { event: 'click', run: (el) => Live.promoteFinding(Number(el.dataset.findingId)) },
+      'audit-client': { event: 'click', run: (el) => { applyMasterUrl(el.dataset.domain, el.dataset.name, el.dataset.industry); runUniversalAudit(); } },
+      'scan-cadence': { event: 'change', run: (el) => Live.setScanCadence(el.dataset.websiteId === '' ? null : Number(el.dataset.websiteId), el.value) },
+      'copy-sitrep-md': { event: 'click', run: () => { copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.'); } },
+      'revoke-key': { event: 'click', run: (el) => Live.revokeKey(Number(el.dataset.keyId)) },
+      'copy-key': { event: 'click', run: (el) => { copyToClipboard(el.dataset.key); showToast('API key copied.'); } },
+      'copy-llm-prompt': { event: 'click', run: (el) => copyCardLlmPrompt(el.dataset.promptKey) },
+    };
+    function initActionDelegation() {
+      for (const type of ['click', 'change']) {
+        document.addEventListener(type, function (e) {
+          const el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+          if (!el) return;
+          const action = ACTIONS[el.dataset.act];
+          if (!action || action.event !== type) return;
+          action.run(el, e);
+        });
+      }
+    }
+
     function initContextMenuGuard() {
       document.addEventListener('contextmenu', function (e) {
         if (e.button !== 2) return;
@@ -6425,7 +6457,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      initTooltips(); initAccordions(); initContextMenuGuard(); initModalA11y();
+      initTooltips(); initAccordions(); initContextMenuGuard(); initModalA11y(); initActionDelegation();
       const versionEl = document.getElementById('lblAppVersion');
       if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
 
@@ -7373,11 +7405,11 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
               <p>${sitrep ? `Generated ${String(sitrep.generated_at).slice(0, 16).replace('T', ' ')} UTC &middot; ${escapeHtml(sitrep.headline)}` : 'No completed scan yet.'}</p>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
-              <select class="filter-select" style="padding:6px 8px;font-size:11.5px;" aria-label="Scan frequency" onchange="Live.setScanCadence(${this.website ? this.website.id : 'null'}, this.value)" data-tooltip="How often this website is scanned automatically. Takes effect on the next cron cycle.">
+              <select class="filter-select" style="padding:6px 8px;font-size:11.5px;" aria-label="Scan frequency" data-act="scan-cadence" data-website-id="${this.website ? this.website.id : ''}" data-tooltip="How often this website is scanned automatically. Takes effect on the next cron cycle.">
                 ${[[60, 'Hourly'], [360, 'Every 6h'], [1440, 'Daily'], [10080, 'Weekly']].map(([m, label]) => `<option value="${m}" ${(ov && ov.scan_settings && ov.scan_settings.cadence_minutes) === m ? 'selected' : ''}>${label}</option>`).join('')}
               </select>
               <button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="Live.requestScan()" data-tooltip="Queues a new scan and regenerates the SITREP when it completes.">⚡ Run scan</button>
-              ${sitrep && sitrep.content_md ? `<button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="copyToClipboard(Live.overview.latest_sitrep.content_md); showToast('SITREP markdown copied.')" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
+              ${sitrep && sitrep.content_md ? `<button class="btn-ghost" style="padding:6px 12px; font-size:11.5px;" data-act="copy-sitrep-md" data-tooltip="Copies the full SITREP as Markdown with citations.">⧉ Copy Markdown</button>` : ''}
             </div>
           </div>
 `;
@@ -7484,7 +7516,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
               <div><strong style="color:#fff;">${escapeHtml(a.name)}</strong><br><span class="live-muted">${escapeHtml(a.kind)}</span></div>
               <div>${a.active ? '<span class="pill pill-low">active</span>' : '<span class="pill pill-pending">inactive</span>'}</div>
               <div class="live-muted">${(a.keys || []).map(k => `${escapeHtml(k.key_prefix)}… [${(k.scopes || []).join(',')}]${k.revoked_at ? ' revoked' : ''}${k.last_used_at ? ' · used ' + String(k.last_used_at).slice(0, 10) : ''}`).join('<br>') || 'no keys'}</div>
-              <div style="text-align:right;">${(a.keys || []).filter(k => !k.revoked_at).map(k => `<button class="btn-ghost" style="padding:3px 8px;font-size:10.5px;" onclick="Live.revokeKey(${k.id})" data-tooltip="Immediately invalidates this key. Any agent using it will start getting 401s.">Revoke</button>`).join('')}</div>
+              <div style="text-align:right;">${(a.keys || []).filter(k => !k.revoked_at).map(k => `<button class="btn-ghost" style="padding:3px 8px;font-size:10.5px;" data-act="revoke-key" data-key-id="${k.id}" data-tooltip="Immediately invalidates this key. Any agent using it will start getting 401s.">Revoke</button>`).join('')}</div>
             </div>`).join('')}
           </div>` : `<div class="panel-body"><p class="live-muted">No agents yet.</p></div>`}
           <div class="panel-body" style="border-top:1px solid var(--surface-border);">
@@ -7672,7 +7704,7 @@ Serve it as text/plain or text/markdown at https://${host}/llms.txt, then list t
           const r = await this.rpc('cavscope_create_api_key', { p_organization_id: this.org.id, p_agent_name: f.get('name'), p_kind: f.get('kind'), p_scopes: String(f.get('scopes')).split(',') });
           const out = document.getElementById('liveKeyOut');
           out.hidden = false;
-          out.innerHTML = `<div class="live-keybox">${escapeHtml(r.api_key)}</div><p class="live-muted" style="margin-top:6px;">${escapeHtml(r.note)} MCP URL: ${escapeHtml(r.mcp_url)}</p><button class="btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="copyToClipboard('${r.api_key}'); showToast('API key copied.')">⧉ Copy key</button>`;
+          out.innerHTML = `<div class="live-keybox">${escapeHtml(r.api_key)}</div><p class="live-muted" style="margin-top:6px;">${escapeHtml(r.note)} MCP URL: ${escapeHtml(r.mcp_url)}</p><button class="btn-ghost" style="padding:4px 10px;font-size:11px;" data-act="copy-key" data-key="${escapeHtml(r.api_key)}">⧉ Copy key</button>`;
           await this.loadWorkspace();
           document.getElementById('liveKeyOut').replaceWith(out);
           showToast('API key issued. Copy it now; it is shown once.');

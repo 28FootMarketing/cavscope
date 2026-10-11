@@ -17,7 +17,7 @@ test("the selects that had no accessible name now carry one", () => {
   for (const frag of [
     'id="riskSeverityFilter" aria-label="Filter by severity"',
     'id="riskStatusFilter" aria-label="Filter by status"',
-    'aria-label="Scan frequency" onchange="Live.setScanCadence(',
+    'aria-label="Scan frequency" data-act="scan-cadence"',
     '<select name="role" aria-label="Role">',
     '<select name="kind" aria-label="Kind" ',
     '<select name="scopes" aria-label="Scopes" ',

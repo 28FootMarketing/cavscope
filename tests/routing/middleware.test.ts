@@ -108,13 +108,16 @@ test("clickjacking is refused two ways, for browsers that only know one", () => 
   assert.equal(res.headers.get("x-frame-options"), "DENY");
 });
 
-// Inline <style> and <script> are still in every page, so script-src has to
-// permit them. Asserting it here means dropping 'unsafe-inline' later is a
-// deliberate change to this test, not an accident that breaks six pages.
-test("script-src still permits inline, and the test says why", () => {
+// Inline <script> blocks and on* handlers are still in every page, but
+// script-src names each by hash (tools/csp/manifest.js) rather than allowing
+// them all. tests/routing/csp-inline.test.ts owns the detail; this pins the
+// headline, because 'unsafe-inline' on script-src is CavScope's own SEC-018.
+test("script-src does not say unsafe-inline; style-src still does, and the test says why", () => {
   const csp = call(`https://${CAV}/`, CAV).headers.get("content-security-policy")!;
-  assert.match(csp, /script-src[^;]*'unsafe-inline'/,
-    "every page ships one inline <script>; extract them before tightening this");
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/, "SEC-018 on our own site");
+  assert.match(csp, /script-src[^;]*'sha256-/);
+  assert.match(csp, /style-src[^;]*'unsafe-inline'/,
+    "every page ships one inline <style> and style attributes; hashing styles is the next step, not this one");
 });
 
 // HSTS comes from Vercel on this domain. Setting it here too would be a second

@@ -16,6 +16,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { chromium } from "../../workers/browser-scan/node_modules/playwright-core/index.mjs";
+import middleware from "../../middleware.js";
 const R = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
 const axeSrc = readFileSync(createRequire(import.meta.url).resolve(`${R}/workers/browser-scan/node_modules/axe-core/axe.min.js`), "utf8");
 const ORIGIN = "https://cavscope.28footsystems.com";
@@ -72,6 +73,8 @@ return{auth:{getSession:function(){return Promise.resolve({data:{session:s}})},o
 rpc:function(n,a){return fetch('/__rpc/'+n+'?a='+encodeURIComponent(JSON.stringify(a||{}))).then(function(r){return r.json()})},
 from:function(){var q={select:function(){return q},eq:function(){return q},order:function(){return q},limit:function(){return q},then:function(f){return Promise.resolve({data:[],error:null}).then(f)}};return q}}}};`;
 
+const APP_CSP = middleware(new Request(`${ORIGIN}/app`, { headers: { host: new URL(ORIGIN).host } })).headers.get("content-security-policy");
+
 const browser = await chromium.launch();
 async function pass(label, mode) {
   const signedIn = mode !== "demo";
@@ -85,7 +88,10 @@ async function pass(label, mode) {
         if (!h) { unstubbed.add(n); return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: null, error: { message: "unstubbed " + n } }) }); }
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: h(JSON.parse(u.searchParams.get("a") || "{}")), error: null }) });
       }
-      if (u.pathname === "/app") return route.fulfill({ status: 200, contentType: "text/html", body: appHtml.replace(/(supabase\.min\.js")\s+integrity="[^"]*"/, "$1") });
+      // Served under the production Content-Security-Policy for /app (the stub replaces the CDN bundle, which the
+      // policy allows by host; the inline blocks and handlers are the file's own, so their hashes must match).
+      // A refused script is a page that does nothing, so a violation is counted as a failure of the pass.
+      if (u.pathname === "/app") return route.fulfill({ status: 200, contentType: "text/html", headers: { "content-security-policy": APP_CSP }, body: appHtml.replace(/(supabase\.min\.js")\s+integrity="[^"]*"/, "$1") });
       const f = `${R}${u.pathname}`;
       return existsSync(f) ? route.fulfill({ status: 200, body: readFileSync(f) }) : route.fulfill({ status: 404, body: "not found" });
     }
@@ -96,6 +102,8 @@ async function pass(label, mode) {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message).slice(0, 200)));
+  const cspViolations = [];
+  page.on("console", (msg) => { if (/Refused to execute inline (script|event handler)|violates the following Content Security Policy directive: "script-src/.test(msg.text())) cspViolations.push(msg.text().replace(/\s+/g, " ").slice(0, 300)); });
   if (!signedIn) await page.addInitScript("window.__AXE_SIGNED_OUT = true");
   // A super admin arriving with no fragment is sent to /admin once; #overview is what the console's own link uses.
   await page.goto(`${ORIGIN}/app${mode === "super" ? "#overview" : ""}`, { waitUntil: "networkidle" });
@@ -185,6 +193,11 @@ async function pass(label, mode) {
     console.log(`${label.padEnd(5)} ${m.name.padEnd(22)} ${res.length ? res.map((x) => `${x.id}(${x.n},${x.impact})`).join(" ") : "axe clean"}${gaps.length ? "  | " + gaps.join(", ") : ""}${errors.length > before ? "  SCRIPT ERROR: " + errors.slice(before).join(" | ") : ""}`);
     if (process.env.DETAIL) for (const x of res) { console.log(`   ## ${x.help}`); x.nodes.forEach((n) => console.log("     ", n)); }
   }
+  if (cspViolations.length) {
+    bad++;
+    console.log(`${label.padEnd(5)} CSP VIOLATIONS (${cspViolations.length}) -- app.html's inline script does not match tools/csp/manifest.js; run node tools/csp/sync.mjs`);
+    for (const v of cspViolations.slice(0, 10)) console.log("     ", v);
+  } else console.log(`${label.padEnd(5)} CSP: inline script and handlers ran under the production policy, no violation`);
   await ctx.close();
   return bad;
 }

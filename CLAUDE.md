@@ -557,10 +557,32 @@ shows — so a partial load must not silently strip half a tenant's workspace.
   X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) is applied through `secureRewrite()`
   and `secureNext()`; there is deliberately no bare `rewrite()` or `next()` left in the file, so a new
   branch cannot forget them. HSTS is **not** set there — Vercel already sends it on these domains, and
-  two sources for one header is how they drift. The CSP still carries `'unsafe-inline'` on `script-src`
-  because all six pages ship an inline `<script>`; extracting those is the prerequisite for tightening
-  it, and `tests/routing/middleware.test.ts` asserts the current state so the change has to be
-  deliberate. Any new external origin a page loads must be added to the CSP or it is silently blocked.
+  two sources for one header is how they drift. Any new external origin a page loads must be added to
+  the CSP or it is silently blocked.
+  **`script-src` names every inline script by hash and carries no `'unsafe-inline'`, as of 2026-10-11.**
+  CavScope's own engine reported `SEC-018` against this site (scan 332, finding 3378: a policy that
+  still allows the one thing injection needs), which is the same defect class as the contrast failures
+  of 2026-10-05. The pages keep their inline `<script>` blocks and inline `on*=` handlers; the policy
+  allows exactly those, by SHA-256 (`'sha256-...'` per block, `'unsafe-hashes'` plus `'sha256-...'` per
+  distinct handler), and refuses anything injected. The hashes live in `tools/csp/manifest.js`,
+  written by **`node tools/csp/sync.mjs`** from the pages themselves, and `middleware.js` puts the
+  right file's set on each response (`cspFor(file)`, also for a page asked for by its file name such
+  as `/app.html`; a response that serves no page names no inline script). **After changing any
+  page's `<script>` block or any inline handler, including through the token or support-widget
+  sync, run `node tools/csp/sync.mjs` and commit the manifest.** A stale hash is not cosmetic: in
+  production the browser refuses that page's script and the page renders with no behaviour.
+  `tests/routing/csp-inline.test.ts` fails if a page has drifted from the manifest or if any routed
+  page's policy would still trip `evaluateCspQuality`, and `tools/site-axe/run.mjs` and `app.mjs`
+  now serve the pages under the real middleware policy and fail on a refused script. Two things
+  follow. **A handler built from data (`onclick="fn(${id})"` inside a template literal) has no fixed
+  hash and the sync refuses it**: `app.html`'s data-rendered rows (finding status and promote, scan
+  cadence, key revoke and copy, the client audit button, the "Copy Fix" LLM prompts) carry a
+  `data-act` attribute with their arguments as `data-*` and are dispatched by one delegated
+  listener, `initActionDelegation()`; a new data-rendered row goes there, never in an `onclick`.
+  And `style-src` still says `'unsafe-inline'`: every page has an inline `<style>` and style
+  attributes, `SEC-018` is about script execution, and hashing styles is a possible next step, not a
+  finished one. `tests/routing/middleware.test.ts` pins both halves. Checked in Chromium on
+  2026-10-11: every page's script ran and 79 of `app.html`'s inline handlers fired under the policy.
 - `/privacy` is `privacy.html` on `muster.partners`. **`/terms` is `terms.html`, added 2026-10-09** after
   the site's own local scan reported `PRIV-004` (no Terms of Service link): it is built from `privacy.html`'s
   template (same tokens block, tooltip and context-menu engines, fully expanded, no Supabase client), is

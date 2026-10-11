@@ -13,6 +13,7 @@
 // collection over them. Other https hosts go out through Node (fonts, CDN); Supabase calls are refused.
 import { readFileSync, existsSync } from "node:fs";
 import { chromium } from "../../workers/browser-scan/node_modules/playwright-core/index.mjs";
+import middleware from "../../middleware.js";
 import { collectPage, newScanContext, AXE_VERSION } from "../../workers/browser-scan/lib/collect.mjs";
 import { evaluateAxe, evaluateStructure } from "../../workers/browser-scan/lib/rules.mjs";
 const R = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
@@ -28,7 +29,11 @@ await ctx.route(/^https?:/, async (route) => {
     if (existsSync(f) && !f.endsWith("/")) {
       const ext = f.split(".").pop();
       const type = { html: "text/html", css: "text/css", js: "text/javascript", png: "image/png", svg: "image/svg+xml", ico: "image/x-icon", webp: "image/webp", txt: "text/plain", json: "application/json" }[ext] ?? "application/octet-stream";
-      return route.fulfill({ status: 200, contentType: type, body: readFileSync(f) });
+      // The page is served under the Content-Security-Policy the real middleware would send for this path,
+      // so a hash in tools/csp/manifest.js that no longer matches the page shows up here as a refused script,
+      // not in production. A violation is printed below and fails the run.
+      const csp = middleware(new Request(u.toString(), { headers: { host: u.host } })).headers.get("content-security-policy");
+      return route.fulfill({ status: 200, contentType: type, headers: { "content-security-policy": csp }, body: readFileSync(f) });
     }
     return route.fulfill({ status: 404, body: "not found" });
   }
@@ -39,6 +44,11 @@ await ctx.route(/^https?:/, async (route) => {
     return route.fulfill({ status: res.status, headers, body: Buffer.from(await res.arrayBuffer()) });
   } catch { return route.abort("failed"); }
 });
+// Only script execution is judged here: it is what the hashes govern, and a refused inline block or handler is a page
+// that does nothing. axe-core's own in-page work (it fetches cross-origin stylesheets to read their rules) trips
+// connect-src under this policy; those are the tool's requests, not the page's, and are not counted.
+const cspViolations = [];
+ctx.on("console", (msg) => { if (/Refused to execute inline (script|event handler)|violates the following Content Security Policy directive: "script-src/.test(msg.text())) cspViolations.push(msg.text().replace(/\s+/g, " ").slice(0, 300)); });
 const pages = [];
 for (const [i, path] of only.entries()) pages.push(await collectPage(ctx, ORIGIN + path, { first: false, evidenceKey: `page_${i + 1}`, observeForms: false }));
 for (const p of pages) {
@@ -52,4 +62,9 @@ if (process.env.DETAIL) {
   for (const p of pages) for (const v of p.axe?.violations ?? []) { console.log(`\n## ${new URL(p.url).pathname} ${v.id}: ${v.help}`); for (const n of v.nodes.slice(0, 3)) console.log("   ", n.target.join(" "), "::", n.html.slice(0, 150).replace(/\s+/g, " "), "::", n.failureSummary.replace(/\s+/g, " ").slice(0, 200)); }
   for (const p of pages) { const f = (p.contrast ?? []).filter((c) => c.status === "fail"); if (f.length) { for (const c of f.slice(0,5)) console.log("   FAIL", c.ratio, c.required, c.target); console.log(`\n## ${new URL(p.url).pathname} resolved contrast FAILURES (${f.length})`); const byT = {}; for (const c of f) byT[c.target] = c.ratio; Object.entries(byT).slice(0, 12).forEach(([t, r]) => console.log("   ", r, t)); } }
 }
+if (cspViolations.length) {
+  console.log(`\nCSP VIOLATIONS (${cspViolations.length}) -- the pages' inline script does not match tools/csp/manifest.js; run node tools/csp/sync.mjs:`);
+  for (const v of cspViolations.slice(0, 20)) console.log("   ", v);
+  process.exitCode = 1;
+} else console.log(`\nCSP: every page ran its inline script under the production policy with no violation.`);
 await browser.close();

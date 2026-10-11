@@ -254,6 +254,34 @@ desk moves, not switches that turn the line on. That change ran in production fr
 (deployed through the MCP, version 6) and was committed to the repo on 2026-10-09 after being found
 as drift; see the CI-deploy note in `CLAUDE.md`.
 
+### The web host's own SPF, DMARC and DNSSEC (2026-10-11, open, owner's)
+
+CavScope's own scan of `cavscope.28footsystems.com` (scan 332) reported `EMAIL-001` (no SPF at
+`cavscope.28footsystems.com`), `EMAIL-004` (no DMARC at `_dmarc.cavscope.28footsystems.com` or
+`_dmarc.28footsystems.com`) and `SEC-020` (no DS record for `28footsystems.com`). None is a repo change.
+`28footsystems.com` is served by Namecheap's nameservers (`dns1`/`dns2.registrar-servers.com`), read live
+over DNS-over-HTTPS that day, so every record below is set in Namecheap's Advanced DNS for
+`28footsystems.com`. What sends mail is `mail.cavscope.28footsystems.com` (Resend, with its own MX and
+Resend's SPF on its `send.` subdomain); the web host itself sends nothing, and the records say so.
+
+One thing is not obvious. `cavscope.28footsystems.com` is a **CNAME** to Vercel
+(`b11c8e243df22105.vercel-dns-016.com`), and a name that is a CNAME can carry no other record, so a TXT
+for SPF cannot be added at that name while the CNAME stands. The engine's finding is still right (a
+receiver following the CNAME finds no SPF at the target either), but the fix has a first step:
+
+| Step | Record | Why |
+|---|---|---|
+| 1 | Delete the CNAME for host `cavscope`; add **A** `cavscope` -> `216.150.1.1` and **A** `cavscope` -> `216.150.16.1` | Vercel's rank-1 recommended addresses for this domain, read from its domain config on 2026-10-11 (`76.76.21.21` is rank 2). Same hosting, now a name that can hold TXT. |
+| 2 | **TXT** `cavscope` -> `v=spf1 -all` | This host sends no mail; `-all` says so, which closes `EMAIL-001` and stops forged mail "from" `@cavscope.28footsystems.com`. |
+| 3 | **TXT** `_dmarc` -> `v=DMARC1; p=none; sp=none; rua=mailto:dmarc@mail.cavscope.28footsystems.com; fo=1` | At the organizational domain, so it covers every `*.28footsystems.com` the other brands send from too. `p=none` reports and blocks nothing; move to `quarantine` then `reject` after reading the reports. Closes `EMAIL-004`. The `rua` address needs a `cavscope.mail_routes` row, or point it at a mailbox that exists. |
+| 4 | **TXT** `_dmarc.cavscope` -> `v=DMARC1; p=reject; rua=mailto:dmarc@mail.cavscope.28footsystems.com` | Optional and stricter: the web host sends nothing, so rejecting is safe here. Receivers checking `mail.cavscope...` do not consult this intermediate label, so it cannot affect Resend's delivery. |
+| 5 | Namecheap -> Domain -> Advanced DNS -> **DNSSEC: On** | Namecheap signs the zone and publishes the DS at the registry itself for domains on its BasicDNS. Confirm afterwards with a DS lookup; a signed zone with no DS is `SEC-020` still open. Closes `SEC-020`. |
+
+After step 1 the certificate is unaffected (Vercel issues on the A records the same way), but check
+`https://cavscope.28footsystems.com/` loads before adding anything else. Verify each record with
+`https://dns.google/resolve?name=<name>&type=TXT`, then re-run the site's audit from the console so the
+findings resolve on the next scan rather than being closed by hand.
+
 ### Inbound on `mail.muster.partners`
 
 Receiving was **disabled** on this domain until 2026-09-08 — every address on it was a black hole.
