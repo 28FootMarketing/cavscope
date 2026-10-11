@@ -89,3 +89,29 @@ test("the Controls view, the laws panel, both reports and the map-control form c
     assert.match(src, /<th data-tooltip="[^"]+" tabindex="0">Framework<\/th>/, `${name}: report Framework header`);
   }
 });
+
+// --- the names in running text ------------------------------------------------------
+
+test("framework names written into prose are tooltip targets that read their words from frameworkTip", () => {
+  const spans = [...app.matchAll(/<span class="fw" data-framework="([^"]+)" tabindex="0">([^<]+)<\/span>/g)];
+  assert.ok(spans.length >= 12, `expected the Controls hero, banner and principle to be marked up, found ${spans.length}`);
+  const general = A.frameworkTip("Something Added Later");
+  for (const [, key, label] of spans) {
+    assert.notEqual(A.frameworkTip(key), general, `${label} (${key}) falls back to the general sentence`);
+  }
+  // The explanation is never copied next to the name; the decorator sets it from the one source.
+  assert.doesNotMatch(app, /class="fw" data-framework="[^"]+" data-tooltip=/);
+  const deco = fn(app, "function decorateFrameworkNames(root) {");
+  assert.match(deco, /frameworkTip\(el\.getAttribute\('data-framework'\)\)/);
+  assert.ok(app.indexOf("decorateFrameworkNames(); initTooltips();") > 0, "the decorator must run at start, before the tooltip engine");
+});
+
+test("the Controls view prose no longer lists bare framework names", () => {
+  const hero = app.slice(app.indexOf("<h2>Framework Control Mapping</h2>"), app.indexOf('<div id="controlsDemoBlocks">'));
+  const banner = app.slice(app.indexOf("Not a Certification or Legal Opinion"), app.indexOf('<div class="table-header grid-controls">'));
+  for (const text of [hero, banner]) {
+    // Attributes are not prose (a button's own tooltip may name a framework), so tags go too.
+    assert.doesNotMatch(text.replace(/<span class="fw"[^>]*>[^<]*<\/span>/g, "").replace(/<[^>]*>/g, " "), /\b(SOC 2|ISO 27001|GDPR|PCI DSS|NIST CSF)\b/,
+      "a framework name in this paragraph is not marked up");
+  }
+});

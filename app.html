@@ -1480,6 +1480,8 @@
     /* Tooltips: one floating element managed by JS (see initTooltips), so tooltips never
        get clipped by scrolling panels and work for dynamically rendered controls. */
 
+    /* A framework name inside running text: the dotted underline says it can be explained; hover or focus explains it. */
+    .fw { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
     .app-tooltip {
       position: fixed;
       z-index: 300;
@@ -2166,7 +2168,7 @@
               <span class="eyebrow" style="color: var(--cyan); font-family: var(--font-mono);">Principle 02</span>
               <h3 style="font-size: 15px; margin: 10px 0 6px; color: #fff;">Cross-Framework Traceability</h3>
               <p style="color: var(--text-muted); font-size: 12.5px; line-height: 1.55;">
-                Map one finding directly to SOC 2, ISO 27001, GDPR, WCAG 2.2 AA, and PCI DSS obligations without duplicating compliance worksheets.
+                Map one finding directly to <span class="fw" data-framework="SOC 2" tabindex="0">SOC 2</span>, <span class="fw" data-framework="ISO 27001" tabindex="0">ISO 27001</span>, <span class="fw" data-framework="GDPR" tabindex="0">GDPR</span>, <span class="fw" data-framework="WCAG" tabindex="0">WCAG 2.2 AA</span>, and <span class="fw" data-framework="PCI DSS" tabindex="0">PCI DSS</span> obligations without duplicating compliance worksheets.
               </p>
             </article>
 
@@ -2631,7 +2633,7 @@
             <div class="hero-content">
               <span class="eyebrow">Framework Alignment Traceability</span>
               <h2>Framework Control Mapping</h2>
-              <p>Map regulatory frameworks (SOC 2, ISO 27001, GDPR, WCAG 2.1, PCI DSS, NIST CSF) directly to underlying operational website assets and active findings.</p>
+              <p>Map regulatory frameworks (<span class="fw" data-framework="SOC 2" tabindex="0">SOC 2</span>, <span class="fw" data-framework="ISO 27001" tabindex="0">ISO 27001</span>, <span class="fw" data-framework="GDPR" tabindex="0">GDPR</span>, <span class="fw" data-framework="WCAG" tabindex="0">WCAG 2.1</span>, <span class="fw" data-framework="PCI DSS" tabindex="0">PCI DSS</span>, <span class="fw" data-framework="NIST CSF" tabindex="0">NIST CSF</span>) directly to underlying operational website assets and active findings.</p>
             </div>
             <div class="hero-actions">
               <button class="btn-primary" onclick="openModal('control')" data-tooltip="Link a compliance rule (SOC 2, GDPR, etc.) to this site and assign an owner.">＋ Map Control</button>
@@ -2641,7 +2643,7 @@
           <div id="controlsDemoBlocks">
           <div class="simple-explainer-banner" style="background: linear-gradient(135deg, #0a251e 0%, #0d1e34 100%); border-color: #1a5647;">
             <h3 style="color: var(--emerald);">⚖ Not a Certification or Legal Opinion</h3>
-            <p>Control mappings reflect CavScope's technical assessment against publicly documented framework criteria (SOC 2, ISO 27001, GDPR, WCAG, PCI DSS, NIST CSF), based on the evidence reviewed to date. This is not a SOC 2 attestation, ISO certification, or legal compliance opinion &mdash; those come only from a licensed CPA firm, an accredited certification body, or counsel. "Effective" and "Deficient" statuses describe what CavScope found, not a third-party audit result.</p>
+            <p>Control mappings reflect CavScope's technical assessment against publicly documented framework criteria (<span class="fw" data-framework="SOC 2" tabindex="0">SOC 2</span>, <span class="fw" data-framework="ISO 27001" tabindex="0">ISO 27001</span>, <span class="fw" data-framework="GDPR" tabindex="0">GDPR</span>, <span class="fw" data-framework="WCAG" tabindex="0">WCAG</span>, <span class="fw" data-framework="PCI DSS" tabindex="0">PCI DSS</span>, <span class="fw" data-framework="NIST CSF" tabindex="0">NIST CSF</span>), based on the evidence reviewed to date. This is not a <span class="fw" data-framework="SOC 2" tabindex="0">SOC 2</span> attestation, <span class="fw" data-framework="ISO 27001" tabindex="0">ISO</span> certification, or legal compliance opinion &mdash; those come only from a licensed CPA firm, an accredited certification body, or counsel. "Effective" and "Deficient" statuses describe what CavScope found, not a third-party audit result.</p>
           </div>
 
           <div class="panel">
@@ -5630,6 +5632,14 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
       for (const [re, tip] of tips) if (re.test(n)) return tip;
       return 'The framework, law or standard this requirement comes from. Citing it says which family a requirement belongs to; it is not a test of that framework and not legal advice.';
     }
+    // Framework names written into prose carry data-framework, not a copy of the explanation:
+    // the words live in frameworkTip() alone, so the prose, the table cells and the reports cannot
+    // describe SOC 2 three different ways. Run once at start; the prose is static markup.
+    function decorateFrameworkNames(root) {
+      (root || document).querySelectorAll('[data-framework]').forEach(el => {
+        el.setAttribute('data-tooltip', frameworkTip(el.getAttribute('data-framework')));
+      });
+    }
     function controlAssessmentTip(a) {
       const tips = {
         met: 'Met: no open finding on the checks that cite this control. That is what the scan could see, not proof the control is satisfied.',
@@ -6463,7 +6473,7 @@ Provide actionable code fixes and format as a CavScope executive brief.`;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      initTooltips(); initAccordions(); initContextMenuGuard(); initModalA11y();
+      decorateFrameworkNames(); initTooltips(); initAccordions(); initContextMenuGuard(); initModalA11y();
       const versionEl = document.getElementById('lblAppVersion');
       if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
 

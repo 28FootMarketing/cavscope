@@ -119,6 +119,31 @@ async function pass(label, mode) {
   }
   if (!views.length) { console.log(`[${label}] no views found`, errors.join(" | ")); bad++; }
 
+  // A framework name has to explain itself: in the Controls view's prose and in its table, hovering or focusing it shows
+  // words (frameworkTip), and a name the page did not know still gets the general sentence. Rendered, not read from source.
+  if (views.includes("controls")) {
+    await page.evaluate(() => showView("controls")); await page.waitForTimeout(150);
+    const fw = await page.evaluate(() => {
+      const prose = [...document.querySelectorAll("#controls [data-framework]")];
+      const pills = [...document.querySelectorAll("#controlTableBody .pill-medium")];
+      return { prose: prose.map((e) => ({ name: e.dataset.framework, tip: e.getAttribute("data-tooltip") || "", focusable: e.tabIndex >= 0 })),
+               pills: pills.map((e) => ({ name: e.textContent.trim(), tip: e.getAttribute("data-tooltip") || "", focusable: e.tabIndex >= 0 })) };
+    });
+    const all = [...fw.prose, ...fw.pills];
+    const empty = all.filter((x) => x.tip.length < 40 || !x.focusable);
+    let shown = "";
+    if (fw.prose.length) {
+      await page.mouse.move(705, 895); // Escape suppresses tooltips until the mouse moves again; that is the page's design
+      await page.focus("#controls [data-framework]");
+      await page.waitForTimeout(250);
+      shown = await page.evaluate(() => { const t = document.getElementById("appTooltip"); return t && !t.hidden ? t.textContent : ""; });
+      await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    }
+    const ok = fw.prose.length >= 8 && fw.pills.length >= 1 && !empty.length && shown.length > 40;
+    if (!ok) bad++;
+    console.log(`${label.padEnd(5)} framework tooltips     ${fw.prose.length} in prose, ${fw.pills.length} in the table${empty.length ? ", WITHOUT WORDS OR FOCUS: " + empty.map((x) => x.name).join(", ") : ""}${shown ? "" : "  (focus showed nothing)"}${ok ? "" : "  FAILED"}`);
+  }
+
   // What each session is entitled to see, and not to see. Hiding is presentation (the RPCs enforce), but a link shown
   // to the wrong person, or hidden from the right one, is a defect this pass can see.
   if (signedIn) {
